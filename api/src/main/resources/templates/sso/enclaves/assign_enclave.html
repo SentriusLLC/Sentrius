@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Assign Users to Enclave</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+        }
+
+        .container {
+            display: flex;
+            padding: 20px;
+        }
+
+        .box {
+            width: 45%;
+            padding: 20px;
+            border: 1px solid #444;
+            background-color: #1e1e1e;
+            min-height: 300px;
+            margin-right: 20px;
+        }
+
+        .btn {
+            background-color: #333;
+            color: #ffffff;
+            border: 1px solid #555;
+        }
+
+        .btn:hover {
+            background-color: #444;
+            color: #ffffff;
+        }
+
+        .popover-content {
+            position: absolute;
+            background: #1e1e1e;
+            color: #ffffff;
+            border: 1px solid #444;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 10;
+            display: none;
+        }
+
+        .popover-content.open {
+            display: block;
+        }
+
+        .user-item {
+            padding: 10px;
+            margin-bottom: 5px;
+            background-color: #2a2a2a;
+            color: #ffffff;
+            border: 1px solid #444;
+            cursor: pointer;
+        }
+
+        .user-item.selected {
+            background-color: #3b82f6; /* Blue to indicate selection */
+            color: #ffffff;
+            border: 1px solid #3b82f6;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 10px;
+            background: #444;
+            color: #ffffff;
+            border-radius: 20px;
+            margin: 5px;
+        }
+
+        .badge .remove {
+            margin-left: 10px;
+            cursor: pointer;
+            color: #ff6b6b;
+        }
+
+        .badge .remove:hover {
+            color: #ff4c4c;
+        }
+
+        #assigned-users-list {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        input::placeholder {
+            color: #aaa;
+        }
+
+        input[type="text"] {
+            background-color: #333;
+            color: #ffffff;
+            border: 1px solid #555;
+            padding: 5px;
+        }
+
+        input[type="text"]:focus {
+            border-color: #3b82f6;
+            outline: none;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+                <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
+                <div class="container">
+                    <h3>Assign Users to [[${hostGroup.displayName}]]</h3>
+                    <!-- Users Not Assigned Section -->
+                    <div class="row">
+                    <div id="unassigned-users" class="box">
+                        <h2>Unassigned Users</h2>
+                        <button id="select-users-button" class="btn btn-outline-primary w-100 d-flex justify-content-between">
+                            Select users to add
+                            <i class="fas fa-chevron-down ml-2"></i>
+                        </button>
+                        <div id="popover-content" class="popover-content">
+                            <input type="text" id="search-users" placeholder="Search users..." class="form-control mb-2">
+                            <div id="user-options">
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Users Assigned Section -->
+                    <div id="enclave-users" class="box">
+                        <h2>Users Assigned</h2>
+                        <div id="assigned-users-list" class="selected-users">
+                            <!-- Assigned users will be displayed here -->
+                        </div>
+                    </div>
+                </div>
+                </div>
+
+                <button id="assign-users-btn" class="btn btn-primary mt-3">Assign Users to Enclave</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const popoverButton = document.getElementById('select-users-button');
+        const popoverContent = document.getElementById('popover-content');
+        const assignButton = document.getElementById('assign-users-btn');
+        const assignedUsersList = document.getElementById('assigned-users-list');
+        const userOptions = document.getElementById('user-options');
+        const selectedUsers = new Set();
+        const groupId = `[[${groupId}]]`; // Thymeleaf will replace this with the actual group ID.
+        const allUsers = new Map();
+
+        // Toggle popover open/close
+        popoverButton.addEventListener('click', () => {
+            popoverContent.classList.toggle('open');
+        });
+
+        // Handle user selection from popover
+        userOptions.addEventListener('click', (e) => {
+            if (e.target.classList.contains('user-item')) {
+                const userId = e.target.dataset.userId;
+                if (selectedUsers.has(userId)) {
+                    selectedUsers.delete(userId);
+                    e.target.classList.remove('selected');
+                } else {
+                    selectedUsers.add(userId);
+                    e.target.classList.add('selected');
+                }
+            }
+        });
+
+        // Assign selected users to enclave
+        assignButton.addEventListener('click', () => {
+            assignedUsersList.innerHTML = ''; // Clear the list
+            console.log("add em");
+            // Add selected users as badges
+            selectedUsers.forEach(userId => {
+                const badge = document.createElement('div');
+                badge.className = 'badge';
+                badge.dataset.userId = userId;
+                const name = allUsers.get(userId);
+                badge.innerHTML = `User ${name} <span class="remove">&times;</span>`;
+                assignedUsersList.appendChild(badge);
+            });
+
+            saveAssignments(Array.from(selectedUsers));
+
+            // Close popover after assignment
+            popoverContent.classList.remove('open');
+        });
+
+        // Remove user from assigned users list
+        assignedUsersList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove')) {
+                const badge = e.target.closest('.badge');
+                const userId = badge.dataset.userId;
+                badge.remove();
+                console.log("Remove -" + userId + "-");
+                selectedUsers.delete(userId);
+
+                // Add the user back to the available list in the popover
+                updateUserOptionsDisplay();
+            }
+        });
+
+// Function to add a user back to the available list in the popover
+        function addUserBackToAvailableList(userId) {
+            const userName = allUsers.get(userId); // Retrieve the user's name from the `allUsers` map
+
+            if (userName) {
+                const userItem = document.createElement('div');
+                userItem.className = 'user-item';
+                userItem.dataset.userId = userId;
+                userItem.innerText = userName;
+                userOptions.appendChild(userItem);
+            }else {
+                console.log("sdalkgjadslgkjads " + userId + " " + userName + " " + allUsers);
+            }
+        }
+
+        // Mock save assignments function
+        function saveAssignments(userIds) {
+            console.log("Saving assignments", userIds);
+            const csrfToken = document.getElementById('csrf-token').value;
+            // This can be replaced with an API call
+            fetch('/api/v1/enclaves/assign', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({ groupId: groupId, userIds: userIds })
+            })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('Assignments saved successfully.');
+                    } else {
+                        console.error('Failed to save assignments.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        function loadUsers(assignedUserIds = []) {
+            fetch('/api/v1/users/list')
+                .then(response => response.json())
+                .then(users => {
+                    userOptions.innerHTML = ''; // Clear previous user options
+                    users.forEach(user => {
+                        console.log("user " + user.id + " " + user.username);
+                        const idString = String(user.id);
+                        allUsers.set(idString, user.username); // Store all users for reference
+
+                        if (!assignedUserIds.includes(idString)) {
+                            const userItem = document.createElement('div');
+                            userItem.className = 'user-item';
+                            userItem.dataset.userId = idString;
+                            userItem.innerText = user.username;
+                            userOptions.appendChild(userItem);
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading users:', error);
+                });
+        }
+
+
+        // Load assignments on page load
+        function loadAssignments() {
+            console.log("Loading assignments...");
+
+            // Fetch users assigned to the enclave
+            fetch('/api/v1/enclaves/assign?groupId=' + groupId)
+                .then(response => response.json())
+                .then(enclaveData => {
+                    console.log("Enclave data:", enclaveData);
+                    const assignedUsers = enclaveData.users;
+                    assignedUsers.forEach(user => {
+                        console.log("user "+ user);
+                        const badge = document.createElement('div');
+                        badge.className = 'badge';
+                        badge.dataset.userId = String(user.id);
+                        badge.innerHTML = `User ${user.username} <span class="remove">&times;</span>`;
+                        assignedUsersList.appendChild(badge);
+                        console.log("Appending " + badge);
+                        selectedUsers.add(String(user.id));
+                    });
+                    loadUsers(assignedUsers.map(user => String(user.id)));
+                    // Load users and exclude those already assigned
+                })
+                .catch(error => {
+                    console.error('Error loading assignments:', error);
+                });
+        }
+
+        // Update the user options list in the popover when a user is removed from assigned
+        function updateUserOptionsDisplay() {
+            userOptions.innerHTML = ''; // Clear previous user options
+            allUsers.forEach((name, id) => {
+                console.log("name " + name + " id -" + id + "- " + selectedUsers);
+                if (!selectedUsers.has(id)) {
+                    console.log("removed name " + name + " id " + id);
+                    const userItem = document.createElement('div');
+                    userItem.className = 'user-item';
+                    userItem.dataset.userId = id;
+                    userItem.innerText = name;
+                    userOptions.appendChild(userItem);
+                }
+            });
+            selectedUsers.forEach(userId => {
+                console.log("selectedUsers name -" +userId + "-" );
+            });
+        }
+
+        // Call load assignments when page loads
+        loadAssignments();
+    });
+</script>
+</body>
+
+</html>

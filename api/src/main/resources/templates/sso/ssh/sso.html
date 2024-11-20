@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta th:replace="~{fragments/header}">
+    <style>
+        /* Chat Button */
+        #chat-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Chat Container */
+        #chat-container {
+            position: fixed;
+            bottom: 10px;
+            right: 20px;
+            width: 300px;
+            height: 350px;
+            background: #222;
+            color: white;
+            border-radius: 10px;
+            display: none;
+            flex-direction: column;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Chat Header */
+        #chat-header {
+            background: #444;
+            padding: 10px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: bold;
+            position: relative;
+        }
+
+        #close-chat {
+            position: absolute;
+            right: 10px;
+            cursor: pointer;
+        }
+
+        /* Chat Messages */
+        #chat-messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            max-height: 250px;
+            font-size: 14px;
+        }
+
+        /* Chat Input */
+        #chat-input {
+            width: 100%;
+            padding: 8px;
+            border: none;
+            background: #333;
+            color: white;
+            font-size: 14px;
+            border-top: 1px solid #666;
+        }
+    </style>
+    <script th:src="@{/node/js/google-protobuf/google-protobuf.js}"></script>
+    <script th:src="@{/node/js/sockjs-client/sockjs.js}"></script>
+    <script th:src="@{/js/bundled_session_pb.js}"></script>
+
+    <script th:inline="javascript">
+        let persistentMessage = "";
+        let termFocus = true;
+        let chatFocus = false;
+        let chatConnection = null;
+
+        function toggleChat() {
+            let chatContainer = document.getElementById("chat-container");
+            if (chatContainer.style.display === "none" || chatContainer.style.display === "") {
+                chatContainer.style.display = "flex";
+                document.getElementById("chat-input").focus();
+                termFocus = false;
+                chatFocus = true;
+                enableSessionChat();
+            } else {
+
+            }
+            //chatContainer.style.display = (chatContainer.style.display === "none" || chatContainer.style.display === "") ? "flex" : "none";
+        }
+
+        function showStatusBar(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+
+            setTimeout(() => {
+                if (persistentMessage) {
+                    notification.textContent = persistentMessage;
+                    //notification.style.display = 'none';
+                } else {
+                    notification.style.display = 'none';
+                }
+
+            }, 3000); // Hide after 3 seconds
+        }
+
+        function showWarningStatus(message) {
+            const notification = document.getElementById('notification');
+            if (message) {
+                notification.textContent = message;
+                notification.style.display = 'block';
+
+                setTimeout(() => {
+                    if (persistentMessage) {
+                        notification.textContent = persistentMessage;
+                        //notification.style.display = 'none';
+                    } else {
+                        notification.style.display = 'none';
+                    }
+                }, 10000); // Hide after 10 seconds
+            } else {
+                notification.style.display = 'none';
+            }
+        }
+        /*<![CDATA[*/
+        document.addEventListener('DOMContentLoaded', () => {
+            let connection;
+            var term;
+
+            style = {};
+
+            var sessionId = "";
+
+            const questionText = document.getElementById('question-text');
+            const responseInput = document.getElementById('response-input');
+            const submitButton = document.getElementById('submit-button');
+            const modalElement = document.getElementById('llmModal');
+            let modalInstance = bootstrap.Modal.getInstance(modalElement);
+
+            if (!modalInstance) {
+                modalInstance = new bootstrap.Modal(modalElement);
+            }
+
+            $.ajaxSetup({
+                cache: false,
+                async:false,
+                beforeSend: function () {
+
+                },
+                complete: function () {
+
+                }
+            });
+
+            window.onerror = function(message, source, lineno, colno, error) {
+                console.error("Global error caught:", message, "at", source, ":", lineno, ":", colno, error);
+            };
+
+            window.location.assign = function (url) {
+
+                console.trace();
+            };
+            window.location.replace = function (url) {
+
+                console.trace();
+            };
+
+            //get instance id list from selected terminals
+            function getActiveTermsInstanceIds() {
+                var ids = [];
+                $(".sentrius_term_active").each(function (index) {
+                    var id = $(this).attr("id").replace("sentrius_term_", "");
+                    ids.push(id);
+                });
+                return ids;
+            }
+
+
+            $('#upload_push_dialog').on('hidden.bs.modal', function () {
+                $("#upload_push_frame").attr("src", "");
+            });
+
+
+            var currentSystemStatus = /*[[${currentSystemStatus}]]*/ {};
+            var connectedSystem = /*[[${connectedSystem}]]*/ {};
+            //upload frame dialog
+            $('#upload_push').click(function () {
+
+
+                var ids = [];
+                ids.push( [[${systemSelectId}]] );
+
+                var idListStr = '?_csrf=' + [[${session._csrf}]];
+                ids.forEach(function (entry) {
+                    idListStr = idListStr + '&idList=' + entry;
+                });
+
+                $("#upload_push_frame").attr("src", "setUpload.ktrl" + idListStr);
+                new bootstrap.Modal($("#upload_push_dialog")).show();
+            });
+
+            [# th:if= "${currentSystemStatus != null && (#strings.equals(currentSystemStatus.statusCd, 'GENERICFAIL') || #strings.equals(currentSystemStatus.statusCd, 'HOSTFAIL'))}"]
+            new bootstrap.Modal($("#error_dialog")).show();
+            [/]
+
+            [# th:if= "${connectedSystem != null && connectedSystem.id != null && (currentSystemStatus == null || (!#strings.equals(currentSystemStatus.statusCd, 'GENERICFAIL') && !#strings.equals(currentSystemStatus.statusCd, 'HOSTFAIL')) )}"]
+            [# th:if= "${ #strings.equals(connectedSystem.statusCd, 'AUTHFAIL')}"]
+            new bootstrap.Modal($("#set_password_dialog")).show();
+            [/]
+
+            [# th:if= "${#strings.equals(connectedSystem.statusCd, 'KEYAUTHFAIL')}"]
+            new bootstrap.Modal($("#set_passphrase_dialog")).show();
+            [/]
+
+            [# th:if= "${currentSystemStatus == null || (#strings.equals(connectedSystem.statusCd, 'AUTHFAIL') && #strings.equals(connectedSystem.statusCd, 'KEYAUTHFAIL')&& #strings.equals(connectedSystem.statusCd, 'GENERICFAIL'))}"]
+
+            console.log("Failure occurred " + currentSystemStatus + " " + connectedSystem.statusCd);
+            [/]
+                [/]
+
+            [# th:if= "${connectedSystem != null }"]
+
+            var keys = {};
+
+
+            $(document).keypress(function (e) {
+                const isModalVisible = $('#assignIncidentModal').is(':visible');
+                if (isModalVisible) {
+                    return; // Prevent terminal actions if modal is visible
+                }
+                const isllmModalVisible = $('#llmModal').is(':visible');
+                if (isllmModalVisible) {
+                    return; // Prevent terminal actions if modal is visible
+                }
+                if (termFocus) {
+                    var keyCode = (e.keyCode) ? e.keyCode : e.charCode;
+
+                    if (String.fromCharCode(keyCode) && String.fromCharCode(keyCode) !== ''
+                        && (!e.ctrlKey || e.altKey) && !e.metaKey && !keys[27] && !keys[37]
+                        && !keys[38] && !keys[39] && !keys[40] && !keys[13] && !keys[8] && !keys[9]
+                        && !keys[46] && !keys[45] && !keys[33] && !keys[34] && !keys[35] && !keys[36]) {
+                        var cmdStr = String.fromCharCode(keyCode);
+                        const message = new proto.io.sentrius.protobuf.TerminalMessage();
+                        message.setCommand(cmdStr);
+                        message.setKeycode(-1);
+                        message.setType(proto.io.sentrius.protobuf.MessageType.USER_DATA);
+                        const base64Message = btoa(String.fromCharCode(...message.serializeBinary()));
+                        connection.send(base64Message);
+                    }
+
+                }
+                else if (chatFocus) {
+                    console.log("Chat going to focus");
+                    $("#chat-input").focus();
+                }
+            });
+
+            // Function to hide the popup
+            function hidePopup() {
+                modalInstance.hide();
+            }
+
+
+            submitButton.addEventListener('click', () => {
+                const userResponse = responseInput.value.trim();
+                if (userResponse) {
+                    console.log('User response:', userResponse); // Replace with your logic to handle the response
+                    // Example: Call the LLM with the user's response and update the next question
+                    const message = new proto.io.sentrius.protobuf.TerminalMessage();
+                    message.setCommand(questionText.textContent);
+                    message.setPrompt(userResponse);
+                    message.setKeycode(-1);
+                    message.setType(proto.io.sentrius.protobuf.MessageType.USER_PROMPT);
+                    const base64Message = btoa(String.fromCharCode(...message.serializeBinary()));
+                    connection.send(base64Message);
+                    hidePopup(); // Close the popup
+                }
+            });
+
+            //function for command keys (ie ESC, CTRL, etc..)
+            $(document).keydown(function (e) {
+                const isModalVisible = $('#assignIncidentModal').is(':visible');
+                if (isModalVisible) {
+                    return; // Prevent terminal actions if modal is visible
+                }
+
+                const isllmModalVisible = $('#llmModal').is(':visible');
+                if (isllmModalVisible) {
+                    return; // Prevent terminal actions if modal is visible
+                }
+
+                console.log("keydown " + e.keyCode);
+                //term.focus();
+                if (termFocus) {
+
+                    var keyCode = (e.keyCode) ? e.keyCode : e.charCode;
+                    keys[keyCode] = true;
+
+                    //27 - ESC
+                    //37 - LEFT
+                    //38 - UP
+                    //39 - RIGHT
+                    //40 - DOWN
+                    //13 - ENTER
+                    //8 - BS
+                    //9 - TAB
+                    //17 - CTRL
+                    //46 - DEL
+                    //45 - INSERT
+                    //33 - PG UP
+                    //34 - PG DOWN
+                    //35 - END
+                    //36 - HOME
+                    if ((e.ctrlKey && !e.altKey) || keyCode === 27 || keyCode === 37 || keyCode ===
+                        38 || keyCode
+                        === 39 || keyCode === 40 || keyCode === 13 || keyCode === 8 || keyCode === 9 || keyCode === 46 || keyCode === 45 || keyCode === 33 || keyCode === 34 || keyCode === 35 || keyCode === 36) {
+
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        const message = new proto.io.sentrius.protobuf.TerminalMessage();
+                        message.setType(proto.io.sentrius.protobuf.MessageType.USER_DATA);
+                        message.setKeycode(keyCode);
+                        const base64Message = btoa(String.fromCharCode(...message.serializeBinary()));
+                        connection.send(base64Message);
+                        if (keyCode===9 || keyCode===13) {
+                            setTimeout(() => {
+                                updateJitBadge(null);
+                            }, 2000); // 3000 milliseconds = 3 seconds
+
+                        }
+                        //connection.send(JSON.stringify({id: getActiveTermsInstanceIds(), keyCode: keyCode}));
+                    }
+                    if (e.key === '/') {
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        const message = new proto.io.sentrius.protobuf.TerminalMessage();
+                        message.setType(proto.io.sentrius.protobuf.MessageType.USER_DATA);
+                        message.setKeycode(-1);
+                        message.setCommand('/');
+                        const base64Message = btoa(String.fromCharCode(...message.serializeBinary()));
+                        connection.send(base64Message);
+                    }
+
+                    //prevent default for unix ctrl commands
+                    if (e.ctrlKey && (keyCode === 9 || keyCode === 83 || keyCode === 81 || keyCode === 84 || keyCode
+                        === 220 || keyCode === 90 || keyCode === 72 || keyCode === 87 || keyCode === 85 || keyCode === 82 || keyCode === 68)) {
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                    }
+
+                } else {
+                    if (chatFocus){
+                        var keyCode = (e.keyCode) ? e.keyCode : e.charCode;
+                        keys[keyCode] = true;
+                        if (keyCode === 13) {
+                            var cmdStr = $('#chat-input').val();
+
+
+                            const message = new proto.io.sentrius.protobuf.ChatMessage();
+                            message.setMessage(cmdStr);
+                            message.setSender("User");
+                            const base64Message = btoa(String.fromCharCode(...message.serializeBinary()));
+                            chatConnection.send(base64Message);
+                            $('#chat-input').val('');
+                            appendToChatWindow("user", cmdStr);
+                        }
+                    }
+                }
+b
+            });
+
+            $(document).keyup(function (e) {
+                var keyCode = (e.keyCode) ? e.keyCode : e.charCode;
+                delete keys[keyCode];
+                if (termFocus) {
+                    $("#sentrius_term_0").focus();
+                    //$('#dummy').focus();
+                }
+            });
+
+            $(document).click(function (e) {
+                console.log("click");
+
+                // Check if the clicked element is inside chat container, chat input, or chat messages
+                if ($(e.target).closest("#chat-container, #chat-input, #chat-messages").length > 0) {
+                    console.log("Chat going to focus");
+                    chatFocus = true;
+                    termFocus = false;
+                    return; // Stop further execution to keep chat focused
+                } else {
+                    termFocus = true;
+                    chatFocus = false;
+                    // Clicked outside chat → focus terminal
+                    if (termFocus && !$('body').hasClass('modal-open')) {
+                        console.log("clicking outside chat, focusing terminal");
+                        document.activeElement.blur(); // Remove focus from other elements
+                        document.getElementById("sentrius_term_0").focus(); // Ensure terminal gets focus
+                    }
+                }
+            });
+
+
+            //get cmd text from paste
+            $(this).bind('paste', function (e) {
+                //$('#dummy').focus();
+                $("#sentrius_term_0").focus();
+                //$('#dummy').val('');
+                setTimeout(function () {
+                    var cmdStr = $('#dummy').val();
+                    const message = new proto.io.sentrius.protobuf.TerminalMessage();
+                    message.setCommand(cmdStr);
+                    message.setType(proto.io.sentrius.protobuf.MessageType.USER_DATA);
+                    const base64Message = btoa(String.fromCharCode(...message.serializeBinary()));
+                    connection.send(base64Message);
+                    //connection.send(JSON.stringify({id: getActiveTermsInstanceIds(), command: cmdStr}));
+                }, 100);
+            });
+
+
+            var fitMap = {};
+
+
+            $("#reset_size").click(function () {
+                resetSize();
+            });
+
+            function resetSize() {
+                var ids = getActiveTermsInstanceIds();
+                for (var i = 0; i < ids.length; i++) {
+                    var w = Math.max(document.documentElement.clientHeight, window.innerWidth || 0);
+                    var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+                    $("#output_" + ids[i]).width((w - 125)/ids.length);
+                    $("#output_" + ids[i]).height(h-20);
+                    $("#output_" + ids[i]).height(h-20);
+
+                    resize($("#output_" + ids[i]));
+                }
+            }
+
+            function notifySize() {
+                var ids = getActiveTermsInstanceIds();
+                for (var i = 0; i < ids.length; i++) {
+                    var w = Math.max(document.documentElement.clientHeight, window.innerWidth || 0);
+                    var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+                    var width = $("#output_" + ids[i]).width();
+                    var height = $("#output_" + ids[i]).height();
+
+                    resize($("#output_" + ids[i]), width, height);
+                }
+            }
+
+            function parse_xterm_style() {
+                var text = $('.xterm-helpers style').text();
+                var arr = text.split('xterm-normal-char{width:');
+                style.width = parseFloat(arr[1]);
+                arr = text.split('div{height:');
+                style.height = parseFloat(arr[1]);
+            }
+
+
+            function get_cell_size(term) {
+                style.width = term._core._renderService._renderer.dimensions.actualCellWidth;
+                style.height = term._core._renderService._renderer.dimensions.actualCellHeight;
+            }
+
+
+
+            function current_geometry(term) {
+                if (!style.width || !style.height) {
+                    try {
+                        get_cell_size(term);
+                    } catch (TypeError) {
+                        parse_xterm_style();
+                    }
+                }
+
+                var cols = parseInt(window.innerWidth / style.width, 10) - 1;
+                var rows = parseInt(window.innerHeight / style.height, 10);
+                return {'cols': cols, 'rows': rows};
+            }
+
+
+            //resize element during drag event. Makes call to set pty width and height
+            function resize(element) {
+                var id = element.attr("id").replace("output_", "");
+
+                if (term) {
+
+                    var geometry = current_geometry(term);
+
+                    var width = Math.floor($('#output_' + id).innerWidth() - 125);
+                    var height = Math.floor($('#output_' + id).innerHeight() - 125);
+                    let encodedSessionId = encodeURIComponent(sessionId);
+                    $.ajax({
+                        url: '/api/v1/ssh/terminal/resize?sessionId=' + encodedSessionId + '&width=' + width +
+                            '&height=' + height,
+                        cache: false
+                    });
+//                    $('#terminal .terminal').toggleClass('fullscreen');
+                    fitMap[id].fit();
+                }
+
+            }
+
+            // Example function to display a new question from the LLM
+            function promptQuestion(question) {
+                //questionText.textContent = question;
+                //responseInput.value = ''; // Clear the input for a new response
+                //modalInstance.show();
+                toggleChat();
+                appendToChatWindow("system", question);
+            }
+
+            function resize(element, width, height) {
+                var id = element.attr("id").replace("output_", "");
+                if (term) {
+                    var geometry = current_geometry(term);
+                    var w = Math.floor($('#output_' + id).innerWidth() - 125);
+                    var h = Math.floor($('#output_' + id).innerHeight() - 250);
+                    encodedSessionId
+                    $.ajax({
+                        url: '/api/v1/ssh/terminal/resize?sessionId=' + encodedSessionId + '&width=' + width +
+                            '&height=' + height,
+                        cache: false
+                    });
+//                    $('#terminal .terminal').toggleClass('fullscreen');
+                    fitMap[id].fit();
+                }
+
+            }
+
+
+            var loc = window.location, ws_uri;
+            if (loc.protocol === "https:") {
+                ws_uri = "https:";
+            } else {
+                ws_uri = "http:";
+            }
+
+            const urlObj = new URL(window.location.href);
+
+            const params = new URLSearchParams(urlObj.search);
+
+            sessionId = params.get('sessionId');
+
+            const path = window.location.pathname;
+
+
+            let encodedSessionId = encodeURIComponent(sessionId);
+
+            ws_uri += "//" + loc.host + "/api/v1/ssh/terminal/subscribe?sessionId="  + encodedSessionId;
+
+
+
+            function heartbeat() {
+
+                if (!connection) return;
+
+                if (connection.readyState !== 1) return;
+
+
+                const auditLog = new proto.io.sentrius.protobuf.TerminalMessage();
+                auditLog.setType(proto.io.sentrius.protobuf.MessageType.HEARTBEAT);
+
+                // Serialize the message to binary
+                const binaryData = auditLog.serializeBinary();
+                const base64Message = btoa(String.fromCharCode(...binaryData));
+                connection.send(base64Message);
+
+                // Set heartbeat interval 10,000 ms
+                setTimeout(heartbeat, 5000);
+            };
+
+            function connect() {
+                connection = new SockJS(ws_uri);
+                // Register websocket heartbeat
+                connection.onopen = function (e) {
+                    heartbeat();
+                };
+
+                connection.onclose = function (e) {
+                    console.trace();
+                    console.log("Repopening");
+                    connect();
+                };
+
+                // Log errors
+                connection.onerror = function (error) {
+                    console.trace();
+                };
+
+
+                connection.onmessage = function (e) {
+                    try {
+                        const binaryMessage = Uint8Array.from(atob(e.data), c => c.charCodeAt(0));
+                        try {
+                            const deserializedAuditLog = proto.io.sentrius.protobuf.TerminalMessage.deserializeBinary(binaryMessage);
+                            if (!deserializedAuditLog) {
+                                console.warn("Malformed message received");
+                                return;
+                            }
+                            if (deserializedAuditLog.getType() == proto.io.sentrius.protobuf.MessageType.USER_DATA) {
+
+                                const alertWarn = document.getElementById("alertWarn");
+                                if (!deserializedAuditLog.getTrigger() || deserializedAuditLog.getTrigger() == proto.io.sentrius.protobuf.TriggerAction.NO_ACTION) {
+                                    console.log("only command");
+                                    if (!deserializedAuditLog.getCommand()) {
+                                        console.warn("No content message     ");
+                                        return;
+                                    }
+                                    if (!term) {
+
+                                        createTermMap(0, deserializedAuditLog.getCommand());
+                                    } else {
+
+                                        term.write(deserializedAuditLog.getCommand());
+                                    }
+
+                                } else {
+
+                                    if (alertWarn) {
+                                        const triggerAction = deserializedAuditLog.getTrigger();
+                                        const description = triggerAction.getDescription();
+                                        if (deserializedAuditLog.getType() ==
+                                            proto.io.sentrius.protobuf.MessageType.PERSISTENT_MESSAGE ||
+                                            triggerAction.getAction() ==
+                                            proto.io.sentrius.protobuf.TriggerAction.PERSISTENT_MESSAGE) {
+                                            console.log("persistent message");
+                                            persistentMessage = description;
+                                            showWarningStatus(description);
+                                        } else if (deserializedAuditLog.getType() ==
+                                            proto.io.sentrius.protobuf.MessageType.PROMPT_DATA) {
+                                            console.log("question is" + deserializedAuditLog.getPrompt());
+                                            persistentMessage = description;
+                                            showWarningStatus(description);
+                                            promptQuestion(deserializedAuditLog.getPrompt());
+
+                                        } else {
+                                            console.log("non-persistent message " + description + " " + triggerAction.getAction());
+                                            console.log("is no action " + (triggerAction.getAction() ==
+                                                proto.io.sentrius.protobuf.TriggerAction.NO_ACTION));
+                                            //alertWarn.textContent = description || persistentMessage || "";
+                                            if (description) {
+                                                if (triggerAction.getAction() == proto.io.sentrius.protobuf.TriggerAction.WARN_ACTION) {
+                                                    showWarningStatus(description);
+                                                } else {
+                                                    showStatusBar(description);
+                                                }
+                                            }
+                                        }
+                                        // Use textContent instead of innerHTML
+                                    }
+                                    /* if (json.hasOwnProperty("action")){
+                                     document.getElementById("alertWarn").innerHTML = json.description;
+                                 }
+                                 else if (json.hasOwnProperty("persistentMessage")){
+                                     persistentMessage = json.description;
+                                     document.getElementById("alertWarn").innerHTML = json.description;
+                                 }*
+
+                                 */
+                                }
+                            } else if (deserializedAuditLog.getType() == proto.io.sentrius.protobuf.MessageType.SESSION_DATA) {
+                                if (deserializedAuditLog.getTrigger()) {
+                                    const triggerAction = deserializedAuditLog.getTrigger();
+                                    const description = triggerAction.getDescription();
+                                    const overlay = document.getElementById("overlay");
+
+                                    // Function to show the spinner
+                                    function showSpinner() {
+                                        overlay.classList.remove("hidden");
+                                    }
+
+                                    // Function to hide the spinner
+                                    function hideSpinner() {
+                                        overlay.classList.add("hidden");
+                                    }
+
+                                    overlay.innerText = description;
+
+
+                                    if (triggerAction.getAction() == proto.io.sentrius.protobuf.TriggerAction.JIT_ACTION) {
+                                        showSpinner();
+                                    } else {
+                                        hideSpinner();
+                                        if (triggerAction.getAction() == proto.io.sentrius.protobuf.TriggerAction.WARN_ACTION) {
+                                            console.log("WARN_ACTION");
+                                            if (description) {
+                                                console.log("WARN_ACTION " + description);
+                                                showWarningStatus(description);
+                                            }
+                                        }
+                                    }
+
+                                }
+                            } else if (deserializedAuditLog.getType() ==
+                                proto.io.sentrius.protobuf.MessageType.PROMPT_DATA) {
+                                console.log("question");
+                                const triggerAction = deserializedAuditLog.getTrigger();
+                                const description = triggerAction.getDescription();
+                                console.log("question is" + deserializedAuditLog.getPrompt());
+                                persistentMessage = description;
+                                showWarningStatus(description);
+                                promptQuestion(deserializedAuditLog.getPrompt());
+
+                            } else {
+                                console.warn("Unknown message type received:", deserializedAuditLog.getType());
+                            }
+                            // Proceed with normal processing...
+                        } catch (error) {
+                            console.error("Failed to deserialize message:", error);
+                        }
+
+
+                    } catch (error) {
+                        console.error("Failed to deserialize Protocol Buffer message:", error);
+                        console.error("Error details:", {
+                            message: error.message,
+                            stack: error.stack,
+                            name: error.name,
+                            binaryMessage: binaryMessage, // Log the problematic Uint8Array
+                            base64Data: e.data            // Log the original base64 data
+                        });
+                        return; // Exit if decoding failed
+                    }
+                };
+
+            }
+
+            connect();
+
+            function createTermMap(id, output) {
+
+                var  CUSTOM_THEME =
+                    {
+                        [# th:if= "${userTheme != null && userTheme.bg != null}"]
+                background: [[${userTheme.bg}]],
+                    [/]
+                        [# th:if= "${userTheme != null && userTheme.bg != null}"]
+                foreground: [[${userTheme.fg}]],
+                    cursor: [[${userTheme.fg}]],
+                    cursorAccent: [[${userTheme.fg}]],
+                    [/]
+                        [# th:if= "${userTheme !=null && userTheme.colors != null && userTheme.colors.length == 16}"]
+                black: [[${userTheme.colors[0]}]],
+                    red: [[${userTheme.colors[1]}]],
+                    green: [[${userTheme.colors[2]}]],
+                    yellow: [[${userTheme.colors[3]}]],
+                    blue: [[${userTheme.colors[4]}]],
+                    magenta: [[${userTheme.colors[5]}]],
+                    cyan: [[${userTheme.colors[6]}]],
+                    white: [[${userTheme.colors[7]}]],
+                    brightBlack: [[${userTheme.colors[8]}]],
+                    brightRed: [[${userTheme.colors[9]}]],
+                    brightGreen: [[${userTheme.colors[10]}]],
+                    brightYellow: [[${userTheme.colors[11]}]],
+                    brightBlue: [[${userTheme.colors[12]}]],
+                    brightMagenta: [[${userTheme.colors[13]}]],
+                    brightCyan: [[${userTheme.colors[14]}]],
+                    brightWhite: [[${userTheme.colors[15]}]]
+                    [/]
+            };
+
+                term = new Terminal({
+                    //fontSize: 14,
+                    'theme': CUSTOM_THEME,
+//                    'cursorStyle' : 'bar',
+//                    'cursorWidth' : '10',
+                    //                 'cursorInactiveStyle' : 'bar',
+                    //fontFamily: 'DejaVu Sans Mono, Liberation Mono, monospace'
+                });
+
+                fitMap[id] = new FitAddon.FitAddon()
+                term.loadAddon(fitMap[id])
+
+                term.onKey(({ key }) => {
+                    if (key === '/') {
+                        // Handle the keypress within the terminal
+                        console.log('Slash key pressed');
+                    }
+                });
+                term.open($("#sentrius_term_" + id).find('.output').get(0));
+
+                //term.setOption('logLevel', 'debug');
+                term.write(output);
+                fitMap[id].fit();
+
+
+                notifySize();
+
+            }
+
+
+            function setTerminalEvents(element, id) {
+                // Ensure `element` is a jQuery object
+                const $element = $(element);
+                /*
+                $element.mousedown(function (event) {
+                    event.preventDefault(); // Prevent default mousedown behavior
+
+                    // Dynamically get the correct helper textarea for the given terminal instance
+                    const helperTextarea = document.querySelector(`#sentrius_term_${id} .xterm-helper-textarea`);
+
+                    if (helperTextarea) {
+                        helperTextarea.focus(); // Explicitly focus the terminal input field
+                    } else {
+                        console.warn("Helper textarea not found for terminal ID:", id);
+                    }
+
+                    console.log("mousedown on terminal", id);
+                });
+                */
+
+            }
+
+            //returns div for newly created terminal element
+            function createTermElement(instanceId, hostId, displayName) {
+                var instance =
+                    "<div id=\"sentrius_term_" + instanceId + "\"  class=\"sentrius_term_active\">"
+                    //                    + "<h6 class=\"term-header\">" + displayName + "</h6>"
+                    //                    + "<div class=\"term\">"
+                    + "<div id=\"output_" + instanceId + "\" class=\"output\"></div>"
+                //                  + "</div>"
+                return instance;
+            }
+
+            //returns next instance id
+            function getNextInstanceId() {
+                var newInstanceId = 1;
+
+                for (var i = 1; i <= $('.sentrius_term').length; i++) {
+
+                    if ($("#sentrius_term_" + i).length === 0) {
+                        newInstanceId = i;
+                        break;
+                    }
+                    newInstanceId++;
+                }
+                return newInstanceId;
+            }
+
+            //set connected systems
+            //"#termwrapper") =
+            $(createTermElement(0, 0, [[${currentSystemStatus.displayName}]])).replaceAll(".termwrapper");
+            setTerminalEvents($("#sentrius_term_" + 0),0);
+
+            var y_offset = $('.sentrius_term:first').innerHeight() - $('.sentrius_term').find(".output:first").innerHeight();
+            [/]
+
+        });
+
+
+        /*]]>*/
+    </script>
+
+    <style>
+
+        #popup-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1075;
+        }
+
+        #overlay-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 1074;
+        }
+
+        #response-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        #notification {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(255, 223, 186, 0.9);
+            color: #333;
+            text-align: center;
+            padding: 10px;
+            font-size: 16px;
+            display: none;
+            z-index: 1050;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar {
+            z-index: 1040; /* Navbar remains below the notification */
+        }
+
+        .termwrapper {
+            position: absolute;
+            top: 60px; /* Adjust based on navbar height */
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+        .term-container {
+            width: 100%;
+            margin: 0;
+        }
+
+        .notification {
+            width: 100%;
+            background: red;
+            color: white
+        }
+
+        .top {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 999;
+            width: 100%;
+            height: 23px;
+        }
+
+        .term {
+            background: [[${userTheme.bg}]];
+        }
+
+    </style>
+    <title>[[${systemOptions.systemLogoName}]] - Terminals</title>
+</head>
+<body>
+<div class="modal fade" id="llmModal" tabindex="-1" aria-labelledby="llmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="llmModalLabel">Question</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="question-text">What is your favorite color?</p>
+                <input type="text" id="response-input" class="form-control" placeholder="Type your answer here...">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="submit-button">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="overlay" class="overlay hidden">
+    <div class="spinner"></div>
+    <p class="overlay-message">Please wait while the session is being prepared...</p>
+</div>
+<div id="notification" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: rgba(255, 223, 186, 0.9);
+    color: #333;
+    text-align: center;
+    padding: 10px;
+    font-size: 16px;
+    display: none;
+    z-index: 1050;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);">
+    This command requires approval
+</div>
+
+<div class="alert alert-primary" style="display:none; margin-top: 10px" role="alert" id="alertNotification">
+    <span id="alertMessage" th:text="${notification}"></span>
+    <div id="alertMessageId" style="display: none;; margin-top: 10px"></div>
+    <button type="button" class="close" data-dismiss="alertMessage" aria-label="Close" onclick="markNotificationAsSeen()">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+
+<div class="navbar navbar-dark fixed-top navbar-expand-md" role="navigation" xmlns:th="http://www.thymeleaf.org">
+    <div class="container bg-dark px-3 py-2" >
+        <!-- Brand Logo -->
+        <a class="navbar-brand" href="#" style="padding-left: 45px;">
+            <a href="/sso/v1/dashboard" class="nav-link">
+                <img th:src="${systemOptions.systemLogoPathSmall}" alt="Logo" class="nav-img">
+                [[${systemOptions.systemLogoName}]]
+            </a>
+        </a>
+
+        <!-- Toggler for Mobile -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Navbar Links -->
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                <li class="nav-item">
+                    <span id="alertWarn" class="badge text-bg-warning ms-2"></span>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#ztatModal" onclick="refreshAccessTokenTable()">
+                    <span id="badge_ztats" class="badge text-bg-dark">0 Pending Access Tokens</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#sessionChatModal" onclick="toggleChat()">
+                        <span id="session_chat" class="badge text-bg-dark">Session Chat</span>
+                    </a>
+                </li>
+
+            </ul>
+
+            <!-- User Dropdown -->
+            <ul class="navbar-nav mb-2 mb-lg-0">
+                <li class="dropdown nav-item">
+                    <a href="#" class="dropdown-toggle nav-link" data-bs-toggle="dropdown">
+                        <span th:text="${operatingUser.username}"></span>
+                        <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li class="dropdown-item"><a th:href="'/admin/userSettings.ktrl?act=clearbc&_csrf=' + ${session._csrf}">Settings</a></li>
+                        <li class="dropdown-item" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
+                            <a th:href="'/manage/system/settings.ktrl?act=clearbc&_csrf=' + ${session._csrf}">System Settings</a>
+                        </li>
+                        <li class="dropdown-item"><a href="/sso/v1/logout">Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+
+<div class="termwrapper">
+</div>
+<!-- Chat Container -->
+<div id="chat-container">
+    <div id="chat-header" onclick="toggleChat()">Chat <span id="close-chat">✖</span></div>
+    <div id="chat-messages"></div>
+    <input type="text" id="chat-input" placeholder="Type a message..." onkeypress="sendMessage(event)">
+</div>
+<div id="csrf-token" style="display: none;" th:text="${_csrf.token}"></div>
+<div class="modal fade" id="ztatModal" tabindex="-1" aria-labelledby="ztatModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ztatModalLabel">My Access Requests</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table id="ztat-table" class="table table-striped table-bordered">
+                    <thead>
+                    <tr>
+                        <th>Command</th>
+                        <th>Status</th>
+                        <th>Created At</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <!-- Dynamic rows will be added by DataTables -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="assignIncidentModal" tabindex="-1" aria-labelledby="assignIncidentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignIncidentModalLabel">Assign Incident</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="assignIncidentForm">
+                    <input type="hidden" id="ztatId" name="ztatId">
+                    <input type="hidden" id="ticketType" name="ticketType">
+                    <div class="mb-3">
+                        <label for="incidentId" class="form-label">Incident ID</label>
+                        <input type="text" class="form-control" id="incidentId" name="incidentId"
+                               placeholder="Incident ID(JIRA-)" autocomplete="off"
+                               oninput="autocompleteIncident(this.value)" required>
+
+                        <ul class="list-group" id="incidentSuggestions" style="position: absolute; z-index: 1050; width: 100%; display: none;">
+                            <!-- Suggestions will be dynamically added here -->
+                        </ul>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="assignIncident()">Assign</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    var loaded = false;
+
+
+    let timeout = null;
+    const csrfToken = document.getElementById("csrf-token").textContent;
+
+    var loc = window.location, chat_ws_uri;
+    if (loc.protocol === "https:") {
+        chat_ws_uri = "https:";
+    } else {
+        chat_ws_uri = "http:";
+    }
+
+    const urlObj = new URL(window.location.href);
+
+    const params = new URLSearchParams(urlObj.search);
+
+    sessionId = params.get('sessionId');
+
+    const path = window.location.pathname;
+
+
+    let encodedSessionId = encodeURIComponent(sessionId);
+
+
+
+    // Function to append chat messages to the UI
+    function appendToChatWindow(sender, message) {
+        let chatBox = document.getElementById("chat-messages");
+
+        // Create message container
+        let messageDiv = document.createElement("div");
+        messageDiv.classList.add("chat-message");
+
+        // Format message
+        messageDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
+
+        // Append message
+        chatBox.appendChild(messageDiv);
+
+        // Auto-scroll to the latest message
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    chat_ws_uri += "//" + loc.host + "/api/v1/chat/attach/subscribe?sessionId="  + encodedSessionId + "&chatGroupId=0" ;
+
+    function heartbeatChat() {
+
+        if (!chatConnection) return;
+
+        if (chatConnection.readyState !== 1) return;
+
+
+        const auditLog = new proto.io.sentrius.protobuf.ChatMessage();
+        auditLog.setSender("system");
+        auditLog.setMessage("heartbeat");
+
+        // Serialize the message to binary
+        const binaryData = auditLog.serializeBinary();
+        const base64Message = btoa(String.fromCharCode(...binaryData));
+        connection.send(base64Message);
+
+        // Set heartbeat interval 10,000 ms
+        setTimeout(heartbeatChat, 5000);
+    };
+
+    function connectChat() {
+        if (null !== chatConnection) {
+            return;
+        }
+        chatConnection = new SockJS(chat_ws_uri);
+        // Register websocket heartbeat
+        chatConnection.onopen = function (e) {
+            heartbeatChat();
+        };
+
+        chatConnection.onclose = function (e) {
+            console.trace();
+            console.log("Repopening");
+        };
+
+        // Log errors
+        chatConnection.onerror = function (error) {
+            console.trace();
+        };
+
+
+        chatConnection.onmessage = function (e) {
+            try {
+                console.log("got message");
+                const binaryMessage = Uint8Array.from(atob(e.data), c => c.charCodeAt(0));
+                try {
+                    const deserializedAuditLog = proto.io.sentrius.protobuf.ChatMessage.deserializeBinary(binaryMessage);
+                    if (!deserializedAuditLog) {
+                        console.log("Malformed message received");
+                        return;
+                    }
+
+                    console.log("appending");
+                    appendToChatWindow(deserializedAuditLog.getSender(), deserializedAuditLog.getMessage());
+
+                    // Proceed with normal processing...
+                } catch (error) {
+                    console.log("Failed to deserialize message:", error);
+                }
+
+
+            } catch (error) {
+                console.log("Failed to deserialize Protocol Buffer message:", error);
+
+                return; // Exit if decoding failed
+            }
+        };
+
+    }
+
+    connectChat();
+
+    function autocompleteIncident(query) {
+
+        const suggestionsList = document.getElementById('incidentSuggestions');
+        suggestionsList.innerHTML = ''; // Clear previous suggestions
+        suggestionsList.style.display = 'none'; // Hide suggestions if no query
+
+        if (query.length < 3) return; // Start autocomplete after 3 characters
+
+        // Debounce to avoid excessive API calls
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            fetch(`/api/v1/ticketing/incidents/search?query=${encodeURIComponent(query)}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length === 0) return;
+
+                    // Populate suggestions
+                    data.forEach(incident => {
+                        const listItem = document.createElement('li');
+                        listItem.className = 'list-group-item list-group-item-action';
+                        listItem.textContent = `${incident.id} - ${incident.title}`;
+                        listItem.onclick = () => selectIncident(incident.id, incident.type);
+                        suggestionsList.appendChild(listItem);
+                    });
+
+                    suggestionsList.style.display = 'block'; // Show suggestions
+                })
+                .catch(error => console.error('Error fetching incident suggestions:', error));
+        }, 300); // Delay for debouncing
+    }
+
+    function selectIncident(incidentId, type) {
+        document.getElementById('incidentId').value = incidentId; // Set selected value
+        document.getElementById('incidentSuggestions').style.display = 'none'; // Hide suggestions
+        document.getElementById('ticketType').value = type; // Set ticket type
+    }
+
+
+    function assignIncident() {
+
+        const ztatId = document.getElementById('ztatId').value;
+        const ticketType = document.getElementById('ticketType').value;
+        const incidentId = document.getElementById('incidentId').value;
+
+        if (!incidentId) {
+            alert('Please enter an Incident ID.');
+            return;
+        }
+        const urlObj = new URL(window.location.href);
+
+        const params = new URLSearchParams(urlObj.search);
+        const mySessionId = params.get('sessionId');
+        fetch('/api/v1/ticketing/assign/' + ticketType, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ ztatId: ztatId, incidentId: incidentId, sessionId: mySessionId})
+        })
+            .then(response => {
+                if (response.ok) {
+
+                    $('#ztat-table').DataTable().ajax.reload(); // Refresh the DataTable
+                    const assignIncidentModal = bootstrap.Modal.getInstance(document.getElementById('assignIncidentModal'));
+                    assignIncidentModal.hide(); // Hide the modal
+
+                    const ztatModalRef = bootstrap.Modal.getInstance(document.getElementById('ztatModal'));
+                    if (ztatModalRef) {
+                        ztatModalRef.hide(); // Hide the JIT modal
+                    }
+                    updateJitBadge(null);
+                    setTimeout(() => {
+                        showStatusBar('Incident assigned successfully. Your JIT has been auto-approved. Please rerun your command');
+                    }, 250); // Delay the alert to ensure the modal is hidden
+                } else {
+                    alert('Failed to assign incident.');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+
+    function revokeJIT(id){
+
+        $.ajax({
+            url: '/api/v1/zerotrust/accesstoken/terminal/revoke?ztatId=' + id,
+            type: 'GET',
+            headers: {
+                'content-type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            success: function(data) {
+                refreshAccessTokenTable();
+            },
+            error: function(xhr, status, error) {
+                console.error("Failed to revoke JIT request:", error);
+            }
+        });
+    }
+
+    function openAssignIncidentModal(ztatId) {
+        // Populate the hidden input field with the JIT ID
+        document.getElementById('ztatId').value = ztatId;
+
+        // Show the modal
+        const assignIncidentModal = new bootstrap.Modal(document.getElementById('assignIncidentModal'));
+        assignIncidentModal.show();
+    }
+    function enableSessionChat() {
+        connectChat();
+
+    }
+
+    function refreshAccessTokenTable() {
+        const ztatTable = $('#ztat-table').DataTable();
+        const allowTicket = `[[${enclaveConfiguration.approveViaTicket}]]`;
+        if ($.fn.dataTable.isDataTable('#ztat-table')) {
+            // Reload the existing table
+            ztatTable.destroy();
+        }
+        // Initialize the DataTable if not already initialized
+        $('#ztat-table').DataTable({
+            ajax: {
+                url: '/api/v1/zerotrust/accesstoken/my/current', // API endpoint to fetch JIT requests
+                dataSrc: '', // Adjust if the data is nested (e.g., 'data' for { data: [...] })
+            },
+            columns: [
+                { data: 'command' },
+                { data: 'status' },
+                {
+                    data: 'lastUpdated',
+                    render: function(data) {
+                        return new Date(data).toLocaleString(); // Format the date
+                    }
+                },
+                {
+                    data: 'id',
+                    render: function(data, type, row) {
+                        // Create dynamic action buttons for each row
+                        let revokeButton = `<button class="btn btn-danger btn-sm" onclick="revokeJIT('${data}')">Revoke</button>`;
+                        let jiraInput = '';
+                        if (allowTicket) {
+                            jiraInput = `<button class="btn btn-primary btn-sm" onclick="openAssignIncidentModal('${data}')">Assign Incident</button>`;
+                        }
+                        return `${revokeButton} ${jiraInput}`;
+                    }
+                }
+            ],
+            processing: true, // Show a processing indicator
+            serverSide: false, // Enable server-side processing if needed
+            paging: true, // Pagination enabled
+            autoWidth: false, // Avoid auto-adjusting column widths
+            responsive: true // Enable responsiveness
+        });
+
+
+    }
+</script>
+</body>
+
+</html>

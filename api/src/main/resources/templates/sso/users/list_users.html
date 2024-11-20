@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - List Users</title>
+    <style>
+        .grid-stack-item-content {
+            background-color: #405d80;
+            color: #fff;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .grid-stack-item-content:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<script>
+    $(document).ready(function() {
+        var cmu = [[${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_USERS')}]];
+        $('#user-table').DataTable({
+            ajax: {
+                url: '/api/v1/users/list', // list
+                dataSrc: '', // Specify the property where the data is located (e.g. use 'data' if response has a "data" field)
+            },
+            columns: [
+                { data: 'name' },
+                { data: 'username' },
+                { data: 'emailAddress' },
+                {
+                    data: 'authorizationType',
+                    render: function(data, type, row) {
+                        return `<span  class=\"badge text-bg-info ms-2\">${data.userTypeName}</span>`;
+                    }
+                },
+                {
+                    data: 'userId',
+                    render: function(data, type, row) {
+                        var myId = encodeURIComponent(data);
+                        var actions = "";
+                        if (cmu){
+                            actions = `<a href="/sso/v1/users/lock/${myId}" class="btn btn-primary" >Lock</a> &nbsp; | &nbsp;`;
+                            actions += `<a href="/sso/v1/users/edit?userId=${myId}" class="btn btn-primary" >Edit</a> &nbsp; | &nbsp;`;
+                            actions += `<a href="/api/v1/users/delete?userId=${myId}" class="btn btn-primary" >Delete</a>`;
+                        }
+                        return actions;
+                    }
+                }
+            ]
+        });
+
+        $('#user-types-table').DataTable({
+            ajax: {
+                url: '/api/v1/users/types/list', // list
+                dataSrc: '', // Specify the property where the data is located (e.g. use 'data' if response has a "data" field)
+            },
+            columns: [
+                { data: 'userTypeName' },
+                {
+                    data: 'accessSet',
+                    render: function(data, type, row) {
+                        if (Array.isArray(data)) {
+                            return data.map(item => `<span class="badge text-bg-info ms-2">${item}</span>`).join(' ');
+                        } else {
+                            // Fallback for unexpected data format
+                            return `<span class="badge text-bg-info ms-2">${data}</span>`;
+                        }
+                    }
+                },
+                {
+                    data: 'dtoId',
+                    render: function(data, type, row) {
+                        var actions = "";
+                        if (cmu && data){
+                        var myId = encodeURIComponent(data);
+                            actions = `<a href="/api/v1/users/types/delete?id=${myId}" class="btn btn-primary" >Delete</a>`;
+                        }
+                        return actions;
+                    }
+                }
+            ]
+        });
+    });
+</script>
+
+
+<body>
+
+<div th:replace="fragments/add_user"></div>
+<div th:replace="fragments/add_type"></div>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+                <div class="main-content">
+
+
+                    <div class="navbar navbar-dark fixed-top navbar-expand-md" role="navigation" xmlns:th="http://www.thymeleaf.org">
+                        <div class="container bg-dark px-3 py-2" >
+                            <!-- Brand Logo -->
+                            <a class="navbar-brand" href="#" style="padding-left: 45px;">
+                                <a href="/sso/v1/dashboard" class="nav-link">
+                                    <img th:src="${systemOptions.systemLogoPathSmall}" alt="Logo" class="nav-img">
+                                </a>
+                            </a>
+
+                            <!-- Toggler for Mobile -->
+                            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                                <span class="navbar-toggler-icon"></span>
+                            </button>
+
+                            <!-- Navbar Links -->
+                            <div class="collapse navbar-collapse" id="navbarCollapse">
+                                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                                    <li class="nav-item">
+                                        <span id="alertWarn" class="badge text-bg-warning ms-2"></span>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="#" class="nav-link" data-bs-toggle="modal"
+                                           data-bs-target="#userFormModal"
+                                           th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_EDIT_USERS')}">
+                                            <span id="Add Hosts" class="badge text-bg-dark">Add User</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="#" class="nav-link" data-bs-toggle="modal"
+                                           data-bs-target="#userTypeFormModal"
+                                           th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_USERS')}">
+                                            <span id="AddType" class="badge text-bg-dark">Add Type</span>
+                                        </a>
+                                    </li>
+
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div th:replace="~{fragments/alerts}"></div>
+                    <div  th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_USERS')}">
+    <h3>User Types</h3>
+    <table id="user-types-table" class="display" style="width:100%">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Access Set</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- Data will be dynamically loaded here -->
+        </tbody>
+    </table>
+    </div>
+    <h3>Users</h3>
+    <table id="user-table" class="display" style="width:100%">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Username</th>
+            <th>Email Address</th>
+            <th>User Type</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- Data will be dynamically loaded here -->
+        </tbody>
+    </table>
+
+
+</div>
+</div>
+</div>
+</div>
+<script type="module" th:src="@{/js/add_user.js}" defer></script>
+<script type="module" th:src="@{/js/add_type.js}" defer></script>
+</body>
+
+</html>

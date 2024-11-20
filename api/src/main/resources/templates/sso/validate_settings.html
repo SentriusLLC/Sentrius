@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Validate YAML Configuration</title>
+    <style>
+
+        .form-container {
+            max-width: 600px;
+            margin: 80px auto;
+            background: #1e1e1e; /* Slightly lighter dark for contrast */
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+        .form-title {
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 1.5rem;
+            color: #f8f9fa;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            color: #eaeaea;
+        }
+        th, td {
+            padding: 10px;
+            vertical-align: middle;
+        }
+        th {
+            text-align: left;
+            font-weight: bold;
+            background-color: #2b2b2b; /* Darker for table header */
+            color: #f8f9fa;
+        }
+        td {
+            border-bottom: 1px solid #3c3c3c;
+        }
+        input.form-control {
+            background-color: #2b2b2b; /* Dark input background */
+            border: 1px solid #444;
+            color: #eaeaea; /* Light text color */
+        }
+        input.form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); /* Bootstrap focus shadow */
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 10px 15px;
+            background-color: #007bff; /* Primary button color */
+            border: none;
+            color: white;
+            font-weight: bold;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .submit-btn:hover {
+            background-color: #0056b3;
+        }
+        .info-icon {
+            color: #007bff;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body >
+<div th:replace="fragments/upload_config"></div>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div class="navbar navbar-dark fixed-top navbar-expand-md" role="navigation" xmlns:th="http://www.thymeleaf.org">
+                    <div class="container bg-dark px-3 py-2" >
+                        <!-- Brand Logo -->
+                        <a class="navbar-brand" href="#" style="padding-left: 45px;">
+                            <a href="/sso/v1/dashboard" class="nav-link">
+                                <img th:src="${systemOptions.systemLogoPathSmall}" alt="Logo" class="nav-img">
+                            </a>
+                        </a>
+
+                        <!-- Toggler for Mobile -->
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+
+                        <!-- Navbar Links -->
+                        <div class="collapse navbar-collapse" id="navbarCollapse">
+                            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                                <li class="nav-item">
+                                    <span id="alertWarn" class="badge text-bg-warning ms-2"></span>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="#" class="nav-link" data-bs-toggle="modal"
+                                       data-bs-target="#uploadConfigFormModal"
+                                       th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
+                                        <span id="Add Hosts" class="badge text-bg-dark">Upload Configuration</span>
+                                    </a>
+                                </li>
+
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div th:replace="~{fragments/alerts}"></div>
+<div class="form-container" th:if="${sideEffects != null && !sideEffects.empty}">
+    <form id="applySettingsForm" method="post" autocomplete="off">
+        <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+        <input type="hidden" name="id" th:value="${id}"/>
+        <div class="form-title">Changes to be made</div>
+
+        <div class="table-container">
+            <table th:if="${sideEffects != null && !sideEffects.empty}">
+                <thead>
+                <tr>
+                    <th>Side Effect</th>
+                    <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <template th:each="s : ${sideEffects}" th:remove="tag">
+                    <tr>
+                        <td>
+                            <div th:text="${s.type}"></div>
+                        </td>
+                        <td>
+                            <div th:text="${s.sideEffectDescription}"></div>
+                        </td>
+                    </tr>
+                </template>
+                </tbody>
+            </table>
+
+        </div>
+
+        <div class="form-footer mt-4">
+            <button type="submit" class="submit-btn">Apply</button>
+        </div>
+    </form>
+</div>
+                <div class="form-container" th:if="${sideEffects == null || sideEffects.empty}"><a
+                        href="/sso/v1/system/settings">All Configurations Applied. Return to System Settings</a> </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="module" th:src="@{/js/upload_config.js}" defer></script>
+</body>
+</html>

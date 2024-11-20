@@ -1,0 +1,41 @@
+{
+  "realm": "sentrius",
+  "enabled": true,
+  "clients": [
+    {
+      "clientId": "sentrius-api",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0",
+      "redirectUris": ["/*"],
+      "protocol": "openid-connect"
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "Default user role"
+      },
+      {
+        "name": "admin",
+        "description": "Administrator role"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "testuser",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["user"]
+    }
+  ]
+}

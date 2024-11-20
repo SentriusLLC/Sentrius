@@ -1,0 +1,30 @@
+
+
+<a href="/sso/v1/users/list" class="card-link">
+    <div id="users-card" class="card" style="display: none">
+        <div class="card-image-container">
+            <img src="/images/users_medium.png" alt="Users Icon" class="card-image">
+        </div>
+        <div class="card-content">
+            <h3 class="card-title">Users</h3>
+            <div class="card-stats">
+                <div class="card-stat">
+                    <span>Subscribed Users:</span>
+                    <span id="total-user-count" class="stat-value">0</span>
+                </div>
+                <div class="card-stat">
+                    <span>Open Connections:</span>
+                    <span id="open-cxn-count" class="stat-value">18</span>
+                </div>
+            </div>
+            <div class="card-buttons">
+                <a href="#" class="btn btn-primary" data-bs-toggle="modal"
+                                             data-bs-target="#securityGroupModal">Add Group</a>
+                <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userFormModal">Add User
+                </a>
+                <a href="/sso/v1/sessions/audit/list" class="btn btn-primary" >Audit User
+                </a>
+            </div>
+        </div>
+    </div>
+</a>

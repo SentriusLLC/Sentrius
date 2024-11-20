@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Add Integrations</title>
+
+    <style>
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .sm\\:grid-cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .lg\\:grid-cols-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .xl\\:grid-cols-4 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            transition: background-color 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .card:hover {
+            background-color: #f9f9f9;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .card-description {
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .icon {
+            font-size: 1.25rem;
+            color: #888;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+                <div class="container">
+                    <h1>Set Up Jira Integration</h1>
+                    <form th:action="@{/api/v1/integrations/jira/add}" th:object="${jiraIntegration}" method="post">
+                        <div class="form-group">
+                            <label for="baseUrl">Jira Base URL</label>
+                            <input type="text" id="baseUrl" name="baseUrl" class="form-control"
+                                   th:field="*{baseUrl}" placeholder="https://your-domain.atlassian.net" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="name">Integration Name</label>
+                            <input type="text" id="name" name="name" class="form-control"
+                                   th:field="*{name}" placeholder="Enter your Integration Name" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="username">Jira Username</label>
+                            <input type="text" id="username" name="username" class="form-control"
+                                   th:field="*{username}" placeholder="Enter your Jira username" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="apiToken">Jira API Token</label>
+                            <input type="password" id="apiToken" name="apiToken" class="form-control"
+                                   th:field="*{apiToken}" placeholder="Enter your Jira API token" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="projectKey">Jira Project Key</label>
+                            <input type="text" id="projectKey" name="projectKey" class="form-control"
+                                   th:field="*{projectKey}" placeholder="Enter your Jira project key" required>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Save Integration</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
+

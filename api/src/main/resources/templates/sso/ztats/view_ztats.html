@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta th:replace="~{fragments/header}" />
+    <title>[[${systemOptions.systemLogoName}]] - Trust AT (TAT) Management</title>
+
+    <!-- Styles -->
+    <style>
+        body {
+            background-color: #121212;
+            color: #eaeaea;
+        }
+
+        .container {
+            margin-top: 20px;
+        }
+
+        .toast-header {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #f8f9fa;
+        }
+
+        .modal-content {
+            background-color: #1e1e1e;
+            color: #eaeaea;
+        }
+
+        .btn-secondary, .btn-secondary, .btn-danger {
+            transition: background-color 0.3s ease;
+        }
+
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: #2b2b2b;
+        }
+
+        .table-striped tbody tr:hover {
+            background-color: #3a3a3a;
+        }
+
+        .icon-btn {
+            border: none;
+            background: transparent;
+            color: #eaeaea;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        .icon-btn:hover {
+            color: #007bff;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
+                <div class="container-fluid">
+                    <h2 class="toast-header">Trust AT (TAT) Management</h2>
+
+                    <!-- Tabs for Open, Approved, and Denied TATs -->
+                    <ul class="nav nav-tabs" id="tatTabs">
+                        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#openTats">Open TATs</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#approvedTats">Approved TATs</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#deniedTats">Denied TATs</a></li>
+                    </ul>
+
+                    <div class="tab-content mt-3">
+                        <!-- Open TATs -->
+                        <div id="openTats" class="tab-pane fade show active">
+                            <ul class="nav nav-pills mb-3">
+                                <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#open-terminal">Terminal TATs</a></li>
+                                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#open-ops">Operational TATs</a></li>
+                            </ul>
+                            <div class="tab-content">
+                                <!-- Terminal TATs -->
+                                <div id="open-terminal" class="tab-pane fade show active">
+                                    <table id="open-terminal-table" class="display">
+                                        <thead>
+                                        <tr><th>Operation</th><th>User</th><th>System</th><th>Actions</th></tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr th:each="s : ${openTerminalTats}">
+                                            <td th:text="${s.command}"></td>
+                                            <td th:text="${s.userName}"></td>
+                                            <td th:text="${s.hostName}"></td>
+                                            <td>
+                                                <button th:id="'app_btn_' + ${s.id}" class="btn-secondary app_btn"
+                                                        th:if="${s.canApprove}">Approve</button>
+                                                <button th:id="'den_btn_' + ${s.id}" class="btn-secondary den_btn"
+                                                        th:if="${s.canDeny}">Deny</button>
+                                                <button th:id="'rev_btn_' + ${s.id}" class="btn-secondary rev_btn"
+                                                        th:if="${s.isCurrentUser}">Revoke</button>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Operational TATs -->
+                                <div id="open-ops" class="tab-pane fade">
+                                    <table id="open-ops-table" class="display">
+                                        <thead>
+                                        <tr><th>Operation</th><th>User</th><th>Actions</th></tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr th:each="s : ${openOpsTats}">
+                                            <td th:text="${s.summary}"></td>
+                                            <td th:text="${s.userName}"></td>
+                                            <td>
+                                                <button th:id="'ops_app_btn_' + ${s.id}"
+                                                        class="btn-secondary ops_app_btn" th:if="${s.canApprove}">Approve
+                                                </button>
+                                                <button th:id="'ops_den_btn_' + ${s.id}"
+                                                        class="btn-secondary ops_den_btn" th:if="${s.canDeny}">Deny
+                                                </button>
+                                                <button th:id="'ops_rev_btn_' + ${s.id}"
+                                                        class="btn-secondary ops_rev_btn"
+                                                        th:if="${s.isCurrentUser}">Revoke
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Approved & Denied TATs - Same Structure -->
+                        <div id="approvedTats" class="tab-pane fade">
+                            <div id="approvedtats-table" class="tab-pane fade show active">
+                                <ul class="nav nav-pills mb-3">
+                                    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#open-terminal">Terminal TATs</a></li>
+                                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#open-ops">Operational TATs</a></li>
+                                </ul>
+                                <div class="tab-content">
+                                    <!-- Terminal TATs -->
+                                    <div id="approved-terminal" class="tab-pane fade show active">
+                                        <table id="approved-terminal-table" class="display">
+                                            <thead>
+                                            <tr><th>Operation</th><th>User</th><th>System</th><th>Uses
+                                                Remaining</th><th>Actions</th></tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr th:each="s : ${approvedTerminalTats}">
+                                                <td th:text="${s.command}"></td>
+                                                <td th:text="${s.userName}"></td>
+                                                <td th:text="${s.hostName}"></td>
+                                                <td th:text="${s.usesRemaining}"></td>
+                                                <td>
+                                                    <button th:id="'den_btn_' + ${s.id}" class="btn-secondary den_btn"
+                                                            th:if="${s.canDeny}">Deny</button>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <!-- Operational TATs -->
+                                    <div id="approved-ops" class="tab-pane fade">
+                                        <table id="approved-ops-table" class="display">
+                                            <thead>
+                                            <tr><th>Operation</th><th>User</th><th>Uses Remaining</th><th>Actions
+                                            </th></tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr th:each="s : ${approvedOpsTats}">
+                                                <td th:text="${s.summary}"></td>
+                                                <td th:text="${s.userName}"></td>
+                                                <td th:text="${s.usesRemaining}"></td>
+                                                <td>
+                                                    <button th:id="'ops_den_btn_' + ${s.id}"
+                                                            class="btn-secondary ops_den_btn" th:if="${s.canDeny}">Deny
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                </div>
+
+
+                    </div>
+                </div>
+
+                        <!-- Denied TATs -->
+                        <div id="deniedTats" class="tab-pane fade">
+                            <div id="denied-table" class="tab-pane fade show active">
+                                <ul class="nav nav-pills mb-3">
+                                    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#open-terminal">Terminal TATs</a></li>
+                                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#open-ops">Operational TATs</a></li>
+                                </ul>
+                                <div class="tab-content">
+                                    <!-- Terminal TATs -->
+                                    <div id="denied-terminal" class="tab-pane fade show active">
+                                        <table id="denied-terminal-table" class="display">
+                                            <thead>
+                                            <tr><th>Operation</th><th>User</th><th>System</th><th>Actions</th></tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr th:each="s : ${deniedTerminalTats}">
+                                                <td th:text="${s.command}"></td>
+                                                <td th:text="${s.userName}"></td>
+                                                <td th:text="${s.hostName}"></td>
+                                                <td>
+                                                    <button th:id="'den_app_' + ${s.id}" class="btn-secondary app_btn"
+                                                            th:if="${s.canApprove}">Approve</button>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <!-- Operational TATs -->
+                                    <div id="denied-ops" class="tab-pane fade">
+                                        <table id="denied-ops-table" class="display">
+                                            <thead>
+                                            <tr><th>Operation</th><th>User</th><th>Actions</th></tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr th:each="s : ${deniedOpsTats}">
+                                                <td th:text="${s.summary}"></td>
+                                                <td th:text="${s.userName}"></td>
+                                                <td>
+                                                    <button th:id="'ops_app_btn_' + ${s.id}"
+                                                            class="btn-secondary ops_app_btn"
+                                                            th:if="${s.canApprove}">Deny
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                </div>
+
+
+                            </div>
+                        </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DataTables Initialization -->
+<script>
+    $(document).ready(function () {
+        $('#open-terminal-table, #open-ops-table, #approved-terminal-table, #approved-ops-table, #denied-terminal-table, #denied-ops-table').DataTable();
+
+        $(".app_btn").click(function () {
+            let id = this.id.split("_").pop();
+            $.get('/api/v1/zerotrust/accesstoken/terminal/approve?ztatId=' + id, {}, function() {
+                location.reload(); });
+        });
+
+        $(".den_btn").click(function () {
+            let id = this.id.split("_").pop();
+            $.get('/api/v1/zerotrust/accesstoken/terminal/deny?ztatId='+ id, {}, function() { location.reload(); });
+        });
+
+        $(".rev_btn").click(function () {
+            let id = this.id.split("_").pop();
+            $.get('/api/v1/zerotrust/accesstoken/terminal/revoke?ztatId='+ id, {}, function() { location.reload(); });
+        });
+
+        $(".ops_app_btn").click(function () {
+            let id = this.id.split("_").pop();
+            $.get('/api/v1/zerotrust/accesstoken/ops/approve?ztatId='+ id, {}, function() { location.reload(); });
+        });
+
+        $(".ops_den_btn").click(function () {
+            let id = this.id.split("_").pop();
+            $.get('/api/v1/zerotrust/accesstoken/ops/deny?ztatId='+ id, {}, function() { location.reload(); });
+        });
+
+        $(".ops_rev_btn").click(function () {
+            let id = this.id.split("_").pop();
+            $.get('/api/v1/zerotrust/accesstoken/my/ops/revoke?ztatId='+ id, {}, function() { location.reload(); });
+        });
+    });
+</script>
+
+</body>
+</html>

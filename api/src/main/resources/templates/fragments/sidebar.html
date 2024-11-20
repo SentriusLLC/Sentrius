@@ -1,0 +1,77 @@
+<div class="col-auto col-md-1 col-xl-1 px-sm-2 px-0 bg-dark">
+    <div class="d-flex flex-column align-items-center align-items-sm-start px-3 pt-2 text-white min-vh-100">
+        <a href="/" class="d-flex align-items-center pb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+            <span class="fs-5 d-none d-sm-inline image-container"><a href="/sso/v1/dashboard" class="nav-link">
+                <img th:src="${systemOptions.systemLogoPathSmall}" alt="Logo" class="nav-img">
+                [[${systemOptions.systemLogoName}]]
+            </a></span>
+        </a>
+        <ul class="nav nav-pills flex-column mb-sm-auto mb-0 align-items-center align-items-sm-start" id="menu">
+            <li class="nav-item">
+                <a href="/sso/v1/dashboard" class="nav-link align-middle px-0">
+                    <i class="fas fa-home"></i> <span class="ms-1 d-none d-sm-inline">Dashboard</span>
+                </a>
+            </li>
+            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_SYSTEMS')}">
+                <a href="/sso/v1/ssh/servers/list" class="nav-link px-0 align-middle">
+                    <i class="fas fa-server"></i> <span class="ms-1 d-none d-sm-inline">SSH Servers</span>
+                </a>
+            </li>
+            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VEIW_USERS')}">
+                <a href="/sso/v1/users/list" class="nav-link px-0 align-middle">
+                    <i class="fas fa-users"></i> <span class="ms-1 d-none d-sm-inline">Users</span>
+                </a>
+            </li>
+            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
+                <a href="/sso/v1/system/settings" class="nav-link px-0 align-middle">
+                    <i class="fas fa-cog"></i> <span class="ms-1 d-none d-sm-inline">Settings</span>
+                </a>
+            </li>
+            <li>
+                <a href="/sso/v1/zerotrust/rules/list" class="nav-link px-0 align-middle">
+                    <i class="fas fa-shield-alt"></i> <span class="ms-1 d-none d-sm-inline">Zero Trust Rules</span>
+                </a>
+            </li>
+            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_SYSTEMS')}">
+                <a href="/sso/v1/ssh/servers/list" class="nav-link px-0 align-middle">
+                    <i class="fas fa-network-wired"></i> <span class="ms-1 d-none d-sm-inline">Host Enclaves</span>
+                </a>
+            </li>
+            <li >
+                <a href="/sso/v1/notifications" class="nav-link px-0 align-middle">
+                    <i class="fa-regular fa-bell"></i> <span class="ms-1 d-none d-sm-inline">System
+                    Notifications</span>
+                </a>
+            </li>
+            <li >
+                <a href="/sso/v1/integrations" class="nav-link px-0 align-middle">
+                    <i class="fa-solid fa-ticket"></i> <span class="ms-1 d-none d-sm-inline">System Integrations</span>
+                </a>
+            </li>
+        </ul>
+        <hr>
+        <div class="dropdown pb-4">
+            <a href="/sso/v1/zerotrust/accesstoken/my" class="nav-link">
+                <span id="badge_ztats" class="badge text-bg-info">0 Pending Access Tokens</span>
+            </a>
+                <a href="/sso/v1/notifications/error/log/get" class="nav-link"
+                   th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
+                    <span id="badge_errors" class="badge text-bg-danger"></span>
+                </a>
+        </div>
+        <div class="dropdown pb-4">
+
+            <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+                <img src="https://github.com/mdo.png" alt="user" width="30" height="30" class="rounded-circle">
+                <span class="d-none d-sm-inline mx-1" th:text="${operatingUser.username}"></span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
+                <li><a class="dropdown-item" href="/sso/v1/users/settings">Settings</a></li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+                <li><a class="dropdown-item" href="/sso/v1/logout">Sign out</a></li>
+            </ul>
+        </div>
+    </div>
+</div>

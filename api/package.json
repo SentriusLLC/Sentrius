@@ -1,0 +1,45 @@
+{
+  "name": "secureshellops",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/phrocker/SSO.git"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "latest",
+    "@fullcalendar/core": "^6.1.12",
+    "@fullcalendar/daygrid": "^6.1.12",
+    "@fullcalendar/interaction": "^6.1.12",
+    "@fullcalendar/rrule": "^6.1.12",
+    "@fullcalendar/timegrid": "^6.1.12",
+    "@popperjs/core": "^2.11.8",
+    "@stomp/stompjs": "^7.0.0",
+    "bootstrap": "^5.3.1",
+    "bootstrap5-tags": "latest",
+    "browserify": "^17.0.1",
+    "datatables": "^1.10.18",
+    "floatthead": "^2.2.5",
+    "google-protobuf": "^3.21.4",
+    "gridstack": "^11.0.1",
+    "jquery": "^3.7.0",
+    "jquery-cron": "latest",
+    "jquery-ui": "^1.13.2",
+    "rrule": "^2.8.1",
+    "sockjs-client": "^1.6.1",
+    "tooltip": "^1.6.1",
+    "xterm": "5.3.0",
+    "xterm-addon-fit": "^0.7.0",
+    "xterm-addon-search": "^0.13.0",
+    "chart.js": "^4.4.6",
+    "jointjs": "^3.7.7",
+    "lodash": "^4.17.21",
+    "backbone": "^1.6.0"
+  },
+  "devDependencies": {
+    "grunt": "^1.6.1",
+    "grunt-cli": "^1.4.3",
+    "grunt-contrib-clean": "^2.0.1",
+    "grunt-contrib-copy": "^1.0.0",
+    "grunt-mkdir": "^1.1.0"
+  }
+}

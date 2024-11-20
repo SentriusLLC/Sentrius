@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<script>
+
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // ---- Gridstack Configuration for #grid_stack_configure ---- //
+        const gridElementConfigure = document.querySelector('#grid_stack_configure');
+
+        function addCardFromHiddenElement(elementId) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                const content = element.innerHTML;
+                addToItemsConfigure(content);
+            }
+        }
+
+        const optionsConfigure = {
+            staticGrid: false,    // Disable dragging and resizing
+            columnMax: 12,
+            rowHeight: '400px',
+            removable: true,
+            resizable: true,
+            draggable: true,
+            sizeToContent: true
+        };
+
+        function decodeHtml(html) {
+            var txt = document.createElement("textarea");
+            txt.innerHTML = html;
+            return txt.innerText || txt.textContent;
+        }
+        const gridConfigure = GridStack.init(optionsConfigure, gridElementConfigure);
+
+        const savedLayout = localStorage.getItem('gridLayout');
+        if (savedLayout) {
+            const layout = JSON.parse(savedLayout);
+            console.log('Loaded layout:', layout);
+            /*
+            layout.forEach(item => {
+                item.content = decodeHtml(item.content);
+            });*/
+            console.log('Loaded layout:', layout);
+            gridConfigure.load(layout);
+            const gridItemsConfigure = document.querySelectorAll('.grid-stack-item');
+            gridItemsConfigure.forEach((gridItem, index) => {
+                const contentDiv = document.createElement('div');
+                contentDiv.classList.add('grid-stack-item-content');
+                contentDiv.innerHTML = decodeHtml(layout[index].content);
+                console.log('Loaded layout:', decodeHtml(layout[index].content));
+                gridItem.appendChild(contentDiv);
+            });
+        } else {
+
+            const itemsConfigure = [];
+
+            function addToItemsConfigure(content) {
+                const totalItems = itemsConfigure.length;
+                const columnsPerCard = 3;
+                const row = Math.floor(totalItems / (optionsConfigure.columnMax / columnsPerCard));
+                const column = (totalItems % (optionsConfigure.columnMax / columnsPerCard)) * columnsPerCard;
+                console.log("For content: " + totalItems + " row: " + row + " column: " + column);
+                const newItem = {
+                    content: content,
+                    x: column,
+                    y: row,
+                    w: columnsPerCard,
+                    h: 4
+                };
+
+                itemsConfigure.push(newItem);
+            }
+
+            // Adding pre-existing cards to grid_stack_configure
+            // addCardFromHiddenElement('host-enclaves');
+            addCardFromHiddenElement('ssh-servers');
+            const settings_card = document.getElementById('settings-card');
+            if (settings_card) {
+                addCardFromHiddenElement('settings-card');
+            }
+
+
+            //addToItemsConfigure('<a href="/page1"><img src="/images/user_settings_medium.png"></a> &nbsp; <a
+                //href="/page1">Settings</a>');\
+
+            const userAccessSet = document.getElementById('users-card');
+            if (userAccessSet) {
+                addCardFromHiddenElement('users-card');
+            }
+
+            const ztat_card = document.getElementById('zero-trust-card');
+            if (ztat_card) {
+                addCardFromHiddenElement('zero-trust-card');
+            }
+
+            gridConfigure.load(itemsConfigure.map(item => {
+                return {
+                    x: item.x,
+                    y: item.y,
+                    w: item.w,
+                    h: item.h,
+                    content: item.content
+                };
+            }));
+
+            const gridItemsConfigure = document.querySelectorAll('.grid-stack-item');
+            gridItemsConfigure.forEach((gridItem, index) => {
+                const contentDiv = document.createElement('div');
+                contentDiv.classList.add('grid-stack-item-content');
+                contentDiv.innerHTML = itemsConfigure[index].content;
+                gridItem.appendChild(contentDiv);
+
+                // Only set overflow visible on specific image containers
+                const imageContainer = contentDiv.querySelector('.card-image-container');
+                if (imageContainer) {
+                    imageContainer.style.overflow = 'visible';
+                }
+                contentDiv.style.overflow = 'visible';
+            });
+
+            /*
+            const gridItemsConfigure = document.querySelectorAll('.grid-stack-item');
+            gridItemsConfigure.forEach((gridItem, index) => {
+                gridItem.innerHTML = itemsConfigure[index].content; // Directly set the inner HTML without adding an extra div
+            });*/
+        }
+
+/*
+        gridConfigure.on('change', function(event, items) {
+            const layout = gridConfigure.save(); // Get current layout configuration
+            localStorage.setItem('gridLayout', JSON.stringify(layout)); // Save it to localStorage
+        }); */
+
+        gridConfigure.on('change', function(event, items) {
+            const layout = gridConfigure.save().map(item => ({
+                x: item.x,
+                y: item.y,
+                w: item.w,
+                h: item.h,
+                content: decodeHtml(item.content) // Storing the HTML directly (encoded automatically)
+            }));
+            console.log("Saving " + layout.length + " items to localStorage");
+            localStorage.setItem('gridLayout', JSON.stringify(layout));
+        });
+
+        // ---- Gridstack Configuration for #grid_stack_use ---- //
+        const gridElementUse = document.querySelector('#grid_stack_use');
+
+        const optionsUse = {
+            staticGrid: false, // Allow dragging and resizing for this one
+            columnMax: 12,
+            rowHeight: '200px'
+        };
+
+        const gridUse = GridStack.init(optionsUse, gridElementUse);
+        const itemsUse = [];
+
+        function addToItemsUse(content) {
+            const totalItems = itemsUse.length;
+            const columnsPerCard = 4;
+            const row = Math.floor(totalItems / (optionsUse.columnMax / columnsPerCard));
+            const column = (totalItems % (optionsUse.columnMax / columnsPerCard)) * columnsPerCard;
+
+            const newItem = {
+                content: content,
+                x: column,
+                y: row,
+                w: columnsPerCard,
+                h: 3
+            };
+
+            itemsUse.push(newItem);
+        }
+
+        // ---- Fetch Terminal Data from /api/v1/ssh/terminal/list ---- //
+        function fetchAndAddTerminalWindows() {
+            fetch('/api/v1/ssh/terminal/list')
+                .then(response => response.json())
+                .then(data => {
+                    // Iterate through the returned HostSystemDTO list and create cards
+                    data.forEach(terminal => {
+                        const content = createTerminalCard(terminal);
+                        addToItemsUse(content);
+                    });
+
+                    // Load the items into the Gridstack for #grid_stack_use
+                    gridUse.load(itemsUse.map(item => {
+                        return {
+                            x: item.x,
+                            y: item.y,
+                            w: item.w,
+                            h: item.h,
+                            content: item.content
+                        };
+                    }));
+
+                    // Setting the content dynamically after loading
+                    const gridItemsUse = gridElementUse.querySelectorAll('.grid-stack-item');
+                    gridItemsUse.forEach((gridItem, index) => {
+                        const contentDiv = document.createElement('div');
+                        contentDiv.classList.add('grid-stack-item-content');
+                        contentDiv.innerHTML = itemsUse[index].content;
+                        gridItem.appendChild(contentDiv);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching Terminal data:', error);
+                });
+        }
+
+        // Function to create a terminal window card
+        function createTerminalCard(terminal) {
+            var id = encodeURIComponent(terminal.hostConnection);
+            return `
+            <div style="width: 100%;">
+                <a href="/sso/v1/ssh/servers/attach?sessionId=${id}">
+                    <table style="width: 100%; border-collapse: collapse; text-align: center; margin: 10px 0;">
+                        <tr>
+                            <td style="border: none; padding: 10px; background-color: #FFFFFF;">
+                                <img src="/images/terminal_medium.png" style="width: 60px; height: auto;">
+                            </td>
+                            <td style="border: none; padding: 10px;">
+                                <a href="/sso/v1/ssh/servers/attach?sessionId=${id}" style="font-weight: bold; font-size: 1.2em; color: #FFFFFF; text-decoration: none;">
+                                    Terminal: ${terminal.displayName}
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="border-top: 1px solid #ccc; padding: 10px; background-color: #f9f9f9;">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <tr>
+                                        <td style="padding: 5px;">Status:</td>
+                                        <td style="padding: 5px; font-weight: bold;">${terminal.statusCd}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 5px;">Last Accessed:</td>
+                                        <td style="padding: 5px; font-weight: bold;">${terminal.lastAccessed}</td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </a>
+            </div>
+        `;
+        }
+
+        // Fetch data and add items to grid_stack_use
+        fetchAndAddTerminalWindows();
+    });
+
+</script>
+
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Dashboard</title>
+    <style>
+        .grid-stack-item-content {
+            background-color: #405d80;
+            color: #fff;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .grid-stack-item-content:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+
+<body>
+
+<div th:replace="~{fragments/topbar}"></div>
+<div th:replace="~{fragments/add_system}"></div>
+<div th:replace="~{fragments/add_user}"></div>
+<div th:replace="~{fragments/add_group}"></div>
+<div class="container-xxl">
+    <br><br>
+    <div class="grid-stack" id="grid_stack_configure"></div>
+    <canvas id="outputSizeChart" width="400" height="200"></canvas>
+    <h3>Open Terminals</h3>
+    <div class="grid-stack" id="grid_stack_use"></div>
+
+
+
+<div th:replace="~{fragments/zero_trust_card}"></div>
+<div th:replace="~{fragments/host_enclave_card}"></div>
+<div th:replace="~{fragments/terminal_card}"></div>
+<div th:replace="~{fragments/users_card}"></div>
+<div th:replace="~{fragments/ssh_server_card}"></div>
+<div th:replace="~{fragments/settings_card}"></div>
+</div>
+<div id="textarea"  style="display: none;"></div>
+<!-- Place the JavaScript at the end of the body -->
+<script type="module" th:src="@{/js/dashboard.js}"></script>
+<script type="module" th:src="@{/js/add_system.js}" defer></script>
+<script type="module" th:src="@{/js/add_user.js}" defer></script>
+<script type="module" th:src="@{/js/add_group.js}" defer></script>
+<script>
+    fetch('/api/v1/ssh/terminal/logs/output-size')
+        .then(response => response.json())
+        .then(dataFromDB => {
+            console.log("Got data from DB: ", dataFromDB);
+            // Process data for the chart
+            const times = dataFromDB.map(entry => new Date(entry.logTm));
+            const minTime = Math.min(...times);
+            const maxTime = Math.max(...times);
+            const timeRangeInHours = (maxTime - minTime) / (1000 * 60 * 60); // Convert ms to hours
+
+            // Set granularity based on time range
+            let groupingInterval;
+            if (timeRangeInHours > 48) {
+                groupingInterval = 'day'; // Group by day if time range is more than 2 days
+            } else if (timeRangeInHours > 12) {
+                groupingInterval = '4hour'; // Group by 4-hour intervals if time range is between 12 hours and 2 days
+            } else {
+                groupingInterval = 'hour'; // Group by hour if time range is 12 hours or less
+            }
+
+            // Helper function to format time for grouping
+            function formatTimeForGrouping(date, interval) {
+                const d = new Date(date);
+                if (interval === 'day') {
+                    return d.toLocaleDateString();
+                } else if (interval === '4hour') {
+                    const hours = Math.floor(d.getHours() / 4) * 4;
+                    return `${d.toLocaleDateString()} ${hours}:00 - ${hours + 3}:59`;
+                } else if (interval === 'hour') {
+                    return `${d.toLocaleDateString()} ${d.getHours()}:00`;
+                }
+            }
+
+            // Group data based on the chosen interval
+            const groupedData = {};
+            dataFromDB.forEach(entry => {
+                const groupKey = formatTimeForGrouping(entry.logTm, groupingInterval);
+                if (!groupedData[groupKey]) {
+                    groupedData[groupKey] = {
+                        count: 0,
+                        totalOutputSize: 0
+                    };
+                }
+                groupedData[groupKey].count += 1;
+                groupedData[groupKey].totalOutputSize += entry.outputSize;
+            });
+
+            // Create labels and data for the chart from the grouped data
+            const labels = Object.keys(groupedData);
+            const data = labels.map(label => {
+                return groupedData[label].totalOutputSize; // You could also use `totalOutputSize / count` for average
+            });
+
+            console.log("Labels are ", labels);
+            console.log("Data is ", data);
+
+            // Chart.js configuration
+            const ctx = document.getElementById('outputSizeChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Segment A',
+                            data: segmentAData,
+                            backgroundColor: 'rgba(0, 123, 255, 0.7)', // Blue color with some transparency
+                        },
+                        {
+                            label: 'Segment B',
+                            data: segmentBData,
+                            backgroundColor: 'rgba(255, 99, 132, 0.7)', // Red color with some transparency
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            stacked: true, // Stack the datasets for the x-axis
+                            title: {
+                                display: true,
+                                text: 'Day',
+                                color: '#eaeaea'
+                            },
+                            ticks: { color: '#eaeaea' }
+                        },
+                        y: {
+                            stacked: true, // Stack the datasets for the y-axis
+                            title: {
+                                display: true,
+                                text: 'Output Size (Bytes)',
+                                color: '#eaeaea'
+                            },
+                            ticks: { color: '#eaeaea' },
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#eaeaea'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return `${context.raw.toFixed(2)} Bytes`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+</script>
+</body>
+
+</html>

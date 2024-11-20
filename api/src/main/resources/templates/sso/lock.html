@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Your account is locked</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center; /* Center horizontally */
+            align-items: center; /* Center vertically */
+            min-height: 100vh; /* Full viewport height */
+            margin: 0;
+            background-color: #f8f9fa; /* Light background */
+        }
+
+        .login-container {
+            background: #ffffff;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #343a40;
+            padding: 0.5rem 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .navbar-brand {
+            color: #ffffff;
+            text-decoration: none;
+        }
+
+        .error {
+            color: red;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+
+<body>
+<!-- Navbar -->
+<div class="navbar">
+    <a class="navbar-brand" href="#">
+        <img th:src="${systemOptions.systemLogoPathSmall}" alt="Logo" class="me-2" style="height: 24px;">
+        [[${systemOptions.systemLogoName}]]
+    </a>
+</div>
+
+<!-- Login Container -->
+<div th:replace="fragments/topbar"></div>
+<div class="container">
+    <h2>Your account is locked</h2>
+</div>
+
+</body>
+
+</html>

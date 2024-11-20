@@ -1,0 +1,27 @@
+
+    <a href="/sso/v1/ssh/servers/list" class="card-link">
+        <div id="ssh-servers" class="card" style="display: none">
+            <div class="card-image-container">
+                <img src="/images/hosts_medium.png" alt="Terminal Icon" class="card-image">
+            </div>
+            <div class="card-content">
+                <h3 class="card-title">Host Enclaves</h3>
+                <div class="card-stats">
+                    <div class="card-stat">
+                        <span>Assigned Systems:</span>
+                        <span id="assigned-server-count" class="stat-value"></span>
+                    </div>
+                    <div class="card-stat">
+                        <span>Assigned Groups:</span>
+                        <span class="stat-value" id="assigned-sgs"></span>
+                    </div>
+                </div>
+                <div class="card-buttons">
+                    <a href="/api/v1/ssh/servers/shutdown" class="btn btn-primary">Shutdown Connections</a>
+                    <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#hostFormModal">Add Hosts</a>
+                    <a href="/sso/v1/ssh/servers/list" class="btn btn-primary" >Open
+                        Connection</a>
+                </div>
+            </div>
+        </div>
+    </a>

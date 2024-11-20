@@ -1,0 +1,20 @@
+<div class="modal fade" id="uploadConfigFormModal" tabindex="-1" aria-labelledby="uploadConfigFormModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="uploadConfigForm"
+                  enctype="multipart/form-data">
+                <div>
+                    <label for="configFile">Select YAML File:</label>
+                    <input type="file" id="configFile" name="configFile" accept=".yaml,.yml" required>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Upload Config</button>
+                </div>
+                <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+            </form>
+
+        </div>
+    </div>
+</div>

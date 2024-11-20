@@ -1,0 +1,29 @@
+
+<a href="/sso/v1/settings" class="card-link">
+    <div id="settings-card" class="card" style="display: none"
+         th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_ZTATS')}">
+        <div class="card-image-container">
+            <img src="/images/user_settings_medium.png" alt="Terminal Icon" class="card-image">
+        </div>
+        <div class="card-content">
+            <h3 class="card-title">Settings</h3>
+            <div class="card-stats">
+                <div class="card-stat">
+                    <span>Audit Enabled:</span>
+                    <span id="audit-enabled" class="stat-value">True</span>
+                </div>
+                <div class="card-stat">
+                    <span>Allow SCP:</span>
+                    <span id="require-user-assignment" class="stat-value">True</span>
+                </div>
+            </div>
+            <div class="card-buttons">
+                <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
+                <a href="#" id="disable-ssh-button" class="btn btn-primary">Disable
+                    SSH</a>
+                <a href="/api/v1/ssh/servers/shutdown" class="btn btn-primary">Update Settings</a>
+                <a href="/api/v1/ssh/servers/shutdown" class="btn btn-primary">Update Settings</a>
+            </div>
+        </div>
+    </div>
+</a>

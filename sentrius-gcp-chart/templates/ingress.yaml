@@ -1,0 +1,33 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: managed-cert-ingress-{{ .Values.tenant }}
+  namespace: {{ .Values.tenant }}
+  annotations:
+    kubernetes.io/ingress.class: gce
+    kubernetes.io/ingress.allow-http: "false"
+    ingress.kubernetes.io/force-ssl-redirect: "true"
+    ingress.kubernetes.io/redirect-http-to-https: "true"
+    networking.gke.io/managed-certificates: wildcard-cert
+spec:
+  rules:
+    - host: keycloak.{{ .Values.tenant }}.sentrius.cloud
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-keycloak
+                port:
+                  number: 8081
+    - host: {{ .Values.tenant }}.sentrius.cloud
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-sentrius
+                port:
+                  number: 8080

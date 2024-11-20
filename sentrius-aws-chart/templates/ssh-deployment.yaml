@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-ssh
+  labels:
+    app: sentrius-ssh
+    release: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: sentrius-ssh
+  template:
+    metadata:
+      labels:
+        app: sentrius-ssh
+    spec:
+      containers:
+        - name: sentrius-ssh
+          image: "{{ .Values.ssh.image.repository }}:{{ .Values.ssh.image.tag }}"
+          imagePullPolicy: {{ .Values.sentrius.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.ssh.port }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ .Release.Name }}-config

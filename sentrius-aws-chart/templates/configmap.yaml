@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels:
+    {{- include "sentrius.labels" . | nindent 4 }}
+data:
+  application.properties: |
+    {{ .Values.sentrius.config.application | nindent 4 }}
+  dynamic.properties: |
+    {{ .Values.sentrius.config.dynamic | nindent 4 }}

@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Dashboard</title>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            /*
+            const ctx = document.getElementById("elevatedCommandsChart").getContext("2d");
+
+            // Example data: Replace with real data from your backend
+            const totalCommands = 100;
+            const sudoUsageCount = 30; // Commands run with 'sudo'
+            const nonSudoCount = totalCommands - sudoUsageCount; // Remaining commands
+
+            new Chart(ctx, {
+                type: "pie",
+                data: {
+                    labels: ["Sudo Commands", "Non-Sudo Commands"],
+                    datasets: [
+                        {
+                            data: [sudoUsageCount, nonSudoCount],
+                            backgroundColor: ["#FF6384", "#36A2EB"], // Customize colors as needed
+                            borderWidth: 1,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: {
+                                font: {
+                                    size: 12,
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+
+             */
+        });
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const ctx = document.getElementById("mostUsedCommandsChart").getContext("2d");
+
+            // Sample data for the chart
+            const data = [
+                { command: "ls", count: 50 },
+                { command: "cd", count: 40 },
+                { command: "sudo", count: 30 },
+                { command: "cat", count: 20 },
+                { command: "vim", count: 10 },
+            ];
+
+            // Extract labels and values for the chart
+            const labels = data.map((item) => item.command);
+            const values = data.map((item) => item.count);
+
+            new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: "Usage Count",
+                            data: values,
+                            backgroundColor: "#8884d8",
+                            borderRadius: 4,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 12,
+                                },
+                            },
+                        },
+                        y: {
+                            ticks: {
+                                font: {
+                                    size: 12,
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+        });
+        document.addEventListener("DOMContentLoaded", function () {
+            const ctx = document.getElementById("sessionDurationChart").getContext("2d");
+
+// Define a function to fetch data from the API
+            async function fetchSessionData() {
+                try {
+                    const response = await fetch("/api/v1/users/sessions/graph");
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const apiData = await response.json();
+
+                    console.log("Got " + apiData);
+
+                    // Transform the API data to match the chart's expected format
+                    const data = Object.keys(apiData).map((key) => ({
+                        label: key,
+                        value: apiData[key],
+                    }));
+
+                    // Extract labels and values for the chart
+                    const labels = data.map((item) => item.label);
+                    const values = data.map((item) => item.value);
+                    const COLORS = ["#8884d8", "#83a6ed", "#8dd1e1", "#82ca9d"];
+
+                    // Create the chart with the fetched data
+                    new Chart(ctx, {
+                        type: "pie",
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                {
+                                    data: values,
+                                    backgroundColor: COLORS,
+                                    borderWidth: 1,
+                                },
+                            ],
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: "bottom",
+                                    labels: {
+                                        font: {
+                                            size: 12,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    });
+                } catch (error) {
+                    console.error("Failed to fetch session data:", error);
+                }
+            }
+
+// Call the function to fetch data and render the chart
+            fetchSessionData();
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const gridElementConfigure = document.querySelector('#grid_stack_stats');
+            if (!gridElementConfigure) {
+                console.error('Grid element not found!');
+                return;
+            }
+
+            const optionsConfigure = {
+                staticGrid: true,
+                columnMax: 12,
+                rowHeight: '100px',
+            };
+
+            const gridConfigure = GridStack.init(optionsConfigure, gridElementConfigure);
+            const itemsConfigure = [];
+
+            function addCardFromHiddenElement(elementId) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    const content = element.innerHTML;
+                    const totalItems = itemsConfigure.length;
+                    const columnsPerCard = 2;
+                    const row = Math.floor(totalItems / (optionsConfigure.columnMax / columnsPerCard));
+                    const column = (totalItems % (optionsConfigure.columnMax / columnsPerCard)) * columnsPerCard;
+
+                    const newItem = {
+                        content: content,
+                        x: column,
+                        y: row,
+                        w: columnsPerCard,
+                        h: 1,
+                    };
+                    itemsConfigure.push(newItem);
+                }
+            }
+
+            addCardFromHiddenElement('active-servers-card');
+            addCardFromHiddenElement('active-user-card');
+            addCardFromHiddenElement('total-systems-card');
+            addCardFromHiddenElement('total-groups-card');
+            addCardFromHiddenElement('active-rules-card');
+
+            gridConfigure.load(itemsConfigure.map(item => ({ ...item })));
+
+            // Add content to dynamically created grid items
+            const gridItemsConfigure = document.querySelectorAll('.grid-stack-item');
+            gridItemsConfigure.forEach((gridItem, index) => {
+                const contentDiv = document.createElement('div');
+                contentDiv.classList.add('grid-stack-item-content');
+                contentDiv.classList.add('custom-dark-card');
+                contentDiv.classList.add('shadow-sm');
+                contentDiv.classList.add('p-3');
+                contentDiv.classList.add('justify-content-center');
+                contentDiv.innerHTML = itemsConfigure[index]?.content || '';
+                gridItem.appendChild(contentDiv);
+            });
+        });
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // ---- Gridstack Configuration for #grid_stack_use ---- //
+            const gridElementUse = document.querySelector('#grid_stack_use');
+
+            const optionsUse = {
+                staticGrid: true, // Allow dragging and resizing for this one
+                columnMax: 12,
+                rowHeight: '100px'
+            };
+
+            const gridUse = GridStack.init(optionsUse, gridElementUse);
+            const itemsUse = [];
+
+            function addToItemsUse(content) {
+                const totalItems = itemsUse.length;
+                const columnsPerCard = 1;
+                const row = Math.floor(totalItems / (optionsUse.columnMax / columnsPerCard));
+                const column = (totalItems % (optionsUse.columnMax / columnsPerCard)) * columnsPerCard;
+
+                const newItem = {
+                    content: content,
+                    x: column,
+                    y: row,
+                    w: columnsPerCard,
+                    h: 1
+                };
+
+                itemsUse.push(newItem);
+            }
+
+            // ---- Fetch Terminal Data from /api/v1/ssh/terminal/list ---- //
+            function fetchAndAddTerminalWindows() {
+                fetch('/api/v1/ssh/terminal/list')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Iterate through the returned HostSystemDTO list and create cards
+                        data.forEach(terminal => {
+                            const content = createTerminalCard(terminal);
+                            addToItemsUse(content);
+                        });
+
+                        // Load the items into the Gridstack for #grid_stack_use
+                        gridUse.load(itemsUse.map(item => {
+                            return {
+                                x: item.x,
+                                y: item.y,
+                                w: item.w,
+                                h: item.h,
+                                content: item.content
+                            };
+                        }));
+
+                        // Setting the content dynamically after loading
+                        const gridItemsUse = gridElementUse.querySelectorAll('.grid-stack-item');
+                        gridItemsUse.forEach((gridItem, index) => {
+                            const contentDiv = document.createElement('div');
+                            contentDiv.classList.add('grid-stack-item-content');
+                            contentDiv.classList.add('terminal-card-black');
+
+                            contentDiv.innerHTML = itemsUse[index].content;
+                            gridItem.appendChild(contentDiv);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching Terminal data:', error);
+                    });
+            }
+
+            // Function to create a terminal window card
+            function createTerminalCard(terminal) {
+                var id = encodeURIComponent(terminal.hostConnection);
+                return `
+            <div style="width: 100%;">
+                <a href="/sso/v1/ssh/servers/attach?sessionId=${id}">
+                    <table style="width: 100%; border-collapse: collapse; text-align: center; margin: 10px 0;">
+                        <tr>
+                            <td style="border: none; padding: 10px; background-color: #1b1f23;">
+                                <i class="fas fa-terminal"></i>
+                            </td>
+                            <td style="border: none; padding: 10px;">
+                                <a href="/sso/v1/ssh/servers/attach?sessionId=${id}" style="font-weight: bold; font-size: 1.2em; color: #FFFFFF; text-decoration: none;">
+                                    Terminal: ${terminal.displayName}
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="border-top: 1px solid #ccc; padding: 10px; background-color: #f9f9f9;">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <tr>
+                                        <td style="padding: 5px;">Status:</td>
+                                        <td style="padding: 5px; font-weight: bold;">${terminal.statusCd}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 5px;">Last Accessed:</td>
+                                        <td style="padding: 5px; font-weight: bold;">${terminal.lastAccessed}</td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </a>
+            </div>
+        `;
+            }
+
+            // Fetch data and add items to grid_stack_use
+            fetchAndAddTerminalWindows();
+        });
+
+    </script>
+    <style>
+        small-card {
+            max-width: 300px;
+            padding: 10px;
+            margin: 10px;
+            background-color: #2d2d2d;
+            color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            margin-bottom: 5px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .card-content {
+            padding: 5px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 200px;
+        }
+
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/add_system}"></div>
+<div th:replace="~{fragments/add_user}"></div>
+<div th:replace="~{fragments/add_group}"></div>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
+                <div class="container-fluid">
+                    <br><br>
+                    <div class="grid-stack" id="grid_stack_stats"></div>
+                    <hr class="my-4">
+                    <div id="network-visualizer-section" class="d-flex justify-content-center gap-lg-5 flex-wrap">
+                        <div id="network-visualizer-card" class="card custom-dark-card shadow-sm p-3" style="max-width: 800px; flex: 1;">
+                            <div class="card-header">
+                                <h5 class="card-title">Enclave Operations</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Buttons -->
+                                <div class="mb-4 d-flex justify-content-center gap-2">
+                                    <a href="/api/v1/ssh/servers/shutdown" class="btn btn-danger">Kill Sessions</a>
+                                    <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#hostFormModal">Add Hosts</a>
+                                    <a href="/sso/v1/ssh/servers/list" class="btn btn-primary">Open Session</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="system-visualizer-card" class="card custom-dark-card shadow-sm p-3"
+                             style="max-width: 800px; flex: 1;" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
+                            <div class="card-header">
+                                <h5 class="card-title">System Operations</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Buttons -->
+                                <div class="mb-4 d-flex justify-content-center gap-2">
+                                    <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
+                                    <a href="#" id="disable-ssh-button" class="btn btn-danger">Lock Down SSH</a>
+                                    <a href="/sso/v1/system/settings" class="btn btn-primary">Update Settings</a>
+                                    <a href="/sso/v1/sessions/audit/list" class="btn btn-primary"
+                                       th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">Audit User</a>
+                                </div>
+
+                            </div>
+                        </div>
+                        <div id="rule-card" class="card custom-dark-card shadow-sm p-3"
+                             style="max-width: 800px; flex: 1;" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
+                            <div class="card-header">
+                                <h5 class="card-title">User Operations</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Buttons -->
+                                <div class="mb-4 d-flex justify-content-center gap-2">
+                                    <a href="/api/v1/users/list" class="btn btn-danger">Delete Users</a>
+                                    <a href="#" class="btn btn-primary" data-bs-toggle="modal"
+                                       data-bs-target="#userFormModal">Add User</a>
+                                    <a href="/sso/v1/users/settings" class="btn btn-primary"
+                                       th:if="${!#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_ZTATS')}">Your Settings</a>
+                                    <a href="/sso/v1/zerotrust/accesstoken/list" class="btn btn-primary"
+                                       th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_ZTATS')}">View Trust ATs</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="system-visualizer-card2" class="card custom-dark-card shadow-sm p-3"
+                             style="max-width: 800px; flex: 1;" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
+                            <div class="card-header">
+                                <h5 class="card-title">AI Admin Operations</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Buttons -->
+                                <div class="mb-4 d-flex justify-content-center gap-2">
+                                    <a href="/api/v1/users/list" class="btn btn-danger">Build Automation</a>
+                                    <a href="#" class="btn btn-primary" data-bs-toggle="modal"
+                                       data-bs-target="#userFormModal">Usage Patterns</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="my-4">
+                    <h3>Terminal Stats</h3>
+                    <div id="suggestion-section" class="d-flex flex-column gap-4">
+                        <!-- First Row -->
+                        <div class="d-flex justify-content-between gap-4 flex-wrap">
+                            <div class="card small-card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Most Used Commands</h5>
+                                </div>
+                                <div class="card-content">
+                                    <canvas id="mostUsedCommandsChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="card small-card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Open Sessions</h5>
+                                </div>
+                                <div class="card-content">
+                                    <canvas id="heatmap-container" style="width:100%; height:300px;"></canvas>
+                                </div>
+                            </div>
+                            <div class="card small-card" style="max-width: 400px;">
+                                <div class="card-header">
+                                    <h5 class="card-title">Session Duration Distribution</h5>
+                                </div>
+                                <div class="card-content">
+                                    <canvas id="sessionDurationChart" width="300" height="200" style="width: 100%;
+                                    height:
+                                     auto;"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="card small-card" style="max-width: 400px;">
+                                <div class="card-header">
+                                    <h5 class="card-title">Terminal Activity</h5>
+                                </div>
+                                <div class="card-content">
+                                    <canvas id="outputSizeChart" width="400" height="200" style="width: 100%; height:
+                                     auto;"></canvas>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+
+
+                    <hr class="my-4">
+                    <div class="grid-stack" id="grid_stack_configure"></div>
+                    <h3>Open Terminals</h3>
+                    <div class="grid-stack" id="grid_stack_use"></div>
+
+                    <div th:replace="~{fragments/dashboard/dashboard_cards}"></div>
+                    <div th:replace="~{fragments/zero_trust_card}"></div>
+                    <div th:replace="~{fragments/host_enclave_card}"></div>
+                    <div th:replace="~{fragments/terminal_card}"></div>
+                    <div th:replace="~{fragments/users_card}"></div>
+                    <div th:replace="~{fragments/ssh_server_card}"></div>
+                    <div th:replace="~{fragments/settings_card}"></div>
+                </div>
+                <div id="textarea" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script type="module" th:src="@{/js/dashboard.js}"></script>
+<script type="module" th:src="@{/js/add_system.js}" defer></script>
+<script type="module" th:src="@{/js/add_user.js}" defer></script>
+<script type="module" th:src="@{/js/add_group.js}" defer></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        let maxConnections = 10;
+        let currentConnections = 0;
+
+        let tachometerChart = null; // Chart variable for tachometer
+        let outputSizeChart; // Chart variable for output size chart
+
+        function createTachometerChart() {
+            if (null == document.getElementById('tachometerChart')){
+                return;
+            }
+            var dnt = document.getElementById('tachometerChart');
+            dnt.style.width = '250px';
+            dnt.style.height = '100px';
+            const ctx = dnt.getContext('2d');
+            if (tachometerChart){
+                tachometerChart.destroy();
+            }
+
+            tachometerChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Active Connections', 'Remaining Capacity'],
+                    datasets: [{
+                        label: 'Active Connections',
+                        data: [currentConnections, maxConnections - currentConnections],
+                        backgroundColor: [
+                            "rgba(75, 192, 192, 0.8)",
+                            "rgba(255, 206, 86, 0.8)",
+                            "rgba(255, 26, 104, 0.8)",
+                        ],
+                        needleValue: 50,
+                        borderColor: "white",
+                        borderWidth: 2,
+                        cutout: "95%",
+                        circumference: 180,
+                        rotation: 270,
+                        borderRadius: 5,
+                    }]
+                },
+                options: {
+                    rotation: -90 * (Math.PI / 180),
+                    circumference: 180 * (Math.PI / 180),
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return `${context.label}: ${context.raw}`;
+                                }
+                            }
+                        }
+                    },
+                    aspectRatio: 2,
+                }
+            });
+        }
+
+        function updateTachometer(newConnections) {
+            if (newConnections <= maxConnections && null != tachometerChart) {
+                tachometerChart.data.datasets[0].data[0] = newConnections;
+                tachometerChart.data.datasets[0].data[1] = maxConnections - newConnections;
+                tachometerChart.update();
+            } else {
+                console.error("Connections exceed max limit!");
+            }
+        }
+
+        let updateTimer;
+
+        function debounceUpdate(newConnections) {
+            clearTimeout(updateTimer);
+            updateTimer = setTimeout(() => {
+                updateTachometer(newConnections);
+            }, 500);
+        }
+
+        function fetchActiveConnections() {
+            fetch('/api/v1/sessions/list')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    currentConnections = data.length;
+                    debounceUpdate(currentConnections);
+                })
+                .catch(error => {
+                    console.error('Error fetching active connections:', error);
+                });
+        }
+
+        createTachometerChart(); // Create chart on load
+
+        // Fetch active connections initially and then every 5 seconds
+        fetchActiveConnections();
+        setInterval(fetchActiveConnections, 5000);
+
+
+
+    fetch('/api/v1/ssh/terminal/logs/output-size')
+        .then(response => response.json())
+        .then(dataFromDB => {
+            // Process data for the chart
+            const labels = dataFromDB.map(entry => new Date(entry.logTm).toLocaleTimeString());
+            const data = dataFromDB.map(entry => entry.outputSize);
+
+            // Chart.js configuration
+            const ctx = document.getElementById('outputSizeChart').getContext('2d');
+            if (outputSizeChart){
+                outputSizeChart.destroy();
+            }
+            outputSizeChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels, // Timestamps as labels
+                    datasets: [{
+                        label: 'Output Size (Bytes)',
+                        data: data, // Output sizes
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                        fill: true,
+                        tension: 0.4, // Smooth line
+                        pointRadius: 0,
+                        pointBackgroundColor: '#007bff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    elements: {
+                        point: {
+                            radius: 0 // Hides the dots globally
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time',
+                                color: '#eaeaea'
+                            },
+                            ticks: { color: '#eaeaea' }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Output Size (Bytes)',
+                                color: '#eaeaea'
+                            },
+                            ticks: { color: '#eaeaea' },
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#eaeaea'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.raw} Bytes`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+        $.getJSON("/api/v1/sessions/map", function(data) {
+            // Prepare data for Chart.js heatmap
+            const orderedDays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+            const labels = [...Array(24).keys()]; // 0 - 23 for hours
+
+            // Define different colors for each day
+            const colors = [
+                'rgba(255, 99, 132, 0.5)',   // MONDAY
+                'rgba(54, 162, 235, 0.5)',   // TUESDAY
+                'rgba(255, 206, 86, 0.5)',   // WEDNESDAY
+                'rgba(75, 192, 192, 0.5)',   // THURSDAY
+                'rgba(153, 102, 255, 0.5)',  // FRIDAY
+                'rgba(255, 159, 64, 0.5)',   // SATURDAY
+                'rgba(99, 255, 132, 0.5)'    // SUNDAY
+            ];
+            // Create datasets with unique colors for each day
+            const datasets = orderedDays.map((day, index) => {
+                return {
+                    label: day,
+                    data: labels.map(hour => data[day] && data[day][hour] ? data[day][hour] : 0),
+                    backgroundColor: colors[index],
+                    borderColor: colors[index].replace('0.5', '1'), // More opaque version for border
+                    borderWidth: 1
+                };
+            });
+
+            // Render heatmap with Chart.js
+            if (document.getElementById('heatmap-container')) {
+            const ctx = document.getElementById('heatmap-container').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar', // Use bar chart to display the heatmap
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            stacked: true,
+                            title: {
+                                display: true,
+                                text: 'Hour of the Day'
+                            }
+                        },
+                        y: {
+                            stacked: true,
+                            title: {
+                                display: true,
+                                text: 'Frequency'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+            }
+        });
+    });
+
+</script>
+</body>
+</html>
+
