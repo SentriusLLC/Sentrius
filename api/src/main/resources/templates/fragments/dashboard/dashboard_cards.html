@@ -1,0 +1,43 @@
+<div id="active-servers-card" class="card custom-dark-card shadow-sm p-3" style="display: none;">
+    <div class="card-header position-relative">
+        <a href="/sso/v1/ssh/servers/list" class="card-link">Active Connections</a>
+        <i class="fas fa-cog card-icon"></i> <!-- Icon for the card -->
+    </div>
+    <div class="card-body">
+        <h5 class="card-title">Open SSH Connections</h5>
+        <p class="card-text"><span id="open-cxn-count"></span></p>
+    </div>
+</div>
+
+<div id="active-user-card" class="card custom-dark-card shadow-sm p-3" style="display: none;">
+    <div class="card-header position-relative">
+        <a href="/sso/v1/users/list" class="card-link">Subscribed Users</a>
+        <i class="fas fa-user card-icon"></i> <!-- Icon for the card -->
+    </div>
+    <div class="card-body">
+        <h5 class="card-title">Active Users</h5>
+        <p class="card-text"><span id="total-user-count" class="stat-value">0</span></p>
+    </div>
+</div>
+
+<div id="total-systems-card" class="card custom-dark-card shadow-sm p-3" style="display: none;">
+    <div class="card-header position-relative">
+        <a href="/sso/v1/ssh/servers/list" class="card-link">Total Systems</a>
+        <i class="fas fa-server card-icon"></i> <!-- Icon for the card -->
+    </div>
+    <div class="card-body">
+        <h5 class="card-title">Number of assigned hosts</h5>
+        <p class="card-text"><span id="assigned-server-count"></span></p>
+    </div>
+</div>
+
+<div id="total-groups-card" class="card custom-dark-card shadow-sm p-3" style="display: none;">
+    <div class="card-header position-relative">
+        <a href="/sso/v1/ssh/servers/list" class="card-link">Enclaves</a>
+        <i class="fas fa-users card-icon"></i> <!-- Icon for the card -->
+    </div>
+    <div class="card-body">
+        <h5 class="card-title">Number of Host Groups</h5>
+        <p class="card-text"><span id="assigned-sgs"></span></p>
+    </div>
+</div>

@@ -1,2 +1,2 @@
-# Sentrius
-Sentrius Application
+# SSO
+Secure Shell Ops Platform

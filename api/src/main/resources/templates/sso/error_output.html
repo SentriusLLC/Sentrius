@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+
+    <meta th:replace="fragments/header">
+
+    <script th:inline="javascript">
+
+        $(document).ready(function () {
+        });
+        /*]]>*/
+    </script>
+    <title>[[${systemOptions.systemLogoName}]] - Error Logs</title>
+</head>
+<body>
+<div th:replace="fragments/topbar"></div>
+<div class="container">
+            <h2>Error Logs</h2>
+            <p>Click on the collapsible panel to open and close it. Most recent 10 logs are shown</p>
+        <div class="accordion" id="accordion">
+            <template th:each="output : ${output}" th:remove="tag"
+                      th:if="${output != null && !output.empty}">
+
+                <!--
+                <div class="accordion-item">
+    <h2 class="accordion-header" id="headingOne">
+      <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+        Accordion Item #1
+      </button>
+    </h2>
+    <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
+      <div class="accordion-body">
+        <strong>This is the first item's accordion body.</strong> It is shown by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.
+      </div>
+    </div>
+  </div>
+                -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" th:id="'heading_' + ${output.id}">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" th:data-bs-target="'#collapse_'+ ${output.id}" aria-expanded="true" th:aria-controls="'#collapse_'+ ${output.id}" th:text="'Error Log produced at ' + ${output.logTm}">
+                            </button>
+                    </h2>
+
+                    <div th:id="'collapse_' + ${output.id}" class="accordion-collapse" th:aria-labelledby="'heading_' + ${output.id}" data-parent="#accordion">
+                        <div th:id="'collapse_output_' + ${output.id}" class="accordion-body output_body" style="white-space: pre-wrap" th:utext="${output.errorLogs}">Panel Body</div>
+                    </div>
+                </div>
+            </template>
+            <form id="clearLogs" action="/api/v1/notification/error/log/clear" method="POST">
+                <input type="hidden" name="_csrf" th:value="${session._csrf}"/>
+                <template th:each="output : ${sortedSet.itemList}" th:remove="tag" th:if="${sortedSet.itemList != null && !sortedSet.itemList.empty}">
+                    <input type="hidden" th:name="'log_' + ${output.id}" th:value="${output.id}"/>
+                </template>
+                <button type="button" class="btn btn-secondary submit_btn" name="clear" value="clear">Clear These Logs</button><button type="button" class="btn btn-secondary submit_btn" name="clear" value="clearall">Clear All Logs</button>
+            </form>
+    </div>
+</div>
+</body>
+
+</html>

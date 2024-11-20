@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package io.dataguardians.protobuf;
+
+enum TriggerAction {
+  NO_ACTION = 0;
+  LOG_ACTION = 1;
+  ALERT_ACTION = 2;
+  WARN_ACTION = 3;
+  DENY_ACTION = 4;
+  JIT_ACTION = 5;
+  RECORD_ACTION = 6;
+  APPROVE_ACTION = 7;
+  PERSISTENT_MESSAGE = 8;
+}
+
+enum MessageType {
+  HEARTBEAT = 0;
+  USER_DATA = 1;
+}
+
+message Trigger {
+  TriggerAction action = 1;
+  string description = 2;
+}
+
+message TerminalMessage {
+  string sessionId = 1;
+  MessageType type = 2;
+  Trigger trigger = 3;
+  double keycode = 4;
+  string command = 5;
+}

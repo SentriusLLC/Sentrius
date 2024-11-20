@@ -1,0 +1,707 @@
+html {
+    font-size: 16px;
+    font-weight: 500;
+    color: #f0f0f0; /* Light text for dark mode */
+}
+
+body {
+    /*padding-top: 75px;
+    height: 85%;
+
+     */
+    background-color: #121212; /* Dark background for dark mode */
+}
+
+a {
+    color: #8ab4f8; /* Light blue for links */
+}
+
+table {
+    border-collapse: collapse;
+    min-width: 50%;
+    margin-bottom: 15px;
+    background-color: #1e1e1e; /* Dark table background */
+}
+
+table tbody {
+    overflow-x: auto;
+}
+
+tr {
+    padding: 10px 0;
+}
+
+td {
+    padding: 5px;
+    color: #e0e0e0; /* Light text for table cells */
+    background-color: #262626;
+}
+
+.container a {
+    text-decoration: underline;
+    color: #8ab4f8;
+}
+
+.container table a {
+    text-decoration: none;
+    color: #8ab4f8;
+}
+
+.navbar .container a {
+    text-decoration: none;
+    color: #8ab4f8;
+}
+
+.navbar .note {
+    padding: 10px 2px 2px 0;
+    float: right;
+    color: #b0b0b0; /* Light gray for navbar notes */
+}
+
+.navbar-dark .bg-dark label {
+    color: #dddddd;
+}
+
+
+/* Specific table class adjustments for dark mode */
+.table-striped {
+    border: 1px solid #777777; /* Darker border for dark mode */
+}
+
+
+.tablescroll_head th {
+    background-color: #333333; /* Darker background for header */
+}
+
+.table-striped colgroup,
+.table-striped th,
+.tablescroll_head th,
+.table-striped td,
+.tablescroll_head td {
+    padding: 15px 20px;
+    color: #000000; /* Light text color */
+}
+
+.tablescroll_body td {
+    padding: 15px 20px;
+}
+
+div.block {
+    overflow: hidden;
+    border: 1px solid #000000; /* Darker border */
+}
+
+div.block label,
+div.block .inner_block {
+    width: 120px;
+    display: block;
+    float: left;
+    text-align: left;
+    margin: 8px;
+    color: #dddddd; /* Light text */
+}
+
+div.block .input {
+    float: left;
+    margin: 8px;
+}
+
+.error,
+.error a {
+    color: #ff4c4c; /* Brighter red for errors */
+}
+
+.warning {
+    font-weight: bold;
+    color: #e5c100; /* Bright yellow for warnings */
+}
+
+.success {
+    font-weight: bold;
+    color: #00e676; /* Bright green for success */
+}
+
+.sort {
+    background-position: right center;
+    background-repeat: no-repeat;
+    cursor: pointer;
+    background-image: url('../../img/bg-dark.gif'); /* Change images for dark mode if available */
+}
+
+.asc {
+    background-position: right center;
+    background-repeat: no-repeat;
+    cursor: pointer;
+    background-image: url('../../img/asc-dark.gif');
+}
+
+.desc {
+    background-position: right center;
+    background-repeat: no-repeat;
+    cursor: pointer;
+    background-image: url('../../img/desc-dark.gif');
+}
+
+.ui-button {
+    height: 22px;
+}
+
+div.term {
+    margin: 10px;
+    border: 1px solid #444444;
+    background-color: #1e1e1e; /* Dark background for term div */
+}
+
+div.termwrapper {
+    width: 100%;
+    min-height: 80%;
+    left: 0;
+    top: 0;
+    background: rgba(18, 18, 18, 0.9);
+    z-index: 10;
+    height: 80vh;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+div.termwrapper div h6 {
+    margin: 8px 0 0 8px;
+    color: #f0f0f0;
+}
+
+.output {
+    height: 80vh;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+    background-color: #1e1e1e; /* Dark output background */
+}
+
+.term-header {
+    font-size: 15px;
+    white-space: nowrap;
+    color: #e0e0e0;
+}
+
+.top_nav {
+    padding: 0;
+    list-style: none;
+}
+
+.top_nav_item {
+    float: left;
+    padding: 0 15px 0 0;
+}
+
+.sentrius_term_ {
+    background: #333333; /* Dark background for command */
+    border: 1px solid #555555;
+}
+
+.sentrius_term__active {
+    background: #444444;
+    border: 1px solid #777777;
+}
+
+.sentrius_term__active h6 {
+    color: #f0f0f0;
+}
+
+.sentrius_term_ {
+    border-radius: 4px;
+    margin: 5px;
+    float: left;
+}
+
+.term {
+    background-color: #000000;
+}
+
+.term-header {
+    cursor: move;
+}
+
+.top_link {
+    float: left;
+    padding: 0 0 10px 30px;
+    font-weight: bold;
+    text-decoration: underline;
+    cursor: pointer;
+    color: #8ab4f8;
+}
+
+.clear {
+    clear: both;
+}
+
+.reverse-video {
+    color: #f0f0f0;
+    background: #4d4d4d;
+}
+
+.note {
+    font-style: italic;
+    font-size: smaller;
+    color: #b0b0b0;
+}
+
+.template {
+    padding: 40px 15px;
+}
+
+
+
+.navbar-brand {
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.align_left {
+    padding-left: 0;
+    margin-left: 0;
+}
+
+.align_right {
+    padding-right: 0;
+    margin-right: 0;
+}
+
+.spacer {
+    display: inline-block;
+}
+
+.spacer-middle {
+    margin: 0 5px;
+}
+
+.spacer-left {
+    margin: 0 5px 0 0;
+}
+
+.spacer-right {
+    margin: 0 0 0 5px;
+}
+
+.spacer-top {
+    margin: 0 0 5px 0;
+}
+
+.spacer-bottom {
+    margin: 5px 0 0 0;
+}
+
+.alertContainer {
+    margin-top: 25px;
+}
+
+a.btn {
+    text-decoration: none;
+    color: #ffffff;
+}
+
+.existing_key_label .alert,
+.new_key_label .alert {
+    float: right;
+    margin-right: 30px;
+    padding: 6px 18px;
+    color: #f0f0f0;
+}
+
+.scrollWrapperActive {
+    overflow-y: scroll;
+    height: 450px;
+    display: inline-block;
+}
+
+.uploadScrollWrapperActive {
+    overflow-y: scroll;
+    height: 200px;
+    display: inline-block;
+}
+
+.uploadScrollableTable {
+    min-width: 600px;
+}
+
+.scrollableTable {
+    min-width: 750px;
+}
+
+.scrollableTable th {
+    background-color: #333333;
+}
+
+table.floatThead-table {
+    border-top: none;
+    border-bottom: none;
+    background-color: #1e1e1e;
+}
+
+.show {
+    display: block;
+}
+
+.hidden {
+    display: none;
+    visibility: hidden;
+}
+
+.invisible {
+    visibility: hidden;
+}
+
+.output .ui-icon {
+    background-image: none;
+}
+
+.btn-secondary {
+    color: #ffffff;
+    background-color: #555555;
+    text-shadow: none;
+    border-color: #777777;
+}
+
+.btn-secondary:focus,
+.btn-secondary.focus {
+    color: #ffffff;
+    background-color: #444444;
+    border-color: #555555;
+}
+
+.btn-secondary:hover {
+    color: #ffffff;
+    background-color: #444444;
+    border-color: #555555;
+}
+
+.btn-secondary:active,
+.btn-secondary.active,
+.open > .dropdown-toggle.btn-secondary {
+    color: #ffffff;
+    background-color: #333333;
+    background-image: none;
+    border-color: #444444;
+}
+
+.btn-secondary .badge {
+    color: #333333;
+    background-color: #ffffff;
+}
+
+.list-group a {
+    text-decoration: none;
+    color: #8ab4f8;
+}
+
+.modal-body .modal-content .row {
+    width: 100%;
+    margin-left: 15px;
+    color: #e0e0e0;
+}
+
+.table-striped th {
+    background-color: #2b2b2b;
+    color: #ffffff;
+}
+/* Change background and text color for selected rows */
+table.dataTable tbody tr.selected {
+    background-color: #333 !important; /* Darker background for dark mode */
+    color: #fff !important; /* Ensure text is readable */
+}
+
+/* Change background and text color for selected cells */
+table.dataTable tbody td.selected {
+    background-color: #444 !important; /* Slightly lighter dark background */
+    color: #fff !important; /* Ensure text is readable */
+}
+
+/* Optional: Adjust hover state for dark mode */
+table.dataTable tbody tr:hover {
+    background-color: #555 !important; /* Hover background color */
+}
+
+.dark-mode-alert {
+    background-color: #2e3b4e; /* Dark background to match dark mode theme */
+    color: #e1e1e1; /* Light text for contrast */
+    border: 1px solid #4a5a6f; /* Slightly lighter border for distinction */
+}
+
+.dark-mode-success-alert {
+    background-color: #2f4f2f; /* A darker shade of green for dark mode */
+    color: #e8f5e9; /* Light text color for good contrast */
+    border: 1px solid #4a7a4a; /* Lighter border to match the green tone */
+}
+/*
+.grid-stack {
+    width: 100%;
+    overflow: visible;
+}
+
+.grid-stack-item {
+    overflow: visible;
+}
+
+.grid-stack-item-content {
+    position: relative;
+    z-index: 1;
+}
+
+
+.grid-stack-item .grid-stack-item-content .card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    background-color: #ffffff;
+    text-align: left;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.grid-stack-item .grid-stack-item-content .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.grid-stack-item .grid-stack-item-content .card-image-container {
+    position: absolute;
+    top: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+}
+
+.grid-stack-item .grid-stack-item-content .card-image {
+    width: 65px;
+    height: 65px;
+    object-fit: cover;
+    border-radius: 50%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    background-color: #ffffff;
+    z-index: 10;
+}
+
+
+.grid-stack-item .grid-stack-item-content .card-title {
+    margin: 0 0 15px;
+    font-weight: bold;
+    font-size: 1.4em;
+    color: #ffffff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+
+.grid-stack-item .grid-stack-item-content .card-stats {
+    background-color: #f9f9f9;
+    padding: 10px;
+    border-top: 1px solid #eee;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.grid-stack-item .grid-stack-item-content .card-stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 1em;
+    color: #555;
+}
+
+.grid-stack-item .grid-stack-item-content .card-buttons {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.grid-stack-item .grid-stack-item-content .btn {
+    background-color: #0573ea;
+    color: #fff;
+    padding: 10px 15px;
+    border-radius: 5px;
+    text-align: center;
+    font-weight: bold;
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+}
+
+.grid-stack-item .grid-stack-item-content .btn:hover {
+    background-color: #0056b3;
+}
+*/
+
+
+/* Adjust background and text color for dark mode */
+table.dataTable.display tbody tr.even > .sorting_1, table.dataTable.order-column.stripe tbody tr.even > .sorting_1 {
+    background-color: #333 !important; /* Darker background for dark mode */
+    color: #fff !important; /* Light text for readability */
+}
+
+table.dataTable.display tbody tr.odd > .sorting_1, table.dataTable.order-column.stripe tbody tr.odd > .sorting_1 {
+    background-color: #444; /* Darker background */
+    color: #fff;
+}
+
+.main-content {
+    padding: 20px;
+}
+
+.sidebar {
+    width: 120px !important; /* Reduced the sidebar width */
+}
+
+.image-container {
+    display: flex;
+    justify-content: center; /* Horizontally center */
+    align-items: center; /* Vertically center */
+    width: 100%; /* Match the container width */
+}
+
+.grid-stack-item-content {
+    background-color: #343a40; /* Matches 'bg-dark' */
+    color: #fff; /* Matches 'text-light' */
+    padding: 10px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.card-header {
+    position: relative;
+    font-size: 1.25rem; /* Adjust font size */
+    font-weight: bold; /* Emphasize header */
+    padding: 0.75rem 1rem; /* Ensure padding */
+    border-bottom: 1px solid #6c757d; /* Optional border */
+}
+
+.card-icon {
+    position: absolute;
+    top: 10px; /* Adjust to fit your layout */
+    right: 10px; /* Adjust to fit your layout */
+    font-size: 1.5rem; /* Adjust icon size */
+    color: #ffffff; /* Match your dark theme */
+    cursor: pointer; /* Optional: Add pointer cursor for interactivity */
+}
+
+.card-icon:hover {
+    color: #8ab4f8; /* Change color on hover for better user experience */
+}
+
+
+.card-body {
+    padding: 1rem; /* Default padding */
+}
+.card-title {
+    margin-bottom: 0.5rem; /* Space below the title */
+}
+
+.card-text {
+    margin: 0; /* No extra margin for the number */
+    font-size: 1.5rem; /* Highlight the number */
+}
+
+
+
+/*
+.custom-dark-card {
+    background: linear-gradient(135deg, #3a3b3c, #212529);
+    color: #fff;
+}
+*/
+
+.grid-stack .grid-stack-item .grid-stack-item-content {
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    color: #fff;
+    background-color: #171616;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+
+.grid-stack .grid-stack-item .grid-stack-item-content .terminal-card-black {
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    color: #fff;
+    background-color: #121212;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+
+#network-visualizer-section {
+    padding-top: 20px;
+}
+
+#network-visualizer-card {
+    border-radius: 8px;
+    background-color: #343a40; /* Matches the dark theme */
+    color: #fff;
+}
+
+#network-visualizer-card .btn-primary {
+    background-color: #007bff;
+    border: none;
+}
+
+#network-visualizer-card .btn-danger {
+    background-color: #dc3545;
+    border: none;
+}
+
+#network-visualizer-card .relative {
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.sidebar a {
+    color: #f8f9fa; /* Light color for links */
+    text-decoration: none; /* Remove underline */
+    transition: color 0.3s;
+}
+
+.sidebar a:hover {
+    color: #007bff; /* Highlight color on hover */
+}
+
+.sidebar a:visited {
+    color: #eaeaea; /* A slightly different shade for visited links */
+}
+
+.sidebar a:active {
+    color: #0056b3; /* Color when the link is clicked */
+}
+
+
+/* Sidebar Link Styles */
+.nav-link {
+    color: #f8f9fa !important; /* Ensure links are light-colored on the dark background */
+    text-decoration: none !important; /* Remove underline from the links */
+    transition: color 0.3s ease; /* Smooth transition effect */
+}
+
+.nav-link:hover {
+    color: #007bff !important; /* Light blue when hovered */
+}
+
+.nav-link:active {
+    color: #0056b3 !important; /* Darker blue when active */
+}
+
+.nav-link:visited {
+    color: #eaeaea !important; /* Slightly different shade for visited links */
+}
+
+/* Ensure the sidebar background remains consistent with the links */
+.bg-dark {
+    background-color: #1b1f23 !important; /* Dark sidebar background */
+    color: #f8f9fa; /* Light text color for contrast */
+}

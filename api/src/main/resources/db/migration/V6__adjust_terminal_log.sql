@@ -1,0 +1,1 @@
+ALTER TABLE terminal_log ALTER COLUMN output CLOB;

@@ -1,0 +1,36 @@
+<!--/**
+ *    Copyright (C) 2013 Loophole, LLC
+ *
+ *    Licensed under The Prosperity Public License 3.0.0
+ */-->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta th:replace="_res/inc/header">
+    <title>[[${systemOptions.systemLogoName}]] - You have been logged out</title>
+</head>
+
+<body>
+<div class="navbar navbar-light bg-light fixed-top navbar-expand-md" role="navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <div class="nav-img">
+                <img src="/img/bastillion_40x40.png" th:src="@{/img/bastillion_40x40.png}"
+                     alt="bastillion">
+            </div>
+            [[${systemOptions.systemLogoName}]]
+        </div>
+        <!--/.nav-collapse -->
+    </div>
+</div>
+<div class="container">
+    <h3></h3>
+    <div th:replace="_res/inc/errors"></div>
+    You have been logged out! Please click <a href="/login.ktrl">login</a> to enter the system again. <br>
+    If you are using a shared computer, you should close the browser to ensure that you are logged out. <br>
+    Please note that if your system is using cert based auth you will be logged back in automatically when clicking the login link.
+</div>
+</body>
+
+</html>

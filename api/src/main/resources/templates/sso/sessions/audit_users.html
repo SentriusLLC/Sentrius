@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Audit Sessions</title>
+    <style>
+        .grid-stack-item-content {
+            background-color: #405d80;
+            color: #fff;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .grid-stack-item-content:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<script>
+    $(document).ready(function() {
+        var cmu = [[${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_USERS')}]];
+        $('#audit-table').DataTable({
+            ajax: {
+                url: '/api/v1/sessions/audit/list', // list
+                dataSrc: '', // Specify the property where the data is located (e.g. use 'data' if response has a "data" field)
+            },
+            columns: [
+                { data: 'user' },
+                { data: 'host' },
+                { data: 'sessionTime' },
+
+                {
+                    data: 'closed',
+                    render: function(data, type, row) {
+                        if (data == true){
+                            return `<span class="badge bg-success">Closed</span>`;
+                        } else {
+                            return `<span class="badge bg-danger">Open</span>`;
+                        }
+                        return actions;
+                    }
+                },
+                {
+                    data: 'sessionId',
+                    render: function(data, type, row) {
+                        if (data) {
+                            var urlencodedId = encodeURIComponent(data);
+                            return`<a href="/sso/v1/sessions/audit/attach?sessionId=${urlencodedId}"><span class="badge bg-success">Terminal Logs</span></a>`;
+                        }
+                        else {
+                            console.log("empty 9on row " + row);
+                        }
+
+                    }
+                },
+            ]
+        });
+    });
+</script>
+
+
+<body>
+<div th:replace="fragments/topbar"></div>
+<div class="container">
+    <h3>Terminal Sessions</h3>
+    <table id="audit-table" class="display" style="width:100%">
+        <thead>
+        <tr>
+            <th>Username</th>
+            <th>Destination Host</th>
+            <th>Connection Time</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- Data will be dynamically loaded here -->
+        </tbody>
+    </table>
+
+</div>
+</body>
+
+</html>

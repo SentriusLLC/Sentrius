@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Dashboard</title>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const gridElementConfigure = document.querySelector('#grid_stack_stats');
+            if (!gridElementConfigure) {
+                console.error('Grid element not found!');
+                return;
+            }
+
+            const optionsConfigure = {
+                staticGrid: true,
+                columnMax: 12,
+                rowHeight: '100px',
+            };
+
+            const gridConfigure = GridStack.init(optionsConfigure, gridElementConfigure);
+            const itemsConfigure = [];
+
+            function addCardFromHiddenElement(elementId) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    const content = element.innerHTML;
+                    const totalItems = itemsConfigure.length;
+                    const columnsPerCard = 2;
+                    const row = Math.floor(totalItems / (optionsConfigure.columnMax / columnsPerCard));
+                    const column = (totalItems % (optionsConfigure.columnMax / columnsPerCard)) * columnsPerCard;
+
+                    console.log(`Adding card to row ${row} and column ${column}`);
+                    const newItem = {
+                        content: content,
+                        x: column,
+                        y: row,
+                        w: columnsPerCard,
+                        h: 1,
+                    };
+                    itemsConfigure.push(newItem);
+                }
+            }
+
+            // Example: Add cards
+            addCardFromHiddenElement('active-servers-card');
+            addCardFromHiddenElement('active-user-card');
+            addCardFromHiddenElement('total-systems-card');
+            addCardFromHiddenElement('total-groups-card');
+
+            gridConfigure.load(itemsConfigure.map(item => ({ ...item })));
+
+            // Add content to dynamically created grid items
+            const gridItemsConfigure = document.querySelectorAll('.grid-stack-item');
+            gridItemsConfigure.forEach((gridItem, index) => {
+                const contentDiv = document.createElement('div');
+                contentDiv.classList.add('grid-stack-item-content');
+                contentDiv.classList.add('custom-dark-card');
+                contentDiv.classList.add('shadow-sm');
+                contentDiv.classList.add('p-3');
+                contentDiv.innerHTML = itemsConfigure[index]?.content || '';
+                gridItem.appendChild(contentDiv);
+            });
+        });
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // ---- Gridstack Configuration for #grid_stack_use ---- //
+            const gridElementUse = document.querySelector('#grid_stack_use');
+
+            const optionsUse = {
+                staticGrid: true, // Allow dragging and resizing for this one
+                columnMax: 12,
+                rowHeight: '100px'
+            };
+
+            const gridUse = GridStack.init(optionsUse, gridElementUse);
+            const itemsUse = [];
+
+            function addToItemsUse(content) {
+                const totalItems = itemsUse.length;
+                const columnsPerCard = 1;
+                const row = Math.floor(totalItems / (optionsUse.columnMax / columnsPerCard));
+                const column = (totalItems % (optionsUse.columnMax / columnsPerCard)) * columnsPerCard;
+
+                const newItem = {
+                    content: content,
+                    x: column,
+                    y: row,
+                    w: columnsPerCard,
+                    h: 1
+                };
+
+                itemsUse.push(newItem);
+            }
+
+            // ---- Fetch Terminal Data from /api/v1/ssh/terminal/list ---- //
+            function fetchAndAddTerminalWindows() {
+                fetch('/api/v1/ssh/terminal/list')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Iterate through the returned HostSystemDTO list and create cards
+                        data.forEach(terminal => {
+                            const content = createTerminalCard(terminal);
+                            addToItemsUse(content);
+                        });
+
+                        // Load the items into the Gridstack for #grid_stack_use
+                        gridUse.load(itemsUse.map(item => {
+                            return {
+                                x: item.x,
+                                y: item.y,
+                                w: item.w,
+                                h: item.h,
+                                content: item.content
+                            };
+                        }));
+
+                        // Setting the content dynamically after loading
+                        const gridItemsUse = gridElementUse.querySelectorAll('.grid-stack-item');
+                        gridItemsUse.forEach((gridItem, index) => {
+                            const contentDiv = document.createElement('div');
+                            contentDiv.classList.add('grid-stack-item-content');
+                            contentDiv.classList.add('terminal-card-black');
+
+                            contentDiv.innerHTML = itemsUse[index].content;
+                            gridItem.appendChild(contentDiv);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching Terminal data:', error);
+                    });
+            }
+
+            // Function to create a terminal window card
+            function createTerminalCard(terminal) {
+                var id = encodeURIComponent(terminal.hostConnection);
+                return `
+            <div style="width: 100%;">
+                <a href="/sso/v1/ssh/servers/attach?sessionId=${id}">
+                    <table style="width: 100%; border-collapse: collapse; text-align: center; margin: 10px 0;">
+                        <tr>
+                            <td style="border: none; padding: 10px; background-color: #1b1f23;">
+                                <i class="fas fa-terminal"></i>
+                            </td>
+                            <td style="border: none; padding: 10px;">
+                                <a href="/sso/v1/ssh/servers/attach?sessionId=${id}" style="font-weight: bold; font-size: 1.2em; color: #FFFFFF; text-decoration: none;">
+                                    Terminal: ${terminal.displayName}
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="border-top: 1px solid #ccc; padding: 10px; background-color: #f9f9f9;">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <tr>
+                                        <td style="padding: 5px;">Status:</td>
+                                        <td style="padding: 5px; font-weight: bold;">${terminal.statusCd}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 5px;">Last Accessed:</td>
+                                        <td style="padding: 5px; font-weight: bold;">${terminal.lastAccessed}</td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </a>
+            </div>
+        `;
+            }
+
+            // Fetch data and add items to grid_stack_use
+            fetchAndAddTerminalWindows();
+        });
+
+    </script>
+    <style>
+
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
+                <div class="container-fluid">
+                    <br><br>
+                    <div class="grid-stack" id="grid_stack_stats"></div>
+                    <hr class="my-4">
+                    <div id="network-visualizer-section" class="d-flex justify-content-between gap-3 flex-wrap">
+                        <div id="network-visualizer-card" class="card custom-dark-card shadow-sm p-3" style="max-width: 800px; flex: 1;">
+                            <div class="card-header">
+                                <h5 class="card-title">Enclave Operations</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Buttons -->
+                                <div class="mb-4 d-flex justify-content-start gap-2">
+                                    <a href="/api/v1/ssh/servers/shutdown" class="btn btn-danger">Shutdown Connections</a>
+                                    <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#hostFormModal">Add Hosts</a>
+                                    <a href="/sso/v1/ssh/servers/list" class="btn btn-primary">Open Connection</a>
+                                </div>
+
+                                <!-- Visualization Area -->
+                                <div class="relative bg-gray-100 dark:bg-gray-800 rounded-lg" style="width: 100%; height: 400px;">
+                                    <canvas id="outputSizeChart" width="400" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="system-visualizer-card" class="card custom-dark-card shadow-sm p-3" style="max-width: 800px; flex: 1;">
+                            <div class="card-header">
+                                <h5 class="card-title">System Operations</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Buttons -->
+                                <div class="mb-4 d-flex justify-content-start gap-2">
+                                    <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
+                                    <a href="#" id="disable-ssh-button" class="btn btn-danger">Lock Down SSH</a>
+                                    <a href="/api/v1/settings" class="btn btn-primary">Update Settings</a>
+                                </div>
+
+                                <!-- Visualization Area -->
+                                <div class="relative bg-gray-100 dark:bg-gray-800 rounded-lg" style="width: 100%; height: 400px;">
+                                    <canvas id="tachometerChart" width="400" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="system-visualizer-card2" class="card custom-dark-card shadow-sm p-3"
+                             style="max-width: 800px; flex: 1;">
+                            <div class="card-header">
+                                <h5 class="card-title">User Operations</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Buttons -->
+                                <div class="mb-4 d-flex justify-content-start gap-2">
+                                    <a href="#" id="disable-ssh-button2" class="btn btn-danger">Lock Down SSH</a>
+                                    <a href="/api/v1/settings" class="btn btn-primary">Update Settings</a>
+                                </div>
+
+                                <!-- Visualization Area -->
+                                <div class="relative bg-gray-100 dark:bg-gray-800 rounded-lg" style="width: 100%; height: 400px;">
+                                    <canvas id="tachometerChart2" width="400" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <div class="grid-stack" id="grid_stack_configure"></div>
+                    <h3>Open Terminals</h3>
+                    <div class="grid-stack" id="grid_stack_use"></div>
+
+                    <div th:replace="~{fragments/dashboard/dashboard_cards}"></div>
+                    <div th:replace="~{fragments/zero_trust_card}"></div>
+                    <div th:replace="~{fragments/host_enclave_card}"></div>
+                    <div th:replace="~{fragments/terminal_card}"></div>
+                    <div th:replace="~{fragments/users_card}"></div>
+                    <div th:replace="~{fragments/ssh_server_card}"></div>
+                    <div th:replace="~{fragments/settings_card}"></div>
+                </div>
+                <div id="textarea" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script type="module" th:src="@{/js/dashboard.js}"></script>
+<script type="module" th:src="@{/js/add_system.js}" defer></script>
+<script type="module" th:src="@{/js/add_user.js}" defer></script>
+<script type="module" th:src="@{/js/add_group.js}" defer></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        let maxConnections = 10;
+        let currentConnections = 0;
+
+        let tachometerChart; // Chart variable for tachometer
+        let outputSizeChart; // Chart variable for output size chart
+
+        function createTachometerChart() {
+            const ctx = document.getElementById('tachometerChart').getContext('2d');
+            if (tachometerChart){
+                tachometerChart.destroy();
+            }
+            tachometerChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Active Connections', 'Remaining Capacity'],
+                    datasets: [{
+                        label: 'Active Connections',
+                        data: [currentConnections, maxConnections - currentConnections],
+                        backgroundColor: [
+                            "rgba(75, 192, 192, 0.8)",
+                            "rgba(255, 206, 86, 0.8)",
+                            "rgba(255, 26, 104, 0.8)",
+                        ],
+                        needleValue: 50,
+                        borderColor: "white",
+                        borderWidth: 2,
+                        cutout: "95%",
+                        circumference: 180,
+                        rotation: 270,
+                        borderRadius: 5,
+                    }]
+                },
+                options: {
+                    rotation: -90 * (Math.PI / 180),
+                    circumference: 180 * (Math.PI / 180),
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return `${context.label}: ${context.raw}`;
+                                }
+                            }
+                        }
+                    },
+                    aspectRatio: 2,
+                }
+            });
+        }
+
+        function updateTachometer(newConnections) {
+            console.log("Updating tachometer with new connections: ", newConnections);
+            if (newConnections <= maxConnections) {
+                tachometerChart.data.datasets[0].data[0] = newConnections;
+                tachometerChart.data.datasets[0].data[1] = maxConnections - newConnections;
+                tachometerChart.update();
+            } else {
+                console.error("Connections exceed max limit!");
+            }
+        }
+
+        let updateTimer;
+
+        function debounceUpdate(newConnections) {
+            clearTimeout(updateTimer);
+            updateTimer = setTimeout(() => {
+                updateTachometer(newConnections);
+            }, 500);
+        }
+
+        function fetchActiveConnections() {
+            fetch('/api/v1/sessions/list')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    currentConnections = data.length;
+                    debounceUpdate(currentConnections);
+                })
+                .catch(error => {
+                    console.error('Error fetching active connections:', error);
+                });
+        }
+
+        createTachometerChart(); // Create chart on load
+
+        // Fetch active connections initially and then every 5 seconds
+        fetchActiveConnections();
+        setInterval(fetchActiveConnections, 5000);
+
+
+
+    fetch('/api/v1/ssh/terminal/logs/output-size')
+        .then(response => response.json())
+        .then(dataFromDB => {
+            console.log("Got data from DB: ", dataFromDB);
+            // Process data for the chart
+            const labels = dataFromDB.map(entry => new Date(entry.logTm).toLocaleTimeString());
+            const data = dataFromDB.map(entry => entry.outputSize);
+
+            // Chart.js configuration
+            const ctx = document.getElementById('outputSizeChart').getContext('2d');
+            if (outputSizeChart){
+                outputSizeChart.destroy();
+            }
+            outputSizeChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels, // Timestamps as labels
+                    datasets: [{
+                        label: 'Output Size (Bytes)',
+                        data: data, // Output sizes
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                        fill: true,
+                        tension: 0.4, // Smooth line
+                        pointRadius: 4,
+                        pointBackgroundColor: '#007bff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time',
+                                color: '#eaeaea'
+                            },
+                            ticks: { color: '#eaeaea' }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Output Size (Bytes)',
+                                color: '#eaeaea'
+                            },
+                            ticks: { color: '#eaeaea' },
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#eaeaea'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.raw} Bytes`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    });
+
+</script>
+</body>
+</html>
+

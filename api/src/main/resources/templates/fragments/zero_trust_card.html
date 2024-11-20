@@ -1,0 +1,27 @@
+
+<a href="/sso/v1/zerotrust/rules/list" class="card-link">
+    <div id="zero-trust-card" class="card" style="display: none"
+         th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_JITS')}">
+        <div class="card-image-container">
+            <img src="/images/zt_medium.png" alt="Terminal Icon" class="card-image">
+        </div>
+        <div class="card-content">
+            <h3 class="card-title">Zero Trust</h3>
+            <div class="card-stats">
+                <div class="card-stat">
+                    <span>System Rules:</span>
+                    <span id="assigned-server-count" class="stat-value">0</span>
+                </div>
+                <div class="card-stat">
+                    <span>Open Connections:</span>
+                    <span class="stat-value">18</span>
+                </div>
+            </div>
+            <div class="card-buttons">
+                <a href="/sso/v1/zerotrust/rules/add" class="btn btn-primary">Assign Rules</a>
+                <a href="/api/v1/ssh/servers/shutdown" class="btn btn-primary">Audit Rules</a>
+                <a href="/api/v1/ssh/servers/shutdown" class="btn btn-primary">JIT Stats</a>
+            </div>
+        </div>
+    </div>
+</a>

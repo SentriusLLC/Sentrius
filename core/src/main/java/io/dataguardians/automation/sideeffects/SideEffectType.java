@@ -1,0 +1,20 @@
+package io.dataguardians.automation.sideeffects;
+
+public enum SideEffectType {
+  NONE,
+  DELETE_FILE,
+  DELETE_DIRECTORY,
+  LIST_DIRECTORY,
+  CHANGE_FILE,
+
+  MKDIR,
+  MOVE_DIRECTORY,
+  CHANGE_DIRECTORY,
+  INSTALL_SOFTWARE,
+  CONFIGURE_APPLICATION,
+  START_APPLICATION,
+  STOP_APPLICATION,
+  SCP_FILE,
+  OPEN_FILE,
+  COPY_FILE;
+}

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <style>
+            form table {
+                width: 350px;
+            }
+            /* Container for centering the row horizontally */
+            .my-specific-container {
+                display: flex;
+                justify-content: center; /* Center horizontally */
+                padding-top: 80px; /* Adjust to add space below the navbar */
+            }
+
+            .row {
+                width: 500px; /* Set your desired width */
+            }
+
+    </style>
+    <title>[[${systemOptions.systemLogoName}]] - System Settings</title>
+</head>
+
+<body>
+<div th:replace="fragments/topbar"></div>
+<div class="my-specific-container">
+    <div class="row">
+        <form th:action="@{/api/v1/users/settings}" method="post"
+              autocomplete="off">
+            <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+            <div id="formToTable">
+
+            </div>
+
+            <table th:if="${userOptions != null && !userOptions.empty}">
+                <template th:each="s : ${userOptions}" th:remove="tag">
+                    <tr>
+                        <td>
+                            <span style="display: flex; align-items: center; gap: 5px;">
+                             <div th:text="${s.name}"></div>
+                                <i class="fa-regular fa-circle-question" th:title="${s.description}"
+                                   th:if="${s.description!= null && !s.description.empty}"></i>
+                            </span>
+                        </td>
+
+                        <td ><input type="text" th:name="${s.name}" th:value="${s.value}" /></td>
+                    </tr>
+                </template>
+            </table>
+            <br />
+            <button type="button" class="btn btn-secondary submit_btn">Save</button>
+        </form>
+
+    </div>
+</div>
+</body>
+
+</html>

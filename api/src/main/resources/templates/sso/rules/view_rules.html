@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+
+<head>
+
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Manage Rules</title>
+
+
+</head>
+
+<body>
+<div th:replace="~{fragments/topbar}"></div>
+<div th:replace="~{fragments/assign_rule}"></div>
+<div class="container">
+    <div class="row">
+
+        <table>
+            <tr>
+                <td>Display Name
+                </td>
+                <td>
+                    <input type="text" name="ruleName" id="ruleName"
+                           class="form-control" title="Rule Name" size="10">
+                </td>
+            </tr>
+            <tr>
+                <td>Rule Type
+                </td>
+
+                <td class="align_left">
+                    <select th:name="ruleClassDropdown" id="ruleClassDropdown"
+                            title="Rule Class" class="form-select view_frm_select">
+                        <option value="">- Select Rule Class -</option>
+                        <option th:each="p : ${classList}" th:value="${p.longName}"
+                                th:text="${p.shortName}"
+                                th:selected="${p.longName}">
+                        </option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td><button  id= "redirectButton" type="button" class="btn btn-secondary submit_btn">Configure
+                    Rule</button></td>
+
+            </tr>
+        </table>
+
+    </div>
+        <h3>Manage Rules</h3>
+        <table id="rule-table" class="display" style="width:100%">
+            <thead>
+            <tr>
+                <th>Rule Name</th>
+                <th>Assigned Groups</th>
+                <th>Rule Class</th>
+                <th>Rule Operations</th>
+            </tr>
+            </thead>
+            <tbody>
+            <!-- Data will be dynamically loaded here -->
+            </tbody>
+        </table>
+    <button class="btn btn-secondary add_btn spacer spacer-bottom"  data-bs-toggle="modal"
+            data-bs-target="#add_dialog" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_EDIT_RULES')}">Add Rule
+    </button>
+    <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
+
+
+</div>
+<script type="module" th:src="@{/js/rules.js}"></script>
+
+
+</body>
+
+</html>

@@ -1,0 +1,22 @@
+
+create table if not exists user_theme (
+	user_id BIGINT PRIMARY KEY,
+	bg varchar(7),
+	fg varchar(7),
+	d1 varchar(7),
+	d2 varchar(7),
+	d3 varchar(7),
+	d4 varchar(7),
+	d5 varchar(7),
+	d6 varchar(7),
+	d7 varchar(7),
+	d8 varchar(7),
+	b1 varchar(7),
+	b2 varchar(7),
+	b3 varchar(7),
+	b4 varchar(7),
+	b5 varchar(7),
+	b6 varchar(7),
+	b7 varchar(7),
+	b8 varchar(7),
+	foreign key (user_id) references users(id) on delete cascade);

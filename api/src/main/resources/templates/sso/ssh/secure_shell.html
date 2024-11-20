@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta th:replace="~{fragments/header}">
+    <script th:src="@{/node/js/google-protobuf/google-protobuf.js}"></script>
+    <script th:src="@{/node/js/sockjs-client/sockjs.js}"></script>
+    <script th:src="@{/js/bundled_session_pb.js}"></script>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        document.addEventListener('DOMContentLoaded', () => {
+            let connection;
+            var term;
+
+            style = {};
+
+            var sessionId = "";
+
+            var persistentMessage = "";
+
+
+
+            $.ajaxSetup({
+                cache: false,
+                async:false,
+                beforeSend: function () {
+                    console.log("AJAX Request started");
+                },
+                complete: function () {
+                    console.log("AJAX Request completed");
+                }
+            });
+
+            window.onerror = function(message, source, lineno, colno, error) {
+                console.error("Global error caught:", message, "at", source, ":", lineno, ":", colno, error);
+            };
+
+            window.location.assign = function (url) {
+                console.log("Redirect (assign):", url);
+                console.trace();
+            };
+            window.location.replace = function (url) {
+                console.log("Redirect (replace):", url);
+                console.trace();
+            };
+
+            //get instance id list from selected terminals
+            function getActiveTermsInstanceIds() {
+                var ids = [];
+                $(".sentrius_term_active").each(function (index) {
+                    var id = $(this).attr("id").replace("sentrius_term_", "");
+                    ids.push(id);
+                });
+                return ids;
+            }
+
+
+            $('#upload_push_dialog').on('hidden.bs.modal', function () {
+                $("#upload_push_frame").attr("src", "");
+            });
+
+
+            var currentSystemStatus = /*[[${currentSystemStatus}]]*/ {};
+            var connectedSystem = /*[[${connectedSystem}]]*/ {};
+            //upload frame dialog
+            $('#upload_push').click(function () {
+
+
+                var ids = [];
+                ids.push( [[${systemSelectId}]] );
+
+                var idListStr = '?_csrf=' + [[${session._csrf}]];
+                ids.forEach(function (entry) {
+                    idListStr = idListStr + '&idList=' + entry;
+                });
+
+                $("#upload_push_frame").attr("src", "setUpload.ktrl" + idListStr);
+                new bootstrap.Modal($("#upload_push_dialog")).show();
+            });
+
+            console.log("85");
+            [# th:if= "${currentSystemStatus != null && (#strings.equals(currentSystemStatus.statusCd, 'GENERICFAIL') || #strings.equals(currentSystemStatus.statusCd, 'HOSTFAIL'))}"]
+            new bootstrap.Modal($("#error_dialog")).show();
+            [/]
+
+                console.log("90");
+            [# th:if= "${connectedSystem != null && connectedSystem.id != null && (currentSystemStatus == null || (!#strings.equals(currentSystemStatus.statusCd, 'GENERICFAIL') && !#strings.equals(currentSystemStatus.statusCd, 'HOSTFAIL')) )}"]
+            console.log("93 " + connectedSystem.statusCd );
+            [# th:if= "${ #strings.equals(connectedSystem.statusCd, 'AUTHFAIL')}"]
+            new bootstrap.Modal($("#set_password_dialog")).show();
+            [/]
+                console.log("97");
+            [# th:if= "${#strings.equals(connectedSystem.statusCd, 'KEYAUTHFAIL')}"]
+            new bootstrap.Modal($("#set_passphrase_dialog")).show();
+            [/]
+
+                console.log("102");
+            [# th:if= "${currentSystemStatus == null || (#strings.equals(connectedSystem.statusCd, 'AUTHFAIL') && #strings.equals(connectedSystem.statusCd, 'KEYAUTHFAIL')&& #strings.equals(connectedSystem.statusCd, 'GENERICFAIL'))}"]
+
+            console.log("Failure occurred " + currentSystemStatus + " " + connectedSystem.statusCd);
+            [/]
+                [/]
+
+                console.log("106 " );
+            [# th:if= "${connectedSystem != null }"]
+
+            var keys = {};
+
+            var termFocus = true;
+            $(document).keypress(function (e) {
+                if (termFocus) {
+                    console.log("termfocus");
+                    var keyCode = (e.keyCode) ? e.keyCode : e.charCode;
+
+                    if (String.fromCharCode(keyCode) && String.fromCharCode(keyCode) !== ''
+                        && (!e.ctrlKey || e.altKey) && !e.metaKey && !keys[27] && !keys[37]
+                        && !keys[38] && !keys[39] && !keys[40] && !keys[13] && !keys[8] && !keys[9]
+                        && !keys[46] && !keys[45] && !keys[33] && !keys[34] && !keys[35] && !keys[36]) {
+                        var cmdStr = String.fromCharCode(keyCode);
+                        console.log("cmdStr: " + cmdStr);
+                        const message = new proto.io.dataguardians.protobuf.TerminalMessage();
+                        message.setCommand(cmdStr);
+                        message.setKeycode(-1);
+                        message.setType(proto.io.dataguardians.protobuf.MessageType.USER_DATA);
+                        const base64Message = btoa(String.fromCharCode(...message.serializeBinary()));
+                        connection.send(base64Message);
+                        console.log("sent");
+                    }
+                    else {
+                        console.log("something else");
+                    }
+
+                }
+            });
+            //function for command keys (ie ESC, CTRL, etc..)
+            $(document).keydown(function (e) {
+                console.log("keydown " + e.keyCode);
+                if (termFocus) {
+                    var keyCode = (e.keyCode) ? e.keyCode : e.charCode;
+                    keys[keyCode] = true;
+
+                    //27 - ESC
+                    //37 - LEFT
+                    //38 - UP
+                    //39 - RIGHT
+                    //40 - DOWN
+                    //13 - ENTER
+                    //8 - BS
+                    //9 - TAB
+                    //17 - CTRL
+                    //46 - DEL
+                    //45 - INSERT
+                    //33 - PG UP
+                    //34 - PG DOWN
+                    //35 - END
+                    //36 - HOME
+                    if ((e.ctrlKey && !e.altKey) || keyCode === 27 || keyCode === 37 || keyCode === 38 || keyCode === 39 || keyCode === 40 || keyCode === 13 || keyCode === 8 || keyCode === 9 || keyCode === 46 || keyCode === 45 || keyCode === 33 || keyCode === 34 || keyCode === 35 || keyCode === 36) {
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        const message = new proto.io.dataguardians.protobuf.TerminalMessage();
+                        message.setType(proto.io.dataguardians.protobuf.MessageType.USER_DATA);
+                        message.setKeycode(keyCode);
+                        const base64Message = btoa(String.fromCharCode(...message.serializeBinary()));
+                        console.log("Sending keycode: " + keyCode);
+                        connection.send(base64Message);
+                        //connection.send(JSON.stringify({id: getActiveTermsInstanceIds(), keyCode: keyCode}));
+                    }
+
+                    //prevent default for unix ctrl commands
+                    if (e.ctrlKey && (keyCode === 9 || keyCode === 83 || keyCode === 81 || keyCode === 84 || keyCode
+                        === 220 || keyCode === 90 || keyCode === 72 || keyCode === 87 || keyCode === 85 || keyCode === 82 || keyCode === 68)) {
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                    }
+
+                }
+
+            });
+
+            $(document).keyup(function (e) {
+                var keyCode = (e.keyCode) ? e.keyCode : e.charCode;
+                delete keys[keyCode];
+                if (termFocus) {
+                    $("#sentrius_term_0").focus();
+                    //$('#dummy').focus();
+                }
+            });
+
+            $(document).click(function (e) {
+                if (termFocus && !$('body').hasClass('modal-open')) {
+                    //$('#dummy').focus();
+                    // $("#sentrius_term_0").focus();
+                }
+            });
+
+
+            //get cmd text from paste
+            $(this).bind('paste', function (e) {
+                //$('#dummy').focus();
+                $("#sentrius_term_0").focus();
+                //$('#dummy').val('');
+                setTimeout(function () {
+                    var cmdStr = $('#dummy').val();
+                    const message = new proto.io.dataguardians.protobuf.TerminalMessage();
+                    message.setCommand(cmdStr);
+                    message.setType(proto.io.dataguardians.protobuf.MessageType.USER_DATA);
+                    const base64Message = btoa(String.fromCharCode(...message.serializeBinary()));
+                    connection.send(base64Message);
+                    //connection.send(JSON.stringify({id: getActiveTermsInstanceIds(), command: cmdStr}));
+                }, 100);
+            });
+
+
+            var fitMap = {};
+
+
+            $("#reset_size").click(function () {
+                resetSize();
+            });
+
+            function resetSize() {
+                var ids = getActiveTermsInstanceIds();
+                for (var i = 0; i < ids.length; i++) {
+                    var w = Math.max(document.documentElement.clientHeight, window.innerWidth || 0);
+                    var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+                    $("#output_" + ids[i]).width((w - 125)/ids.length);
+                    $("#output_" + ids[i]).height(h-20);
+                    $("#output_" + ids[i]).height(h-20);
+
+                    resize($("#output_" + ids[i]));
+                }
+            }
+
+            function notifySize() {
+                var ids = getActiveTermsInstanceIds();
+                for (var i = 0; i < ids.length; i++) {
+                    var w = Math.max(document.documentElement.clientHeight, window.innerWidth || 0);
+                    var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+                    var width = $("#output_" + ids[i]).width();
+                    var height = $("#output_" + ids[i]).height();
+
+                    resize($("#output_" + ids[i]), width, height);
+                }
+            }
+
+            function parse_xterm_style() {
+                var text = $('.xterm-helpers style').text();
+                var arr = text.split('xterm-normal-char{width:');
+                style.width = parseFloat(arr[1]);
+                arr = text.split('div{height:');
+                style.height = parseFloat(arr[1]);
+            }
+
+
+            function get_cell_size(term) {
+                style.width = term._core._renderService._renderer.dimensions.actualCellWidth;
+                style.height = term._core._renderService._renderer.dimensions.actualCellHeight;
+            }
+
+
+
+            function current_geometry(term) {
+                if (!style.width || !style.height) {
+                    try {
+                        get_cell_size(term);
+                    } catch (TypeError) {
+                        parse_xterm_style();
+                    }
+                }
+
+                var cols = parseInt(window.innerWidth / style.width, 10) - 1;
+                var rows = parseInt(window.innerHeight / style.height, 10);
+                return {'cols': cols, 'rows': rows};
+            }
+
+
+            //resize element during drag event. Makes call to set pty width and height
+            function resize(element) {
+                var id = element.attr("id").replace("output_", "");
+
+                if (term) {
+
+                    var geometry = current_geometry(term);
+
+                    var width = Math.floor($('#output_' + id).innerWidth() - 125);
+                    var height = Math.floor($('#output_' + id).innerHeight() - 125);
+                    let encodedSessionId = encodeURIComponent(sessionId);
+                    $.ajax({
+                        url: '/api/v1/ssh/terminal/resize?sessionId=' + encodedSessionId + '&width=' + width +
+                            '&height=' + height,
+                        cache: false
+                    });
+//                    $('#terminal .terminal').toggleClass('fullscreen');
+                    fitMap[id].fit();
+                }
+
+            }
+
+            function resize(element, width, height) {
+                var id = element.attr("id").replace("output_", "");
+                if (term) {
+                    var geometry = current_geometry(term);
+                    var w = Math.floor($('#output_' + id).innerWidth() - 125);
+                    var h = Math.floor($('#output_' + id).innerHeight() - 250);
+                    encodedSessionId
+                    $.ajax({
+                        url: '/api/v1/ssh/terminal/resize?sessionId=' + encodedSessionId + '&width=' + width +
+                            '&height=' + height,
+                        cache: false
+                    });
+//                    $('#terminal .terminal').toggleClass('fullscreen');
+                    fitMap[id].fit();
+                }
+
+            }
+
+
+            var loc = window.location, ws_uri;
+            if (loc.protocol === "https:") {
+                ws_uri = "https:";
+            } else {
+                ws_uri = "http:";
+            }
+
+            const urlObj = new URL(window.location.href);
+
+            const params = new URLSearchParams(urlObj.search);
+
+            sessionId = params.get('sessionId');
+
+            const path = window.location.pathname;
+
+
+            let encodedSessionId = encodeURIComponent(sessionId);
+
+            ws_uri += "//" + loc.host + "/api/v1/ssh/terminal/subscribe?sessionId="  + encodedSessionId;
+
+            console.log("Attempting to create connection to " + ws_uri);
+            connection = new SockJS(ws_uri);
+
+
+            function heartbeat() {
+                console.log("seneding hb");
+
+                if (!connection) return;
+                console.log("seneding hb2");
+
+                if (connection.readyState !== 1) return;
+                console.log("seneding hb3");
+                console.log("proto:", proto);
+                console.log("proto.io.dataguardians.protobuf:", proto?.io?.dataguardians?.protobuf);
+
+
+                const auditLog = new proto.io.dataguardians.protobuf.TerminalMessage();
+                auditLog.setType(proto.io.dataguardians.protobuf.MessageType.HEARTBEAT);
+
+                console.log("seneding hb3.5");
+                // Serialize the message to binary
+                const binaryData = auditLog.serializeBinary();
+                console.log("seneding hb");
+                const base64Message = btoa(String.fromCharCode(...binaryData));
+                connection.send(base64Message);
+                console.log("sent hb");
+                //connection.send(binaryData);
+                //connection.send("heartbeat");
+
+                // Set heartbeat interval 10,000 ms
+                setTimeout(heartbeat, 10000);
+            };
+
+            // Register websocket heartbeat
+            connection.onopen = function (e) {
+                console.log("opened");
+                heartbeat();
+            };
+
+            connection.onclose = function (e) {
+                console.log("closed");
+                console.trace();
+            };
+
+            // Log errors
+            connection.onerror = function (error) {
+                console.log('WebSocket Error ' + error);
+            };
+
+            connection.onmessage = function (e) {
+                console.log("Received message: " + e.data);
+                console.log("382");
+                try {
+                    const binaryMessage = Uint8Array.from(atob(e.data), c => c.charCodeAt(0));
+                    console.log("Decoded binary message:", binaryMessage);
+                    try {
+                        const deserializedAuditLog = proto.io.dataguardians.protobuf.TerminalMessage.deserializeBinary(binaryMessage);
+                        if (!deserializedAuditLog ) {
+                            console.warn("Malformed message received");
+                            return;
+                        }
+
+                        console.log("Deserialized message: ", deserializedAuditLog);
+                        const alertWarn = document.getElementById("alertWarn");
+                        if (!deserializedAuditLog.getTrigger() ) {
+                            if (!deserializedAuditLog.getCommand()) {
+                                console.warn("Malformed message received 402");
+                                return;
+                            }
+                            console.log("387");
+                            if (!term) {
+                                console.log("377" + deserializedAuditLog.getCommand());
+
+                                createTermMap(0, deserializedAuditLog.getCommand());
+                            } else {
+                                console.log("381" + deserializedAuditLog.getCommand());
+
+                                term.write(deserializedAuditLog.getCommand());
+                            }
+
+                        }else{
+                            console.log("395");
+
+                            if (alertWarn) {
+                                const triggerAction = deserializedAuditLog.getTrigger();
+                                const description = triggerAction.getDescription();
+                                if (deserializedAuditLog.getType() == proto.io.dataguardians.protobuf.MessageType.PERSISTENT_MESSAGE) {
+                                    persistentMessage = description;
+                                }
+                                else {
+                                    console.log("hmmm" + deserializedAuditLog.getType());
+                                    alertWarn.textContent = description || persistentMessage || "";
+                                }
+                                // Use textContent instead of innerHTML
+                            }
+                            /* if (json.hasOwnProperty("action")){
+                                 document.getElementById("alertWarn").innerHTML = json.description;
+                             }
+                             else if (json.hasOwnProperty("persistentMessage")){
+                                 persistentMessage = json.description;
+                                 document.getElementById("alertWarn").innerHTML = json.description;
+                             }*
+
+                             */
+                            console.log("trigger action is set");
+                        }
+                        // Proceed with normal processing...
+                    } catch (error) {
+                        console.error("Failed to deserialize message:", error);
+                    }
+
+
+
+
+                } catch (error) {
+                    console.error("Failed to deserialize Protocol Buffer message:", error);
+                    console.error("Error details:", {
+                        message: error.message,
+                        stack: error.stack,
+                        name: error.name,
+                        binaryMessage: binaryMessage, // Log the problematic Uint8Array
+                        base64Data: e.data            // Log the original base64 data
+                    });
+                    return; // Exit if decoding failed
+                }
+            };
+
+            function createTermMap(id, output) {
+
+                var  CUSTOM_THEME =
+                    {
+                        [# th:if= "${userTheme != null && userTheme.bg != null}"]
+                background: [[${userTheme.bg}]],
+                    [/]
+                        [# th:if= "${userTheme != null && userTheme.bg != null}"]
+                foreground: [[${userTheme.fg}]],
+                    cursor: [[${userTheme.fg}]],
+                    cursorAccent: [[${userTheme.fg}]],
+                    [/]
+                        [# th:if= "${userTheme !=null && userTheme.colors != null && userTheme.colors.length == 16}"]
+                black: [[${userTheme.colors[0]}]],
+                    red: [[${userTheme.colors[1]}]],
+                    green: [[${userTheme.colors[2]}]],
+                    yellow: [[${userTheme.colors[3]}]],
+                    blue: [[${userTheme.colors[4]}]],
+                    magenta: [[${userTheme.colors[5]}]],
+                    cyan: [[${userTheme.colors[6]}]],
+                    white: [[${userTheme.colors[7]}]],
+                    brightBlack: [[${userTheme.colors[8]}]],
+                    brightRed: [[${userTheme.colors[9]}]],
+                    brightGreen: [[${userTheme.colors[10]}]],
+                    brightYellow: [[${userTheme.colors[11]}]],
+                    brightBlue: [[${userTheme.colors[12]}]],
+                    brightMagenta: [[${userTheme.colors[13]}]],
+                    brightCyan: [[${userTheme.colors[14]}]],
+                    brightWhite: [[${userTheme.colors[15]}]]
+                    [/]
+            };
+
+                term = new Terminal({
+                    //fontSize: 14,
+                    'theme': CUSTOM_THEME,
+//                    'cursorStyle' : 'bar',
+//                    'cursorWidth' : '10',
+                    //                 'cursorInactiveStyle' : 'bar',
+                    //fontFamily: 'DejaVu Sans Mono, Liberation Mono, monospace'
+                });
+
+                fitMap[id] = new FitAddon.FitAddon()
+                term.loadAddon(fitMap[id])
+                term.open($("#sentrius_term_" + id).find('.output').get(0));
+
+                //term.setOption('logLevel', 'debug');
+                term.write(output);
+                fitMap[id].fit();
+
+
+                notifySize();
+
+            }
+
+            //function to set all terminal bindings when creating a term window
+            function setTerminalEvents(element) {
+
+                //if terminal window toggle active for commands
+                element.mousedown(function (e) {
+                    //check for cmd-click / ctr-click
+                    /*
+                    if (!e.ctrlKey && !e.metaKey) {
+                        $(".sentrius_term").removeClass('sentrius_term_active');
+                    }else{
+                        element.addClass('sentrius_term_active')
+                    }
+*/
+                    /*
+                    if (element.hasClass('sentrius_term_active')) {
+                        element.removeClass('sentrius_term_active');
+                    } else {*/
+                    //  element.addClass('sentrius_term_active')
+                    // }
+                    //element.focus();
+                });
+                $('.ter').toggleClass('fullscreen');
+
+            }
+
+            function setTerminalEvents(element, id) {
+
+                //if terminal window toggle active for commands
+                element.mousedown(function (e) {
+
+                });
+
+            }
+            //returns div for newly created terminal element
+            function createTermElement(instanceId, hostId, displayName) {
+                var instance =
+                    "<div id=\"sentrius_term_" + instanceId + "\"  class=\"sentrius_term_active\">"
+                    //                    + "<h6 class=\"term-header\">" + displayName + "</h6>"
+                    //                    + "<div class=\"term\">"
+                    + "<div id=\"output_" + instanceId + "\" class=\"output\"></div>"
+                //                  + "</div>"
+                return instance;
+            }
+
+            //returns next instance id
+            function getNextInstanceId() {
+                var newInstanceId = 1;
+
+                for (var i = 1; i <= $('.sentrius_term').length; i++) {
+
+                    if ($("#sentrius_term_" + i).length === 0) {
+                        newInstanceId = i;
+                        break;
+                    }
+                    newInstanceId++;
+                }
+                return newInstanceId;
+            }
+
+            //set connected systems
+            //"#termwrapper") =
+            $(createTermElement(0, 0, [[${currentSystemStatus.displayName}]])).replaceAll(".termwrapper");
+            setTerminalEvents($("#sentrius_term_" + 0),0);
+
+            var y_offset = $('.sentrius_term:first').innerHeight() - $('.sentrius_term').find(".output:first").innerHeight();
+            [/]
+
+        });
+
+        /*]]>*/
+    </script>
+
+    <style>
+        .term-container {
+            width: 100%;
+            margin: 0;
+        }
+
+        .notification {
+            width: 100%;
+            background: red;
+            color: white
+        }
+
+        .top {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 999;
+            width: 100%;
+            height: 23px;
+        }
+
+        .term {
+            background: [[${userTheme.bg}]];
+        }
+
+    </style>
+    <title>[[${systemOptions.systemLogoName}]] - Terminals</title>
+</head>
+<body>
+<div class="navbar navbar-dark fixed-top navbar-expand-md" role="navigation" xmlns:th="http://www.thymeleaf.org">
+    <div class="container bg-dark px-3 py-2" >
+        <!-- Brand Logo -->
+        <a class="navbar-brand" href="#" style="padding-left: 45px;">
+            <a href="/sso/v1/dashboard" class="nav-link">
+                <img th:src="${systemOptions.systemLogoPathSmall}" alt="Logo" class="nav-img">
+                [[${systemOptions.systemLogoName}]]
+            </a>
+        </a>
+
+        <!-- Toggler for Mobile -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Navbar Links -->
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                <!-- Pending JITs Badge -->
+                <li class="nav-item">
+                    <span id="alertWarn" class="badge text-bg-warning ms-2"></span>
+                </li>
+                <li class="nav-item">
+                    <a th:href="'/manage/jit/my/status.ktrl?_csrf=' + ${session._csrf}" class="nav-link">
+                        <span id="badge_jits" class="badge text-bg-dark">0 Pending JITs</span>
+                    </a>
+                </li>
+
+            </ul>
+
+            <!-- User Dropdown -->
+            <ul class="navbar-nav mb-2 mb-lg-0">
+                <li class="dropdown nav-item">
+                    <a href="#" class="dropdown-toggle nav-link" data-bs-toggle="dropdown">
+                        <span th:text="${operatingUser.username}"></span>
+                        <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li class="dropdown-item"><a th:href="'/admin/userSettings.ktrl?act=clearbc&_csrf=' + ${session._csrf}">Settings</a></li>
+                        <li class="dropdown-item" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
+                            <a th:href="'/manage/system/settings.ktrl?act=clearbc&_csrf=' + ${session._csrf}">System Settings</a>
+                        </li>
+                        <li class="dropdown-item"><a href="/sso/v1/logout">Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+
+<div class="termwrapper">
+</div>
+
+</body>
+
+</html>

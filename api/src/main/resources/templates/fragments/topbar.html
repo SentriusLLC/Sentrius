@@ -1,0 +1,107 @@
+<!-- Top Navigation Bar -->
+<div class="navbar navbar-dark fixed-top navbar-expand-md" role="navigation" xmlns:th="http://www.thymeleaf.org">
+    <div class="container bg-dark px-3 py-2" >
+        <!-- Brand Logo -->
+        <a class="navbar-brand" href="#" style="padding-left: 45px;">
+            <a href="/sso/v1/dashboard" class="nav-link">
+                <img th:src="${systemOptions.systemLogoPathSmall}" alt="Logo" class="nav-img">
+                [[${systemOptions.systemLogoName}]]
+            </a>
+        </a>
+
+        <!-- Toggler for Mobile -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Navbar Links -->
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+
+                <!-- Profile Selection Dropdown -->
+                <li class="nav-item" th:if="${enclaveList != null && !enclaveList.empty}">
+                    <select th:name="enclaveList" th:onchange="'javascript:changeProfile(this.value)'"
+                            class="form-select view_frm_select" title="Enclave">
+                        <option value="">- Select Host Group -</option>
+                        <option th:each="p : ${enclaveList}" th:value="${p.id}" th:text="${p.nm}" th:if="${p.selected == true}" selected></option>
+                        <option th:each="p : ${enclaveList}" th:value="${p.id}" th:text="${p.nm}" th:if="${p.selected != true}"></option>
+                    </select>
+                </li>
+
+                <li class="nav-item" th:if="${topBarLinks != null}" th:each="link : ${topBarLinks}" th:classappend="${link.url == currentUrl} ? 'active'">
+                    <a th:href="${link.url.isEmpty() ? '#' : link.url}" th:id="${link.id}" class="nav-link">
+                        <span th:text="${link.name}"></span>
+                    </a>
+                </li>
+
+
+                <!-- Pending JITs Badge -->
+                <li class="nav-item">
+                    <a th:href="'/manage/jit/my/status.ktrl?_csrf=' + ${session._csrf}" class="nav-link">
+                        <span id="badge_jits" class="badge text-bg-dark">0 Pending JITs</span>
+                    </a>
+                </li>
+
+                <!-- Error Log Badge (Admin Only) -->
+                <li class="nav-item" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
+                    <a th:href="'/admin/error/log/get.ktrl?_csrf=' + ${session._csrf}" class="nav-link">
+                        <span id="badge_errors" class="badge text-bg-danger"></span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Search Box -->
+            <form class="d-flex ms-auto">
+                <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+            </form>
+
+            <!-- User Dropdown -->
+            <ul class="navbar-nav mb-2 mb-lg-0">
+                <li class="dropdown nav-item">
+                    <a href="#" class="dropdown-toggle nav-link" data-bs-toggle="dropdown">
+                        <span th:text="${operatingUser.username}"></span>
+                        <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li class="dropdown-item"><a
+                                href="/sso/v1/users/settings">Your Settings</a></li>
+                        <li class="dropdown-item" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
+                            <a th:href="'/manage/system/settings.ktrl?act=clearbc&_csrf=' + ${session._csrf}">System Settings</a>
+                        </li>
+                        <li class="dropdown-item"><a href="/sso/v1/logout">Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-warning text-center" role="alert" style="display:none ; margin-top: 10px" id="systemBanner"
+     th:text="${systemBanner}">
+</div>
+<div class="alert alert-primary" style="display:none; margin-top: 10px" role="alert" id="alertNotification">
+    <span id="alertMessage" th:text="${notification}"></span>
+    <div id="alertMessageId" style="display: none;; margin-top: 10px"></div>
+    <button type="button" class="close" data-dismiss="alertMessage" aria-label="Close" onclick="markNotificationAsSeen()">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+<div class="alert alert-success dark-mode-success-alert" role="alert" style="display:none; margin-top: 10px"
+     id="alertTop" th:text="${userMessage.messageToUser}">
+</div>
+<div class="alert alert-danger" role="alert" style="display:none; margin-top: 10px" id="alertTopError"
+     th:text="${userMessage.errorToUser}">
+</div>
+<div class="alert alert-warning" role="alert" style="display:none; margin-top: 10px" id="alertTopBanner"
+     th:text="${userMessage.banner}">
+</div>
+<div class="container" style=" margin-top: 10px">
+<ul class="breadcrumb">
+    <li th:each="breadcrumb : ${breadcrumbs}">
+        <a th:href="${breadcrumb.url} + '.ktrl?' + ${breadcrumb.arguments} + '_csrf=' + ${session._csrf}"
+           th:text="${breadcrumb.name} + ' >> ' + ' ' "> </a>
+    </li>
+    <li> </li>
+</ul>
+</div>

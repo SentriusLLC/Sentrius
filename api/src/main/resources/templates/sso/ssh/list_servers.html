@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+
+    <title>[[${systemOptions.systemLogoName}]] - View Hosts and Enclaves</title>
+    <style>
+        .grid-stack-item-content {
+            background-color: #405d80;
+            color: #fff;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .grid-stack-item-content:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+
+<div th:replace="~{fragments/add_system}"></div>
+
+
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+<div class="main-content">
+    <div th:replace="~{fragments/alerts}"></div>
+
+    <div class="container-fluid">
+        <br><br>
+        <h3>Assigned Host Groups (Enclaves)</h3>
+        <table id="group-table" class="display" style="width:100%">
+            <thead>
+            <tr>
+                <th>Enclave Name</th>
+                <th>Description</th>
+                <th>Host count</th>
+                <th>Operations</th>
+            </tr>
+            </thead>
+            <tbody>
+            <!-- Data will be dynamically loaded here -->
+            </tbody>
+        </table>
+        <h3>Assigned SSH Servers</h3>
+        <table id="ssh-table" class="display" style="width:100%">
+            <thead>
+            <tr>
+                <th>System Name</th>
+                <th>Hostname</th>
+                <th>Host Group</th>
+                <th>SSH User</th>
+                <th>Port</th>
+                <th>Operations</th>
+            </tr>
+            </thead>
+            <tbody>
+            <!-- Data will be dynamically loaded here -->
+            </tbody>
+        </table>
+    </div>
+    <div id="textarea" style="display: none;"></div>
+</div>
+</div>
+</div>
+</div>
+
+<script type="module" th:src="@{/js/functions.js}"></script>
+<script>
+
+    function connectToServer(groupId,data) {
+        // The API URL you want to call
+        let terminalsInNewTab = [[${systemOptions.terminalsInNewTab != null ? systemOptions.terminalsInNewTab : false}]];
+        console.log("Data: ", data);
+        const apiUrl = `/api/v1/ssh/servers/connect/${groupId}/${data}`;
+
+        // Perform the API call
+        fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => {
+                if (response.ok) {
+                    // Assuming the API returns a URL to redirect to
+                    return response.json();
+                } else {
+                    throw new Error('Failed to connect to server');
+                }
+            })
+            .then(data => {
+                if (data.sessionId) {
+                    var sesh = encodeURIComponent(data.sessionId);
+                    // Redirect to the URL received in response
+                    if (terminalsInNewTab) {
+                        window.open(`/sso/v1/ssh/servers/connect?sessionId=${sesh}`, '_blank').focus();
+                    } else {
+                        window.location.href = `/sso/v1/ssh/servers/connect?sessionId=${sesh}`;
+                    }
+                } else {
+
+                    $("#alertTop").hide();
+                    $("#alertTopError").text(data.errorToUser).show().delay(3000).fadeOut();
+                    console.error('No redirect URL provided by API');
+                }
+            })
+            .catch(error => {
+                console.log(error);
+                $("#alertTop").hide();
+                $("#alertTopError").text("An unknown error occurred").show().delay(3000).fadeOut();
+            });
+    }
+    $(document).ready(function() {
+        console.log("table 1 ");
+        let groupName = '[[${(currentGroup != null && currentGroup.displayName != null) ? currentGroup.displayName : "Default Group Name"}]]';
+        let groupId = [[${null != currentGroup && currentGroup.groupId != null ? currentGroup.groupId : null}]];
+
+        let canEdit = [[${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_EDIT_SYSTEMS')}]];
+        console.log("Group Name: ", groupName);
+        console.log("Group ID: ", groupId);
+
+        console.log("group name: ", groupName);
+        console.log("group id: ", groupId);
+        $('#group-table').DataTable({
+            ajax: {
+                url: '/api/v1/enclaves/search', // list
+                dataSrc: '', // Specify the property where the data is located (e.g. use 'data' if response has a "data" field)
+            },
+            columns: [
+                { data: 'displayName' },
+                { data: 'description' },
+                { data: 'hostCount' },
+
+                {
+                    data: 'groupId',
+                    render: function(data, type) {
+                        let ret = `<a href="/sso/v1/ssh/servers/list?groupId=${data}"><button class="btn btn-primary" >View Group</button></a> `;
+                        if (canEdit) {
+                            ret += `<a href="/sso/v1/enclaves/edit?groupId=${data}"><button class="btn btn-primary">Edit Group</button></a>`;
+                        }
+                        return ret;
+//                        return `<a href="/sso/v1/ssh/servers/connect/-1/${data}" class="btn btn-primary" >Connect</a>`;
+                    }
+                }
+            ]
+        });
+        var url = '/api/v1/ssh/servers/list';
+        console.log("group id: ", groupId);
+        if (groupId && groupId !== '-1') {
+            url = `/api/v1/ssh/servers/list?groupId=${groupId}`;
+            console.log("url is " + url);
+        }
+        console.log("table 2 ");
+        $('#ssh-table').DataTable({
+            ajax: {
+                url: url, // list
+                dataSrc: '', // Specify the property where the data is located (e.g. use 'data' if response has a "data" field)
+            },
+            columns: [
+                { data: 'displayName' },
+                { data: 'displayName' },
+                { data: 'group.displayName' },
+                { data: 'sshUser' },
+                { data: 'port' },
+
+                {
+                    data: null,
+                    render: function(data, type, row) {
+                        const groupId = row.group ? row.group.groupId : -1; // Access group.id
+                        const id = row.id;
+                        return`<button class="btn btn-primary" onclick="connectToServer(${groupId}, ${id})">Connect</button>`;
+                    }
+                }
+
+            ]
+        });
+    });
+</script>
+</body>
+
+</html>

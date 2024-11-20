@@ -1,0 +1,319 @@
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+
+    <meta th:replace="~{fragments/header}">
+    <script>
+        function enableButton() {
+            const textBox = document.getElementById("reason");
+            const submitButton = document.getElementById("submitButton");
+
+            // Specify the required length
+            const requiredLength = 10;
+
+            // Enable the button if the text length is greater than or equal to the required length
+            submitButton.disabled = textBox.value.length < requiredLength;
+        }
+    </script>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        var previous = "";
+        $(document).ready(function () {
+
+            var firstBody = null;
+            var termMap = {};
+            var searchMap = {};
+
+
+            $(".termwrapper").sortable({
+                helper: 'clone'
+            });
+            //submit add or edit form
+            $(".submit_btn").button().click(function () {
+                filterTerms();
+            });
+
+
+            $(".clear_btn").button().click(function () {
+                $('#filter').val('');
+                filterTerms();
+            });
+
+            $(".stop_btn").button().click(function () {
+                new bootstrap.Modal($("#stop_session_dialog")).show();
+            });
+
+            $(".stop_btns").button().click(function () {
+                new bootstrap.Modal($("#stop_session_dialog")).hide();
+
+            });
+
+            function filterTerms() {
+                var filterVal = $('#filter').val();
+
+                if (filterVal != null && filterVal !== '') {
+
+                    $(".output_body").each(function (index) {
+
+                        var instanceId = $(this).attr("id").replace("collapse_output_", "");
+                        var termSearch = searchMap[instanceId]; //$(this).find(".terminal");
+                        termSearch.findNext(filterVal, {
+                            caseSensitive: false,
+                            incremental: false
+                        });
+                    });
+
+                }
+                else{
+                    $(".output_body").each(function (index) {
+
+                        var instanceId = $(this).attr("id").replace("collapse_output_", "");
+                        var termSearch = searchMap[instanceId]; //$(this).find(".terminal");
+                        termSearch.findNext('');
+                    });
+                }
+            }
+
+
+            function loadTerms() {
+
+                $(".output_body").each(function (index) {
+
+                    var instanceId = $(this).attr("id").replace("collapse_output_", "");
+                    var id = $(this).attr("id");
+                    var myfield = document.getElementById(id);
+                    var sesh = encodeURIComponent([[${sessionId}]]);
+                    $.ajax({
+                        url : '/api/v1/sessions/audit/attach?sessionId=' +sesh,
+                        type : 'GET',
+                        success : function(data) {
+                                if (data.includes("<html") || data.includes("</html")){
+                                    clearInterval(interval);
+                                    return false;
+                                }
+                                if (data != null && data !== '') {
+                                    if (previous !== '' && data === previous){
+                                        return false;
+                                    }
+                                    myfield.innerHTML = "";
+                                    previous = data;
+                                    var output = data;
+                                    var term = new Terminal({
+                                        cols: 240,
+                                        theme: {
+                                            background: "rgb(8 47 73)",
+                                            foreground: "white",
+                                            cursor: "yellow",
+                                            selectionBackground: "yellow",
+                                            selectionForeground: "black"
+                                        },
+                                        letterSpacing: 0,
+                                        scrollback: 100000,
+                                        fontFamily: "monospace",
+                                        fontSize: 14,
+                                        //                    'cursorStyle' : 'bar',
+                                        //                    'cursorWidth' : '10',
+                                        //                 'cursorInactiveStyle' : 'bar',
+                                        //fontFamily: 'DejaVu Sans Mono, Liberation Mono, monospace'
+                                    });
+
+                                    var fit = new FitAddon.FitAddon()
+                                    var searchAddon = new SearchAddon.SearchAddon();
+                                    term.loadAddon(fit)
+                                    term.loadAddon(searchAddon);
+                                    term.open(myfield);
+                                    term.write(output);
+                                    term.write("<<EOF>>");
+                                    term.write('\r\n');
+                                    fit.fit();
+                                    termMap[instanceId] = term;
+                                    searchMap[instanceId] = searchAddon;
+
+                                }
+                        },
+                    });
+
+                });
+            }
+
+            loadTerms();
+            var interval = setInterval(function() {
+                loadTerms();
+            }, 1000);
+
+
+
+                var cmu = [[${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_USERS')}]];
+                $('#audit-table').DataTable({
+                    ajax: {
+                        url: '/api/v1/sessions/audit/list', // list
+                        dataSrc: '', // Specify the property where the data is located (e.g. use 'data' if response has a "data" field)
+                    },
+                    columns: [
+                        { data: 'user' },
+                        { data: 'host' },
+                        { data: 'sessionTime' },
+
+                        {
+                            data: 'closed',
+                            render: function(data, type, row) {
+                                if (data == true){
+                                    return `<span class="badge bg-success">Closed</span>`;
+                                } else {
+                                    return `<span class="badge bg-danger">Open</span>`;
+                                }
+                                return actions;
+                            }
+                        },
+                        {
+                            data: 'sessionId',
+                            render: function(data, type, row) {
+                                if (data) {
+                                    var urlencodedId = encodeURIComponent(data);
+                                    return`<a href="/sso/v1/sessions/audit/attach?sessionId=${urlencodedId}"><span class="badge bg-success">Terminal Logs</span></a>`;
+                                }
+                                else {
+                                    console.log("empty 9on row " + row);
+                                }
+
+                            }
+                        },
+                    ]
+                });
+            });
+        /*]]>*/
+    </script>
+    <style>
+            .run_cmd {
+                width: 45%
+            }
+            .term {
+                background-color: rgb(240, 240, 240);
+                color: rgb(77, 77, 77);
+            }
+            .terminal {
+                height: 300px;
+                overflow-y: scroll;
+            }
+            .terminal pre {
+                padding: 0;
+                margin: 2px;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                background-color: #F5F5F5;
+            }
+            .align-right {
+                padding: 10px 2px 10px 10px;
+                float: right;
+            }
+            .term-container {
+                width: 100%;
+                padding: 25px 0;
+                margin: 0;
+            }
+        </style>
+    <title>[[${systemOptions.systemLogoName}]] - Session Terminals</title>
+</head>
+
+<body>
+<div class="navbar navbar-dark fixed-top navbar-expand-md" role="navigation" xmlns:th="http://www.thymeleaf.org">
+    <div class="container bg-dark px-3 py-2" >
+        <a class="navbar-brand" href="#" style="padding-left: 45px;">
+            <a href="/sso/v1/dashboard" class="nav-link">
+                <img th:src="${systemOptions.systemLogoPathSmall}" alt="Logo" class="nav-img">
+                [[${systemOptions.systemLogoName}]]
+            </a>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a href="/sso/v1/sessions/audit/list" class="nav-link">Audit List</a>
+                    </li>
+                </ul>
+
+                <ul class="navbar-nav mb-2 mb-lg-0" style="float:right">
+                    <li class="nav-item">
+                        <label> <b>Audit ( <span th:text="${sessionAudit.user}"></span> ) </b>
+                        </label>
+                    </li>
+                    <li class="nav-item">&nbsp;&nbsp;&nbsp;&nbsp;</li>
+                    <li class="nav-item">
+                        <input type="text" id="filter" name="filter" title="Filter" class="spacer spacer-left form-control">
+                    </li>
+                    <li class="nav-item">&nbsp;</li>
+                    <li class="nav-item">
+                        <div class="btn btn-secondary submit_btn spacer spacer-middle">Filter</div>
+                    </li>
+                    <li class="nav-item">
+                        <div class="btn btn-secondary clear_btn spacer spacer-right">Clear</div>
+                    </li>
+                    <li class="nav-item" th:if="${!sessionAudit.closed}">
+                        <div class="btn btn-secondary stop_btn spacer spacer-right">End Session</div>
+                    </li>
+                </ul>
+        </div>
+        <!--/.nav-collapse -->
+    </div>
+</div>
+
+
+<div id="stop_session_dialog" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content" style="width:700px">
+            <div class="modal-header">
+                <h5 class="modal-title">End Session</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table>
+                    <tr>
+                        <td>Reason for ending session:</td>
+                        </td>
+                        <td>
+                            <input type="text"  onkeyup="enableButton()" name="reason"  class="form-control"
+                                   title="reason"
+                                   size="15" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <div id="submitButton"  class="btn btn-secondary stop_btns spacer spacer-right"
+                                 style="margin-top: 10px;">End Session</div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+        <div id="'collapse_output_0" class="container output_body" th:text="''">Panel Body</div>
+</div>
+
+<div class="container">
+    <h3>Terminal Sessions</h3>
+    <table id="audit-table" class="display" style="width:100%">
+        <thead>
+        <tr>
+            <th>Username</th>
+            <th>Destination Host</th>
+            <th>Connection Time</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- Data will be dynamically loaded here -->
+        </tbody>
+    </table>
+
+</div>
+
+</body>
+
+</html>

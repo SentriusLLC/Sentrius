@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+
+<head>
+
+    <meta th:replace="fragments/header">
+    <title>[[${systemOptions.systemLogoName}]] - Manage Rules</title>
+    <style>
+        .grid-stack-item-content {
+            background-color: #405d80;
+            color: #fff;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .grid-stack-item-content:hover {
+            transform: scale(1.05);
+        }
+    </style>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+
+
+        function connectToServer(data) {
+            // The API URL you want to call
+            console.log("Data: ", data);
+            const apiUrl = `/api/v1/ssh/servers/connect/-1/${data}`;
+
+            // Perform the API call
+            fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (response.ok) {
+                        // Assuming the API returns a URL to redirect to
+                        return response.json();
+                    } else {
+                        throw new Error('Failed to connect to server');
+                    }
+                })
+                .then(data => {
+                    if (data.sessionId) {
+                        var openInNewTab = [[${systemOptions.terminalsInNewTab}]];
+                        var sesh = encodeURIComponent(data.sessionId);
+                        // Redirect to the URL received in response
+                        if (openInNewTab) {
+                            window.open(`/sso/v1/ssh/servers/connect?sessionId=${sesh}`, '_blank').focus();
+                        } else {
+                            window.location.href = `/sso/v1/ssh/servers/connect?sessionId=${sesh}`;
+                        }
+                    } else {
+                        console.error('No redirect URL provided by API');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to connect. Please try again later.');
+                });
+        }
+        $(document).ready(function () {
+            $("#view_btn").button().click(function () {
+                $("#viewRules").submit();
+            });
+
+            //call delete action
+            $(".del_btn").button().click(function () {
+                var id = $(this).attr('id').replace("del_btn_", "");
+                window.location = '/sso/v1/rules/delete?ruleId=' + id;
+            });
+            //submit add or edit form
+            $(".submit_btn").button().click(function () {
+                $(this).parents('.modal').find('form').submit();
+            });
+
+            $('#rule').DataTable({
+                ajax: {
+                    url: '/api/v1/rules/list', // list
+                    dataSrc: '', // Specify the property where the data is located (e.g. use 'data' if response has a "data" field)
+                },
+                columns: [
+                    {data: 'ruleName'},
+                    {data: 'hostGroup'},
+                    {data: 'ruleClass'},
+
+                    {
+                        data: 'id',
+                        render: function (data, type, row) {
+                            let buttons = '';
+
+                            if (row.canEdit) {
+                                buttons += `
+                <button class="btn btn-secondary spacer spacer-middle" data-bs-toggle="modal" data-bs-target="#edit_dialog_${data}" onclick="editRule(${data})">Edit</button>
+                <a href="/manage/viewSystemRules.ktrl?rule.id=${data}&amp;_csrf=${session._csrf}">
+                    <button id="role_btn_${data}" class="btn btn-secondary del_btn spacer spacer-right">Assign Systems</button>
+                </a>
+                <a href="/manage/rules/profiles/view.ktrl?rule.id=${data}&amp;_csrf=${session._csrf}">
+                    <button id="role_btn_${data}" class="btn btn-secondary del_btn spacer spacer-right">Assign Profiles</button>
+                </a>
+            `;
+                            }
+
+                            if (row.canDelete) {
+                                buttons += `
+                <button id="del_btn_${data}" class="btn btn-secondary del_btn spacer spacer-right" onclick="deleteRule(${data})">Delete</button>
+            `;
+                            }
+
+                            return buttons;
+                        }
+                    }
+                ]
+            });
+
+        });
+        /*]]>*/
+
+    </script>
+    <script th:inline="javascript" th:if="${!#maps.isEmpty(fieldErrors) || !errors.empty}">
+        /*<![CDATA[*/
+        $(document).ready(function () {
+            [# th:if= "${rule.id > 0}"]
+            new bootstrap.Modal($('#edit_dialog_' + [[${rule.id}]]).show();
+            [/]
+
+                [# th:if= "${rule.id <= 0}"]
+            new bootstrap.Modal($("#add_dialog")).show();
+            [/]
+        });
+        /*]]>*/
+
+    </script>
+
+
+</head>
+
+<body>
+<div th:replace="fragments/topbar"></div>
+<div class="container">
+    <div class="row">
+        <div class="col-sm-6">
+            <h2 class="toast-header">Open Terminal JITs</h2>
+            <div class="table-responsive ">
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th th:id="${@io.bastillion.manage.db.AuditingRulesDB@SORT_BY_NAME}" class="sort">Operation</th>
+                        <th th:id="${@io.bastillion.manage.db.AuditingRulesDB@SORT_BY_CLASS}"
+                            class="sort">User
+                        </th>
+                        <th th:id="${@io.bastillion.manage.db.AuditingRulesDB@SORT_BY_CONFIG}"
+                            class="sort">System
+                        </th>
+                        <th>Approvals </th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <!--
+                    th:remove="tag"
+                    -->
+                    <tr th:each="s : ${sortedSet.itemList}"  th:if="${sortedSet.itemList != null && !sortedSet.itemList.empty}">
+                        <td>
+                            <div th:id="'status_' + ${s.id}" th:text="${s.command}"></div>
+                        </td>
+                        <td th:text="${s.user.username}"></td>
+                        <td th:text="${s.hostSystem.displayNm}"></td>
+                        <td>
+                            <div>
+                                <button th:id="'app_btn_' + ${s.id}"
+                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_JITS')
+                                     && !operatingUser.id.equals(s.user.id)}"
+                                        class="btn btn-secondary app_btn spacer spacer-right">Approve
+                                </button>
+                                <button th:id="'den_btn_' + ${s.id}"
+                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_JITS')
+                                    && !operatingUser.id.equals(s.user.id)}"
+                                        class="btn btn-secondary den_btn spacer spacer-right">Deny
+                                </button>
+                                <button th:id="'rev_btn_' + ${s.id}"
+                                        th:if="${operatingUser.id.equals(s.user.id) }"
+                                        class="btn btn-secondary rev_btn spacer spacer-right">Revoke
+                                </button>
+                                <div style="clear:both"></div>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="col-sm-6">
+            <h2 class="toast-header">Open OPS JITs</h2>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th th:id="${@io.bastillion.manage.db.AuditingRulesDB@SORT_BY_NAME}" class="sort">Operation</th>
+                        <th th:id="${@io.bastillion.manage.db.AuditingRulesDB@SORT_BY_CLASS}"
+                            class="sort" th:if="${myJits==false}">User
+                        </th>
+                        <th  th:if="${myJits==false}">Approvals </th>
+                        <th  th:if="${myJits==true}">Adjudicator </th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="s : ${opsSortedSet.itemList}" <!-- th:remove="tag"
+                        --> th:if="${opsSortedSet.itemList != null && !opsSortedSet.itemList.empty}">
+                    <td>
+                        <div th:id="'status_' + ${s.id}" th:text="${s.command}"></div>
+                    </td>
+                    <td th:text="${s.user.username}" th:if="${myJits==false}"></td>
+                    <td>
+                        <div>
+                            <button th:id="'ops_app_btn_' + ${s.id}"
+                                    th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_JITS')
+                                         && !operatingUser.id.equals(s.user.id)}"
+                                    class="btn btn-secondary ops_app_btn spacer spacer-right">Approve
+                            </button>
+                            <button th:id="'ops_den_btn_' + ${s.id}"
+                                    th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_JITS')
+                                          && !operatingUser.id.equals(s.user.id) }"
+                                    class="btn btn-secondary ops_den_btn spacer spacer-right">Deny
+                            </button>
+                            <button th:id="'ops_rev_btn_' + ${s.id}"
+                                    th:if="${operatingUser.id.equals(s.user.id) }"
+                                    class="btn btn-secondary ops_rev_btn spacer spacer-right">Revoke
+                            </button>
+                            <div style="clear:both"></div>
+                        </div>
+                    </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <!-- approveds -->
+    <div class="row">
+        <div class="col-sm-6">
+            <h2 class="toast-header">Approved Terminal JITs</h2>
+            <div class="table-responsive ">
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th th:id="${@io.bastillion.manage.db.AuditingRulesDB@SORT_BY_NAME}" class="sort">Operation</th>
+                        <th th:id="${@io.bastillion.manage.db.AuditingRulesDB@SORT_BY_CLASS}"
+                            class="sort" th:if="${myJits==false}">User
+                        </th>
+                        <th th:id="${@io.bastillion.manage.db.AuditingRulesDB@SORT_BY_CONFIG}"
+                            class="sort">System
+                        </th>
+                        <th  th:if="${myJits==false}">Approvals </th>
+                        <th  th:if="${myJits==true}">Uses Remaining </th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <!--
+                    th:remove="tag"
+                    -->
+                    <tr th:each="s : ${approvedSortedSet.itemList}"  th:if="${approvedSortedSet.itemList != null && !approvedSortedSet.itemList.empty}">
+                        <td>
+                            <div th:id="'status_' + ${s.id}" th:text="${s.command}"></div>
+                        </td>
+                        <td th:text="${s.user.username}" th:if="${myJits==false}"></td>
+                        <td th:text="${s.hostSystem.displayNm}"></td>
+                        <td  th:if="${myJits==false}">
+                            <div>
+                                <button th:id="'den_btn_' + ${s.id}"
+                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_JITS')
+                                                       && !operatingUser.id.equals(s.user.id)
+                                                        }"
+                                        class="btn btn-secondary den_btn spacer spacer-right">Deny
+                                </button>
+                                <div style="clear:both"></div>
+                            </div>
+                        </td>
+                        <td  th:if="${myJits==true}" th:text="${s.usesRemaining}">
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="col-sm-6">
+            <h2 class="toast-header">Approved OPS JITs</h2>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th th:id="${@io.bastillion.manage.db.AuditingRulesDB@SORT_BY_NAME}" class="sort">Operation</th>
+                        <th th:id="${@io.bastillion.manage.db.AuditingRulesDB@SORT_BY_CLASS}"
+                            class="sort" th:if="${myJits==false}">User
+                        </th>
+                        <th  th:if="${myJits==false}">Approvals </th>
+                        <th  th:if="${myJits==true}">Uses Remaining </th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="s : ${approvedOpsSortedSet.itemList}"  th:if="${approvedOpsSortedSet.itemList != null && !approvedOpsSortedSet.itemList.empty}">
+                        <td>
+                            <div th:id="'status_' + ${s.id}" th:text="${s.command}"></div>
+                        </td>
+                        <td th:text="${s.user.username}" th:if="${myJits==false}"></td>
+                        <td th:if="${myJits==false}">
+                            <div>
+                                <button th:id="'ops_den_btn_' + ${s.id}"
+                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_JITS')
+                                            && !operatingUser.id.equals(s.user.id)}"
+                                        class="btn btn-secondary ops_den_btn spacer spacer-right">Deny
+                                </button>
+
+                                <div style="clear:both"></div>
+                            </div>
+                        </td>
+                        <td  th:if="${myJits==true}" th:text="${s.usesRemaining}">
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <!-- denieds -->
+    <!-- approveds -->
+    <div class="row">
+        <div class="col-sm-6">
+            <h2 class="toast-header">Denied Terminal JITs</h2>
+            <div class="table-responsive ">
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th th:id="${@io.bastillion.manage.db.AuditingRulesDB@SORT_BY_NAME}" class="sort">Operation</th>
+                        <th th:id="${@io.bastillion.manage.db.AuditingRulesDB@SORT_BY_CLASS}"
+                            class="sort" th:if="${myJits==false}">User
+                        </th>
+                        <th th:id="${@io.bastillion.manage.db.AuditingRulesDB@SORT_BY_CONFIG}"
+                            class="sort">System
+                        </th>
+                        <th  th:if="${myJits==false}">Approvals </th>
+                        <th  th:if="${myJits==true}">Can Re-submit </th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <!--
+                    th:remove="tag"
+                    -->
+                    <tr th:each="s : ${deniedSortedSet.itemList}"  th:if="${deniedSortedSet.itemList != null && !deniedSortedSet.itemList.empty}">
+                        <td>
+                            <div th:id="'status_' + ${s.id}" th:text="${s.command}"></div>
+                        </td>
+                        <td th:text="${s.user.username}" th:if="${myJits==false}"></td>
+                        <td th:text="${s.hostSystem.displayNm}"></td>
+                        <td th:if="${myJits==false}">
+                            <div>
+                                <button th:id="'app_btn_' + ${s.id}"
+                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_JITS')
+                                                       && !operatingUser.id.equals(s.user.id)
+                                                        }"
+                                        class="btn btn-secondary app_btn spacer spacer-right">Approve
+                                </button>
+                                <div style="clear:both"></div>
+                            </div>
+                        <td  th:if="${myJits==true}" th:text="${s.canResubmit}">
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="col-sm-6">
+            <h2 class="toast-header">Denied OPS JITs</h2>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th th:id="${@io.bastillion.manage.db.AuditingRulesDB@SORT_BY_NAME}" class="sort">Operation</th>
+                        <th th:id="${@io.bastillion.manage.db.AuditingRulesDB@SORT_BY_CLASS}"
+                            class="sort" th:if="${myJits==false}">User
+                        </th>
+                        <th  th:if="${myJits==false}">Approvals </th>
+                        <th  th:if="${myJits==true}">Can Re-submit </th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="s : ${deniedOpsSortedSet.itemList}" th:if="${deniedOpsSortedSet.itemList != null && !deniedOpsSortedSet.itemList.empty}">
+                        <td>
+                            <div th:id="'status_' + ${s.id}" th:text="${s.command}"></div>
+                        </td>
+                        <td th:text="${s.user.username}" th:if="${myJits==false}"></td>
+                        <td th:if="${myJits==false}">
+                            <div>
+                                <button th:id="'ops_app_btn_' + ${s.id}"
+                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_JITS')
+                                            && !operatingUser.id.equals(s.user.id)}"
+                                        class="btn btn-secondary ops_app_btn spacer spacer-right">Approve
+                                </button>
+
+                                <div style="clear:both"></div>
+                            </div>
+                        </td>
+                        <td  th:if="${myJits==true}" th:text="${s.canResubmit}">
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<template th:each="jr : ${sortedSet.itemList}" th:remove="tag">
+    <div th:id="'view_dialog_' + ${jr.id}" class="modal fade">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">View JIT Request</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div th:replace="_res/inc/errors"></div>
+                        <tr>
+                            <td th:text="${jr.command}"></td>
+                        </tr>
+                        <tr>
+                            <td th:text="${jr.reason.commandNeed}"></td>
+                        </tr>
+                        <td th:text="${jr.reason.requestLink.identifier}"></td>
+                        </tr>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary cancel_btn" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+<template th:each="jr : ${deniedSortedSet.itemList}" th:remove="tag">
+    <div th:id="'view_dialog_' + ${jr.id}" class="modal fade">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" th:text="'JIT Request from ' + ${jr.user.username}"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!--
+                    <table class="table-striped scrollableTable">
+                        <thead>
+                        <tr>
+                            <th>Command</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td th:text="${jr.command}"></td>
+                        </tr>
+                        <tr>
+                            <td th:text="${jr.reason.commandNeed}"></td>
+                        </tr>
+                        <td th:text="${jr.reason.requestLink.identifier}"></td>
+                        </tr>
+                    </tbody>
+                    </table>
+                    -->
+                    <div class="row">
+                        Command:
+                        <td th:text="${jr.command}"></td>
+                    </div>
+                    <div class="row">
+                        <div th:replace="_res/inc/errors"></div>
+                        Reason Provided:
+                        <td th:text="${jr.reason.commandNeed}"></td>
+                    </div>
+                    <div class="row">
+                        <td th:text="${jr.reason.requestLink.identifier}"></td>
+                        </tr>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary cancel_btn" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

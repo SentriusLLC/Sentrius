@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - System Settings</title>
+    <style>
+
+        .form-container {
+            max-width: 600px;
+            margin: 80px auto;
+            background: #1e1e1e; /* Slightly lighter dark for contrast */
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+        .form-title {
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 1.5rem;
+            color: #f8f9fa;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            color: #eaeaea;
+        }
+        th, td {
+            padding: 10px;
+            vertical-align: middle;
+        }
+        th {
+            text-align: left;
+            font-weight: bold;
+            background-color: #2b2b2b; /* Darker for table header */
+            color: #f8f9fa;
+        }
+        td {
+            border-bottom: 1px solid #3c3c3c;
+        }
+        input.form-control {
+            background-color: #2b2b2b; /* Dark input background */
+            border: 1px solid #444;
+            color: #eaeaea; /* Light text color */
+        }
+        input.form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); /* Bootstrap focus shadow */
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 10px 15px;
+            background-color: #007bff; /* Primary button color */
+            border: none;
+            color: white;
+            font-weight: bold;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .submit-btn:hover {
+            background-color: #0056b3;
+        }
+        .info-icon {
+            color: #007bff;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body >
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+<div class="form-container">
+    <form th:action="@{/api/v1/system/settings}" method="post" autocomplete="off">
+        <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+
+        <div class="form-title">System Settings</div>
+
+        <div class="table-container">
+            <table th:if="${systemSettings != null && !systemSettings.empty}">
+                <thead>
+                <tr>
+                    <th>Setting Name</th>
+                    <th>Value</th>
+                </tr>
+                </thead>
+                <tbody>
+                <template th:each="s : ${systemSettings}" th:remove="tag">
+                    <tr>
+                        <td>
+                                <span style="display: flex; align-items: center; gap: 5px;">
+                                    <div th:text="${s.name}"></div>
+                                    <i class="fa-regular fa-circle-question info-icon" th:title="${s.description}"
+                                       th:if="${s.description != null && !s.description.empty}"></i>
+                                </span>
+                        </td>
+                        <td>
+                            <input type="text" th:name="${s.name}" th:value="${s.value}" class="form-control"/>
+                        </td>
+                    </tr>
+                </template>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="form-footer mt-4">
+            <button type="submit" class="submit-btn">Save</button>
+        </div>
+    </form>
+</div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta th:replace="~{fragments/header}" />
+    <title>[[${systemOptions.systemLogoName}]] - JIT Management</title>
+
+    <!-- Styles -->
+    <style>
+        body {
+            background-color: #121212; /* Dark mode background */
+            color: #eaeaea; /* Light text color */
+        }
+
+        .container {
+            margin-top: 20px;
+        }
+
+        .table-container {
+            margin-bottom: 20px;
+        }
+
+        .toast-header {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #f8f9fa;
+        }
+
+        .modal-content {
+            background-color: #1e1e1e;
+            color: #eaeaea;
+        }
+
+        .btn-primary,
+        .btn-secondary {
+            background-color: #007bff;
+            border-color: #007bff;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-secondary:hover,
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: #2b2b2b; /* Custom dark striping */
+        }
+
+        .table-striped tbody tr:hover {
+            background-color: #3a3a3a;
+        }
+    </style>
+</head>
+
+<body>
+<div th:replace="~{fragments/topbar}"></div>
+<div class="container">
+    <!-- JIT Management Sections -->
+    <div class="row">
+        <!-- Open Terminal JITs -->
+        <div class="col-md-6 table-container">
+            <h2 class="toast-header">Open Terminal JITs</h2>
+            <table id="terminal-jits-table" class="table table-striped table-dark">
+                <thead>
+                <tr>
+                    <th>Operation</th>
+                    <th>User</th>
+                    <th>System</th>
+                    <th>Approvals</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="s : ${openTerminalJits}">
+                    <td th:text="${s.command}"></td>
+                    <td th:text="${s.user.username}"></td>
+                    <td th:text="${s.hostSystem.displayNm}"></td>
+                    <td>
+                        <button th:id="'app_btn_' + ${s.id}" class="btn btn-primary btn-sm" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_JITS')}">Approve</button>
+                        <button th:id="'den_btn_' + ${s.id}" class="btn btn-danger btn-sm" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_JITS')}">Deny</button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Open OPS JITs -->
+        <div class="col-md-6 table-container">
+            <h2 class="toast-header">Open OPS JITs</h2>
+            <table id="ops-jits-table" class="table table-striped table-dark">
+                <thead>
+                <tr>
+                    <th>Operation</th>
+                    <th>User</th>
+                    <th>Approvals</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="s : ${openOpsJits}">
+                    <td th:text="${s.command}"></td>
+                    <td th:text="${s.user.username}"></td>
+                    <td>
+                        <button th:id="'ops_app_btn_' + ${s.id}" class="btn btn-primary btn-sm" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_JITS')}">Approve</button>
+                        <button th:id="'ops_den_btn_' + ${s.id}" class="btn btn-danger btn-sm" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_JITS')}">Deny</button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Approved JITs -->
+    <div class="row">
+        <div class="col-md-6 table-container">
+            <h2 class="toast-header">Approved Terminal JITs</h2>
+            <table id="approved-terminal-jits-table" class="table table-striped table-dark">
+                <thead>
+                <tr>
+                    <th>Operation</th>
+                    <th>User</th>
+                    <th>System</th>
+                    <th>Uses Remaining</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="s : ${approvedTerminalJits}">
+                    <td th:text="${s.command}"></td>
+                    <td th:text="${s.user.username}"></td>
+                    <td th:text="${s.hostSystem.displayNm}"></td>
+                    <td th:text="${s.usesRemaining}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 table-container">
+            <h2 class="toast-header">Approved OPs JITs</h2>
+            <table id="approved-ops-jits-table" class="table table-striped table-dark">
+                <thead>
+                <tr>
+                    <th>Operation</th>
+                    <th>User</th>
+                    <th>System</th>
+                    <th>Uses Remaining</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="s : ${approvedOpsJits}">
+                    <td th:text="${s.command}"></td>
+                    <td th:text="${s.user.username}"></td>
+                    <td th:text="${s.hostSystem.displayNm}"></td>
+                    <td th:text="${s.usesRemaining}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 table-container">
+            <h2 class="toast-header">Denied Terminal JITs</h2>
+            <table id="denied-ops-jits-table" class="table table-striped table-dark">
+                <thead>
+                <tr>
+                    <th>Operation</th>
+                    <th>User</th>
+                    <th>System</th>
+                    <th>Uses Remaining</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="s : ${deniedTerminalJits}">
+                    <td th:text="${s.command}"></td>
+                    <td th:text="${s.user.username}"></td>
+                    <td th:text="${s.hostSystem.displayNm}"></td>
+                    <td th:text="${s.usesRemaining}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 table-container">
+            <h2 class="toast-header">Denied Terminal JITs</h2>
+            <table id="denied-terminal-jits-table" class="table table-striped table-dark">
+                <thead>
+                <tr>
+                    <th>Operation</th>
+                    <th>User</th>
+                    <th>System</th>
+                    <th>Uses Remaining</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="s : ${deniedOpsJits}">
+                    <td th:text="${s.command}"></td>
+                    <td th:text="${s.user.username}"></td>
+                    <td th:text="${s.hostSystem.displayNm}"></td>
+                    <td th:text="${s.usesRemaining}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<template th:each="jr : ${openJits}" th:remove="tag">
+    <div th:id="'view_dialog_' + ${jr.id}" class="modal fade">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">JIT Request Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Command:</strong> <span th:text="${jr.command}"></span></p>
+                    <p><strong>Reason:</strong> <span th:text="${jr.reason.commandNeed}"></span></p>
+                    <p><strong>Request Link:</strong> <span th:text="${jr.reason.requestLink.identifier}"></span></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- DataTables Initialization -->
+<script>
+    $(document).ready(function () {
+        // Initialize DataTables
+        $('#terminal-jits-table').DataTable();
+        $('#ops-jits-table').DataTable();
+        $('#approved-terminal-jits-table').DataTable();
+        $('#approved-ops-jits-table').DataTable();
+        $('#denied-terminal-jits-table').DataTable();
+        $('#denied-ops-jits-table').DataTable();
+
+        // Handle modal display logic
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        const modalId = urlParams.get('modalId');
+        if (modalId) {
+            new bootstrap.Modal(document.getElementById(modalId)).show();
+        }
+    });
+</script>
+</body>
+
+</html>

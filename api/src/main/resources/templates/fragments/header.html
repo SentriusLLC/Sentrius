@@ -1,0 +1,305 @@
+<head xmlns:th="http://www.thymeleaf.org" th:remove="tag">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <link rel="icon" th:href="@{/images/sentrius.ico}" type="image/x-icon"/>
+    <link rel="stylesheet" type="text/css" th:href="@{/node/css/jquery-ui/all.css}"/>
+    <!-- <link rel="stylesheet" type="text/css" th:href="@{/node/css/xterm.css}"/> -->
+    <link rel="stylesheet" type="text/css" th:href="@{/node/css/font-awesome/all.css}"/>
+    <link rel="stylesheet" type="text/css" th:href="@{/css/xterm.min.css}"/>
+    <link rel="stylesheet" type="text/css" th:href="@{/node/css/bootstrap.min.css}"/>
+    <link rel="stylesheet" type="text/css" th:href="@{/node/css/bootstrap-grid.min.css}"/>
+    <link rel="stylesheet" type="text/css" th:href="@{/node/css/bootstrap-reboot.min.css}"/>
+    <link rel="stylesheet" type="text/css" th:href="@{/node/css/bootstrap-utilities.min.css}"/>
+
+    <link rel="stylesheet" type="text/css" th:href="@{/node/css/jquery-cron.css}"/>
+    <link rel="stylesheet" type="text/css" th:href="@{/node/css/gridstack/gridstack.css}"/>
+    <link rel="stylesheet" type="text/css" th:href="@{/node/css/datatables/jquery.dataTables.css}"/>
+    <link rel="stylesheet" type="text/css" th:href="@{/css/sso.css}"/>
+
+    <script th:src="@{/node/js/jquery.min.js}"></script>
+    <script th:src="@{/node/js/jquery-ui/version.js}"></script>
+    <script th:src="@{/node/js/jquery-ui/widget.js}"></script>
+    <script th:src="@{/node/js/jquery-ui/position.js}"></script>
+    <script th:src="@{/node/js/jquery-ui/data.js}"></script>
+    <script th:src="@{/node/js/jquery-ui/disable-selection.js}"></script>
+    <script th:src="@{/node/js/jquery-ui/focusable.js}"></script>
+    <!-- <script th:src="@{/node/js/jquery-ui/form.js}"></script> -->
+    <script th:src="@{/node/js/jquery-ui/form-reset-mixin.js}"></script>
+    <!-- <script th:src="@{/node/js/jquery-ui/ie.js}"></script> -->
+    <script th:src="@{/node/js/jquery-ui/keycode.js}"></script>
+    <script th:src="@{/node/js/jquery-ui/labels.js}"></script>
+    <script th:src="@{/node/js/jquery-ui/plugin.js}"></script>
+    <!-- <script th:src="@{/node/js/jquery-ui/safe-active-element.js}"></script> -->
+    <!-- <script th:src="@{/node/js/jquery-ui/safe-blur.js}"></script> -->
+    <script th:src="@{/node/js/jquery-ui/scroll-parent.js}"></script>
+    <script th:src="@{/node/js/jquery-ui/tabbable.js}"></script>
+    <script th:src="@{/node/js/jquery-ui/unique-id.js}"></script>
+    <script th:src="@{/node/js/jquery-ui/widgets/datepicker.js}"></script>
+    <script th:src="@{/node/js/jquery-ui/widgets/mouse.js}"></script>
+    <script th:src="@{/node/js/jquery-ui/widgets/draggable.js}"></script>
+    <script th:src="@{/node/js/jquery-ui/widgets/droppable.js}"></script>
+    <script th:src="@{/node/js/jquery-ui/widgets/resizable.js}"></script>
+    <script th:src="@{/node/js/jquery-ui/widgets/selectable.js}"></script>
+    <script th:src="@{/node/js/jquery-ui/widgets/sortable.js}"></script>
+    <script th:src="@{/node/js/jquery.floatThead.min.js}"></script>
+    <script th:src="@{/node/js/datatables/jquery.dataTables.js}"></script>
+    <script th:src="@{/node/js/popper.min.js}"></script>
+    <script th:src="@{/node/js/Tooltip.min.js}"></script>
+    <script th:src="@{/node/js/rrule.js}"></script>
+    <script th:src="@{/node/js/fullcalendar/core/index.global.min.js}"></script>
+    <script th:src="@{/node/js/fullcalendar/interaction/index.global.min.js}"></script>
+    <script th:src="@{/node/js/fullcalendar/daygrid/index.global.min.js}"></script>
+    <script th:src="@{/node/js/fullcalendar/timegrid/index.global.min.js}"></script>
+    <script th:src="@{/node/js/fullcalendar/rrule/index.global.min.js}"></script>
+    <script th:src="@{/node/js/xterm.js}"></script>
+    <script th:src="@{/node/js/xterm-addon-fit.js}"></script>
+    <script th:src="@{/node/js/xterm-addon-search.js}"></script>
+    <script th:src="@{/node/js/bootstrap.min.js}"></script>
+    <script th:src="@{/node/js/gridstack/gridstack-all.js}"></script>
+    <script th:src="@{/node/js/chart.js/chart.js}"></script>
+    <script th:src="@{/node/js/chart.js/chart.umd.js}"></script>
+    <!--
+        <script th:src="@{/node/js/tags.js}">
+            Tags.init("select");
+        </script>-->
+
+    <style>
+        #alertNotification {
+            margin: 0; /* Remove outer margin */
+            padding: 5px 10px; /* Adjust padding to desired amount */
+        }
+    </style>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        function changeProfile(profileId) {
+            var expires = "";
+            var url = "/admin/experience/selectedProfile.ktrl?_csrf=" + [[${session._csrf}]] + "&profileId=" +
+                (profileId ||
+                "");
+            console.log("Changing url");
+            window.location.href = url;``
+        }
+
+        function isNotification() {
+            const currentPath = window.location.pathname;
+            return /\/admin\/notifications/.test(currentPath);
+        }
+
+        function markNotificationAsSeen() {
+            // Assuming the notification ID or unique identifier is needed to mark it as seen.
+            // Here we pass the notification data. Adjust as needed.
+            const notificationMessage = $("#alertMessage").text();
+            const notificationMessageId = $("#alertMessageId").text();
+            url = "/admin/notification/seen.ktrl?notificationId=" + notificationMessageId + "&_csrf=" + [[${session._csrf}]];
+            console.log("going to " + url);
+            $.ajax({
+                url: url, // Endpoint to mark notification as seen
+                type: 'GET',
+                success: function(response) {
+                    console.log("Notification marked as seen " + response);
+                    $("#alertNotification").fadeOut();
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.error("Error marking notification as seen: " + errorThrown);
+                }
+            });
+        }
+
+        $(document).ready(function () {
+
+            const isAuthenticated = [[${authenticated}]];
+
+
+            if (isAuthenticated) {
+            $.ajaxSetup({cache: false});
+
+                var csrf = [[${session._csrf}]];
+                if (typeof csrf !== 'undefined') {
+                    var refreshId = setInterval(function () {
+                        $.ajax({
+                            url: "/api/v1/zerotrust/jit/my/current",
+                            type: 'GET',
+                        }).done(function (data) {
+                            console.log(data);
+                            if (data && Array.isArray(data)) {
+                                count = Object.keys(data).length;
+                                $("#badge_jits").html('<span class="badge text-bg-dark">' + count + ' Your JITs</span>');
+                            } else {
+                                $("#badge_jits").html('');
+                                $("#badge_errors").html('');
+                            }
+                        }).fail(function (jqXHR, textStatus, errorThrown) {
+
+                            $("#badge_jits").html('');
+                            $("#badge_errors").html('');
+                            clearInterval(refreshId);
+                            console.log("Error: " + errorThrown);
+                        })
+                    }, 60000);
+
+                    function fetchLatestNotification() {
+                        $.ajax({
+                            url: "/api/v1/notification/latest",
+                            type: 'GET',
+                        }).done(function (data) {
+                            if (!data || data === "") {
+                                console.log("No notification data received. Hiding alert.");
+                                $("#alertNotification").fadeOut();
+                            } else {
+                                console.log("Notification received: " + data);
+                                if (data["id"] && data["message"]) {
+                                    if (data["html"]) {
+                                        $("#alertMessage").html(data["message"]);
+                                    } else {
+                                        $("#alertMessage").text(data["message"]);
+                                    }
+                                    $("#alertMessageId").text(data["id"]);
+                                    $("#alertNotification").fadeIn();
+                                } else {
+                                    $("#alertMessage").text('');
+                                    $("#alertNotification").fadeOut();
+                                }
+                            }
+                        }).fail(function (jqXHR, textStatus, errorThrown) {
+                            console.error("Error fetching notification: " + errorThrown);
+                            $("#alertMessage").text('');
+                            $("#alertNotification").fadeOut();
+                            clearInterval(notificationRefreshId);
+                        });
+                    }
+
+                    // Initial fetch
+                    if (!isNotification()) {
+                        fetchLatestNotification();
+
+                        // Set interval to fetch notifications periodically
+                        var notificationRefreshId = setInterval(fetchLatestNotification, 30000);
+                    }
+                    // Adjust interval as needed
+
+                    $.ajax({
+                        url: "/api/v1/jit/my/current",
+                        type: 'GET',
+                    }).done(function (data) {
+                        count = Object.keys(data).length;
+                        $("#badge_jits").html('<span class="badge text-bg-dark">' + count + ' Your JITs</span>');
+                    }).fail(function (jqXHR, textStatus, errorThrown) {
+
+                        $("#badge_jits").html('');
+                        $("#badge_errors").html('');
+                    });
+                    if ($("#badge_errors").length > 0) {
+                        //it doesn't exist
+
+                        var errorrefreshId = setInterval(function () {
+                            $.ajax({
+                                url: "/api/v1/notification/error/log/list",
+                                type: 'GET',
+                            }).done(function (data) {
+                                    count = Object.keys(data).length;
+                                    if (count > 0) {
+                                        $("#badge_errors").html('<span class="badge text-bg-danger">' + count + ' Errors</span>');
+                                    } else {
+                                        $("#badge_errors").html('');
+                                    }
+                                }
+                            ).fail(function (jqXHR, textStatus, errorThrown) {
+                                $("#badge_jits").html('');
+                                $("#badge_errors").html('');
+                                clearInterval(errorrefreshId);
+                            });
+                        }, 60000);
+
+                        $.ajax({
+                            url: "/api/v1/notification/error/log/list",
+                            type: 'GET',
+                        }).done(function (data) {
+                            count = Object.keys(data).length;
+                            if (count > 0) {
+                                $("#badge_errors").html('<span class="badge text-bg-danger">' + count + ' Errors</span>');
+                            } else {
+                                $("#badge_errors").html('');
+                            }
+                        }).fail(function (jqXHR, textStatus, errorThrown) {
+                            $("#badge_jits").html('');
+                            $("#badge_errors").html('');
+                        });
+                    }
+                }
+            }
+            $(function () {
+                var tabindex = 1;
+                $('input,textarea,select,.btn').each(function () {
+                    if (this.type !== "hidden") {
+                        var $input = $(this);
+                        $input.attr("tabindex", tabindex);
+                        tabindex++;
+                    }
+                });
+
+                $(".btn").keyup(function (event) {
+                    if (event.keyCode === 13) {
+                        $(this).click();
+                    }
+                });
+
+                $("form input, form select, .btn").keydown(function (event) {
+                    if (event.keyCode === 13) {
+                        event.preventDefault();
+                        $(this).closest("form").submit();
+                    }
+                });
+            });
+
+            var scrollWrapper = $('.scrollWrapper');
+            if (scrollWrapper.height() >= 450) {
+                scrollWrapper.addClass('scrollWrapperActive');
+                $('.scrollableTable').floatThead({
+                    scrollContainer: function ($table) {
+                        return $table.closest(".scrollWrapper");
+                    }
+                });
+            }
+
+            $(".scrollableTable tr:even").css("background-color", "#e0e0e0");
+
+            $(':input:enabled:visible:first').focus();
+
+            $('.modal').on('shown.bs.modal', function () {
+                $('input:enabled:visible:first').focus();
+            });
+
+            //disable double-click on btns
+            $("form").submit(function () {
+                $('.btn').attr('disabled', 'disabled');
+                return true;
+            }).attr("accept-charset", "utf-8");
+
+            $(".submit_btn").button().click(function() {
+                $(this).closest('form').submit();
+            });
+            [# th:if= "${userMessage != null && userMessage.messageToUser != null && !userMessage.messageToUser.isEmpty()}"]
+                $("#alertTop").show().delay(3000).fadeOut();
+            [/]
+
+            [# th:if= "${userMessage != null && userMessage.errorToUser != null && !userMessage.errorToUser.isEmpty()}"]
+                $("#alertTopError").show().delay(5000).fadeOut();
+            [/]
+
+                [# th:if= "${banner != null && !banner.isEmpty()}"]
+                $("#alertTopBanner").show();
+                [/]
+
+            [# th:if= "${systemBanner != null && !systemBanner.isEmpty()}"]
+                $("#systemBanner").show();
+            [/]
+
+        });
+
+        /*]]>*/
+    </script>
+
+
+</head>

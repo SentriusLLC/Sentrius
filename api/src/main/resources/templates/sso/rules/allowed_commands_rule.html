@@ -1,0 +1,119 @@
+<!--/**
+ *    Copyright (C) 2013 Loophole, LLC
+ *
+ *    Licensed under The Prosperity Public License 3.0.0
+ */-->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+
+    <meta th:replace="~{fragments/header}">
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+
+        var count = 0;
+        function ddM(){
+            if (count >= 1) {
+                $("#com_" + count).remove();
+                count = count - 1;
+            }
+        }
+        function dd(){
+            var new_form = "<div id=\"com_" + count + "\"><table><tr><td>Command ( matched at beginning )" +
+                    "</td><td><input type=\"text\" name=\"command_" + count + "\"" +
+                    "className=\"form-control\" title=\"Rule Name\" size=\"25\">" +
+                    "</td></tr></table></div>";
+            count= count + 1;
+            $("#formToTable").append(new_form);
+        }
+        $(document).ready(function () {
+            dd();
+            $("#view_btn").button().click(function () {
+                $("#viewRules").submit();
+            });
+
+            //call delete action
+            $(".del_btn").button().click(function () {
+                var id = $(this).attr('id').replace("del_btn_", "");
+                window.location = 'manage/deleteRule.ktrl?rule.id=' + id + '&sortedSet.orderByDirection=' + /*[[${sortedSet.orderByDirection}]]*/ ''
+                    + '&sortedSet.orderByField=' + /*[[${sortedSet.orderByField}]]*/ ''
+                    + '&_csrf=' + [[${session._csrf}]];
+            });
+            //submit add or edit form
+            $(".submit_btn").button().click(function () {
+                $(this).parents('.modal').find('form').submit();
+            });
+
+            $(".sort,.sortAsc,.sortDesc").click(function () {
+                var id = $(this).attr('id');
+
+                var orderDirection = $('#viewRules_sortedSet_orderByDirection');
+                if (orderDirection.attr('value') === 'asc') {
+                    orderDirection.attr('value', 'desc');
+                } else {
+                    orderDirection.attr('value', 'asc');
+                }
+
+                $('#viewRules_sortedSet_orderByField').attr('value', id);
+                $("#viewRules").submit();
+
+            });
+
+            [# th:if= "${!#strings.isEmpty(sortedSet.orderByField)}"]
+                $('#' + [[${sortedSet.orderByField}]]).attr('class', [[${sortedSet.orderByDirection}]]);
+            [/]
+
+        });
+        /*]]>*/
+
+    </script>
+    <script th:inline="javascript" th:if="${!#maps.isEmpty(fieldErrors) || !errors.empty}">
+        /*<![CDATA[*/
+        $(document).ready(function () {
+            [# th:if= "${rule.id > 0}"]
+                new bootstrap.Modal($('#edit_dialog_' + [[${rule.id}]]).show();
+            [/]
+
+            [# th:if= "${rule.id <= 0}"]
+                new bootstrap.Modal($("#add_dialog")).show();
+            [/]
+        });
+        /*]]>*/
+
+    </script>
+
+    <title>[[${systemOptions.systemLogoName}]] - Manage Rules / Distribute SSH Keys</title>
+</head>
+
+<body>
+<div th:replace="~{fragments/topbar}"></div>
+<div class="container">
+    <h2>Allowed Commands Configuration</h2>
+    <h6>Configure "[[${ruleName}]]". Enter the command. These will be matched as prefixes. </h6>
+    <h6>The message to the user will be displayed while using their terminal. </h6>
+
+    <div class="row">
+        <form th:action="@{/manage/rules/save.ktrl}" method="post" class="save_sys_form_add"
+              autocomplete="off">
+            <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+            <input type="hidden" name="ruleClass" th:value="${rule.ruleClass}">
+            <input type="hidden" name="ruleName" th:value="${rule.displayNm}">
+            <input type="hidden" name="action_global" th:value="APPROVE">
+            <table><tr><td>Description, displayed when <br/>command isn't allowed </td><td><input type="text" name="description_global"
+                className="form-control" title="Description" size="35"></td></tr></table>
+            <div id="formToTable">
+
+            </div>
+            <a href="javascript:dd();" ><i class="fa fa-plus"></i></a>
+            <a href="javascript:ddM();" ><i class="fa fa-minus"></i></a>
+            <br />
+            <button type="button" class="btn btn-secondary submit_btn">Save Rule</button>
+        </form>
+
+    </div>
+</div>
+</body>
+
+</html>

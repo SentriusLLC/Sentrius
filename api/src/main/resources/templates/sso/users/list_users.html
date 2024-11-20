@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - List Users</title>
+    <style>
+        .grid-stack-item-content {
+            background-color: #405d80;
+            color: #fff;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .grid-stack-item-content:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<script>
+    $(document).ready(function() {
+        var cmu = [[${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_USERS')}]];
+        $('#user-table').DataTable({
+            ajax: {
+                url: '/api/v1/users/list', // list
+                dataSrc: '', // Specify the property where the data is located (e.g. use 'data' if response has a "data" field)
+            },
+            columns: [
+                { data: 'name' },
+                { data: 'username' },
+                { data: 'emailAddress' },
+
+                {
+                    data: 'userId',
+                    render: function(data, type, row) {
+                        var myId = encodeURIComponent(data);
+                        if (cmu){
+                            actions = `<a href="/sso/v1/users/lock/${myId}" class="btn btn-primary" >Lock</a> &nbsp; | &nbsp;`;
+                            actions += `<a href="/api/v1/users/delete?userId=${myId}" class="btn btn-primary" >Delete</a>`;
+                        }
+                        return actions;
+                    }
+                }
+            ]
+        });
+    });
+</script>
+
+
+<body>
+<div th:replace="fragments/topbar"></div>
+<div th:replace="fragments/add_system"></div>
+<div class="container">
+    <h3>Users</h3>
+    <table id="user-table" class="display" style="width:100%">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Username</th>
+            <th>Email Address</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- Data will be dynamically loaded here -->
+        </tbody>
+    </table>
+
+</div>
+</body>
+
+</html>
