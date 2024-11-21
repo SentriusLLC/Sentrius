@@ -177,6 +177,9 @@
     </style>
 </head>
 <body>
+<div th:replace="~{fragments/add_system}"></div>
+<div th:replace="~{fragments/add_user}"></div>
+<div th:replace="~{fragments/add_group}"></div>
 <div class="container-fluid">
     <div class="row flex-nowrap">
         <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
@@ -217,7 +220,7 @@
                                 <div class="mb-4 d-flex justify-content-start gap-2">
                                     <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
                                     <a href="#" id="disable-ssh-button" class="btn btn-danger">Lock Down SSH</a>
-                                    <a href="/api/v1/settings" class="btn btn-primary">Update Settings</a>
+                                    <a href="/sso/v1/settings" class="btn btn-primary">Update Settings</a>
                                 </div>
 
                                 <!-- Visualization Area -->

@@ -1,6 +1,7 @@
 
 package io.dataguardians.sso.websocket;
 
+import io.dataguardians.automation.auditing.Trigger;
 import io.dataguardians.automation.auditing.TriggerAction;
 import io.dataguardians.protobuf.Session;
 import io.dataguardians.sso.core.security.service.CryptoService;
@@ -92,11 +93,15 @@ public class TerminalWSHandler extends TextWebSocketHandler {
                     if (null != sys ) {
                         for (var action : sys.getSessionStartupActions()) {
                             var trigger = action.trigger("");
-                            if (trigger.getAction() == TriggerAction.JIT_ACTION) {
+                            if (trigger.get().getAction() == TriggerAction.JIT_ACTION) {
                                 // drop the message
-                                sessionTrackingService.addTrigger(sys, trigger);
+                                sys.getTerminalAuditor().setSessionTrigger(trigger.get());
+                                sessionTrackingService.addTrigger(sys, trigger.get());
                                 return;
                             }
+                        }
+                        if (sys.getTerminalAuditor().getSessionTrigger().getAction() != TriggerAction.NO_ACTION){
+                            sessionTrackingService.addTrigger(sys, sys.getTerminalAuditor().getSessionTrigger());
                         }
 
                         // Get the user's session and handle trigger if present

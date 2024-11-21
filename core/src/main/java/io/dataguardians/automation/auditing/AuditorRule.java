@@ -18,11 +18,11 @@ public abstract class AuditorRule {
 
   public abstract boolean requiresSanitized();
 
-  void setConnectedSystem(ConnectedSystem connectedSystem) {
+  public void setConnectedSystem(ConnectedSystem connectedSystem) {
     this.connectedSystem = connectedSystem;
   }
 
-  void setTrackingService(SessionTrackingService sessionTrackingService){
+  public void setTrackingService(SessionTrackingService sessionTrackingService){
     this.sessionTrackingService = sessionTrackingService;
   }
 }

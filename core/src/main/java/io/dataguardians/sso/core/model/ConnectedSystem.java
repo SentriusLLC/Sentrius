@@ -45,8 +45,13 @@ public class ConnectedSystem {
     @Builder.Default
     private List<SessionRuleIfc> sessionStartupActions = new ArrayList<>();
 
+    // websocket for the terminal
     @Builder.Default
-    private String websocketSessionId = "";
+    private volatile String websocketSessionId = "";
+
+    // websocket for a listener
+    @Builder.Default
+    private volatile String websocketListenerSessionId = "";
 
     RecordingStudio terminalRecorder;
 

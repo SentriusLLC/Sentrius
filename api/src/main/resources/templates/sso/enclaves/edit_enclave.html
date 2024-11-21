@@ -92,7 +92,13 @@
 </head>
 
 <body>
-<div th:replace="~{fragments/topbar}"></div>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
 <div class="form-container">
     <h2>Edit Host Group Configuration</h2>
     <p>Fill out the following options</p>
@@ -143,7 +149,10 @@
         <button type="submit" class="btn btn-primary submit-btn">Save</button>
     </form>
 </div>
-
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 
 </html>

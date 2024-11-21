@@ -156,6 +156,10 @@ public class SshListenerService {
                     keyCode = keyCodeDbl.intValue();
                 }
 
+                if (terminalSessionId.getTerminalAuditor().getSessionTrigger().getAction() != TriggerAction.NO_ACTION) {
+                    log.info("Session Trigger action is not NO_ACTION");
+                    return;
+                }
                     var schSession = terminalSessionId.getSession();
 
                     if (terminalSessionId.getTerminalAuditor().getCurrentTrigger().getAction()
@@ -198,8 +202,12 @@ public class SshListenerService {
 
                     } else {
                         log.trace("Appending");
-                        terminalSessionId.getTerminalAuditor().append(command);
-                        terminalSessionId.getCommander().print(command);
+
+                            terminalSessionId.getTerminalAuditor().append(command);
+                            terminalSessionId.getCommander().print(command);
+
+
+
                 }
 
                 // update timeout

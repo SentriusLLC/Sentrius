@@ -1,6 +1,7 @@
 package io.dataguardians.automation.auditing;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class BaseAuditor {
 
@@ -17,10 +18,14 @@ public abstract class BaseAuditor {
 
   AtomicBoolean shutdownRequested = new AtomicBoolean(false);
 
+  protected AtomicReference<Trigger> sessionTrigger = new AtomicReference<>();
+
   public BaseAuditor(Long userId, Long sessionId, Long systemId) {
     this.userId = userId;
     this.sessionId = sessionId;
     this.systemId = systemId;
+
+    sessionTrigger.set(new Trigger(TriggerAction.NO_ACTION, ""));
   }
 
   public synchronized String clear(int keycode) {
@@ -110,5 +115,13 @@ public abstract class BaseAuditor {
 
   public Trigger getCurrentTrigger() {
     return currentTrigger;
+  }
+
+  public void setSessionTrigger(Trigger trigger ){
+    sessionTrigger.set(trigger);
+  }
+
+  public Trigger getSessionTrigger() {
+    return sessionTrigger.get();
   }
 }

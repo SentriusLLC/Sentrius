@@ -11,6 +11,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import io.dataguardians.sso.core.data.auditing.RecordingStudio;
 import io.dataguardians.sso.core.model.ConnectedSystem;
 import io.dataguardians.sso.core.model.auditing.Rule;
@@ -54,6 +55,7 @@ public class RuleAlertAuditor extends BaseAuditor {
 
     // async thread evaluate
     executorService = Executors.newFixedThreadPool(1);
+
   }
 
   @Override
@@ -90,19 +92,21 @@ public class RuleAlertAuditor extends BaseAuditor {
     // do nothing
   }
 
-  public void setSynchronousRules(List<Rule> synchronousRules)
+  public void setStartupActions(List<SessionRuleIfc> startupActions) {
+    for (SessionRuleIfc action : startupActions) {
+      if (action.describeAction() == TriggerAction.JIT_ACTION) {
+        synchronousRules.add(action);
+      }
+    }
+  }
+
+  public void setSynchronousRules(List<AuditorRule> synchronousRules)
       throws ClassNotFoundException,
           NoSuchMethodException,
           InvocationTargetException,
           InstantiationException,
           IllegalAccessException {
-    for (Rule rule : synchronousRules) {
-      Class<? extends AuditorRule> newRuleClass =
-          Class.forName(rule.getRuleClass()).asSubclass(AuditorRule.class);
-      AuditorRule newRule = newRuleClass.getConstructor().newInstance();
-      newRule.configure(rule.getRuleConfig());
-      newRule.setConnectedSystem(connectedSystem);
-      newRule.setTrackingService(sessionTrackingService);
+    for (AuditorRule newRule : synchronousRules) {
       switch (newRule.describeAction()) {
         case JIT_ACTION:
           this.synchronousRules.add(newRule);

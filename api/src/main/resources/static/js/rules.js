@@ -217,7 +217,27 @@ $(document).ready(function () {
 
             return;
         } else {
-            url = "/sso/v1/zerotrust/rules/config/";
+            (async () => {
+                url = "/api/v1/zerotrust/rules/save";
+                const csrfToken = document.getElementById('csrf-token').value; // Get CSRF token value
+                const payload = {
+                    ruleName: ruleName,
+                    ruleClass: ruleClass
+                };
+
+
+
+                try {
+                    await saveRuleConfiguration(url, payload, csrfToken);
+                    console.log("Rule configuration saved successfully.");
+                    console.log("Saved");
+                    url = "/sso/v1/zerotrust/rules/list";
+                    window.location.href = url;
+                } catch (error) {
+                    console.error("Error while saving:", error);
+                }
+            })();
+            return;
         }
 
         // Redirect to the constructed URL if ruleName and ruleClass are valid

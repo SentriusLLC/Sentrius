@@ -53,9 +53,15 @@
 
 
 <body>
-<div th:replace="fragments/topbar"></div>
+
 <div th:replace="fragments/add_system"></div>
-<div class="container">
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
     <h3>Users</h3>
     <table id="user-table" class="display" style="width:100%">
         <thead>
@@ -71,6 +77,9 @@
         </tbody>
     </table>
 
+</div>
+</div>
+</div>
 </div>
 </body>
 

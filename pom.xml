@@ -3,12 +3,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.dataguardians</groupId>
-    <artifactId>secureshellops</artifactId>
+    <artifactId>sentrius</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>SecureShellOps</name>
-    <description>Multi-module project for SecureShellOps</description>
+    <name>sentrius</name>
+    <description>Multi-module project for sentrius</description>
 
     <modules>
         <module>core</module>

@@ -19,7 +19,9 @@ import com.jcraft.jsch.ChannelShell;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
+import io.dataguardians.automation.auditing.AuditorRule;
 import io.dataguardians.automation.auditing.RuleAlertAuditor;
+import io.dataguardians.automation.auditing.RuleFactory;
 import io.dataguardians.automation.auditing.SessionRuleIfc;
 import io.dataguardians.automation.auditing.TriggerAction;
 import io.dataguardians.automation.auditing.rules.SudoPrevention;
@@ -120,16 +122,30 @@ public class TerminalService {
             if (systemOptions.getTestMode()) {
                 session.setConfig("StrictHostKeyChecking", "no");
             }
+            Set<ProfileRule> rules = enclave.getRules();
+
+            // rules that are in-line with data/command processing
+            List<AuditorRule> synchronousRules = new ArrayList<>();
+            // rules that are ONLY before a session begins.
+            List<SessionRuleIfc> definedSessionRules = new ArrayList<>();
+
+            RuleFactory.createRules(schSession, sessionTrackingService, rules.stream().collect(Collectors.toList()),
+                synchronousRules, definedSessionRules);
+
+
+            sessionRules.addAll(definedSessionRules);
 
             for(var rule : sessionRules){
                 rule.setConnectedSystem(schSession);
                 rule.setTrackingService(sessionTrackingService);
                 var trg = rule.trigger("");
-                    if (trg.getAction() == TriggerAction.DENY_ACTION){
+                    if (trg.get().getAction() == TriggerAction.DENY_ACTION){
                         return schSession;
                     }
 
             }
+
+            schSession.setSessionStartupActions(sessionRules);
 
             var serverAliveInterval = systemOptions.getServerAliveInterval() * 1000;
             jsch.setKnownHosts(systemOptions.knownHostsPath);
@@ -181,7 +197,7 @@ public class TerminalService {
             schSession.setInputToChannel(inputToChannel);
             schSession.setCommander(commander);
 
-            Set<ProfileRule> rules = enclave.getRules();
+
 
             for(ProfileRule rule : rules) {
                 log.info("Apply8ing {} to system", rule.getRuleName());
@@ -189,7 +205,7 @@ public class TerminalService {
             if (null != enclave.getConfiguration() && !enclave.getConfiguration().getAllowSudo()) {
                 terminalAuditor.addRule(new SudoPrevention());
             }
-            terminalAuditor.setSynchronousRules(rules.stream().collect(Collectors.toList()));
+            terminalAuditor.setSynchronousRules(synchronousRules);
             schSession.setTerminalAuditor(terminalAuditor);
 
             schSession.setTerminalRecorder(recorder);
