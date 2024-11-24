@@ -2,7 +2,6 @@ package io.dataguardians.sso.core.services;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.dataguardians.security.JITUtils;
 import io.dataguardians.sso.core.model.HostSystem;
 import io.dataguardians.sso.core.model.users.User;
 import io.dataguardians.sso.core.model.security.enums.JITAccessEnum;
@@ -25,11 +24,14 @@ public class TwoPartyApprovalService {
     private final TwoPartyApprovalConfigService configService;
     private final JITRequestService jitRequestService;
     private final ObjectMapper objectMapper;
+    private final JITService jitService;
 
-    public TwoPartyApprovalService(TwoPartyApprovalConfigService configService, JITRequestService jitRequestService, ObjectMapper objectMapper) {
+    public TwoPartyApprovalService(TwoPartyApprovalConfigService configService, JITRequestService jitRequestService,
+                                   ObjectMapper objectMapper, JITService jitService) {
         this.configService = configService;
         this.jitRequestService = jitRequestService;
         this.objectMapper = objectMapper;
+        this.jitService = jitService;
     }
 
     @Transactional
@@ -98,16 +100,16 @@ public class TwoPartyApprovalService {
 
     private String handleApprovalRequest(User requestingUser, String command, String referrer, StringBuilder referralUri, JITAccessEnum.OpsIfc lambda, JITRequest jitRequest) throws SQLException, GeneralSecurityException {
         if (jitRequestService.hasJITRequest(command, requestingUser.getId(), -1L)) {
-            if (!JITUtils.isExpired(command, requestingUser.getId(), -1L)) {
-                if (JITUtils.isApproved(command, requestingUser.getId(), -1L)) {
-                    if (JITUtils.isActive(command, requestingUser.getId(), -1L)) {
-                        JITUtils.incrementUses(command, requestingUser.getId(), -1L);
+            if (!jitService.isExpired(command, requestingUser, -1L)) {
+                if (jitService.isApproved(command, requestingUser.getId(), -1L)) {
+                    if (jitService.isActive(command, requestingUser.getId(), -1L)) {
+                        jitService.incrementUses(command, requestingUser.getId(), -1L);
                         return lambda.approved(0L);
                     } else {
                         jitRequestService.addJITRequest(jitRequest);
                         return createRedirect(referrer, referralUri, MessagingUtil.REQUIRE_APPROVAL);
                     }
-                } else if (JITUtils.isDenied(command, requestingUser.getId(), -1L)) {
+                } else if (jitService.isDenied(command, requestingUser.getId(), -1L)) {
                     return createRedirect(referrer, referralUri, MessagingUtil.DENIED);
                 } else {
                     return createRedirect(referrer, referralUri, MessagingUtil.AWAITING_APPROVAL);

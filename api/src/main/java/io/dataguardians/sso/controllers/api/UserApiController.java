@@ -97,6 +97,7 @@ public class UserApiController extends BaseController {
         ObjectNode node = JsonUtil.MAPPER.createObjectNode();
 
         try {
+            user.setPassword(userService.encodePassword( user.getPassword()));
             // Save user using service
             userService.addUscer(user);
             node.put("status","User successfully added.");

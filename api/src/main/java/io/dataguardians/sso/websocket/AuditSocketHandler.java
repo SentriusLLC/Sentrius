@@ -41,13 +41,11 @@ public class AuditSocketHandler extends TextWebSocketHandler {
             Map<String, String> queryParams = parseQueryParams(uri.getQuery());
             String sessionId = queryParams.get("sessionId");
 
-
-
             if (sessionId != null) {
                 // Store the WebSocket session using the session ID from the query parameter
                 sessions.put(sessionId, session);
-                log.trace("New connection established, session ID: " + sessionId);
-                sshListenerService.startListeningToSshServer(sessionId, session);
+                log.trace("*AUDITING New connection established, session ID: " + sessionId);
+                sshListenerService.startAuditingSession(sessionId, session);
             } else {
                 log.trace("Session ID not found in query parameters.");
                 session.close(); // Close the session if no valid session ID is provided
@@ -62,41 +60,7 @@ public class AuditSocketHandler extends TextWebSocketHandler {
     protected void handleTextMessage(WebSocketSession session, TextMessage message)
         throws IOException, GeneralSecurityException {
 
-        // Extract query parameters from the URI again if needed
-        URI uri = session.getUri();
-        log.trace("got message {}", uri);
-        try {
-            if (uri != null) {
-                Map<String, String> queryParams = parseQueryParams(uri.getQuery());
-                String sessionId = queryParams.get("sessionId");
 
-                if (sessionId != null) {
-                    log.trace("Received message from session ID: " + sessionId);
-                    // Handle the message (e.g., process or respond)
-
-
-                    // Deserialize the protobuf message
-                    byte[] messageBytes = Base64.getDecoder().decode(message.getPayload());
-                    Session.TerminalMessage auditLog =
-                        Session.TerminalMessage.parseFrom(messageBytes);
-
-                    // Decrypt the session ID
-                    var sessionIdStr = cryptoService.decrypt(sessionId);
-                    var sessionIdLong = Long.parseLong(sessionIdStr);
-
-                    // Retrieve ConnectedSystem from your persistent map using the session ID
-                    var sys = sessionTrackingService.getConnectedSession(sessionIdLong);
-
-                    // Get the user's session and handle trigger if present
-                    sshListenerService.processTerminalMessage(sys, auditLog);
-                } else {
-                    log.trace("Session ID not found in query parameters for message handling.");
-                }
-            }
-        }catch (Exception e ){
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
     }
 
     @Override
@@ -109,8 +73,8 @@ public class AuditSocketHandler extends TextWebSocketHandler {
             if (sessionId != null) {
                 // Remove the session when connection is closed
                 sessions.remove(sessionId);
-                sshListenerService.removeSession(sessionId);
-                log.trace("Connection closed, session ID: " + sessionId);
+                sshListenerService.endAuditingSession(sessionId);
+                log.trace("**AIDT Connection closed, session ID: " + sessionId);
             }
         }
     }

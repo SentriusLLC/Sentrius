@@ -509,7 +509,8 @@ proto.io.dataguardians.protobuf.TriggerAction = {
  */
 proto.io.dataguardians.protobuf.MessageType = {
   HEARTBEAT: 0,
-  USER_DATA: 1
+  USER_DATA: 1,
+  SESSION_DATA: 3
 };
 
 goog.object.extend(exports, proto.io.dataguardians.protobuf);

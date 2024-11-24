@@ -22,6 +22,18 @@ export function countTypes(){
         });
 }
 
+export function countRules(){
+    fetch('/api/v1/zerotrust/rules/list')
+        .then(response => response.json())
+        .then(data => {
+            console.log("Got data:", data);
+            if (null != data) {
+                if (document.getElementById('total-rule-count'))
+                    document.getElementById('total-rule-count').innerHTML = data.length;
+            }
+        });
+}
+
 export function countAssignedSystems(){
     fetch('/api/v1/ssh/servers/list')
         .then(response => response.json())

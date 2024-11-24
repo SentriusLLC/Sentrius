@@ -46,6 +46,7 @@
             addCardFromHiddenElement('active-user-card');
             addCardFromHiddenElement('total-systems-card');
             addCardFromHiddenElement('total-groups-card');
+            addCardFromHiddenElement('active-rules-card');
 
             gridConfigure.load(itemsConfigure.map(item => ({ ...item })));
 
@@ -206,7 +207,10 @@
 
                                 <!-- Visualization Area -->
                                 <div class="relative bg-gray-100 dark:bg-gray-800 rounded-lg" style="width: 100%; height: 400px;">
-                                    <canvas id="outputSizeChart" width="400" height="200"></canvas>
+                                    <h3 style="margin-bottom: 10px;">Output</h3>
+                                    <canvas id="outputSizeChart" width="200" height="100" style="width: 100%; height:
+                                     auto;"></canvas>
+
                                 </div>
                             </div>
                         </div>
@@ -221,11 +225,14 @@
                                     <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
                                     <a href="#" id="disable-ssh-button" class="btn btn-danger">Lock Down SSH</a>
                                     <a href="/sso/v1/settings" class="btn btn-primary">Update Settings</a>
+                                    <a href="/sso/v1/sessions/audit/list" class="btn btn-primary" >Audit User</a>
                                 </div>
 
                                 <!-- Visualization Area -->
                                 <div class="relative bg-gray-100 dark:bg-gray-800 rounded-lg" style="width: 100%; height: 400px;">
-                                    <canvas id="tachometerChart" width="400" height="200"></canvas>
+                                    <h3>Open Sessions</h3>
+                                    <canvas id="tachometerChart" width="200" height="100" style="width: 100%; height:
+                                     auto;"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -238,13 +245,20 @@
                             <div class="card-body">
                                 <!-- Buttons -->
                                 <div class="mb-4 d-flex justify-content-start gap-2">
-                                    <a href="#" id="disable-ssh-button2" class="btn btn-danger">Lock Down SSH</a>
-                                    <a href="/api/v1/settings" class="btn btn-primary">Update Settings</a>
+                                    <a href="/api/v1/users/list" class="btn btn-danger">Delete Users</a>
+                                    <a href="#" class="btn btn-primary" data-bs-toggle="modal"
+                                       data-bs-target="#userFormModal">Add User</a>
+                                    <a href="/sso/v1/users/settings" class="btn btn-primary"
+                                       th:if="${!#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_JITS')}">Your Settings</a>
+                                    <a href="/sso/v1/zerotrust/jit/list" class="btn btn-primary"
+                                       th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_JITS')}">View JITs</a>
                                 </div>
 
                                 <!-- Visualization Area -->
                                 <div class="relative bg-gray-100 dark:bg-gray-800 rounded-lg" style="width: 100%; height: 400px;">
-                                    <canvas id="tachometerChart2" width="400" height="200"></canvas>
+                                    <h3>User Activity</h3>
+                                        <canvas id="heatmap-container" style="width:100%; height:300px;"></canvas>
+
                                 </div>
                             </div>
                         </div>
@@ -435,6 +449,69 @@
                                     return `${context.raw} Bytes`;
                                 }
                             }
+                        }
+                    }
+                }
+            });
+        });
+        $.getJSON("/api/v1/sessions/map", function(data) {
+            console.log("447");
+            // Prepare data for Chart.js heatmap
+            const orderedDays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+            const labels = [...Array(24).keys()]; // 0 - 23 for hours
+
+            // Define different colors for each day
+            const colors = [
+                'rgba(255, 99, 132, 0.5)',   // MONDAY
+                'rgba(54, 162, 235, 0.5)',   // TUESDAY
+                'rgba(255, 206, 86, 0.5)',   // WEDNESDAY
+                'rgba(75, 192, 192, 0.5)',   // THURSDAY
+                'rgba(153, 102, 255, 0.5)',  // FRIDAY
+                'rgba(255, 159, 64, 0.5)',   // SATURDAY
+                'rgba(99, 255, 132, 0.5)'    // SUNDAY
+            ];
+            console.log("461");
+            // Create datasets with unique colors for each day
+            const datasets = orderedDays.map((day, index) => {
+                return {
+                    label: day,
+                    data: labels.map(hour => data[day] && data[day][hour] ? data[day][hour] : 0),
+                    backgroundColor: colors[index],
+                    borderColor: colors[index].replace('0.5', '1'), // More opaque version for border
+                    borderWidth: 1
+                };
+            });
+
+            // Render heatmap with Chart.js
+            const ctx = document.getElementById('heatmap-container').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar', // Use bar chart to display the heatmap
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            stacked: true,
+                            title: {
+                                display: true,
+                                text: 'Hour of the Day'
+                            }
+                        },
+                        y: {
+                            stacked: true,
+                            title: {
+                                display: true,
+                                text: 'Frequency'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
                         }
                     }
                 }

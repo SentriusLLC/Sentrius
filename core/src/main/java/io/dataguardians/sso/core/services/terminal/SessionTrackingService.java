@@ -241,6 +241,13 @@ public class SessionTrackingService {
     }
   }
 
+  public void addSystemTrigger(ConnectedSystem connectedSystem, Trigger trigger) {
+    UserSessionsOutput userSessionsOutput = userSessionsOutputMap.get(connectedSystem.getSession().getId());
+    if (userSessionsOutput != null) {
+      userSessionsOutput.getSessionOutputMap().get(connectedSystem.getSession().getId()).addSystemMessage(trigger);
+    }
+  }
+
   public void addToOutput(ConnectedSystem connectedSystem, String output) {
     addToOutput(connectedSystem, output.toCharArray(), 0, output.length());
   }

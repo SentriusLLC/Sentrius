@@ -2,6 +2,7 @@ package io.dataguardians.sso.core.model.dto;
 
 import java.sql.Timestamp;
 import io.dataguardians.sso.core.model.ConnectedSystem;
+import io.dataguardians.sso.core.model.sessions.SessionLog;
 import io.dataguardians.sso.core.model.sessions.TerminalLogs;
 import lombok.Data;
 import lombok.Getter;
@@ -30,6 +31,15 @@ public class TerminalLogDTO {
         this.host = session.getHostSystem().getHost();
         this.closed = session.getSession().getClosed();
         this.sessionTime = session.getSession().getSessionTm();
+
+    }
+
+    public TerminalLogDTO(SessionLog session, String encryptedId) {
+        this.sessionId = encryptedId;
+        this.user = session.getUsername();
+        this.host = session.getIpAddress();
+        this.closed = session.getClosed();
+        this.sessionTime = session.getSessionTm();
 
     }
 

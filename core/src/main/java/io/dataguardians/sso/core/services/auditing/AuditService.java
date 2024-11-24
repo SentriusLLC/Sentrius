@@ -15,7 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -169,7 +171,24 @@ public class AuditService {
     }
 
     @Transactional
-    public List<TerminalLogs> listUniqueSessions() {
-        return terminalLogsRepository.findUniqueSessionIds();
+    public List<SessionLog> listUniqueSessions() {
+        return sessionLogRepository.findUniqueSessionIds();
+    }
+
+    @Transactional
+    public Map<String, Map<Integer, Long>> getSessionHeatmapData() {
+        List<SessionLog> sessions = sessionLogRepository.findAll();
+
+        Map<String, Map<Integer, Long>> heatmapData = new HashMap<>();
+        for (SessionLog session : sessions) {
+            var localTime = session.getSessionTm().toLocalDateTime();
+            String weekday = localTime.getDayOfWeek().name(); // "MONDAY", "TUESDAY", etc.
+            int hour = localTime.getHour(); // 0 - 23
+
+            heatmapData.putIfAbsent(weekday, new HashMap<>());
+            heatmapData.get(weekday).merge(hour, 1L, Long::sum);
+        }
+
+        return heatmapData;
     }
 }

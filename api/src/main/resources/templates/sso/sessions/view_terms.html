@@ -5,6 +5,9 @@
 <head>
 
     <meta th:replace="~{fragments/header}">
+    <script th:src="@{/node/js/google-protobuf/google-protobuf.js}"></script>
+    <script th:src="@{/node/js/sockjs-client/sockjs.js}"></script>
+    <script th:src="@{/js/bundled_session_pb.js}"></script>
     <script>
         function enableButton() {
             const textBox = document.getElementById("reason");
@@ -142,6 +145,80 @@
             var interval = setInterval(function() {
                 loadTerms();
             }, 1000);
+
+            var loc = window.location, ws_uri;
+            if (loc.protocol === "https:") {
+                ws_uri = "https:";
+            } else {
+                ws_uri = "http:";
+            }
+
+            const urlObj = new URL(window.location.href);
+
+            const params = new URLSearchParams(urlObj.search);
+
+            sessionId = params.get('sessionId');
+
+            const path = window.location.pathname;
+
+
+            let encodedSessionId = encodeURIComponent(sessionId);
+
+            ws_uri += "//" + loc.host + "/api/v1/audit/attach/subscribe?sessionId="  + encodedSessionId;
+
+            console.log("Attempting to create connection to " + ws_uri);
+            connection = new SockJS(ws_uri);
+
+
+            function heartbeat() {
+                console.log("seneding hb");
+
+                if (!connection) return;
+                console.log("seneding hb2");
+
+                if (connection.readyState !== 1) return;
+                console.log("seneding hb3");
+                console.log("proto:", proto);
+                console.log("proto.io.dataguardians.protobuf:", proto?.io?.dataguardians?.protobuf);
+
+
+                const auditLog = new proto.io.dataguardians.protobuf.TerminalMessage();
+                auditLog.setType(proto.io.dataguardians.protobuf.MessageType.HEARTBEAT);
+
+                console.log("seneding hb3.5");
+                // Serialize the message to binary
+                const binaryData = auditLog.serializeBinary();
+                console.log("seneding hb");
+                const base64Message = btoa(String.fromCharCode(...binaryData));
+                connection.send(base64Message);
+                console.log("sent hb");
+                //connection.send(binaryData);
+                //connection.send("heartbeat");
+
+                // Set heartbeat interval 10,000 ms
+                setTimeout(heartbeat, 10000);
+            };
+
+            // Register websocket heartbeat
+            connection.onopen = function (e) {
+                console.log("opened");
+                heartbeat();
+            };
+
+            connection.onclose = function (e) {
+                console.log("closed");
+                console.trace();
+            };
+
+            // Log errors
+            connection.onerror = function (error) {
+                console.log('WebSocket Error ' + error);
+            };
+
+            connection.onmessage = function (e) {
+                console.log("Received message: " + e.data);
+
+            };
 
 
 

@@ -10,6 +10,7 @@ import java.security.SecureRandom;
 import java.util.Base64;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -21,6 +22,7 @@ public class CryptoService {
     private static final String CIPHER_INSTANCE = "AES/ECB/PKCS5Padding";
     private static final String CRYPT_ALGORITHM = "AES";
     private static final String HASH_ALGORITHM = "SHA-256";
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     public CryptoService(KeyStoreService keyStoreUtil, @Value("${keystore.alias}") String alias) {
         try {
@@ -57,5 +59,9 @@ public class CryptoService {
         cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, CRYPT_ALGORITHM));
         byte[] decodedVal = Base64.getDecoder().decode(encryptedStr);
         return new String(cipher.doFinal(decodedVal), StandardCharsets.UTF_8);
+    }
+
+    public String encodePassword(String password) throws NoSuchAlgorithmException {
+        return encoder.encode(password);
     }
 }

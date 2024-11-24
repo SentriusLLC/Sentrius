@@ -62,6 +62,7 @@ public class TerminalService {
     protected final AutomationService automationService;
     protected final UserPublicKeyService userPublicKeyService;
     protected final KeyStoreService keyStoreService;
+    protected final JITService jitService;
 
     public static final int SESSION_TIMEOUT = 60000;
     public static final int CHANNEL_TIMEOUT = 60000;
@@ -164,7 +165,7 @@ public class TerminalService {
             InputStream outFromChannel = channel.getInputStream();
             RecordingStudio recorder = new RecordingStudio(schSession,sessionTrackingService, automationService);
             RuleAlertAuditor terminalAuditor =
-                new RuleAlertAuditor(schSession, sessionOutputService,
+                new RuleAlertAuditor(jitService, schSession, sessionOutputService,
                     recorder);
 
             schSession.setChannel(channel);

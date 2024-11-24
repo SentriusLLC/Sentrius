@@ -11,14 +11,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import io.dataguardians.sso.core.data.auditing.RecordingStudio;
 import io.dataguardians.sso.core.model.ConnectedSystem;
-import io.dataguardians.sso.core.model.auditing.Rule;
-import io.dataguardians.sso.core.model.security.zt.JITReason;
-import io.dataguardians.sso.core.model.security.zt.JITRequest;
+import io.dataguardians.sso.core.model.zt.JITReason;
+import io.dataguardians.sso.core.model.zt.JITRequest;
 import io.dataguardians.repository.security.zt.JITServiceLocator;
-import io.dataguardians.security.JITUtils;
+import io.dataguardians.sso.core.services.JITService;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -44,8 +42,14 @@ public class RuleAlertAuditor extends BaseAuditor {
 
   final SessionTrackingService sessionTrackingService;
 
-  public RuleAlertAuditor(ConnectedSystem schSession, SessionTrackingService sessionTrackingService, RecordingStudio recorder) {
+  final JITService jitService;
+
+  public RuleAlertAuditor(
+      JITService jitService,
+      ConnectedSystem schSession, SessionTrackingService sessionTrackingService, RecordingStudio recorder) {
     super(schSession.getUser().getId(), schSession.getSession().getId(), schSession.getHostSystem().getId());
+
+    this.jitService = jitService;
 
     this.connectedSystem = schSession;
 
@@ -122,7 +126,7 @@ public class RuleAlertAuditor extends BaseAuditor {
           this.asyncRules.add(newRule);
       }
     }
-    runner = new AsyncRuleAuditorRunner(asyncRules, connectedSystem, sessionTrackingService);
+    runner = new AsyncRuleAuditorRunner(jitService, asyncRules, connectedSystem, sessionTrackingService);
     executorService.submit(runner);
   }
 
@@ -142,7 +146,7 @@ public class RuleAlertAuditor extends BaseAuditor {
     private final SessionTrackingService sessionTrackingService;
     private final ConnectedSystem connectedSystem;
     public AtomicBoolean running = new AtomicBoolean(false);
-
+    private JITService jitService;
     public final List<AuditorRule> asyncRules;
 
     LinkedBlockingDeque<String> stringsToReview;
@@ -150,8 +154,9 @@ public class RuleAlertAuditor extends BaseAuditor {
     Long userId;
     Long systemId;
 
-    public AsyncRuleAuditorRunner(List<AuditorRule> asyncRules, ConnectedSystem connectedSystem,
+    public AsyncRuleAuditorRunner(JITService jitService, List<AuditorRule> asyncRules, ConnectedSystem connectedSystem,
                                   SessionTrackingService sessionTrackingService) {
+      this.jitService = jitService;
       this.userId = connectedSystem.getUser().getId();
       this.systemId = connectedSystem.getHostSystem().getId();
       this.stringsToReview = new LinkedBlockingDeque<>();
@@ -181,7 +186,7 @@ public class RuleAlertAuditor extends BaseAuditor {
                   sessionTrackingService.addTrigger(connectedSystem, trg);
                   break;
                 case JIT_ACTION:
-                  if (!JITUtils.isApproved(nextstr, userId, systemId)) {
+                  if (!jitService.isApproved(nextstr, userId, systemId)) {
                     sessionTrackingService.addTrigger(connectedSystem, trg);
                   }
                   break;
@@ -234,11 +239,12 @@ public class RuleAlertAuditor extends BaseAuditor {
     if (currentTrigger.getAction() == TriggerAction.JIT_ACTION) {
       // need to form a jit request
       try {
-        if (!JITUtils.isApproved(command, userId, systemId)) {
+        if (!jitService.isApproved(command, userId, systemId)) {
           if (!JITServiceLocator.getRepository().hasJITRequest(command, userId, systemId)) {
-            JITReason reason = JITUtils.createReason("need ", " ticket ", " url");
-            JITRequest request = JITUtils.createRequest(command, reason, userId, systemId);
-            request = JITServiceLocator.getRepository().addJITRequest(request);
+            JITReason reason = jitService.createReason("need ", " ticket ", " url");
+            JITRequest request = jitService.createRequest(command, reason, connectedSystem.getUser(),
+                connectedSystem.getHostSystem());
+            request = jitService.addJITRequest(request);
           }
 
           // keep the current trigger

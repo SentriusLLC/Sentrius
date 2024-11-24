@@ -397,41 +397,42 @@
                             console.warn("Malformed message received");
                             return;
                         }
+                        if (deserializedAuditLog.getType() == proto.io.dataguardians.protobuf.MessageType.USER_DATA) {
 
-                        console.log("Deserialized message: ", deserializedAuditLog);
-                        const alertWarn = document.getElementById("alertWarn");
-                        if (!deserializedAuditLog.getTrigger() ) {
-                            if (!deserializedAuditLog.getCommand()) {
-                                console.warn("Malformed message received 402");
-                                return;
-                            }
-                            console.log("387");
-                            if (!term) {
-                                console.log("377" + deserializedAuditLog.getCommand());
 
-                                createTermMap(0, deserializedAuditLog.getCommand());
+                            console.log("Deserialized message: ", deserializedAuditLog);
+                            const alertWarn = document.getElementById("alertWarn");
+                            if (!deserializedAuditLog.getTrigger()) {
+                                if (!deserializedAuditLog.getCommand()) {
+                                    console.warn("Malformed message received 402");
+                                    return;
+                                }
+                                console.log("387");
+                                if (!term) {
+                                    console.log("377" + deserializedAuditLog.getCommand());
+
+                                    createTermMap(0, deserializedAuditLog.getCommand());
+                                } else {
+                                    console.log("381" + deserializedAuditLog.getCommand());
+
+                                    term.write(deserializedAuditLog.getCommand());
+                                }
+
                             } else {
-                                console.log("381" + deserializedAuditLog.getCommand());
+                                console.log("395");
 
-                                term.write(deserializedAuditLog.getCommand());
-                            }
-
-                        }else{
-                            console.log("395");
-
-                            if (alertWarn) {
-                                const triggerAction = deserializedAuditLog.getTrigger();
-                                const description = triggerAction.getDescription();
-                                if (deserializedAuditLog.getType() == proto.io.dataguardians.protobuf.MessageType.PERSISTENT_MESSAGE) {
-                                    persistentMessage = description;
+                                if (alertWarn) {
+                                    const triggerAction = deserializedAuditLog.getTrigger();
+                                    const description = triggerAction.getDescription();
+                                    if (deserializedAuditLog.getType() == proto.io.dataguardians.protobuf.MessageType.PERSISTENT_MESSAGE) {
+                                        persistentMessage = description;
+                                    } else {
+                                        console.log("hmmm" + deserializedAuditLog.getType());
+                                        alertWarn.textContent = description || persistentMessage || "";
+                                    }
+                                    // Use textContent instead of innerHTML
                                 }
-                                else {
-                                    console.log("hmmm" + deserializedAuditLog.getType());
-                                    alertWarn.textContent = description || persistentMessage || "";
-                                }
-                                // Use textContent instead of innerHTML
-                            }
-                            /* if (json.hasOwnProperty("action")){
+                                /* if (json.hasOwnProperty("action")){
                                  document.getElementById("alertWarn").innerHTML = json.description;
                              }
                              else if (json.hasOwnProperty("persistentMessage")){
@@ -440,7 +441,37 @@
                              }*
 
                              */
-                            console.log("trigger action is set");
+                                console.log("trigger action is set");
+                            }
+                        } else if (deserializedAuditLog.getType() == proto.io.dataguardians.protobuf.MessageType.SESSION_DATA) {
+                            console.log("Received session data message:", deserializedAuditLog);
+                            if (deserializedAuditLog.getTrigger()) {
+                                const triggerAction = deserializedAuditLog.getTrigger();
+                                const description = triggerAction.getDescription();
+                                const overlay = document.getElementById("overlay");
+
+                                // Function to show the spinner
+                                function showSpinner() {
+                                    overlay.classList.remove("hidden");
+                                }
+
+                                // Function to hide the spinner
+                                function hideSpinner() {
+                                    overlay.classList.add("hidden");
+                                }
+
+                               overlay.innerText = description;
+
+
+                                if (triggerAction.getAction() == proto.io.dataguardians.protobuf.TriggerAction.JIT_ACTION) {
+                                    showSpinner();
+                                } else {
+                                    hideSpinner();
+                                }
+
+                            }
+                        } else {
+                            console.warn("Unknown message type received:", deserializedAuditLog.getType());
                         }
                         // Proceed with normal processing...
                     } catch (error) {
@@ -618,6 +649,10 @@
     <title>[[${systemOptions.systemLogoName}]] - Terminals</title>
 </head>
 <body>
+<div id="overlay" class="overlay hidden">
+    <div class="spinner"></div>
+    <p class="overlay-message">Please wait while the session is being prepared...</p>
+</div>
 <div class="navbar navbar-dark fixed-top navbar-expand-md" role="navigation" xmlns:th="http://www.thymeleaf.org">
     <div class="container bg-dark px-3 py-2" >
         <!-- Brand Logo -->

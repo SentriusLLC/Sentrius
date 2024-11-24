@@ -26,6 +26,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -84,7 +85,9 @@ public class RuleController extends BaseController {
 
     @GetMapping("/config/forbidden_commands_rule")
     @LimitAccess(ruleAccess = {RuleAccessEnum.CAN_EDIT_RULES})
-    public String configureForbiddenCommandsRule() {
+    public String configureForbiddenCommandsRule(@RequestParam("ruleName") String ruleName, Model model) {
+        model.addAttribute("ruleName", ruleName);
+        model.addAttribute("ruleClass", ForbiddenCommandsRule.class.getCanonicalName());
         return "sso/rules/forbidden_commands_rule";
     }
 

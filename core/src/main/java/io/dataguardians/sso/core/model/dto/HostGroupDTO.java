@@ -1,5 +1,7 @@
 package io.dataguardians.sso.core.model.dto;
 
+import java.util.ArrayList;
+import java.util.List;
 import io.dataguardians.sso.core.model.hostgroup.HostGroup;
 import io.dataguardians.sso.core.model.hostgroup.ProfileConfiguration;
 import lombok.Builder;
@@ -15,6 +17,7 @@ public class HostGroupDTO {
     private String description;
     private int hostCount = 0;
     private ProfileConfiguration configuration;
+    List<UserDTO> users = new ArrayList<>();
 
     public HostGroupDTO() {
         groupId = 0L;
@@ -23,10 +26,17 @@ public class HostGroupDTO {
         configuration = new ProfileConfiguration();
     }
     public HostGroupDTO(HostGroup group){
+        this(group,false);
+    }
+
+    public HostGroupDTO(HostGroup group, boolean setUsers){
         this.groupId = group.getId();
         this.displayName = group.getName();
         this.description = group.getDescription();
         this.hostCount = group.getHostSystemList().size();
         this.configuration = group.getConfiguration();
+        if (setUsers){
+            this.users = group.getUsers().stream().map(UserDTO::new).toList();
+        }
     }
 }

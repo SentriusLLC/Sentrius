@@ -2,10 +2,12 @@ package io.dataguardians.sso.controllers.api;
 
 import java.security.GeneralSecurityException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import io.dataguardians.sso.core.annotations.LimitAccess;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.controllers.BaseController;
+import io.dataguardians.sso.core.model.dto.SessionLogDTO;
 import io.dataguardians.sso.core.model.dto.TerminalLogDTO;
 import io.dataguardians.sso.core.model.security.enums.SSHAccessEnum;
 import io.dataguardians.sso.core.model.security.enums.SystemOperationsEnum;
@@ -67,11 +69,11 @@ public class AuditApiController extends BaseController {
 
     @GetMapping("/audit/list")
     @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
-    public List<TerminalLogDTO> listSessions(HttpServletRequest request, HttpServletResponse response) {
+    public List<SessionLogDTO> listSessions(HttpServletRequest request, HttpServletResponse response) {
         return auditService.listUniqueSessions().stream().map(
             x -> {
                 try {
-                    return new TerminalLogDTO(x, cryptoService.encrypt(x.getSession().getId().toString()));
+                    return new SessionLogDTO(x, cryptoService.encrypt(x.getId().toString()));
                 } catch (GeneralSecurityException e) {
                     throw new RuntimeException(e);
                 }
@@ -98,5 +100,10 @@ public class AuditApiController extends BaseController {
 
     }
 
+    @GetMapping("/map")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<Map<String, Map<Integer, Long>>> getMap(HttpServletRequest request, HttpServletResponse response) {
+        return ResponseEntity.ok(auditService.getSessionHeatmapData());
+    }
 
 }

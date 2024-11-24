@@ -58,18 +58,25 @@ public class AuditController extends BaseController {
         var sessionIdStr = cryptoService.decrypt(sessionId);
         var sessionIdLong = Long.parseLong(sessionIdStr);
 
-        var logs = auditService.getTerminalLogsForSession(sessionIdLong);
         var sessionLog = auditService.getSession(sessionIdLong);
+        var logs = auditService.getTerminalLogsForSession(sessionIdLong);
+
 
         var connectedSession = sessionTrackingService.getConnectedSession(sessionIdLong);
 
-        if (logs == null || logs.isEmpty() ) {
+        if (sessionLog.isEmpty()) {
             log.info("redirecting {}", sessionIdLong);
             return "redirect:/sso/v1/sessions/audit/list";
         }
 
         model.addAttribute("sessionId", sessionId);
-        model.addAttribute("sessionAudit", new TerminalLogDTO(logs.get(0), sessionId));
+        if ((null == logs || logs.isEmpty())){
+            model.addAttribute("sessionAudit", new TerminalLogDTO( sessionLog.get(),sessionId));
+        }
+        else {
+            model.addAttribute("sessionAudit", new TerminalLogDTO(logs.get(0),sessionId));
+        }
+
         return "/sso/sessions/view_terms";
     }
 

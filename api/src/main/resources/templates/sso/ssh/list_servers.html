@@ -146,7 +146,8 @@
                     render: function(data, type) {
                         let ret = `<a href="/sso/v1/ssh/servers/list?groupId=${data}"><button class="btn btn-primary" >View Group</button></a> `;
                         if (canEdit) {
-                            ret += `<a href="/sso/v1/enclaves/edit?groupId=${data}"><button class="btn btn-primary">Edit Group</button></a>`;
+                            ret += `<a href="/sso/v1/enclaves/edit?groupId=${data}"><button class="btn btn-primary">Edit Group</button></a> `;
+                            ret += `<a href="/sso/v1/enclaves/assign?groupId=${data}"><button class="btn btn-primary">Assign Users</button></a>`;
                         }
                         return ret;
 //                        return `<a href="/sso/v1/ssh/servers/connect/-1/${data}" class="btn btn-primary" >Connect</a>`;

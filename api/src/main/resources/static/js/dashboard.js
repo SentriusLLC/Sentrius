@@ -1,4 +1,12 @@
-import {countAssignedGroups, countAssignedSystems, countTypes, countUsers, getSettings, countOpenConnections} from './functions.js';
+import {
+    countAssignedGroups,
+    countAssignedSystems,
+    countTypes,
+    countUsers,
+    getSettings,
+    countOpenConnections,
+    countRules
+} from './functions.js';
 
 document.addEventListener('DOMContentLoaded', function () {
     console.log("*** count users');");
@@ -8,6 +16,6 @@ document.addEventListener('DOMContentLoaded', function () {
     countAssignedGroups();
     getSettings();
     countOpenConnections();
-
+    countRules();
 });
 

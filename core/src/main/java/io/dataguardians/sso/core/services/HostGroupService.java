@@ -3,7 +3,7 @@ package io.dataguardians.sso.core.services;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import io.dataguardians.sso.core.model.dto.ProfileRuleDTO;
+import java.util.zip.ZipFile;
 import io.dataguardians.sso.core.repository.HostGroupRepository;
 import io.dataguardians.sso.core.repository.UserRepository;
 import io.dataguardians.sso.core.repository.SystemRepository;
@@ -32,6 +32,13 @@ public class HostGroupService {
     @Autowired
     private UserRepository userRepository;
 
+    @Transactional
+    public HostGroup getHostGroup(Long hostGroupId) {
+        HostGroup hostGroup = hostGroupRepository.findById(hostGroupId)
+            .orElseThrow(() -> new EntityNotFoundException("Host " + hostGroupId + " Group not found"));
+
+        return hostGroup;
+    }
 
     @Transactional
     public Optional<HostGroup> getHostGroupWithHostSystems(User user, Long hostGroupId) {
@@ -195,6 +202,15 @@ public class HostGroupService {
     @Transactional
     public void save(HostGroup hostGroup) {
         hostGroupRepository.save(hostGroup);
+    }
+
+    public List<HostSystem> getAllHosts() {
+        return systemRepository.findAll();
+    }
+
+    public List<HostGroup> searchAllHostGroups(String enclaveName) {
+        Specification<HostGroup> spec = HostGroupSpecification.findByOptionalFilters(enclaveName);
+        return hostGroupRepository.findAll(spec);
     }
 
 /*

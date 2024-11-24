@@ -1,6 +1,7 @@
 package io.dataguardians.sso.core.services;
 
 import java.security.GeneralSecurityException;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.stream.Collectors;
 import io.dataguardians.sso.core.model.dto.UserTypeDTO;
@@ -26,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -167,6 +169,10 @@ public class UserService {
     public List<UserTypeDTO> getUserTypeList() {
         log.info("****SDGLKJDSGLKSJ");
         return userTypeRepository.findAll().stream().map(UserTypeDTO::new).collect(Collectors.toList());
+    }
+
+    public String encodePassword(String password) throws NoSuchAlgorithmException {
+        return cryptoService.encodePassword(password);
     }
 
     @Transactional

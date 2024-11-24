@@ -31,8 +31,9 @@ replay_pid*
 *.war
 *.ear
 target/*
-core/target/**
 api/target/**
+core/target/**
+core/target/
 node/*
 node_modules/*
 api/node_modules/*

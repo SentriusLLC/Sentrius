@@ -198,6 +198,10 @@ public final class Session {
      * <code>USER_DATA = 1;</code>
      */
     USER_DATA(1),
+    /**
+     * <code>SESSION_DATA = 3;</code>
+     */
+    SESSION_DATA(3),
     UNRECOGNIZED(-1),
     ;
 
@@ -209,6 +213,10 @@ public final class Session {
      * <code>USER_DATA = 1;</code>
      */
     public static final int USER_DATA_VALUE = 1;
+    /**
+     * <code>SESSION_DATA = 3;</code>
+     */
+    public static final int SESSION_DATA_VALUE = 3;
 
 
     public final int getNumber() {
@@ -237,6 +245,7 @@ public final class Session {
       switch (value) {
         case 0: return HEARTBEAT;
         case 1: return USER_DATA;
+        case 3: return SESSION_DATA;
         default: return null;
       }
     }
@@ -2099,8 +2108,9 @@ public final class Session {
       "\022\016\n\nLOG_ACTION\020\001\022\020\n\014ALERT_ACTION\020\002\022\017\n\013WA" +
       "RN_ACTION\020\003\022\017\n\013DENY_ACTION\020\004\022\016\n\nJIT_ACTI" +
       "ON\020\005\022\021\n\rRECORD_ACTION\020\006\022\022\n\016APPROVE_ACTIO" +
-      "N\020\007\022\026\n\022PERSISTENT_MESSAGE\020\010*+\n\013MessageTy" +
-      "pe\022\r\n\tHEARTBEAT\020\000\022\r\n\tUSER_DATA\020\001b\006proto3"
+      "N\020\007\022\026\n\022PERSISTENT_MESSAGE\020\010*=\n\013MessageTy" +
+      "pe\022\r\n\tHEARTBEAT\020\000\022\r\n\tUSER_DATA\020\001\022\020\n\014SESS" +
+      "ION_DATA\020\003b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

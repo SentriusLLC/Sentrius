@@ -17,6 +17,7 @@ enum TriggerAction {
 enum MessageType {
   HEARTBEAT = 0;
   USER_DATA = 1;
+  SESSION_DATA = 3;
 }
 
 message Trigger {

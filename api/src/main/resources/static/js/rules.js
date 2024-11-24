@@ -114,10 +114,10 @@ $(document).ready(function () {
          `;
                     }
 
-                    if (row.canDelete) {
+                    //if (row.canDelete) {
                         buttons += `<button id="delete_class_${data}" class="btn btn-secondary delete_class spacer spacer-right" onclick="deleteRule(${data})">Delete</button>
             `;
-                    }
+                    //}
 
                     return buttons;
                 }

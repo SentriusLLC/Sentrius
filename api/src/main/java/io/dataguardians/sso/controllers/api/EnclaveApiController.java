@@ -1,26 +1,31 @@
 package io.dataguardians.sso.controllers.api;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import io.dataguardians.sso.core.annotations.LimitAccess;
 import io.dataguardians.sso.core.controllers.BaseController;
 import io.dataguardians.sso.core.model.dto.HostGroupDTO;
-import io.dataguardians.sso.core.model.hostgroup.HostGroup;
 import io.dataguardians.sso.core.model.security.enums.SSHAccessEnum;
+import io.dataguardians.sso.core.model.users.User;
 import io.dataguardians.sso.core.services.HostGroupService;
 import io.dataguardians.sso.core.services.UserService;
 import io.dataguardians.sso.core.config.SystemOptions;
+import io.dataguardians.sso.core.utils.AccessUtil;
 import io.dataguardians.sso.core.utils.MessagingUtil;
+import jakarta.persistence.Access;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
 
 @Slf4j
 @Controller
@@ -39,10 +44,49 @@ public class EnclaveApiController extends BaseController {
     public ResponseEntity<List<HostGroupDTO>> searchEnclaves(HttpServletRequest request, HttpServletResponse response,
                                                              @RequestParam(name="query",required = false) String query) {
 
-        var operatingUser = getOperatingUser(request, response);
 
-        return ResponseEntity.ok( hostGroupService.searchHostGroupsByUserIdAndFilters(operatingUser.getId(), query).stream().map(HostGroupDTO::new)
-            .collect(Collectors.toList()) );
+        var operatingUser = getOperatingUser(request, response);
+        if (AccessUtil.canAccess(operatingUser, SSHAccessEnum.CAN_MANAGE_SYSTEMS)) {
+            return ResponseEntity.ok( hostGroupService.searchAllHostGroups(query).stream().map(HostGroupDTO::new)
+                .collect(Collectors.toList()) );
+        }
+        else {
+            return ResponseEntity.ok(
+                hostGroupService.searchHostGroupsByUserIdAndFilters(operatingUser.getId(), query).stream()
+                    .map(HostGroupDTO::new)
+                    .collect(Collectors.toList()));
+        }
+    }
+
+    @GetMapping("/assign")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_EDIT_SYSTEMS})
+    public ResponseEntity<HostGroupDTO> assign(HttpServletRequest request, HttpServletResponse response,
+                                                @RequestParam(name="groupId") Long groupId) {
+        var resp = new HostGroupDTO(hostGroupService.getHostGroup(groupId),true);
+        return ResponseEntity.ok(resp);
+    }
+
+    @PostMapping("/assign")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_EDIT_SYSTEMS})
+    public ResponseEntity<HostGroupDTO> setAssignments(HttpServletRequest request, HttpServletResponse response,
+                                                       @RequestBody Map<String, Object> payload) {
+
+        var groupId = Long.valueOf( (String) payload.get("groupId") );
+        var hg = hostGroupService.getHostGroup(groupId);
+        if (null == hg) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        List<User> newUserList = new ArrayList<>();
+        for(var userId : (List<String>) payload.get("userIds")) {
+            var u = userService.getUser(Long.valueOf(userId));
+            if (null != u) {
+                newUserList.add(u);
+            }
+        }
+        hg.setUsers(newUserList);
+        hostGroupService.save(hg);
+        return ResponseEntity.ok(new HostGroupDTO(hg, true));
     }
 
     @PostMapping("/edit")

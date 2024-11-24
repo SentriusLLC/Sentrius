@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
@@ -34,6 +35,8 @@ public class SessionOutput  {
     ConcurrentLinkedDeque<Trigger> deny = new ConcurrentLinkedDeque<>();
 
     ConcurrentLinkedDeque<Trigger> jit = new ConcurrentLinkedDeque<>();
+
+    private AtomicReference<Trigger> sessionMessage = new AtomicReference<>();
 
     public SessionOutput(ConnectedSystem connectedSystem) {
         this.connectedSystem = connectedSystem;
@@ -66,6 +69,17 @@ public class SessionOutput  {
         lock.lock();
         try {
             output.append(str);
+            notEmpty.signalAll(); // Notify waiting threads
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void addSystemMessage(Trigger trigger) {
+        lock.lock();
+        try {
+            log.info("Setting trigger and notifying");
+            sessionMessage.set(trigger);
             notEmpty.signalAll(); // Notify waiting threads
         } finally {
             lock.unlock();
@@ -132,9 +146,13 @@ public class SessionOutput  {
     }
 
 
-    private Session.TerminalMessage getTrigger(Trigger trigger) {
+    private Session.TerminalMessage getTrigger(Trigger trigger){
+       return getTrigger(trigger, Session.MessageType.USER_DATA);
+    }
+
+    private Session.TerminalMessage getTrigger(Trigger trigger, Session.MessageType messageType){
         var terminalMessage = Session.TerminalMessage.newBuilder();
-        terminalMessage.setType(Session.MessageType.USER_DATA);
+        terminalMessage.setType(messageType);
         Session.Trigger.Builder triggerBuilder = Session.Trigger.newBuilder();
         switch(trigger.getAction()){
             case DENY_ACTION:
@@ -162,7 +180,7 @@ public class SessionOutput  {
         List<Session.TerminalMessage> messages = new ArrayList<>();
         lock.lock();
         try {
-            while ((output.length() == 0 && warn.isEmpty() && jit.isEmpty() && deny.isEmpty()) && condition.test(this)) {
+            while ((output.length() == 0 && warn.isEmpty() && jit.isEmpty() && deny.isEmpty()) && condition.test(this) && sessionMessage.get() == null) {
                 notEmpty.await(time, unit); // Wait until notified
             }
 
@@ -172,6 +190,12 @@ public class SessionOutput  {
                 terminalMessage.setCommand(output.toString());
                 output = new StringBuilder(256);
                 messages.add( terminalMessage.build());
+            }
+
+            var systemTrigger = sessionMessage.getAndSet(null);
+            if (null != systemTrigger){
+                log.info("System Trigger: {}", systemTrigger);
+                messages.add( getTrigger(systemTrigger, Session.MessageType.SESSION_DATA));
             }
 
             if (!warn.isEmpty()){

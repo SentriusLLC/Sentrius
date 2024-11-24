@@ -50,7 +50,7 @@ public class TerminalWSHandler extends TextWebSocketHandler {
             if (sessionId != null) {
                 // Store the WebSocket session using the session ID from the query parameter
                 sessions.put(sessionId, session);
-                log.trace("New connection established, session ID: " + sessionId);
+                log.info("New connection established, session ID: " + sessionId);
                 sshListenerService.startListeningToSshServer(sessionId, session);
             } else {
                 log.trace("Session ID not found in query parameters.");
@@ -91,17 +91,23 @@ public class TerminalWSHandler extends TextWebSocketHandler {
                     // Retrieve ConnectedSystem from your persistent map using the session ID
                     var sys = sessionTrackingService.getConnectedSession(sessionIdLong);
                     if (null != sys ) {
+                        boolean allNoAction = true;
                         for (var action : sys.getSessionStartupActions()) {
                             var trigger = action.trigger("");
                             if (trigger.get().getAction() == TriggerAction.JIT_ACTION) {
+                                allNoAction = false;
                                 // drop the message
                                 sys.getTerminalAuditor().setSessionTrigger(trigger.get());
-                                sessionTrackingService.addTrigger(sys, trigger.get());
+                                log.info("**** Setting JIT Trigger: {}", trigger.get());
+                                sessionTrackingService.addSystemTrigger(sys, trigger.get());
                                 return;
                             }
                         }
-                        if (sys.getTerminalAuditor().getSessionTrigger().getAction() != TriggerAction.NO_ACTION){
-                            sessionTrackingService.addTrigger(sys, sys.getTerminalAuditor().getSessionTrigger());
+                        if (allNoAction && sys.getSessionStartupActions().size() > 0) {
+                            log.info("**** Setting NO_ACTION Trigger");
+                            var noActionTrigger = new Trigger(TriggerAction.NO_ACTION, "");
+                            sessionTrackingService.addSystemTrigger(sys, noActionTrigger);
+                            sys.getTerminalAuditor().setSessionTrigger(noActionTrigger);
                         }
 
                         // Get the user's session and handle trigger if present

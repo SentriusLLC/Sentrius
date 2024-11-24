@@ -34,6 +34,23 @@ public class EnclaveController extends BaseController {
     }
 
 
+
+    @GetMapping("/assign")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_EDIT_SYSTEMS})
+    public String assignEnclave(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        @RequestParam(name = "groupId") Long groupId, Model model) {
+
+        var resp = new HostGroupDTO(hostGroupService.getHostGroup(groupId),true);
+        model.addAttribute("hostGroup", resp);
+
+        model.addAttribute("groupId", groupId);
+
+        return "sso/enclaves/assign_enclave";
+
+    }
+
     @GetMapping("/edit")
     @LimitAccess(sshAccess = {SSHAccessEnum.CAN_EDIT_SYSTEMS})
     public String editEnclave(

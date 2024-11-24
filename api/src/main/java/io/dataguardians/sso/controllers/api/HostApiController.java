@@ -21,6 +21,7 @@ import io.dataguardians.sso.core.services.TerminalService;
 import io.dataguardians.sso.core.services.UserService;
 import io.dataguardians.sso.core.services.HostGroupService;
 import io.dataguardians.sso.core.config.SystemOptions;
+import io.dataguardians.sso.core.utils.AccessUtil;
 import io.dataguardians.sso.core.utils.JsonUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -75,6 +76,9 @@ public class HostApiController extends BaseController {
         var hostSystems = groupId == null ?
             hostGroupService.getAssignedHostsForUser(getOperatingUser(request, response)) :
             hostGroupService.getAssignedHostsForUserAndId(getOperatingUser(request, response), groupId);
+        if (AccessUtil.canAccess(getOperatingUser(request, response), SSHAccessEnum.CAN_MANAGE_SYSTEMS)) {
+            hostSystems = hostGroupService.getAllHosts();
+        }
         List<HostSystemDTO> hostSystemDTOS = new ArrayList<>();
         for(HostSystem hostSystem : hostSystems) {
             for(HostGroup hostGroup : hostSystem.getHostGroups()) {
@@ -150,13 +154,17 @@ public class HostApiController extends BaseController {
         }
         // operating user
         var user = getOperatingUser(request, response);
-        var sessionLog = sessionService.createSession(user.getName(), "", user.getUsername(), "");
-
         var hostGroup = hostGroupService.getHostGroupWithHostSystems(user, enclaveId);
         var hostSystem = hostGroupService.getHostSystem(hostId);
+
         Hibernate.initialize(hostSystem.get().getPublicKeyList());
 
         ProfileConfiguration config = hostGroup.get().getConfiguration();
+
+        var sessionLog = sessionService.createSession(user.getName(), "", user.getUsername(), hostSystem.get().getHost());
+
+
+
 
         var sessionRules = terminalService.createRules(config);
 
