@@ -59,6 +59,9 @@ public class ProfileConfiguration {
   private Boolean rangeLimitSSH = false;
 
   @Builder.Default
+  private Boolean approveViaTicket = false;
+
+  @Builder.Default
   private List<SessionRule> sessionRules = new ArrayList<>();
 
   @Builder.Default

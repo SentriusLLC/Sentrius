@@ -89,6 +89,52 @@ public class EnclaveApiController extends BaseController {
         return ResponseEntity.ok(new HostGroupDTO(hg, true));
     }
 
+    @GetMapping("/lock")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_EDIT_SYSTEMS})
+    public String lockEnclave(HttpServletRequest request, HttpServletResponse response) {
+        var grpIdStr = request.getParameter("groupId");
+        if (null == grpIdStr  || grpIdStr.isEmpty()) {
+            return "redirect:/sso/v1/dashboard?errorId=" + MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR);
+        }
+        Long groupId = Long.valueOf( grpIdStr );
+        var operatingUser = getOperatingUser(request, response);
+        var hg = hostGroupService.getHostGroupWithHostSystems(operatingUser, groupId);
+        if (hg.isEmpty()) {
+            log.info("User {} does not have access to group {}", operatingUser.getUsername(), groupId);
+            return "redirect:/sso/v1/dashboard?errorId=" + MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR);
+        }
+        var hostGroup = hg.get();
+        var configuration = hostGroup.getConfiguration();
+        configuration.setTerminalsLocked(true);
+        hostGroup.setConfiguration(configuration);
+        hostGroupService.save(hostGroup);
+
+        return "redirect:/sso/v1/enclaves/edit?groupId="+groupId + "&message=" + MessagingUtil.getMessageId(MessagingUtil.SETTINGS_UPDATED);
+    }
+
+    @GetMapping("/unlock")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_EDIT_SYSTEMS})
+    public String unlockEnclave(HttpServletRequest request, HttpServletResponse response) {
+        var grpIdStr = request.getParameter("groupId");
+        if (null == grpIdStr  || grpIdStr.isEmpty()) {
+            return "redirect:/sso/v1/dashboard?errorId=" + MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR);
+        }
+        Long groupId = Long.valueOf( grpIdStr );
+        var operatingUser = getOperatingUser(request, response);
+        var hg = hostGroupService.getHostGroupWithHostSystems(operatingUser, groupId);
+        if (hg.isEmpty()) {
+            log.info("User {} does not have access to group {}", operatingUser.getUsername(), groupId);
+            return "redirect:/sso/v1/dashboard?errorId=" + MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR);
+        }
+        var hostGroup = hg.get();
+        var configuration = hostGroup.getConfiguration();
+        configuration.setTerminalsLocked(false);
+        hostGroup.setConfiguration(configuration);
+        hostGroupService.save(hostGroup);
+
+        return "redirect:/sso/v1/enclaves/edit?groupId="+groupId + "&message=" + MessagingUtil.getMessageId(MessagingUtil.SETTINGS_UPDATED);
+    }
+
     @PostMapping("/edit")
     @LimitAccess(sshAccess = {SSHAccessEnum.CAN_EDIT_SYSTEMS})
     public String editEnclave(HttpServletRequest request, HttpServletResponse response) {
@@ -108,6 +154,7 @@ public class EnclaveApiController extends BaseController {
         String description = request.getParameter("description");
         String maxConcurrentSessions = request.getParameter("maxConcurrentSessions");
         String allowSudoStr = request.getParameter("allowSudo");
+        String approveViaTicketStr = request.getParameter("approveViaTicket");
         log.info("allowSudoStr: {}", allowSudoStr);
 
         var hostGroup = hg.get();
@@ -119,6 +166,15 @@ public class EnclaveApiController extends BaseController {
         else {
             log.info("Setting allowSudo to false {}", allowSudoStr);
             configuration.setAllowSudo(false);
+        }
+
+        if (null != approveViaTicketStr && !approveViaTicketStr.isEmpty()) {
+            log.info("Setting approveViaTicket to true {}", approveViaTicketStr);
+            configuration.setApproveViaTicket(true);
+        }
+        else {
+            log.info("Setting approveViaTicket to false {}", approveViaTicketStr);
+            configuration.setApproveViaTicket(false);
         }
 
         hostGroup.setName(displayName);

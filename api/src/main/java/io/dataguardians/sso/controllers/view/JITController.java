@@ -43,6 +43,15 @@ public class JITController extends BaseController {
         return "sso/jits/view_jits";
     }
 
+    @GetMapping("/my")
+    @LimitAccess(jitAccess= {JITAccessEnum.CAN_VIEW_JITS})
+    public String viewMyJits(HttpServletRequest request, HttpServletResponse response, Model model) {
+        var operatingUser = getOperatingUser(request, response);
+        modelJITs(model, operatingUser);
+
+        return "sso/jits/view_my_jits";
+    }
+
     private void modelJITs(Model model, User operatingUser){
         model.addAttribute("openTerminalJits", jitRequestService.getOpenJITRequests(operatingUser));
         model.addAttribute("openOpsJits", jitRequestService.getOpenOpsRequests(operatingUser));

@@ -6,6 +6,7 @@ import io.dataguardians.automation.auditing.Trigger;
 import io.dataguardians.automation.auditing.TriggerAction;
 import io.dataguardians.sso.core.model.ConnectedSystem;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
+import io.dataguardians.sso.integrations.ticketing.TicketService;
 
 public class TicketSessionRule extends SessionRuleIfc {
 
@@ -14,6 +15,7 @@ public class TicketSessionRule extends SessionRuleIfc {
     private static final String CLASS_NAME = TicketSessionRule.class.getName();
     private ConnectedSystem connectedSystem;
     private SessionTrackingService sessionTrackingService;
+    private TicketService ticketService;
 
     @Override
     public void setConnectedSystem(ConnectedSystem connectedSystem) {
@@ -25,9 +27,13 @@ public class TicketSessionRule extends SessionRuleIfc {
         this.sessionTrackingService = sessionTrackingService;
     }
 
+    public void setTicketService(TicketService ticketService) {
+        this.ticketService = ticketService;
+    }
+
     @Override
     public Optional<Trigger> trigger(String text) {
-        if (connectedSystem.getWebsocketListenerSessionId() == null || connectedSystem.getWebsocketListenerSessionId().isEmpty()) {
+        if (ticketService.isTicketActive("JIRA-1234")) {
             Trigger trg = new Trigger(TriggerAction.JIT_ACTION, DESCRIPTION);
             return Optional.of(trg);
         }

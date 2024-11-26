@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<!DOCTYPE Configure PUBLIC "-//Jetty//Configure//EN" "http://www.eclipse.org/jetty/configure_9_3.dtd">
+<Configure id="Server" class="org.eclipse.jetty.server.Server">
+    <Call name="addConnector">
+        <Arg>
+            <New class="org.eclipse.jetty.server.ServerConnector">
+                <Arg name="server">
+                    <Ref refid="Server"/>
+                </Arg>
+                <Arg>
+                    <New class="org.eclipse.jetty.util.ssl.SslContextFactory$Server">
+                        <!-- Define paths relative to jetty.base -->
+                        <Set name="keyStorePath"><Property name="jetty.base" default="." />/../systemguard-config/ssl/keystore.jks</Set>
+                        <Set name="keyStorePassword">${KEYSTORE_PASSWORD}</Set>
+                        <Set name="trustStorePath"><Property name="jetty.base" default="." />/../systemguard-config/ssl/truststore.jks</Set>
+                        <Set name="trustStorePassword">${TRUSTSTORE_PASSWORD}</Set>
+                        <Set name="needClientAuth">true</Set> <!-- Enables mutual authentication -->
+                    </New>
+                </Arg>
+            </New>
+        </Arg>
+    </Call>
+</Configure>

@@ -740,7 +740,7 @@ table.dataTable.display tbody tr.odd > .sorting_1, table.dataTable.order-column.
 }
 
 .overlay-message {
-    color: #fff;
+    color: #FFFFFF;
     margin-top: 20px;
     font-size: 1.2em;
 }

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Add Integrations</title>
+
+    <style>
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .sm\\:grid-cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .lg\\:grid-cols-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .xl\\:grid-cols-4 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            transition: background-color 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .card:hover {
+            background-color: #f9f9f9;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .card-description {
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .icon {
+            font-size: 1.25rem;
+            color: #888;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
+                <div class="container-fluid">
+                    <div class="row">
+                    <h2 class="toast-header">Select Integration to Add</h2>
+                    <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
+                        <div th:each="integration : ${integrations}">
+                            <a th:href="${integration.href}" class="card hover:bg-muted transition-colors p-3 text-xs shadow-sm rounded-lg">
+                                <div class="card-header flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <h2 class="card-title text-xs font-medium" th:text="${integration.name}"></h2>
+                                    <i th:class="${integration.icon}"></i> <!-- Placeholder for icons -->
+                                </div>
+                                <p class="card-description text-xs" th:text="${integration.description}"></p>
+                            </a>
+                        </div>
+                    </div>
+                        </div>
+                    <div class="row">
+                        <h2 class="toast-header">Integrations</h2>
+                        <table id="integrations-table" class="display">
+                            <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Base URL
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="s : ${existingIntegrations}">
+                                <td><i class="fa-regular fa-ticket"></i> <span th:text="${s.name}"></span></td>
+                                <td th:text="${s.connectionType}"></td>
+                                <td
+                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}" th:text="${s.baseUrl}">
+                                </td>
+
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
+

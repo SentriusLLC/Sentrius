@@ -43,10 +43,15 @@
                     Notifications</span>
                 </a>
             </li>
+            <li >
+                <a href="/sso/v1/integrations" class="nav-link px-0 align-middle">
+                    <i class="fa-solid fa-ticket"></i> <span class="ms-1 d-none d-sm-inline">System Integrations</span>
+                </a>
+            </li>
         </ul>
         <hr>
         <div class="dropdown pb-4">
-            <a th:href="'/manage/jit/my/status.ktrl?_csrf=' + ${session._csrf}" class="nav-link">
+            <a href="/sso/v1/zerotrust/jit/my" class="nav-link">
                 <span id="badge_jits" class="badge text-bg-info">0 Pending JITs</span>
             </a>
         </div>

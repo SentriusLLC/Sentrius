@@ -1,17 +1,16 @@
 package io.dataguardians.sso.integrations.ticketing;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class TicketService {
 
-    private final GitHubService gitHubService;
-    private final JiraService jiraService;
+    @Autowired
+    private GitHubService gitHubService;
+    @Autowired
+    private JiraService jiraService;
 
-    public TicketService(GitHubService gitHubService, JiraService jiraService) {
-        this.gitHubService = gitHubService;
-        this.jiraService = jiraService;
-    }
 
     public boolean isTicketActive(String ticketKey) {
         if (ticketKey.startsWith("GH-")) {

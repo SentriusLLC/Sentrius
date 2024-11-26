@@ -152,9 +152,18 @@ public class HostApiController extends BaseController {
             node.put("errorToUser","SSH is disabled");
             return ResponseEntity.ok(node);
         }
+
+
         // operating user
         var user = getOperatingUser(request, response);
         var hostGroup = hostGroupService.getHostGroupWithHostSystems(user, enclaveId);
+
+        if (hostGroup.get().getConfiguration().getTerminalsLocked()){
+            node.put("sessionId","");
+            node.put("errorToUser","Terminals for this host group are locked, please reach out to your system admin.");
+            return ResponseEntity.ok(node);
+        }
+
         var hostSystem = hostGroupService.getHostSystem(hostId);
 
         Hibernate.initialize(hostSystem.get().getPublicKeyList());

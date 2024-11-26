@@ -91,6 +91,7 @@ io/dataguardians/sso/core/model/ServletResponseType.class
 io/dataguardians/config/audting/AuditingConfigProvider$AuditingConfigProviderFactory.class
 io/dataguardians/sso/core/model/users/UserConfig.class
 io/dataguardians/sso/core/model/security/enums/ApplicationAccessEnum.class
+io/dataguardians/sso/integrations/ticketing/TicketService.class
 io/dataguardians/sso/core/model/users/User.class
 io/dataguardians/security/ApiKey.class
 io/dataguardians/sso/core/annotations/Messaging.class
@@ -146,6 +147,7 @@ io/dataguardians/sso/core/services/terminal/SessionTrackingService$1.class
 io/dataguardians/sso/core/model/dto/JITTrackerDTO.class
 io/dataguardians/automation/ShellScript.class
 io/dataguardians/sso/core/model/security/enums/UserAccessEnum.class
+io/dataguardians/sso/integrations/external/ExternalIntegrationDTO$ExternalIntegrationDTOBuilder.class
 io/dataguardians/sso/core/model/security/enums/AutomationAccessEnum.class
 io/dataguardians/automation/auditing/TriggerAction.class
 io/dataguardians/sso/core/model/security/enums/TwoPartyApprovalConfig.class
@@ -156,6 +158,7 @@ io/dataguardians/sso/core/services/JITService.class
 io/dataguardians/protobuf/Session$TriggerOrBuilder.class
 io/dataguardians/sso/core/model/automation/AutomationShare.class
 io/dataguardians/sso/core/model/security/zt/JITStatus.class
+io/dataguardians/sso/core/services/IntegrationSecurityTokenService.class
 io/dataguardians/sso/core/model/zt/JITApproval.class
 io/dataguardians/sso/core/data/specification/HostGroupSpecification.class
 io/dataguardians/sso/core/utils/AuditConfigProvider.class
@@ -163,9 +166,10 @@ io/dataguardians/sso/core/controllers/BaseRestController.class
 io/dataguardians/automation/watchdog/CustomWatchdog.class
 io/dataguardians/sso/core/utils/HttpUtils.class
 io/dataguardians/sso/core/data/NotificationType.class
-io/dataguardians/repository/CursorPaginator$SortDirection.class
 io/dataguardians/sso/core/config/SchedulingConfig.class
+io/dataguardians/sso/integrations/external/ExternalIntegrationDTO.class
 io/dataguardians/sso/core/model/dto/ProfileRuleDTO.class
+io/dataguardians/automation/auditing/rules/TicketSessionRule.class
 io/dataguardians/sso/core/model/security/AccessControl$AccessControlBuilder.class
 io/dataguardians/protobuf/Session$TriggerAction$1.class
 io/dataguardians/sso/core/model/hostgroup/TimeConfigs$TimeConfigsBuilder.class
@@ -254,7 +258,9 @@ io/dataguardians/sso/core/security/service/CryptoService.class
 io/dataguardians/automation/AutomationConfiguration$AutomationConfigurationBuilderImpl.class
 io/dataguardians/sso/core/model/Notification$NotificationBuilder.class
 io/dataguardians/automation/runner/AutomationRunner.class
+io/dataguardians/sso/core/repository/IntegrationSecurityTokenRepository.class
 io/dataguardians/sso/core/model/ApplicationKey.class
+io/dataguardians/sso/integrations/ticketing/GitHubService.class
 io/dataguardians/sso/core/utils/StringUtils.class
 io/dataguardians/sso/core/model/dto/HostSystemDTO.class
 io/dataguardians/sso/core/model/AuditWrapper.class
@@ -263,15 +269,16 @@ io/dataguardians/sso/core/security/CustomUserDetails.class
 io/dataguardians/sso/core/model/dto/JITTrackerDTO$JITTrackerDTOBuilder.class
 io/dataguardians/sso/core/repository/SystemRepository.class
 io/dataguardians/sso/core/model/users/UserSettings$UserSettingsBuilder.class
+io/dataguardians/sso/core/model/security/IntegrationSecurityToken.class
 io/dataguardians/automation/auditing/rules/ForbiddenCommandsRule.class
 io/dataguardians/sso/core/utils/TimeAgoFormatter.class
 io/dataguardians/sso/core/repository/automation/ScriptRepository.class
 io/dataguardians/sso/core/breadcrumbs/BreadcrumbItem$BreadcrumbItemBuilder.class
+io/dataguardians/sso/core/model/security/IntegrationSecurityToken$IntegrationSecurityTokenBuilder.class
 io/dataguardians/sso/core/security/CustomAuthenticationSuccessHandler.class
 io/dataguardians/sso/core/config/AppConfig.class
 io/dataguardians/sso/core/model/security/enums/JITAccessEnum$OpsIfc.class
 io/dataguardians/sso/core/model/security/zt/JITReason$JITReasonBuilder.class
-io/dataguardians/repository/CursorPaginator.class
 io/dataguardians/sso/core/config/SystemOptions$SystemOptionsBuilder.class
 io/dataguardians/sso/core/model/security/zt/JITRequest.class
 io/dataguardians/protobuf/Session$Trigger$1.class
@@ -292,6 +299,7 @@ io/dataguardians/sso/core/services/auditing/AuditService.class
 io/dataguardians/sso/core/breadcrumbs/BreadcrumbItem.class
 io/dataguardians/sso/core/data/TimeConfig$TimeConfigBuilder.class
 io/dataguardians/config/audting/DefaultAuditConfigProvider.class
+io/dataguardians/sso/integrations/ticketing/JiraService.class
 io/dataguardians/sso/core/data/SchUserInfo$SchUserInfoBuilder.class
 io/dataguardians/sso/core/utils/ConcurrentLRUCache$1.class
 io/dataguardians/protobuf/Session$MessageType$1.class

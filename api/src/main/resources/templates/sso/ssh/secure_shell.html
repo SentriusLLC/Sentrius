@@ -385,6 +385,16 @@
                 console.log('WebSocket Error ' + error);
             };
 
+            function showStatusBar(message) {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.style.display = 'block';
+
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 3000); // Hide after 3 seconds
+            }
+
             connection.onmessage = function (e) {
                 console.log("Received message: " + e.data);
                 console.log("382");
@@ -428,7 +438,10 @@
                                         persistentMessage = description;
                                     } else {
                                         console.log("hmmm" + deserializedAuditLog.getType());
-                                        alertWarn.textContent = description || persistentMessage || "";
+                                        //alertWarn.textContent = description || persistentMessage || "";
+                                        if (description) {
+                                            showStatusBar(description);
+                                        }
                                     }
                                     // Use textContent instead of innerHTML
                                 }
@@ -617,10 +630,38 @@
 
         });
 
+
         /*]]>*/
     </script>
 
     <style>
+
+        #notification {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(255, 223, 186, 0.9);
+            color: #333;
+            text-align: center;
+            padding: 10px;
+            font-size: 16px;
+            display: none;
+            z-index: 1050;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar {
+            z-index: 1040; /* Navbar remains below the notification */
+        }
+
+        .termwrapper {
+            position: absolute;
+            top: 60px; /* Adjust based on navbar height */
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
         .term-container {
             width: 100%;
             margin: 0;
@@ -649,10 +690,22 @@
     <title>[[${systemOptions.systemLogoName}]] - Terminals</title>
 </head>
 <body>
-<div id="overlay" class="overlay hidden">
-    <div class="spinner"></div>
-    <p class="overlay-message">Please wait while the session is being prepared...</p>
+<div id="notification" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: rgba(255, 223, 186, 0.9);
+    color: #333;
+    text-align: center;
+    padding: 10px;
+    font-size: 16px;
+    display: none;
+    z-index: 1050;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);">
+    This command requires approval
 </div>
+
 <div class="alert alert-primary" style="display:none; margin-top: 10px" role="alert" id="alertNotification">
     <span id="alertMessage" th:text="${notification}"></span>
     <div id="alertMessageId" style="display: none;; margin-top: 10px"></div>
@@ -685,8 +738,8 @@
                     <span id="alertWarn" class="badge text-bg-warning ms-2"></span>
                 </li>
                 <li class="nav-item">
-                    <a th:href="'/manage/jit/my/status.ktrl?_csrf=' + ${session._csrf}" class="nav-link">
-                        <span id="badge_jits" class="badge text-bg-dark">0 Pending JITs</span>
+                    <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#jitModal" onclick="refreshJITTable()">
+                    <span id="badge_jits" class="badge text-bg-dark">0 Pending JITs</span>
                     </a>
                 </li>
 
@@ -716,6 +769,82 @@
 <div class="termwrapper">
 </div>
 
+<div class="modal fade" id="jitModal" tabindex="-1" aria-labelledby="jitModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="jitModalLabel">My JIT Requests</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table id="jit-table" class="table table-striped table-bordered">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Command</th>
+                        <th>Status</th>
+                        <th>Created At</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <!-- Dynamic rows will be added by DataTables -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    function refreshJITTable() {
+        const jitTable = $('#jit-table').DataTable();
+        if ($.fn.dataTable.isDataTable('#jit-table')) {
+            // Reload the existing table
+            jitTable.ajax.reload();
+        } else {
+            // Initialize the DataTable if not already initialized
+            $('#jit-table').DataTable({
+                ajax: {
+                    url: '/api/v1/zerotrust/jit/my/current', // API endpoint to fetch JIT requests
+                    dataSrc: '', // Adjust if the data is nested (e.g., 'data' for { data: [...] })
+                },
+                columns: [
+                    { data: 'id' },
+                    { data: 'command' },
+                    { data: 'status' },
+                    {
+                        data: 'createdAt',
+                        render: function(data) {
+                            return new Date(data).toLocaleString(); // Format the date
+                        }
+                    },
+                    {
+                        data: 'id',
+                        render: function(data, type, row) {
+                            // Create dynamic action buttons for each row
+                            let revokeButton = `<button class="btn btn-danger btn-sm" onclick="revokeJIT('${data}')">Revoke</button>`;
+                            let jiraInput = '';
+                            if (row.externalSource === 'JIRA') {
+                                jiraInput = `<input type="text" class="form-control mt-2" placeholder="JIRA Ticket" onchange="linkJIRATicket('${data}', this.value)">`;
+                            }
+                            return `${revokeButton} ${jiraInput}`;
+                        }
+                    }
+                ],
+                processing: true, // Show a processing indicator
+                serverSide: false, // Enable server-side processing if needed
+                paging: true, // Pagination enabled
+                autoWidth: false, // Avoid auto-adjusting column widths
+                responsive: true // Enable responsiveness
+            });
+        }
+    }
+</script>
 </body>
 
 </html>

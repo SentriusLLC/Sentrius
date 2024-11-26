@@ -10,10 +10,9 @@ import org.springframework.web.client.RestTemplate;
 public class GitHubService {
     private final RestTemplate restTemplate;
 
-    @Value("${github.api-url}")
     private String apiUrl;
 
-    @Value("${github.token}")
+
     private String token;
 
     public GitHubService(RestTemplateBuilder builder) {
