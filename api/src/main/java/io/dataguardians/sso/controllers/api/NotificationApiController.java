@@ -26,11 +26,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Slf4j
 @Controller
 @RequestMapping("/api/v1/notification")
-public class NotificationController extends BaseController {
+public class NotificationApiController extends BaseController {
 
 
     protected final NotificationService notificationService;
@@ -43,10 +44,10 @@ public class NotificationController extends BaseController {
         return errorOutput;
     }
 
-    protected NotificationController(UserService userService,
-                                     SystemOptions systemOptions,
-                                     NotificationService notificationService,
-                                     ErrorOutputService errorOutputService) {
+    protected NotificationApiController(UserService userService,
+                                        SystemOptions systemOptions,
+                                        NotificationService notificationService,
+                                        ErrorOutputService errorOutputService) {
         super(userService, systemOptions);
         this.notificationService = notificationService;
         this.errorOutputService= errorOutputService;
@@ -55,14 +56,14 @@ public class NotificationController extends BaseController {
     @GetMapping("/latest")
     public ResponseEntity<ObjectNode> getLatest(HttpServletRequest request, HttpServletResponse response) {
         var operatingUser = getOperatingUser(request,response);
-        var notifications = notificationService.getNotificationsByRecipient(operatingUser);
+        var notifications = notificationService.findUnseenNotifications(operatingUser);
         String resp = "";
         Long id = -1L;
         var jsonObject = JsonUtil.MAPPER.createObjectNode();
         if (notifications.size() > 1){
             jsonObject.put("html", true);
             resp =
-                "<a href=\"sso/v1/notifications\">You" +
+                "<a href=\"/sso/v1/notifications\">You" +
                     " have multiple notifications. Please " +
                     "check the " +
                     "notifications page.</a>";
@@ -128,5 +129,34 @@ public class NotificationController extends BaseController {
                 });
 
         return ResponseEntity.ok(jitResponse);
+    }
+
+    @PostMapping("/remove")
+    public ResponseEntity<String> removeNotification(HttpServletRequest request, HttpServletResponse response,
+                                                 @RequestParam(
+        "notificationId") String notificationId) throws GeneralSecurityException {
+        notificationService.setNotificationActedUpon(getOperatingUser(request, response), Long.parseLong(notificationId));
+        return ResponseEntity.ok("OK");
+    }
+
+    @GetMapping("/seen")
+    public ResponseEntity<String> markAsSeen(HttpServletRequest request, HttpServletResponse response, @RequestParam(
+        "notificationId") String notificationId) throws GeneralSecurityException,
+        SQLException {
+
+        var operatingUser = getOperatingUser(request, response);
+        if (null != notificationId) {
+            if (notificationId.equals("-1")) {
+                var notification = notificationService.getNotificationsByRecipient(operatingUser);
+                for (var n : notification) {
+                    log.info("Marking notification as seen: {} {}", n.getId(), n.getMessage());
+                    notificationService.setNotificationActedUpon(operatingUser, n.getId());
+                }
+            } else {
+                notificationService.setNotificationActedUpon(operatingUser, Long.parseLong(notificationId));
+            }
+        }
+
+        return ResponseEntity.ok("OK");
     }
 }

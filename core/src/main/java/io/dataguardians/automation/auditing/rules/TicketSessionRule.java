@@ -1,0 +1,57 @@
+package io.dataguardians.automation.auditing.rules;
+
+import java.util.Optional;
+import io.dataguardians.automation.auditing.SessionRuleIfc;
+import io.dataguardians.automation.auditing.Trigger;
+import io.dataguardians.automation.auditing.TriggerAction;
+import io.dataguardians.sso.core.model.ConnectedSystem;
+import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
+
+public class TicketSessionRule extends SessionRuleIfc {
+
+    private static final String DESCRIPTION = "Require tickets to be filed with a high severity incident to proceed " +
+        "with breakglass.";
+    private static final String CLASS_NAME = TicketSessionRule.class.getName();
+    private ConnectedSystem connectedSystem;
+    private SessionTrackingService sessionTrackingService;
+
+    @Override
+    public void setConnectedSystem(ConnectedSystem connectedSystem) {
+        this.connectedSystem = connectedSystem;
+    }
+
+    @Override
+    public void setTrackingService(SessionTrackingService sessionTrackingService) {
+        this.sessionTrackingService = sessionTrackingService;
+    }
+
+    @Override
+    public Optional<Trigger> trigger(String text) {
+        if (connectedSystem.getWebsocketListenerSessionId() == null || connectedSystem.getWebsocketListenerSessionId().isEmpty()) {
+            Trigger trg = new Trigger(TriggerAction.JIT_ACTION, DESCRIPTION);
+            return Optional.of(trg);
+        }
+        Trigger trg = new Trigger(TriggerAction.NO_ACTION, CLASS_NAME);
+        return Optional.of(trg);
+    }
+
+    @Override
+    public boolean configure(String configuration) {
+        return false;
+    }
+
+    @Override
+    public TriggerAction describeAction() {
+        return TriggerAction.JIT_ACTION;
+    }
+
+    @Override
+    public boolean requiresSanitized() {
+        return false;
+    }
+
+    @Override
+    public boolean isOnlySessionRule() {
+        return true;
+    }
+}

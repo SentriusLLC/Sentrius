@@ -2,13 +2,19 @@ package io.dataguardians.automation.auditing;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import io.dataguardians.sso.core.model.HostSystem;
+import io.dataguardians.sso.core.model.sessions.SessionLog;
+import io.dataguardians.sso.core.model.users.User;
 
 public abstract class BaseAuditor {
-
+/*
   protected final Long userId;
   protected final Long sessionId;
 
-  protected final Long systemId;
+  protected final Long systemId;*/
+  protected final HostSystem system;
+  protected final SessionLog session;
+  protected final User user;
 
   protected Trigger currentTrigger = Trigger.NO_ACTION;
 
@@ -20,10 +26,10 @@ public abstract class BaseAuditor {
 
   protected AtomicReference<Trigger> sessionTrigger = new AtomicReference<>();
 
-  public BaseAuditor(Long userId, Long sessionId, Long systemId) {
-    this.userId = userId;
-    this.sessionId = sessionId;
-    this.systemId = systemId;
+  public BaseAuditor(User user, SessionLog session, HostSystem system) {
+    this.user = user;
+    this.session = session;
+    this.system = system;
 
     sessionTrigger.set(new Trigger(TriggerAction.NO_ACTION, ""));
   }

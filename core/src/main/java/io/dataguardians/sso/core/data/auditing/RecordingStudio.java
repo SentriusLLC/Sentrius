@@ -32,7 +32,7 @@ public class RecordingStudio extends Recorder {
     String automationName;
 
     public RecordingStudio(ConnectedSystem session, SessionTrackingService sessionTrackingService, AutomationService service) {
-        super(session.getUserId(), session.getSession().getId(), session.getHostSystem().getId());
+        super(session.getUser(), session.getSession(), session.getHostSystem());
         // async thread evaluate
         recordingStarted = false;
         this.automationService = service;

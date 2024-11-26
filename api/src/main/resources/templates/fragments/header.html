@@ -84,7 +84,7 @@
 
         function isNotification() {
             const currentPath = window.location.pathname;
-            return /\/admin\/notifications/.test(currentPath);
+            return /\/v1\/notifications/.test(currentPath);
         }
 
         function markNotificationAsSeen() {
@@ -92,7 +92,7 @@
             // Here we pass the notification data. Adjust as needed.
             const notificationMessage = $("#alertMessage").text();
             const notificationMessageId = $("#alertMessageId").text();
-            url = "/admin/notification/seen.ktrl?notificationId=" + notificationMessageId + "&_csrf=" + [[${session._csrf}]];
+            url = "/api/v1/notification/seen?notificationId=" + notificationMessageId;
             console.log("going to " + url);
             $.ajax({
                 url: url, // Endpoint to mark notification as seen
@@ -125,7 +125,8 @@
                             console.log(data);
                             if (data && Array.isArray(data)) {
                                 count = Object.keys(data).length;
-                                $("#badge_jits").html('<span class="badge text-bg-dark">' + count + ' Your JITs</span>');
+                                $("#badge_jits").html('<span class="badge text-bg-info">' + count +
+                                    ' Your JITs</span>');
                             } else {
                                 $("#badge_jits").html('');
                                 $("#badge_errors").html('');
@@ -180,11 +181,11 @@
                     // Adjust interval as needed
 
                     $.ajax({
-                        url: "/api/v1/jit/my/current",
+                        url: "/api/v1/zerotrust/jit/my/current",
                         type: 'GET',
                     }).done(function (data) {
                         count = Object.keys(data).length;
-                        $("#badge_jits").html('<span class="badge text-bg-dark">' + count + ' Your JITs</span>');
+                        $("#badge_jits").html('<span class="badge text-bg-info">' + count + ' Your JITs</span>');
                     }).fail(function (jqXHR, textStatus, errorThrown) {
 
                         $("#badge_jits").html('');

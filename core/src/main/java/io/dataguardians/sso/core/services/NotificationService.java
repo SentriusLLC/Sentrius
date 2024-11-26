@@ -33,7 +33,8 @@ public class NotificationService {
 
     @Transactional
     public void sendNotification(String message, User recipient) {
-        Notification notification = Notification.builder().message(message).recipients(List.of(recipient)).build();
+        Notification notification =
+            Notification.builder().message(message).notificationType(NotificationType.JIT_NOTIFICATION.getValue()).recipients(List.of(recipient)).build();
         sendNotification(notification);
     }
 
@@ -73,5 +74,19 @@ public class NotificationService {
         } else {
             throw new RuntimeException("User is not a recipient of the notification");
         }
+    }
+
+    @Transactional
+    public void deleteById(User operatingUser, Long notificationId) {
+        Notification notification = notificationRepository.findById(notificationId).orElseThrow(() -> new RuntimeException("Notification not found"));
+        if (notification.getRecipients().contains(operatingUser)) {
+            notificationRepository.deleteById(notificationId);
+        } else {
+            throw new RuntimeException("User is not a recipient of the notification");
+        }
+    }
+
+    public List<Notification> findUnseenNotifications(User operatingUser) {
+        return notificationRepository.findUnseenNotifications(operatingUser.getId(), false);
     }
 }

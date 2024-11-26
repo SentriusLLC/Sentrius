@@ -18,16 +18,15 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
 // JITRequest Entity
 
-@SuperBuilder(toBuilder = true)
+@Builder
 @Entity
-@Table(name = "jit_requests")
+@Table(name = "operations_request")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class JITRequest  {
+public class OpsJITRequest {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -55,5 +54,5 @@ public class JITRequest  {
     private java.sql.Timestamp lastUpdated;
     // Add the relationship to OpsApproval
     @OneToMany(mappedBy = "jitRequest", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private List<JITApproval> approvals;
+    private List<OpsApproval> approvals;
 }

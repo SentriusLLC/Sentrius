@@ -68,7 +68,7 @@
         <!-- Open Terminal JITs -->
         <div class="col-md-6 table-container">
             <h2 class="toast-header">Open Terminal JITs</h2>
-            <table id="terminal-jits-table" class="table table-striped table-dark">
+            <table id="terminal-jits-table" class="display">
                 <thead>
                 <tr>
                     <th>Operation</th>
@@ -80,11 +80,17 @@
                 <tbody>
                 <tr th:each="s : ${openTerminalJits}">
                     <td th:text="${s.command}"></td>
-                    <td th:text="${s.user.username}"></td>
-                    <td th:text="${s.hostSystem.displayNm}"></td>
+                    <td th:text="${s.userName}"></td>
+                    <td th:text="${s.hostName}"></td>
                     <td>
-                        <button th:id="'app_btn_' + ${s.id}" class="btn btn-primary btn-sm" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_JITS')}">Approve</button>
-                        <button th:id="'den_btn_' + ${s.id}" class="btn btn-danger btn-sm" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_JITS')}">Deny</button>
+                        <button th:id="'app_btn_' + ${s.id}" class="btn btn-primary btn-sm app_btn"
+                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_JITS') && !s.isCurrentUser}">Approve</button>
+                        <button th:id="'den_btn_' + ${s.id}" class="btn btn-danger btn-sm den_btn"
+                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_JITS') && !s.isCurrentUser}">Deny</button>
+                        <button th:id="'rev_btn_' + ${s.id}"
+                                th:if="${s.isCurrentUser }"
+                                class="btn btn-secondary rev_btn spacer spacer-right">Revoke
+                        </button>
                     </td>
                 </tr>
                 </tbody>
@@ -93,7 +99,7 @@
 
         <div class="col-md-6 table-container">
             <h2 class="toast-header">Open OPS JITs</h2>
-            <table id="ops-jits-table" class="table table-striped table-dark">
+            <table id="ops-jits-table" class="display">
                 <thead>
                 <tr>
                     <th>Operation</th>
@@ -104,10 +110,22 @@
                 <tbody>
                 <tr th:each="s : ${openOpsJits}">
                     <td th:text="${s.command}"></td>
-                    <td th:text="${s.user.username}"></td>
+                    <td th:text="${s.userName}"></td>
                     <td>
-                        <button th:id="'ops_app_btn_' + ${s.id}" class="btn btn-primary btn-sm" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_JITS')}">Approve</button>
-                        <button th:id="'ops_den_btn_' + ${s.id}" class="btn btn-danger btn-sm" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_JITS')}">Deny</button>
+                         <button th:id="'ops_app_btn_' + ${s.id}"
+                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_JITS')
+                                         && !s.isCurrentUser}"
+                                class="btn btn-secondary ops_app_btn spacer spacer-right">Approve
+                        </button>
+                        <button th:id="'ops_den_btn_' + ${s.id}"
+                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_JITS')
+                                          && !s.isCurrentUser }"
+                                class="btn btn-secondary ops_den_btn spacer spacer-right">Deny
+                        </button>
+                        <button th:id="'ops_rev_btn_' + ${s.id}"
+                                th:if="${s.isCurrentUser }"
+                                class="btn btn-secondary ops_rev_btn spacer spacer-right">Revoke
+                        </button>
                     </td>
                 </tr>
                 </tbody>
@@ -123,7 +141,7 @@
     <div class="row">
         <div class="col-md-6 table-container">
             <h2 class="toast-header">Approved Terminal JITs</h2>
-            <table id="approved-terminal-jits-table" class="table table-striped table-dark">
+            <table id="approved-terminal-jits-table" class="display">
                 <thead>
                 <tr>
                     <th>Operation</th>
@@ -135,8 +153,8 @@
                 <tbody>
                 <tr th:each="s : ${approvedTerminalJits}">
                     <td th:text="${s.command}"></td>
-                    <td th:text="${s.user.username}"></td>
-                    <td th:text="${s.hostSystem.displayNm}"></td>
+                    <td th:text="${s.userName}"></td>
+                    <td th:text="${s.hostName}"></td>
                     <td th:text="${s.usesRemaining}"></td>
                 </tr>
                 </tbody>
@@ -144,7 +162,7 @@
         </div>
         <div class="col-md-6 table-container">
             <h2 class="toast-header">Approved OPs JITs</h2>
-            <table id="approved-ops-jits-table" class="table table-striped table-dark">
+            <table id="approved-ops-jits-table" class="display">
                 <thead>
                 <tr>
                     <th>Operation</th>
@@ -156,8 +174,8 @@
                 <tbody>
                 <tr th:each="s : ${approvedOpsJits}">
                     <td th:text="${s.command}"></td>
-                    <td th:text="${s.user.username}"></td>
-                    <td th:text="${s.hostSystem.displayNm}"></td>
+                    <td th:text="${s.userName}"></td>
+                    <td th:text="${s.hostName}"></td>
                     <td th:text="${s.usesRemaining}"></td>
                 </tr>
                 </tbody>
@@ -168,28 +186,7 @@
     <div class="row">
         <div class="col-md-6 table-container">
             <h2 class="toast-header">Denied Terminal JITs</h2>
-            <table id="denied-terminal-jits-table" class="table table-striped table-dark">
-                <thead>
-                <tr>
-                    <th>Operation</th>
-                    <th>User</th>
-                    <th>System</th>
-                    <th>Uses Remaining</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="s : ${deniedOpsJits}">
-                    <td th:text="${s.command}"></td>
-                    <td th:text="${s.user.username}"></td>
-                    <td th:text="${s.hostSystem.displayNm}"></td>
-                    <td th:text="${s.usesRemaining}"></td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="col-md-6 table-container">
-            <h2 class="toast-header">Denied Terminal JITs</h2>
-            <table id="denied-ops-jits-table" class="table table-striped table-dark">
+            <table id="denied-terminal-jits-table" class="display">
                 <thead>
                 <tr>
                     <th>Operation</th>
@@ -201,8 +198,29 @@
                 <tbody>
                 <tr th:each="s : ${deniedTerminalJits}">
                     <td th:text="${s.command}"></td>
-                    <td th:text="${s.user.username}"></td>
-                    <td th:text="${s.hostSystem.displayNm}"></td>
+                    <td th:text="${s.userName}"></td>
+                    <td th:text="${s.hostName}"></td>
+                    <td th:text="${s.usesRemaining}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-6 table-container">
+            <h2 class="toast-header">Denied Ops JITs</h2>
+            <table id="denied-ops-jits-table" class="display">
+                <thead>
+                <tr>
+                    <th>Operation</th>
+                    <th>User</th>
+                    <th>System</th>
+                    <th>Uses Remaining</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="s : ${deniedOpsJits}">
+                    <td th:text="${s.command}"></td>
+                    <td th:text="${s.userName}"></td>
+                    <td th:text="${s.hostName}"></td>
                     <td th:text="${s.usesRemaining}"></td>
                 </tr>
                 </tbody>
@@ -256,6 +274,48 @@
         if (modalId) {
             new bootstrap.Modal(document.getElementById(modalId)).show();
         }
+
+        //call delete action
+        $(".den_btn").button().click(function () {
+            var id = $(this).attr('id').replace("den_btn_", "");
+            window.location = '/api/v1/zerotrust/jit/terminal/deny?jitId=' + id;
+        });
+
+        $(".ops_den_btn").button().click(function () {
+            var id = $(this).attr('id').replace("ops_den_btn_", "");
+            window.location = '/v1/zerotrust/jit/ops/deny?jitId=' + id;
+        });
+
+        $(".rev_btn").button().click(function () {
+            var id = $(this).attr('id').replace("rev_btn_", "");
+            window.location = '/api/v1/zerotrust/jit/terminal/revoke?jitId=' + id;
+        });
+
+        $(".ops_rev_btn").button().click(function () {
+            var id = $(this).attr('id').replace("ops_rev_btn_", "");
+            window.location = '/v1/zerotrust/jit/my/ops/revoke?jitId=' + id;
+        });
+
+        $(".up_den_btn").button().click(function () {
+            var id = $(this).attr('id').replace("up_den_btn_", "");
+            window.location = '/manage/denyJIT?jitId=' + id;
+        });
+
+        $(".up_app_btn").button().click(function () {
+            var id = $(this).attr('id').replace("up_app_btn_", "");
+            window.location = '/manage/approveJIT?jitId=' + id;
+        });
+
+        $(".app_btn").button().click(function () {
+            var id = $(this).attr('id').replace("app_btn_", "");
+            console.log("ALKJDSLKJG");
+            window.location = '/api/v1/zerotrust/jit/terminal/approve?jitId=' + id;
+        });
+
+        $(".ops_app_btn").button().click(function () {
+            var id = $(this).attr('id').replace("ops_app_btn_", "");
+            window.location = '/api/v1/zerotrust/jit/ops/approve?jitId=' + id;
+        });
     });
 </script>
 </body>

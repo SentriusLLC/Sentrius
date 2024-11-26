@@ -86,10 +86,8 @@ public class SshListenerService {
                     var sshData = sessionTrackingService.getOutput(connectedSystem, 1L, TimeUnit.SECONDS,
                         output -> (!connectedSystem.getSession().getClosed() && (null != activeSessions.get(terminalSessionId) && activeSessions.get(terminalSessionId).isOpen())));
 
-                    log.info("ahhh");
                     // Send data to the specific terminal session
                     if (null != sshData ) {
-                        log.info("ahhh2");
                         for(Session.TerminalMessage terminalMessage : sshData){
                             if (terminalMessage.getTrigger() == null) {
                                 sendToTerminalSession(terminalSessionId, connectedSystem, terminalMessage);

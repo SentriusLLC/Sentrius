@@ -11,6 +11,13 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
+
+    @Query("SELECT n FROM Notification n JOIN NotificationRecipient nr on n.id = nr.id.notificationId WHERE nr.id" +
+        ".userId = :userId AND " +
+        "nr.acted = " +
+        ":acted")
+    List<Notification> findUnseenNotifications(@Param("userId") Long userId, @Param("acted") boolean acted);
+
     List<Notification> findByRecipientsContains(User recipient);
 
     @Modifying

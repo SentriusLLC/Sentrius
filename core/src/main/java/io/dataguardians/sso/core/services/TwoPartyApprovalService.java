@@ -26,6 +26,8 @@ public class TwoPartyApprovalService {
     private final ObjectMapper objectMapper;
     private final JITService jitService;
 
+    private static HostSystem SENTRIUS_SYS = HostSystem.builder().id(-1L).build();
+
     public TwoPartyApprovalService(TwoPartyApprovalConfigService configService, JITRequestService jitRequestService,
                                    ObjectMapper objectMapper, JITService jitService) {
         this.configService = configService;
@@ -100,16 +102,16 @@ public class TwoPartyApprovalService {
 
     private String handleApprovalRequest(User requestingUser, String command, String referrer, StringBuilder referralUri, JITAccessEnum.OpsIfc lambda, JITRequest jitRequest) throws SQLException, GeneralSecurityException {
         if (jitRequestService.hasJITRequest(command, requestingUser.getId(), -1L)) {
-            if (!jitService.isExpired(command, requestingUser, -1L)) {
-                if (jitService.isApproved(command, requestingUser.getId(), -1L)) {
-                    if (jitService.isActive(command, requestingUser.getId(), -1L)) {
-                        jitService.incrementUses(command, requestingUser.getId(), -1L);
+            if (!jitService.isExpired(command, requestingUser, SENTRIUS_SYS)) {
+                if (jitService.isApproved(command, requestingUser, SENTRIUS_SYS)) {
+                    if (jitService.isActive(command, requestingUser, SENTRIUS_SYS)) {
+                        jitService.incrementUses(command, requestingUser, SENTRIUS_SYS);
                         return lambda.approved(0L);
                     } else {
                         jitRequestService.addJITRequest(jitRequest);
                         return createRedirect(referrer, referralUri, MessagingUtil.REQUIRE_APPROVAL);
                     }
-                } else if (jitService.isDenied(command, requestingUser.getId(), -1L)) {
+                } else if (jitService.isDenied(command, requestingUser, SENTRIUS_SYS)) {
                     return createRedirect(referrer, referralUri, MessagingUtil.DENIED);
                 } else {
                     return createRedirect(referrer, referralUri, MessagingUtil.AWAITING_APPROVAL);

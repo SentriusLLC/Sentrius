@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta th:replace="~{fragments/header}" />
+    <title>[[${systemOptions.systemLogoName}]] - Notifications</title>
+
+    <!-- Styles -->
+    <style>
+        body {
+            background-color: #121212; /* Dark mode background */
+            color: #eaeaea; /* Light text color */
+        }
+
+        .container {
+            margin-top: 20px;
+        }
+
+        .table-container {
+            margin-bottom: 20px;
+        }
+
+        .toast-header {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #f8f9fa;
+        }
+
+        .modal-content {
+            background-color: #1e1e1e;
+            color: #eaeaea;
+        }
+
+        .btn-primary,
+        .btn-secondary {
+            background-color: #007bff;
+            border-color: #007bff;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-secondary:hover,
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: #2b2b2b; /* Custom dark striping */
+        }
+
+        .table-striped tbody tr:hover {
+            background-color: #3a3a3a;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
+
+                <div class="container-fluid">
+                    <div class="row">
+                        <h2 class="toast-header">Your Notifications</h2>
+                        <table id="terminal-jits-table" class="display">
+                            <thead>
+                            <tr>
+                                <th>Sender</th>
+                                <th>Message</th>
+                                <th th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">View
+                                    Count</th>
+                                <th> </th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="s : ${myNotifications}">
+                                <td><i class="fa-regular fa-bell"></i> <span th:text="${s.initiator}"></span></td>
+                                <td th:text="${s.message}"></td>
+                                <td
+                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}" th:text="${s.viewCount}">
+                                </td>
+
+                                <td>
+                                    <a th:id="'del_bet_' + ${s.id}"
+                                       href="#"
+                                       th:data-url="'/api/v1//notification/remove.ktrl?_csrf=' + ${session._csrf} + '&notificationId=' + ${s.id}"
+                                       class="del_bet">
+                                        <i class="fa fa-trash" aria-hidden="true"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+    <!-- JIT Management Sections -->
+    <div class="row">
+        <!-- Open Terminal JITs -->
+        <div class="container" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
+            <h3>Send Broadcast</h3>
+            Broadcast will be sent to every profile selected
+            <div class="scrollWrapper" >
+                <form th:action="@{/api/v1//notifications}" method="post" class="save_sys_form_add"
+                      autocomplete="off">
+                    <input type="hidden" name="_csrf" th:value="${session._csrf}">
+                    <table>
+                        <tr>
+                            <td>Select Profiles
+                            </td>
+                            <td>
+                                <select id="notificationgroups" th:name="notificationgroups" size="10" multiple="multiple">
+                                    <option value="everyone" selected>Everyone</option>
+                                    <option th:each="profile : ${hostGroups}"
+                                            th:value="${profile.id}"
+                                            th:text="${profile.nm}"
+                                            th:if="${hostGroups != null && !hostGroups.empty}">
+                                    </option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Message
+                            </td>`
+
+                            <td class="align_left">
+                                <input type="text" name="notification"
+                                       class="form-control" title="Message" size="10"> </span>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+        </div>
+    </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- DataTables Initialization -->
+<script>
+    async function deleteNotification(url, payload, csrf) {
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf // Include the CSRF token in the headers
+                },
+            });
+
+            console.log("Response:", response);
+            if (!response.ok) {
+                throw new Error("Failed to save the rule configuration");
+            }
+
+        } catch (error) {
+            console.log("Error occurred:", error);
+            alert("An error occurred while saving the rule configuration.");
+        }
+    }
+
+    $(document).ready(function () {
+        // Initialize DataTables
+        var csrf = "[[${_csrf.token}]]"
+
+        $('#notifications-table').DataTable();
+
+        // Mark the click handler as async
+        $(".del_bet").click(async function (event) {
+            event.preventDefault(); // Prevent the default link behavior
+            var id = $(this).attr('id').replace("del_bet_", ""); // Parse ID from the element's ID
+
+            var url = '/api/v1/notification/remove?notificationId=' + id;
+
+            // Call the deleteNotification function
+            await deleteNotification(url, null, csrf);
+
+            // Optionally reload the page after deletion
+            window.location.reload();
+        });
+    });
+</script>
+
+</body>
+
+</html>

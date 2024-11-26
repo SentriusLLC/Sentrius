@@ -31,7 +31,7 @@ public class OpsApproval {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "jit_request_id", nullable = false)
-    private JITRequest jitRequest;
+    private OpsJITRequest jitRequest;
 
     @Column(name = "uses", nullable = false)
     private int uses;

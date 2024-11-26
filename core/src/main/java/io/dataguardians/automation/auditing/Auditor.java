@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import io.dataguardians.automation.auditing.rules.RuleConfiguration;
 import io.dataguardians.config.audting.AuditingConfigProvider;
+import io.dataguardians.sso.core.model.HostSystem;
+import io.dataguardians.sso.core.model.sessions.SessionLog;
+import io.dataguardians.sso.core.model.users.User;
 
 public class Auditor extends BaseAuditor {
 
@@ -38,8 +41,8 @@ public class Auditor extends BaseAuditor {
     return ruleConfigurationList;
   }
 
-  public Auditor(Long userId, Long sessionId, Long systemId) {
-    super(userId, sessionId, systemId);
+  public Auditor(User user, SessionLog sessionLog, HostSystem hostSystem) {
+    super(user, sessionLog, hostSystem);
   }
 
   @Override

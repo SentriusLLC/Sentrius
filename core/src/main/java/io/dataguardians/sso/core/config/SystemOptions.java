@@ -108,6 +108,12 @@ public class SystemOptions {
 
   public Boolean sshEnabled = true;
 
+  /**
+   * Purely for testing mode
+   */
+  @Updatable(description = "Allows admins to view and approve their own JIT requests.")
+  public Boolean canApproveOwnJITs = false;
+
 
   // the default path may be sufficient
   @Updatable(description = "This is the path where uploaded files will be stored before distributed to remote systems.")

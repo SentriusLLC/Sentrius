@@ -37,9 +37,21 @@
                     <i class="fas fa-network-wired"></i> <span class="ms-1 d-none d-sm-inline">Host Enclaves</span>
                 </a>
             </li>
+            <li >
+                <a href="/sso/v1/notifications" class="nav-link px-0 align-middle">
+                    <i class="fa-regular fa-bell"></i> <span class="ms-1 d-none d-sm-inline">System
+                    Notifications</span>
+                </a>
+            </li>
         </ul>
         <hr>
         <div class="dropdown pb-4">
+            <a th:href="'/manage/jit/my/status.ktrl?_csrf=' + ${session._csrf}" class="nav-link">
+                <span id="badge_jits" class="badge text-bg-info">0 Pending JITs</span>
+            </a>
+        </div>
+        <div class="dropdown pb-4">
+
             <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
                 <img src="https://github.com/mdo.png" alt="user" width="30" height="30" class="rounded-circle">
                 <span class="d-none d-sm-inline mx-1" th:text="${operatingUser.username}"></span>

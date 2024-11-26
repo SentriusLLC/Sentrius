@@ -15,7 +15,6 @@ import io.dataguardians.sso.core.data.auditing.RecordingStudio;
 import io.dataguardians.sso.core.model.ConnectedSystem;
 import io.dataguardians.sso.core.model.zt.JITReason;
 import io.dataguardians.sso.core.model.zt.JITRequest;
-import io.dataguardians.repository.security.zt.JITServiceLocator;
 import io.dataguardians.sso.core.services.JITService;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +46,7 @@ public class RuleAlertAuditor extends BaseAuditor {
   public RuleAlertAuditor(
       JITService jitService,
       ConnectedSystem schSession, SessionTrackingService sessionTrackingService, RecordingStudio recorder) {
-    super(schSession.getUser().getId(), schSession.getSession().getId(), schSession.getHostSystem().getId());
+    super(schSession.getUser(), schSession.getSession(), schSession.getHostSystem());
 
     this.jitService = jitService;
 
@@ -151,14 +150,11 @@ public class RuleAlertAuditor extends BaseAuditor {
 
     LinkedBlockingDeque<String> stringsToReview;
 
-    Long userId;
-    Long systemId;
+
 
     public AsyncRuleAuditorRunner(JITService jitService, List<AuditorRule> asyncRules, ConnectedSystem connectedSystem,
                                   SessionTrackingService sessionTrackingService) {
       this.jitService = jitService;
-      this.userId = connectedSystem.getUser().getId();
-      this.systemId = connectedSystem.getHostSystem().getId();
       this.stringsToReview = new LinkedBlockingDeque<>();
       this.asyncRules = asyncRules;
       this.connectedSystem = connectedSystem;
@@ -186,7 +182,7 @@ public class RuleAlertAuditor extends BaseAuditor {
                   sessionTrackingService.addTrigger(connectedSystem, trg);
                   break;
                 case JIT_ACTION:
-                  if (!jitService.isApproved(nextstr, userId, systemId)) {
+                  if (!jitService.isApproved(nextstr, connectedSystem.getUser(), connectedSystem.getHostSystem())) {
                     sessionTrackingService.addTrigger(connectedSystem, trg);
                   }
                   break;
@@ -239,17 +235,62 @@ public class RuleAlertAuditor extends BaseAuditor {
     if (currentTrigger.getAction() == TriggerAction.JIT_ACTION) {
       // need to form a jit request
       try {
-        if (!jitService.isApproved(command, userId, systemId)) {
-          if (!JITServiceLocator.getRepository().hasJITRequest(command, userId, systemId)) {
+        // has a jit request and not approved
+        if (!jitService.isApproved(command, user, system)) {
+          log.info("on message not approved but has one {}", command);
+          /*
+          if (!jitService.hasJITRequest(command, user, system)) {
             JITReason reason = jitService.createReason("need ", " ticket ", " url");
             JITRequest request = jitService.createRequest(command, reason, connectedSystem.getUser(),
-                connectedSystem.getHostSystem());
+                connectedSystem.getHostSystem()
+            );
             request = jitService.addJITRequest(request);
-          }
+            return TriggerAction.DENY_ACTION;
+          } else {
+            log.info("on message is approved {}", command);
+
+           */
+            if (jitService.hasJITRequest(command, user, system) && !jitService.isActive(command, user, system)) {
+
+              log.info("on message is approved not active, awaiting response {}", command);
+              return TriggerAction.DENY_ACTION;
+            }else {
+              if (jitService.isApproved(command, user, system)) {
+                jitService.incrementUses(command, user, system);
+                log.info("on message is approved {}", command);
+                return TriggerAction.NO_ACTION;
+              }else {
+                //jitService.incrementUses(command, user, system);
+                JITReason reason = jitService.createReason("need ", " ticket ", " url");
+                JITRequest request = jitService.createRequest(command, reason, connectedSystem.getUser(),
+                    connectedSystem.getHostSystem()
+                );
+                request = jitService.addJITRequest(request);
+                log.info("on message not approved, so let's wait {}", command);
+                return TriggerAction.DENY_ACTION;
+              }
+            }
+          //}
 
           // keep the current trigger
-        } else {
-          currentTrigger = Trigger.NO_ACTION;
+        } else if (jitService.hasJITRequest(command, user, system)){
+
+            if (!jitService.isActive(command, user, system)) {
+              JITReason reason = jitService.createReason("need ", " ticket ", " url");
+              JITRequest request = jitService.createRequest(command, reason, connectedSystem.getUser(),
+                  connectedSystem.getHostSystem()
+              );
+              request = jitService.addJITRequest(request);
+              return TriggerAction.DENY_ACTION;
+            } else {
+              jitService.incrementUses(command, user, system);
+              currentTrigger = Trigger.NO_ACTION;
+            }
+
+
+      } else {
+
+            currentTrigger = Trigger.NO_ACTION;
         }
 
       } catch (SQLException e) {
