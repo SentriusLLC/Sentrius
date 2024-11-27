@@ -29,7 +29,6 @@
                     const row = Math.floor(totalItems / (optionsConfigure.columnMax / columnsPerCard));
                     const column = (totalItems % (optionsConfigure.columnMax / columnsPerCard)) * columnsPerCard;
 
-                    console.log(`Adding card to row ${row} and column ${column}`);
                     const newItem = {
                         content: content,
                         x: column,
@@ -344,7 +343,6 @@
         }
 
         function updateTachometer(newConnections) {
-            console.log("Updating tachometer with new connections: ", newConnections);
             if (newConnections <= maxConnections) {
                 tachometerChart.data.datasets[0].data[0] = newConnections;
                 tachometerChart.data.datasets[0].data[1] = maxConnections - newConnections;
@@ -391,7 +389,6 @@
     fetch('/api/v1/ssh/terminal/logs/output-size')
         .then(response => response.json())
         .then(dataFromDB => {
-            console.log("Got data from DB: ", dataFromDB);
             // Process data for the chart
             const labels = dataFromDB.map(entry => new Date(entry.logTm).toLocaleTimeString());
             const data = dataFromDB.map(entry => entry.outputSize);
@@ -455,7 +452,6 @@
             });
         });
         $.getJSON("/api/v1/sessions/map", function(data) {
-            console.log("447");
             // Prepare data for Chart.js heatmap
             const orderedDays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
             const labels = [...Array(24).keys()]; // 0 - 23 for hours
@@ -470,7 +466,6 @@
                 'rgba(255, 159, 64, 0.5)',   // SATURDAY
                 'rgba(99, 255, 132, 0.5)'    // SUNDAY
             ];
-            console.log("461");
             // Create datasets with unique colors for each day
             const datasets = orderedDays.map((day, index) => {
                 return {

@@ -1,5 +1,6 @@
 package io.dataguardians.sso.core.model.dto;
 
+import java.util.Date;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,6 +10,8 @@ import lombok.Data;
 @AllArgsConstructor
 public class JITTrackerDTO {
     private Long id;
+    @Builder.Default
+    private String status = "Open";
     private String command;
     private String commandHash;
     private String userName;
@@ -17,6 +20,7 @@ public class JITTrackerDTO {
     private String reasonUrl;
     private Integer usesRemaining;
     private Boolean canResubmit;
+    private Date lastUpdated;
     @Builder.Default
     private boolean currentUser = false;
 }

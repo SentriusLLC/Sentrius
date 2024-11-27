@@ -6,7 +6,6 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-@Service
 public class GitHubService {
     private final RestTemplate restTemplate;
 
@@ -36,4 +35,5 @@ public class GitHubService {
             throw new RuntimeException("Failed to fetch GitHub issue: " + response.getStatusCode());
         }
     }
+
 }

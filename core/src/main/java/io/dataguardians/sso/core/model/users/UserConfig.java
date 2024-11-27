@@ -13,4 +13,7 @@ public class UserConfig {
 
     @Builder.Default
     private Boolean terminalsInNewTab = true;
+
+    @Builder.Default
+    private String jiraEmailAddress = "";
 }

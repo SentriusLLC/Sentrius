@@ -39,4 +39,9 @@ public class IntegrationSecurityTokenService {
     public void deleteById(Long id) {
         repository.deleteById(id);
     }
+
+    @Transactional(readOnly = true)
+    public List<IntegrationSecurityToken> findByConnectionType(String connectionType) {
+        return repository.findByConnectionType(connectionType);
+    }
 }

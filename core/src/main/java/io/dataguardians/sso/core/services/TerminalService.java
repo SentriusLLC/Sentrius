@@ -11,6 +11,7 @@ import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import com.jcraft.jsch.Channel;
@@ -47,6 +48,7 @@ import io.dataguardians.sso.core.utils.SecureShellTask;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -63,6 +65,7 @@ public class TerminalService {
     protected final UserPublicKeyService userPublicKeyService;
     protected final KeyStoreService keyStoreService;
     protected final JITService jitService;
+    protected final ApplicationContext applicationContext;
 
     public static final int SESSION_TIMEOUT = 60000;
     public static final int CHANNEL_TIMEOUT = 60000;
@@ -83,6 +86,19 @@ public class TerminalService {
         HostSystem selectedSystem, List<SessionRuleIfc> sessionRules
     )
         throws SQLException, GeneralSecurityException {
+
+        Map<String, PluggableServices> servicesMap = applicationContext.getBeansOfType(PluggableServices.class);
+        Map<String, PluggableServices> services = applicationContext.getBeansOfType(PluggableServices.class);
+        for (Map.Entry<String, PluggableServices> entry : servicesMap.entrySet()) {
+            String beanName = entry.getValue().getName();
+            PluggableServices service = entry.getValue();
+            if (service.isEnabled()) {
+                services.put(beanName, service);
+                log.info("Processing service with bean name: " + beanName);
+                log.info("Service name: " + service.getName());
+            }
+        }
+
         JSch jsch = new JSch();
 
         final var schSession =
@@ -131,7 +147,7 @@ public class TerminalService {
             List<SessionRuleIfc> definedSessionRules = new ArrayList<>();
 
             RuleFactory.createRules(schSession, sessionTrackingService, rules.stream().collect(Collectors.toList()),
-                synchronousRules, definedSessionRules);
+                synchronousRules, definedSessionRules, services);
 
 
             sessionRules.addAll(definedSessionRules);

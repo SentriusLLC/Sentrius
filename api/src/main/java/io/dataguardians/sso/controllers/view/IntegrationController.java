@@ -48,10 +48,10 @@ public class IntegrationController extends BaseController {
                 "href", "/sso/v1/integrations/jira"
             ),
             Map.of(
-                "name", "Slack",
-                "description", "Connect your Slack workspace",
-                "icon", "fa-brands fa-slack", // CSS class for Slack icon
-                "href", "/sso/v1/integrations/slack"
+                "name", "OpenAI",
+                "description", "OpenAI connector",
+                "icon", "fa-brands fa-openai", // CSS class for Slack icon
+                "href", "/sso/v1/integrations/openai"
             ),
             Map.of(
                 "name", "Database",
@@ -78,6 +78,13 @@ public class IntegrationController extends BaseController {
         ExternalIntegrationDTO integration = new ExternalIntegrationDTO();
         model.addAttribute("jiraIntegration", integration);
         return "sso/integrations/add_jira";
+    }
+
+    @GetMapping("/openai")
+    public String createOpenAIIntegration(Model model, @RequestParam(name = "id", required = false) Long id) {
+        ExternalIntegrationDTO integration = new ExternalIntegrationDTO();
+        model.addAttribute("openaiIntegration", integration);
+        return "sso/integrations/add_openai";
     }
 
 }

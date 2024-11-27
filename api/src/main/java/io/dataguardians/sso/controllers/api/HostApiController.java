@@ -5,6 +5,7 @@ import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.dataguardians.sso.core.annotations.LimitAccess;
 import io.dataguardians.sso.core.controllers.BaseController;
@@ -141,7 +142,7 @@ public class HostApiController extends BaseController {
                                                        @PathVariable("enclave") Long enclaveId,
                                                        @PathVariable("host_id") Long hostId)
         throws SQLException, GeneralSecurityException, ClassNotFoundException, InvocationTargetException,
-        NoSuchMethodException, InstantiationException, IllegalAccessException {
+        NoSuchMethodException, InstantiationException, IllegalAccessException, JsonProcessingException {
 
         ObjectNode node = JsonUtil.MAPPER.createObjectNode();
         if (enclaveId == null || hostId == null) {
@@ -188,6 +189,7 @@ public class HostApiController extends BaseController {
         log.info("returning " + encryptedSessionId);
 
         node.put("sessionId", encryptedSessionId);
+
         return ResponseEntity.ok(node);
     }
 

@@ -51,6 +51,16 @@ public class TwoPartySessionRule extends SessionRuleIfc {
     }
 
     @Override
+    public Optional<Trigger> onMessage(String text) {
+        if (connectedSystem.getWebsocketListenerSessionId() == null || connectedSystem.getWebsocketListenerSessionId().isEmpty()) {
+            Trigger trg = new Trigger(TriggerAction.JIT_ACTION, DESCRIPTION);
+            return Optional.of(trg);
+        }
+        Trigger trg = new Trigger(TriggerAction.NO_ACTION, CLASS_NAME);
+        return Optional.of(trg);
+    }
+
+    @Override
     public boolean isOnlySessionRule() {
         return true;
     }

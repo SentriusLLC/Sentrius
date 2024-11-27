@@ -14,6 +14,7 @@ import io.dataguardians.sso.core.annotations.LimitAccess;
 import io.dataguardians.sso.core.annotations.Model;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.controllers.BaseController;
+import io.dataguardians.sso.core.model.dto.TicketDTO;
 import io.dataguardians.sso.core.model.dto.UserDTO;
 import io.dataguardians.sso.core.model.dto.UserTypeDTO;
 import io.dataguardians.sso.core.model.security.IntegrationSecurityToken;
@@ -77,6 +78,27 @@ public class IntegrationApiController extends BaseController {
         var json = JsonUtil.MAPPER.writeValueAsString(integrationDTO);
         IntegrationSecurityToken token = IntegrationSecurityToken.builder()
             .connectionType("jira")
+            .name(integrationDTO.getName())
+            .connectionInfo(json)
+            .build();
+
+        token = integrationService.save(token);
+
+        // excludes the access token
+        return ResponseEntity.ok(new ExternalIntegrationDTO(token));
+    }
+
+    @PostMapping("/openai/add")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<ExternalIntegrationDTO> addOpenaiIntegration(HttpServletRequest request,
+                                                                  HttpServletResponse response,
+                                                                     ExternalIntegrationDTO integrationDTO)
+        throws JsonProcessingException {
+
+
+        var json = JsonUtil.MAPPER.writeValueAsString(integrationDTO);
+        IntegrationSecurityToken token = IntegrationSecurityToken.builder()
+            .connectionType("openai")
             .name(integrationDTO.getName())
             .connectionInfo(json)
             .build();

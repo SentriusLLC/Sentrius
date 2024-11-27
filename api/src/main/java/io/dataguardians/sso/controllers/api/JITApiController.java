@@ -2,10 +2,12 @@ package io.dataguardians.sso.controllers.api;
 
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Optional;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.dataguardians.sso.core.controllers.BaseController;
+import io.dataguardians.sso.core.model.dto.JITTrackerDTO;
 import io.dataguardians.sso.core.model.users.User;
 import io.dataguardians.sso.core.services.JITRequestService;
 import io.dataguardians.sso.core.services.JITService;
@@ -38,25 +40,14 @@ public class JITApiController extends BaseController {
     }
 
     @GetMapping("/my/current")
-    public ResponseEntity<ArrayNode> getCurrentJit(HttpServletRequest request, HttpServletResponse response) {
+    public ResponseEntity<List<JITTrackerDTO>> getCurrentJit(HttpServletRequest request, HttpServletResponse response) {
 
         var operatingUser = getOperatingUser(request, response);
 
         var jitTracker = jitService.getOpenJITRequests(operatingUser);
         jitTracker.addAll(jitService.getOpenOpsRequests( operatingUser));
 
-        ArrayNode jitResponse = JsonUtil.MAPPER.createArrayNode();
-        for (var jit : jitTracker) {
-
-            ObjectNode node = JsonUtil.MAPPER.createObjectNode();
-            node.put("id", jit.getId());
-
-            node.put("status", "");
-
-            jitResponse.add(node);
-        }
-
-        return ResponseEntity.ok(jitResponse);
+        return ResponseEntity.ok(jitTracker);
     }
 
     @GetMapping("/{type}/{status}")

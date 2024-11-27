@@ -57,6 +57,11 @@ public class TicketSessionRule extends SessionRuleIfc {
     }
 
     @Override
+    public Optional<Trigger> onMessage(String text) {
+        return Optional.empty();
+    }
+
+    @Override
     public boolean isOnlySessionRule() {
         return true;
     }

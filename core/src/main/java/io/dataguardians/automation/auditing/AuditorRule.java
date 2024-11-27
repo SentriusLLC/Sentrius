@@ -18,6 +18,10 @@ public abstract class AuditorRule {
 
   public abstract boolean requiresSanitized();
 
+  public boolean onFullCommand() {
+    return false;
+  }
+
   public void setConnectedSystem(ConnectedSystem connectedSystem) {
     this.connectedSystem = connectedSystem;
   }

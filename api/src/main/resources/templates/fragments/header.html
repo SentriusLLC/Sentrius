@@ -106,10 +106,35 @@
                 }
             });
         }
+        const isAuthenticated = [[${authenticated}]];
+
+
+        function updateJitBadge(refreshId){
+            $.ajax({
+                url: "/api/v1/zerotrust/jit/my/current",
+                type: 'GET',
+            }).done(function (data) {
+                console.log(data);
+                if (data && Array.isArray(data)) {
+                    count = Object.keys(data).length;
+                    $("#badge_jits").html('<span class="badge text-bg-info">' + count +
+                        ' Your JITs</span>');
+                } else {
+                    $("#badge_jits").html('');
+                    $("#badge_errors").html('');
+                }
+            }).fail(function (jqXHR, textStatus, errorThrown) {
+
+                $("#badge_jits").html('');
+                $("#badge_errors").html('');
+                if (refreshId) clearInterval(refreshId);
+                console.log("Error: " + errorThrown);
+            })
+        }
 
         $(document).ready(function () {
 
-            const isAuthenticated = [[${authenticated}]];
+
 
 
             if (isAuthenticated) {
@@ -118,26 +143,7 @@
                 var csrf = [[${session._csrf}]];
                 if (typeof csrf !== 'undefined') {
                     var refreshId = setInterval(function () {
-                        $.ajax({
-                            url: "/api/v1/zerotrust/jit/my/current",
-                            type: 'GET',
-                        }).done(function (data) {
-                            console.log(data);
-                            if (data && Array.isArray(data)) {
-                                count = Object.keys(data).length;
-                                $("#badge_jits").html('<span class="badge text-bg-info">' + count +
-                                    ' Your JITs</span>');
-                            } else {
-                                $("#badge_jits").html('');
-                                $("#badge_errors").html('');
-                            }
-                        }).fail(function (jqXHR, textStatus, errorThrown) {
-
-                            $("#badge_jits").html('');
-                            $("#badge_errors").html('');
-                            clearInterval(refreshId);
-                            console.log("Error: " + errorThrown);
-                        })
+                        updateJitBadge(refreshId);
                     }, 60000);
 
                     function fetchLatestNotification() {

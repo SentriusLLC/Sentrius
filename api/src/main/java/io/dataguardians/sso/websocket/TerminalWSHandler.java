@@ -92,8 +92,10 @@ public class TerminalWSHandler extends TextWebSocketHandler {
                     var sys = sessionTrackingService.getConnectedSession(sessionIdLong);
                     if (null != sys ) {
                         boolean allNoAction = true;
+                        log.info("**** Processing message for session ID: {} with {} actions", sessionId,
+                            sys.getSessionStartupActions().size());
                         for (var action : sys.getSessionStartupActions()) {
-                            var trigger = action.trigger("");
+                            var trigger = action.onMessage("");
                             if (trigger.get().getAction() == TriggerAction.JIT_ACTION) {
                                 allNoAction = false;
                                 // drop the message

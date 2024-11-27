@@ -17,6 +17,7 @@ import io.dataguardians.sso.core.services.UserService;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.services.UserCustomizationService;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
+import io.dataguardians.sso.core.utils.JsonUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -167,7 +168,7 @@ public class HostController extends BaseController {
     @GetMapping("/connect")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public String connectSSHServer(
-        HttpServletRequest request, HttpServletResponse response,
+        HttpServletRequest request, HttpServletResponse response, Model model,
         @RequestParam("sessionId") String sessionId) throws GeneralSecurityException {
 
         log.info("Connecting to SSH server {}", sessionId);
@@ -185,6 +186,9 @@ public class HostController extends BaseController {
         this.connectedSystem = myConnectedSystem;
 
 
+        var config = myConnectedSystem.getEnclave().getConfiguration();
+
+        model.addAttribute("enclaveConfiguration", config);
 
         return "sso/ssh/secure_shell";
 
@@ -193,7 +197,7 @@ public class HostController extends BaseController {
     @GetMapping("/attach")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public String attachSession(
-        HttpServletRequest request, HttpServletResponse response,
+        HttpServletRequest request, HttpServletResponse response, Model model,
         @RequestParam("sessionId") String sessionId) throws GeneralSecurityException {
 
         log.info("Connecting to SSH server {}", sessionId);
@@ -215,6 +219,9 @@ public class HostController extends BaseController {
 
         sessionTrackingService.refreshSession(myConnectedSystem);
 
+        var config = myConnectedSystem.getEnclave().getConfiguration();
+
+        model.addAttribute("enclaveConfiguration", config);
 
         return "sso/ssh/secure_shell";
 

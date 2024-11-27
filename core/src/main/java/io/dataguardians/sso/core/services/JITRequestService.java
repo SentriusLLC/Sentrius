@@ -295,6 +295,7 @@ public class JITRequestService {
         return JITTrackerDTO.builder()
             .id(request.getId())
             .command(request.getCommand())
+            .lastUpdated(request.getLastUpdated())
             .commandHash(request.getCommandHash())
             .userName(request.getUser().getUsername())
             .hostName(request.getSystem().getHost())

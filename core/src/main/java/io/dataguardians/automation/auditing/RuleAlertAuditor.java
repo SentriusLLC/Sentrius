@@ -8,9 +8,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import io.dataguardians.sso.core.data.auditing.RecordingStudio;
 import io.dataguardians.sso.core.model.ConnectedSystem;
 import io.dataguardians.sso.core.model.zt.JITReason;
@@ -24,11 +21,16 @@ public class RuleAlertAuditor extends BaseAuditor {
 
   public List<AuditorRule> synchronousRules = new ArrayList<>();
 
+  public List<AuditorRule> synchronousFullRules = new ArrayList<>();
+
   public List<AuditorRule> asyncRules = new ArrayList<>();
+
+  public List<AuditorRule> asyncFullRules = new ArrayList<>();
 
   final ExecutorService executorService;
 
   private AsyncRuleAuditorRunner runner;
+  private AsyncRuleAuditorRunner fullRunner;
 
   List<String> commands = new ArrayList<>();
 
@@ -57,7 +59,7 @@ public class RuleAlertAuditor extends BaseAuditor {
     this.recordingStudio = recorder;
 
     // async thread evaluate
-    executorService = Executors.newFixedThreadPool(1);
+    executorService = Executors.newFixedThreadPool(2);
 
   }
 
@@ -75,20 +77,25 @@ public class RuleAlertAuditor extends BaseAuditor {
     final String cstr = get();
     final String sanitized = getSantized();
     for (AuditorRule rule : synchronousRules) {
-      Optional<Trigger> result = rule.trigger(rule.requiresSanitized() ? sanitized : cstr);
-      if (result.isPresent()) {
-        Trigger trg = result.get();
-        sessionTrackingService.addTrigger(connectedSystem, trg);
-        switch (trg.getAction()) {
-          case JIT_ACTION:
-            currentTrigger = trg;
-            break;
-          case DENY_ACTION:
-            currentTrigger = trg;
-            break;
-          default:
-            break;
+      try {
+        Optional<Trigger> result = rule.trigger(rule.requiresSanitized() ? sanitized : cstr);
+        if (result.isPresent()) {
+          Trigger trg = result.get();
+          sessionTrackingService.addTrigger(connectedSystem, trg);
+          switch (trg.getAction()) {
+            case JIT_ACTION:
+              currentTrigger = trg;
+              break;
+            case DENY_ACTION:
+              currentTrigger = trg;
+              break;
+            default:
+              break;
+          }
         }
+      }catch (Throwable t) {
+        log.error("error while evaluating rule", t);
+
       }
     }
     runner.enqueue(cstr);
@@ -112,8 +119,14 @@ public class RuleAlertAuditor extends BaseAuditor {
     for (AuditorRule newRule : synchronousRules) {
       switch (newRule.describeAction()) {
         case JIT_ACTION:
-          this.synchronousRules.add(newRule);
-          this.asyncRules.add(newRule);
+          if (newRule.onFullCommand()){
+            log.info("Adding full command rule {}", newRule.getClass());
+            this.asyncFullRules.add(newRule);
+          }
+          else {
+            this.synchronousRules.add(newRule);
+            this.asyncRules.add(newRule);
+          }
           break;
         case DENY_ACTION:
           this.synchronousRules.add(newRule);
@@ -127,6 +140,9 @@ public class RuleAlertAuditor extends BaseAuditor {
     }
     runner = new AsyncRuleAuditorRunner(jitService, asyncRules, connectedSystem, sessionTrackingService);
     executorService.submit(runner);
+
+    fullRunner = new AsyncRuleAuditorRunner(jitService, asyncFullRules, connectedSystem, sessionTrackingService);
+    executorService.submit(fullRunner);
   }
 
   public void addRule(AuditorRule rule) {
@@ -138,64 +154,6 @@ public class RuleAlertAuditor extends BaseAuditor {
     super.shutdown();
     // nothing to do here
     executorService.shutdownNow();
-  }
-
-  private static final class AsyncRuleAuditorRunner implements Runnable {
-
-    private final SessionTrackingService sessionTrackingService;
-    private final ConnectedSystem connectedSystem;
-    public AtomicBoolean running = new AtomicBoolean(false);
-    private JITService jitService;
-    public final List<AuditorRule> asyncRules;
-
-    LinkedBlockingDeque<String> stringsToReview;
-
-
-
-    public AsyncRuleAuditorRunner(JITService jitService, List<AuditorRule> asyncRules, ConnectedSystem connectedSystem,
-                                  SessionTrackingService sessionTrackingService) {
-      this.jitService = jitService;
-      this.stringsToReview = new LinkedBlockingDeque<>();
-      this.asyncRules = asyncRules;
-      this.connectedSystem = connectedSystem;
-      this.sessionTrackingService = sessionTrackingService;
-      running.set(true);
-    }
-
-    public void enqueue(String cstr) {
-      stringsToReview.add(cstr);
-    }
-
-    @Override
-    public void run() {
-      while (running.get()) {
-        try {
-
-          String nextstr = stringsToReview.poll(100, TimeUnit.MILLISECONDS);
-          if (null == nextstr) continue;
-          for (AuditorRule rule : asyncRules) {
-            Optional<Trigger> result = rule.trigger(nextstr);
-            if (result.isPresent()) {
-              Trigger trg = result.get();
-              switch (trg.getAction()) {
-                case WARN_ACTION:
-                  sessionTrackingService.addTrigger(connectedSystem, trg);
-                  break;
-                case JIT_ACTION:
-                  if (!jitService.isApproved(nextstr, connectedSystem.getUser(), connectedSystem.getHostSystem())) {
-                    sessionTrackingService.addTrigger(connectedSystem, trg);
-                  }
-                  break;
-                default:
-                  break;
-              }
-            }
-          }
-        } catch (InterruptedException | SQLException | GeneralSecurityException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    }
   }
 
   @Override
@@ -221,6 +179,7 @@ public class RuleAlertAuditor extends BaseAuditor {
   protected synchronized TriggerAction submit(String command) {
     // currentTrigger
 
+    fullRunner.enqueue(command);
     if (null != recordingStudio && !isRestrictedCommand()) {
 
       TriggerAction action = recordingStudio.submit(command);

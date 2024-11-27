@@ -1,64 +1,94 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta th:replace="~{fragments/header}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <style>
-            form table {
-                width: 350px;
-            }
-            /* Container for centering the row horizontally */
-            .my-specific-container {
-                display: flex;
-                justify-content: center; /* Center horizontally */
-                padding-top: 80px; /* Adjust to add space below the navbar */
-            }
+        /* Centering the form container */
+        .center-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: calc(100vh - 80px); /* Full viewport height minus space for navbar */
+            padding: 20px;
+        }
 
-            .row {
-                width: 500px; /* Set your desired width */
-            }
+        /* Limit form width for better UX */
+        .settings-form {
+            max-width: 500px;
+            width: 100%;
+            background-color: #30373a;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
 
+        /* Table adjustments */
+        .settings-form table {
+            width: 100%;
+        }
+
+        /* Responsive table adjustments */
+        .settings-form td:first-child {
+            width: 70%;
+        }
+
+        .settings-form td:last-child {
+            width: 30%;
+        }
+
+        /* Align icons next to labels */
+        .settings-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .submit_btn {
+            width: 100%; /* Full-width button */
+        }
     </style>
-    <title>[[${systemOptions.systemLogoName}]] - System Settings</title>
+    <title>[[${systemOptions.systemLogoName}]] - User Settings</title>
 </head>
 
 <body>
 <div class="container-fluid">
     <div class="row flex-nowrap">
+        <!-- Sidebar -->
         <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+
+        <!-- Main content -->
         <div class="col py-4">
             <div class="main-content">
                 <div th:replace="~{fragments/alerts}"></div>
 
-<div class="my-specific-container">
-    <div class="row">
-        <form th:action="@{/api/v1/users/settings}" method="post"
-              autocomplete="off">
-            <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
-            <div id="formToTable">
+                <!-- Centered form container -->
+                <div class="center-container">
+                    <form th:action="@{/api/v1/users/settings}" method="post" class="settings-form" autocomplete="off">
+                        <input type="hidden" name="_csrf" th:value="${_csrf.token}" />
 
-            </div>
+                        <table th:if="${userOptions != null && !userOptions.empty}">
+                            <template th:each="s : ${userOptions}" th:remove="tag">
+                                <tr>
+                                    <td>
+                                        <span class="settings-label">
+                                            <div th:text="${s.name}"></div>
+                                            <i class="fa-regular fa-circle-question" th:title="${s.description}"
+                                               th:if="${s.description != null && !s.description.empty}"></i>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control" th:name="${s.name}" th:value="${s.value}" />
+                                    </td>
+                                </tr>
+                            </template>
+                        </table>
 
-            <table th:if="${userOptions != null && !userOptions.empty}">
-                <template th:each="s : ${userOptions}" th:remove="tag">
-                    <tr>
-                        <td>
-                            <span style="display: flex; align-items: center; gap: 5px;">
-                             <div th:text="${s.name}"></div>
-                                <i class="fa-regular fa-circle-question" th:title="${s.description}"
-                                   th:if="${s.description!= null && !s.description.empty}"></i>
-                            </span>
-                        </td>
-
-                        <td ><input type="text" th:name="${s.name}" th:value="${s.value}" /></td>
-                    </tr>
-                </template>
-            </table>
-            <br />
-            <button type="button" class="btn btn-secondary submit_btn">Save</button>
-        </form>
-
-    </div>
-</div>
+                        <br />
+                        <button type="submit" class="btn btn-primary submit_btn">Save</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>

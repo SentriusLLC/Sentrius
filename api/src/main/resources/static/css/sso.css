@@ -742,5 +742,6 @@ table.dataTable.display tbody tr.odd > .sorting_1, table.dataTable.order-column.
 .overlay-message {
     color: #FFFFFF;
     margin-top: 20px;
-    font-size: 1.2em;
+    font-size: 3em;
+    font-weight: bolder; /* Makes the text bold */
 }

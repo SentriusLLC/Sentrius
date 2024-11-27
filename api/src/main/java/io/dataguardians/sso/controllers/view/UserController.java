@@ -1,8 +1,13 @@
 package io.dataguardians.sso.controllers.view;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dataguardians.sso.core.annotations.LimitAccess;
 import io.dataguardians.sso.core.controllers.BaseController;
 import io.dataguardians.sso.core.model.dto.SystemOption;
@@ -57,14 +62,63 @@ public class UserController extends BaseController {
         }
         log.info("User settings found: {}", settings.isPresent());
         log.info("User settings found: {}", userSetting.getJsonConfig());
-        var node = JsonUtil.MAPPER.readTree(userSetting.getJsonConfig() );
-        node.fields().forEachRemaining(entry -> {
-            log.info("Adding option {} : {}", entry.getKey(), entry.getValue().asText());
-            userOptions.add(new SystemOption(entry.getKey(), entry.getValue().asText(), ""));
-        });
+        processUserSettings(userSetting.getJsonConfig(), userOptions);
 
 
         return userOptions;
+    }
+
+    public void processUserSettings(String jsonConfig, List<SystemOption> userOptions) {
+        try {
+            ObjectMapper objectMapper = JsonUtil.MAPPER;
+
+            // Step 1: Deserialize into UserConfig
+            UserConfig userConfig = objectMapper.readValue(jsonConfig, UserConfig.class);
+
+            // Step 2: Parse the raw JSON
+            JsonNode rawNode = objectMapper.readTree(jsonConfig);
+
+            // Step 3: Get all declared fields in UserConfig
+            Set<String> configFields = new HashSet<>();
+            for (Field field : UserConfig.class.getDeclaredFields()) {
+                field.setAccessible(true); // Allow access to private fields
+                configFields.add(field.getName());
+            }
+
+            // Step 4: Iterate over all JSON fields
+            rawNode.fields().forEachRemaining(entry -> {
+                String key = entry.getKey();
+                JsonNode valueNode = entry.getValue();
+                String value = valueNode.isTextual() ? valueNode.asText() : valueNode.toString();
+
+                if (configFields.contains(key)) {
+                    // Existing field in UserConfig
+                    log.info("Processing existing field: {} = {}", key, value);
+                    userOptions.add(new SystemOption(key, value, ""));
+                    configFields.remove(key);
+                } else {
+                    // New field not in UserConfig
+                    log.info("New field detected: {} = {}", key, value);
+                    //userOptions.add(new SystemOption(key, value, ""));
+                }
+            });
+
+            for (Field field : UserConfig.class.getDeclaredFields()) {
+                field.setAccessible(true); // Allow access to private fields
+                if (configFields.contains(field.getName())) {
+                    // Field not found in JSON
+                    log.info("Field not found in JSON: {}", field.getName());
+                    userOptions.add(new SystemOption(field.getName(), field.get(userConfig).toString() , ""));
+                }
+            }
+
+
+
+
+
+        } catch (Exception e) {
+            log.error("Failed to process user settings: {}", e.getMessage(), e);
+        }
     }
 
     @GetMapping("/list")

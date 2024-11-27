@@ -44,12 +44,7 @@ public class DashboardController extends BaseController {
     public User getUser() {
         return new User();
     }
-/*
-    @ModelAttribute("breadcrumbs")
-    public List<BreadcrumbItem> getBreadcrumbService() throws JsonProcessingException {
-        return breadcrumbService.getBreadcrumbs();
-    }
-*/
+
 
     @ModelAttribute("systemSettings")
     public List<SystemOption> getSystemSettings() throws IllegalAccessException {

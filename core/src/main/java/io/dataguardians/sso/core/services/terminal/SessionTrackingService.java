@@ -24,6 +24,7 @@ import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.model.ConnectedSystem;
 import io.dataguardians.sso.core.model.sessions.SessionOutput;
 import io.dataguardians.sso.core.model.users.User;
+import io.dataguardians.sso.core.services.PluggableServices;
 import io.dataguardians.sso.core.services.auditing.AuditService;
 import io.dataguardians.sso.core.utils.terminal.UserSessionsOutput;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +41,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SessionTrackingService {
+public class SessionTrackingService implements PluggableServices {
 
   private final SystemOptions systemOptions;
   private final AuditService sessionAuditService;
@@ -339,5 +340,15 @@ public class SessionTrackingService {
 
   public void addPersistentMessage(ConnectedSystem connectedSystem, PersistentMessage persistentMessage) {
     throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
+  public String getName() {
+    return "sessiontrackingService";
+  }
+
+  @Override
+  public boolean isEnabled() {
+    return true;
   }
 }
