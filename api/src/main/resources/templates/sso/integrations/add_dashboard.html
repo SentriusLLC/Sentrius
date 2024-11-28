@@ -56,6 +56,15 @@
             color: #888;
         }
 
+        .form-container {
+            max-width: 600px;
+            margin: 80px auto;
+            background: #1e1e1e; /* Slightly lighter dark for contrast */
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+
     </style>
 </head>
 <body>
@@ -67,7 +76,7 @@
             <div class="main-content">
                 <div th:replace="~{fragments/alerts}"></div>
 
-                <div class="container-fluid">
+                <div class="form-container">
                     <div class="row">
                     <h2 class="toast-header">Select Integration to Add</h2>
                     <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
@@ -82,6 +91,8 @@
                         </div>
                     </div>
                         </div>
+                </div>
+                <div class="container">
                     <div class="row">
                         <h2 class="toast-header">Integrations</h2>
                         <table id="integrations-table" class="display">
@@ -89,15 +100,35 @@
                             <tr>
                                 <th>Name</th>
                                 <th>Type</th>
-                                <th>Base URL
+                                <th>Connecting Info </th>
+                                <th></th>
                             </tr>
                             </thead>
                             <tbody>
                             <tr th:each="s : ${existingIntegrations}">
-                                <td><i class="fa-regular fa-ticket"></i> <span th:text="${s.name}"></span></td>
-                                <td th:text="${s.connectionType}"></td>
+                                <td><span
+                                        th:text="${s.name}"></span></td>
+                                <td >
+                                    <span
+                                            th:if="${s.connectionType == 'github'}">GitHub</span>
+                                    <span
+                                            th:if="${s.connectionType == 'openai'}">OpenAI</span>
+                                    <span
+                                            th:if="${s.connectionType == 'jira'}">JIRA</span>
+                                </td>
                                 <td
                                         th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}" th:text="${s.baseUrl}">
+                                </td>
+                                <td
+                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}" th:text="${s.baseUrl}">
+                                </td>
+                                <td>
+                                    <a th:id="'del_bet_' + ${s.id}"
+                                       href="#"
+                                       th:data-url="'/api/v1/integrations/remove.ktrl?integrationId=' + ${s.id}"
+                                       class="del_bet">
+                                        <i class="fa fa-trash" aria-hidden="true"></i>
+                                    </a>
                                 </td>
 
                             </tr>
@@ -111,7 +142,48 @@
         </div>
     </div>
 </div>
+<script>
 
+    async function deleteIntegration(url, payload, csrf) {
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf // Include the CSRF token in the headers
+                },
+            });
+
+            console.log("Response:", response);
+            if (!response.ok) {
+                throw new Error("Failed to save the rule configuration");
+            }
+
+        } catch (error) {
+            console.log("Error occurred:", error);
+            alert("An error occurred while saving the rule configuration.");
+        }
+    }
+    $(document).ready(function () {
+    // Initialize DataTables
+    var csrf = "[[${_csrf.token}]]"
+
+
+    // Mark the click handler as async
+    $(".del_bet").click(async function (event) {
+        event.preventDefault(); // Prevent the default link behavior
+        var id = $(this).attr('id').replace("del_bet_", ""); // Parse ID from the element's ID
+
+        var url = '/api/v1/integrations/delete?integrationId=' + id;
+
+        // Call the deleteNotification function
+        await deleteIntegration(url, null, csrf);
+
+        // Optionally reload the page after deletion
+        window.location.reload();
+    });
+});
+</script>
 </body>
 </html>
 

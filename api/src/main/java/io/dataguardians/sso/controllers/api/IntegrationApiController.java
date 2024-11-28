@@ -121,4 +121,15 @@ public class IntegrationApiController extends BaseController {
         return ResponseEntity.ok("OK");
     }
 
+    @PostMapping("/delete")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<String> deleteIntegration(HttpServletRequest request,
+                                                        HttpServletResponse response,
+                                                        @RequestParam("integrationId") String id) {
+
+        integrationService.deleteById(Long.parseLong(id));
+
+        return ResponseEntity.ok("OK");
+    }
+
 }

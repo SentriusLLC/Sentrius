@@ -50,15 +50,16 @@ public class IntegrationController extends BaseController {
             Map.of(
                 "name", "OpenAI",
                 "description", "OpenAI connector",
-                "icon", "fa-brands fa-openai", // CSS class for Slack icon
+                "icon", "fa-solid fa-robot", // CSS class for Slack icon
                 "href", "/sso/v1/integrations/openai"
-            ),
+            )
+            /*
             Map.of(
                 "name", "Database",
                 "description", "Configure database connections",
                 "icon", "fa-solid fa-database", // CSS class for database icon
                 "href", "/sso/v1/integrations/database"
-            )
+            )*/
         );
         List<ExternalIntegrationDTO> existingIntegrations = new ArrayList<>();
         integrationService.findAll().forEach(token -> {
