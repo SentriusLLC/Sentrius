@@ -28,7 +28,7 @@ public class HostSystemDTO {
         this.id = hostSystem.getId();
         this.displayName = hostSystem.getDisplayName();
         this.statusCd = hostSystem.getStatusCd();
-        this.publicKeyList = new ArrayList<>(hostSystem.getPublicKeyList());
+        this.publicKeyList = hostSystem.getPublicKeyList() != null ? new ArrayList<>(hostSystem.getPublicKeyList()) : new ArrayList<>();
         this.errorMsg = hostSystem.getErrorMsg();
         this.port = hostSystem.getPort();
         this.lastAccessed = "never";

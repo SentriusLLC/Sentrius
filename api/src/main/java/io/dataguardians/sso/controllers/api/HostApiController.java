@@ -93,11 +93,12 @@ public class HostApiController extends BaseController {
 
     @PostMapping("/add")
     @LimitAccess(sshAccess = {SSHAccessEnum.CAN_EDIT_SYSTEMS})
-    public ResponseEntity<HostSystem> addSSHServer(HttpServletRequest request, HttpServletResponse response,
+    public ResponseEntity<HostSystemDTO> addSSHServer(HttpServletRequest request, HttpServletResponse response,
                                                          @RequestParam("enclave") String enclave,
                                                          @RequestParam("displayName") String displayName,
                                                          @RequestParam("user") String user, @RequestParam("authorizedKeys") String authorizedKeys,
-                                                         @RequestParam("host") String host, @RequestParam("port") int port) {
+                                                         @RequestParam("host") String host,
+                                                   @RequestParam("port") int port, @RequestParam("sshPassword") String sshPassword) {
 
 
         var operatingUser = getOperatingUser(request, response);
@@ -120,6 +121,7 @@ public class HostApiController extends BaseController {
             .sshUser(user)
             .authorizedKeys(authorizedKeys)
             .host(host)
+            .sshPassword(sshPassword)
             .port(port)
             .hostGroups(hostGroups)
             .build();
@@ -133,7 +135,33 @@ public class HostApiController extends BaseController {
 
         hostGroups.forEach(hostGroup -> hostGroupService.assignHostSystemToHostGroup(hostGroup.getId(), finalHostSystem.getId()));
         */
-        return ResponseEntity.ok(hostSystem);
+        return ResponseEntity.ok(new HostSystemDTO(hostSystem));
+    }
+
+    @PostMapping("/delete/{enclave}/{host_id}")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_DEL_SYSTEMS})
+    public ResponseEntity<ObjectNode> deleteServer(HttpServletRequest request, HttpServletResponse response,
+                                                       @PathVariable("enclave") Long enclaveId,
+                                                       @PathVariable("host_id") Long hostId)
+        throws SQLException, GeneralSecurityException, ClassNotFoundException, InvocationTargetException,
+        NoSuchMethodException, InstantiationException, IllegalAccessException {
+
+
+        ObjectNode node = JsonUtil.MAPPER.createObjectNode();
+        if (enclaveId == null || hostId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        // operating user
+        var user = getOperatingUser(request, response);
+
+        var hostSystem = hostGroupService.getHostSystem(hostId);
+
+        hostGroupService.deleteHostSystem(user, hostSystem.get());
+
+        node.put("deletedSystemId", hostSystem.get().getId());
+
+        return ResponseEntity.ok(node);
     }
 
     @GetMapping("/connect/{enclave}/{host_id}")

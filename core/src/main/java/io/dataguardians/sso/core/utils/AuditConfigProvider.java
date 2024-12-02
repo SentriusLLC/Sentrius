@@ -2,8 +2,8 @@ package io.dataguardians.sso.core.utils;
 
 import java.util.ArrayList;
 import java.util.List;
-import io.dataguardians.automation.auditing.AuditorRule;
-import io.dataguardians.automation.auditing.RuleAlertAuditor;
+import io.dataguardians.automation.auditing.AccessTokenEvaluator;
+import io.dataguardians.automation.auditing.AccessTokenAuditor;
 import io.dataguardians.automation.auditing.rules.RuleConfiguration;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.config.ThreadSafeDynamicPropertiesService;
@@ -28,7 +28,7 @@ public class AuditConfigProvider {
         if (null == ruleConfigurationList) {
             synchronized (AuditConfigProvider.class) {
                 ruleConfigurationList = new ArrayList<>();
-                var auditorClass = RuleAlertAuditor.class.getName();
+                var auditorClass = AccessTokenAuditor.class.getName();
                 var configName = Class.forName(auditorClass).getSimpleName();
                 // we don't need more than 10k rules..
                 for (int i = 0; i < 10000; i++) {
@@ -43,7 +43,7 @@ public class AuditConfigProvider {
                             RuleConfiguration.builder()
                                 .shortName(ruleSplit[1].trim())
                                 .longName(ruleSplit[0].trim())
-                                .clazz((Class<? extends AuditorRule>) Class.forName(ruleSplit[0].trim()))
+                                .clazz((Class<? extends AccessTokenEvaluator>) Class.forName(ruleSplit[0].trim()))
                                 .build());
                     }
                 }

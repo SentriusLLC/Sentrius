@@ -9,7 +9,7 @@ public class ShellAuditable {
   static ConcurrentLinkedDeque<Trigger> warn = new ConcurrentLinkedDeque<>();
   static ConcurrentLinkedDeque<Trigger> deny = new ConcurrentLinkedDeque<>();
 
-  static ConcurrentLinkedDeque<Trigger> jit = new ConcurrentLinkedDeque<>();
+  static ConcurrentLinkedDeque<Trigger> ztat = new ConcurrentLinkedDeque<>();
 
   public static void addWarning(Trigger trigger) {
     warn.add(trigger);
@@ -41,7 +41,7 @@ public class ShellAuditable {
             + " garnered.If approval is not already submitted you will be notified when it is"
             + " submitted.. "
             + trg.getDescription();
-    jit.add(new Trigger(trg.getAction(), message));
+    ztat.add(new Trigger(trg.getAction(), message));
     warn.add(new Trigger(trg.getAction(), message));
   }*/
 }

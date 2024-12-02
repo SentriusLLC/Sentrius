@@ -8,25 +8,25 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import io.dataguardians.sso.core.model.ConnectedSystem;
-import io.dataguardians.sso.core.services.JITService;
+import io.dataguardians.sso.core.services.ZeroTrustAccessTokenService;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
 
-final class AsyncRuleAuditorRunner implements Runnable {
+final class AsyncAccessTokenAuditor implements Runnable {
 
     private final SessionTrackingService sessionTrackingService;
     private final ConnectedSystem connectedSystem;
     public AtomicBoolean running = new AtomicBoolean(false);
-    private JITService jitService;
-    public final List<AuditorRule> asyncRules;
+    private ZeroTrustAccessTokenService ztatService;
+    public final List<AccessTokenEvaluator> asyncRules;
 
     LinkedBlockingDeque<String> stringsToReview;
 
 
-    public AsyncRuleAuditorRunner(
-        JITService jitService, List<AuditorRule> asyncRules, ConnectedSystem connectedSystem,
+    public AsyncAccessTokenAuditor(
+        ZeroTrustAccessTokenService ztatService, List<AccessTokenEvaluator> asyncRules, ConnectedSystem connectedSystem,
         SessionTrackingService sessionTrackingService
     ) {
-        this.jitService = jitService;
+        this.ztatService = ztatService;
         this.stringsToReview = new LinkedBlockingDeque<>();
         this.asyncRules = asyncRules;
         this.connectedSystem = connectedSystem;
@@ -47,16 +47,17 @@ final class AsyncRuleAuditorRunner implements Runnable {
                 if (null == nextstr) {
                     continue;
                 }
-                for (AuditorRule rule : asyncRules) {
+                for (AccessTokenEvaluator rule : asyncRules) {
                     Optional<Trigger> result = rule.trigger(nextstr);
                     if (result.isPresent()) {
                         Trigger trg = result.get();
                         switch (trg.getAction()) {
+                            case PERSISTENT_MESSAGE:
                             case WARN_ACTION:
                                 sessionTrackingService.addTrigger(connectedSystem, trg);
                                 break;
                             case JIT_ACTION:
-                                if (!jitService.isApproved(
+                                if (!ztatService.isApproved(
                                     nextstr, connectedSystem.getUser(), connectedSystem.getHostSystem())) {
                                     sessionTrackingService.addTrigger(connectedSystem, trg);
                                 }

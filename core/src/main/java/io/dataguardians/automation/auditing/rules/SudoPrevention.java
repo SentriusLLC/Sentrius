@@ -4,7 +4,7 @@ import java.util.Optional;
 import io.dataguardians.automation.auditing.Trigger;
 import io.dataguardians.automation.auditing.TriggerAction;
 
-public class SudoPrevention extends ForbiddenCommandsRule {
+public class SudoPrevention extends CommandEvaluator {
 
   public SudoPrevention() {
     action = TriggerAction.DENY_ACTION;

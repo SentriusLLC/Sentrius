@@ -1,33 +1,29 @@
 package io.dataguardians.sso.core.model.zt;
 
-import java.util.List;
 import io.dataguardians.sso.core.model.HostSystem;
 import io.dataguardians.sso.core.model.users.User;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.MappedSuperclass;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-// JITRequest Entity
+import lombok.experimental.SuperBuilder;
 
-@Builder
-@Entity
-@Table(name = "operations_request")
+@SuperBuilder(toBuilder = true)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class OpsJITRequest {
-
+@MappedSuperclass
+@Inheritance(strategy = InheritanceType.JOINED)
+public abstract class ZTATRequestBase {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -47,12 +43,9 @@ public class OpsJITRequest {
     private String commandHash;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "jit_reason_id")
-    private JITReason jitReason;
+    @JoinColumn(name = "ztat_reason_id")
+    private ZeroTrustAccessTokenReason ztatReason;
 
     @Column(name = "last_updated", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private java.sql.Timestamp lastUpdated;
-    // Add the relationship to OpsApproval
-    @OneToMany(mappedBy = "jitRequest", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private List<OpsApproval> approvals;
 }

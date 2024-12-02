@@ -11,11 +11,11 @@ import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.model.HostSystem;
 import io.dataguardians.sso.core.model.dto.JITTrackerDTO;
 import io.dataguardians.sso.core.model.users.User;
-import io.dataguardians.sso.core.model.zt.JITApproval;
-import io.dataguardians.sso.core.model.zt.JITReason;
-import io.dataguardians.sso.core.model.zt.JITRequest;
-import io.dataguardians.sso.core.model.zt.OpsJITRequest;
-import io.dataguardians.sso.core.utils.JITUtils;
+import io.dataguardians.sso.core.model.zt.ZeroTrustAccessTokenApproval;
+import io.dataguardians.sso.core.model.zt.ZeroTrustAccessTokenReason;
+import io.dataguardians.sso.core.model.zt.ZeroTrustAccessTokenRequest;
+import io.dataguardians.sso.core.model.zt.OpsZeroTrustAcessTokenRequest;
+import io.dataguardians.sso.core.utils.ZTATUtils;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,12 +24,12 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class JITService {
+public class ZeroTrustAccessTokenService {
 
   private final SystemOptions systemOptions;
   MessageDigest digest;
 
-  private final JITRequestService jitRequestService;
+  private final ZeroTrustRequestService ztatRequestService;
 
   {
     try {
@@ -39,29 +39,29 @@ public class JITService {
     }
   }
 
-  public JITReason createReason(
+  public ZeroTrustAccessTokenReason createReason(
       @NonNull String commandNeed, @NonNull String ticketId, @NonNull String ticketURI) {
-    JITReason.JITReasonBuilder jitReasonBuilder =
-        JITReason.builder().commandNeed(commandNeed).reasonIdentifier(ticketId);
+    ZeroTrustAccessTokenReason.ZeroTrustAccessTokenReasonBuilder ztatReasonBuilder =
+        ZeroTrustAccessTokenReason.builder().commandNeed(commandNeed).reasonIdentifier(ticketId);
 
-    //jitReasonBuilder.requestLink(jriBuilder.build());
-    return jitReasonBuilder.build();
+    //ztatReasonBuilder.requestLink(jriBuilder.build());
+    return ztatReasonBuilder.build();
   }
 
 
-  public JITRequest createRequest(
+  public ZeroTrustAccessTokenRequest createRequest(
       @NonNull String command,
-      @NonNull JITReason reason,
+      @NonNull ZeroTrustAccessTokenReason reason,
       @NonNull User user,
       @NonNull HostSystem system)
       throws SQLException, GeneralSecurityException {
 
-    JITRequest request =
-        JITRequest.builder()
+    ZeroTrustAccessTokenRequest request =
+        ZeroTrustAccessTokenRequest.builder()
             .command(command)
-            .jitReason(reason)
+            .ztatReason(reason)
             .user(user)
-            .commandHash(JITUtils.getCommandHash(command))
+            .commandHash(ZTATUtils.getCommandHash(command))
             .system(system)
             .lastUpdated(new Timestamp(System.currentTimeMillis()))
             .build();
@@ -72,14 +72,14 @@ public class JITService {
   public boolean isApproved(
       @NonNull String command, @NonNull User user , @NonNull HostSystem system)
       throws SQLException, GeneralSecurityException {
-    List<JITRequest> requests = jitRequestService.getJITRequests(command, user, system);
+    List<ZeroTrustAccessTokenRequest> requests = ztatRequestService.getAccessTokenRequests(command, user, system);
     boolean approved = false;
 
     log.info("Checking if command is approved: " + command);
     if (requests.size() > 0) {
       log.info("Found JIT request for command: " + command);
-      JITRequest request = requests.get(0);
-      Optional<JITApproval> status = jitRequestService.getJITStatus(request);
+      ZeroTrustAccessTokenRequest request = requests.get(0);
+      Optional<ZeroTrustAccessTokenApproval> status = ztatRequestService.getAccessTokenStatus(request);
       if (status.isPresent()) {
         approved = status.get().isApproved();
         log.info("Found  approved JIT request for command: " + command);
@@ -92,12 +92,12 @@ public class JITService {
   public boolean isDenied(
       @NonNull String command, @NonNull User user , @NonNull HostSystem system)
       throws SQLException, GeneralSecurityException {
-    List<JITRequest> requests = jitRequestService.getJITRequests(command, user, system);
+    List<ZeroTrustAccessTokenRequest> requests = ztatRequestService.getAccessTokenRequests(command, user, system);
     boolean approved = false;
 
     if (requests.size() > 0) {
-      JITRequest request = requests.get(0);
-      Optional<JITApproval> status = jitRequestService.getJITStatus(request);
+      ZeroTrustAccessTokenRequest request = requests.get(0);
+      Optional<ZeroTrustAccessTokenApproval> status = ztatRequestService.getAccessTokenStatus(request);
       if (status.isPresent()) {
         approved = status.get().isApproved();
         if (!approved) {
@@ -112,14 +112,14 @@ public class JITService {
   public boolean isExpired(
       @NonNull String command, @NonNull User user , @NonNull HostSystem system)
       throws SQLException, GeneralSecurityException {
-    List<JITRequest> requests = jitRequestService.getJITRequests(command, user, system);
+    List<ZeroTrustAccessTokenRequest> requests = ztatRequestService.getAccessTokenRequests(command, user, system);
 
     if (requests.size() > 0) {
-      JITRequest request = requests.get(0);
-      Optional<JITApproval> status = jitRequestService.getJITStatus(request);
+      ZeroTrustAccessTokenRequest request = requests.get(0);
+      Optional<ZeroTrustAccessTokenApproval> status = ztatRequestService.getAccessTokenStatus(request);
 
       if (status.isPresent()) {
-        var lastUpdated = status.get().getJitRequest().getLastUpdated().getTime();
+        var lastUpdated = status.get().getZtatRequest().getLastUpdated().getTime();
         var currentTime = System.currentTimeMillis();
         if ((currentTime - lastUpdated) > systemOptions.getMaxJitDurationMs()) {
           return true;
@@ -135,16 +135,16 @@ public class JITService {
   public boolean isActive(
       @NonNull String command, @NonNull User user , @NonNull HostSystem system)
       throws SQLException, GeneralSecurityException {
-    List<JITRequest> requests = jitRequestService.getJITRequests(command, user, system);
+    List<ZeroTrustAccessTokenRequest> requests = ztatRequestService.getAccessTokenRequests(command, user, system);
 
     if (requests.size() > 0) {
-      JITRequest request = requests.get(0);
+      ZeroTrustAccessTokenRequest request = requests.get(0);
       log.info("JIT request has reached max uses: " + request.getId());
-      Optional<JITApproval> status = jitRequestService.getJITStatus(request);
+      Optional<ZeroTrustAccessTokenApproval> status = ztatRequestService.getAccessTokenStatus(request);
 
       if (status.isPresent()) {
-        var lastUpdated = null != status.get().getJitRequest().getLastUpdated() ?
-        status.get().getJitRequest().getLastUpdated().getTime() : System.currentTimeMillis();
+        var lastUpdated = null != status.get().getZtatRequest().getLastUpdated() ?
+        status.get().getZtatRequest().getLastUpdated().getTime() : System.currentTimeMillis();
         var currentTime = System.currentTimeMillis();
         if (systemOptions.getMaxJitUses() > 0
             && status.get().getUses() >= systemOptions.getMaxJitUses()) {
@@ -162,72 +162,72 @@ public class JITService {
     return false;
   }
 
-  public void approveJIT(@NonNull JITRequest request, @NonNull User user)
+  public void approveAccessToken(@NonNull ZeroTrustAccessTokenRequest request, @NonNull User user)
       throws SQLException, GeneralSecurityException {
-    jitRequestService.setJITStatus(request, user, true);
+    ztatRequestService.getAccessTokenStatus(request, user, true);
   }
 
-  public void approveOpsJIT(@NonNull OpsJITRequest request, @NonNull User user)
+  public void approveOpsAccessToken(@NonNull OpsZeroTrustAcessTokenRequest request, @NonNull User user)
       throws SQLException, GeneralSecurityException {
-    jitRequestService.setOpsJITStatus(request, user, true);
+    ztatRequestService.setOpsAccessTokenStatus(request, user, true);
   }
 
-  public void denyJIT(@NonNull JITRequest request, @NonNull User user)
+  public void denyAccessToken(@NonNull ZeroTrustAccessTokenRequest request, @NonNull User user)
       throws SQLException, GeneralSecurityException {
-    jitRequestService.setJITStatus(request, user, false);
+    ztatRequestService.getAccessTokenStatus(request, user, false);
   }
 
-  public void denyOpsJIT(@NonNull OpsJITRequest request, @NonNull User user)
+  public void denyOpsAccessToken(@NonNull OpsZeroTrustAcessTokenRequest request, @NonNull User user)
       throws SQLException, GeneralSecurityException {
-    jitRequestService.setOpsJITStatus(request, user, false);
+    ztatRequestService.setOpsAccessTokenStatus(request, user, false);
   }
 
   public void incrementUses(String command, User user, HostSystem system)
       throws SQLException, GeneralSecurityException {
-    List<JITRequest> requests = jitRequestService.getJITRequests(command, user, system);
+    List<ZeroTrustAccessTokenRequest> requests = ztatRequestService.getAccessTokenRequests(command, user, system);
     boolean approved = false;
 
     if (requests.size() > 0) {
-      JITRequest request = requests.get(0);
-      Optional<JITApproval> status = jitRequestService.getJITStatus(request);
+      ZeroTrustAccessTokenRequest request = requests.get(0);
+      Optional<ZeroTrustAccessTokenApproval> status = ztatRequestService.getAccessTokenStatus(request);
       if (status.isPresent()) {
         log.info("incrementing uses for command: " + command);
-        jitRequestService.incrementJITUses(request);
+        ztatRequestService.incrementAccessTokenUses(request);
       }
     }
   }
 
-  public void revokeOpsJIT(JITRequest jitRequest, Long userId)
+  public void revokeOpsJIT(ZeroTrustAccessTokenRequest ztatRequest, Long userId)
       throws SQLException, GeneralSecurityException {
-    jitRequestService.revokeOpsJIT(jitRequest, userId);
+    ztatRequestService.revokeOpsAccesToken(ztatRequest, userId);
   }
 
-  public void revokeJIT(JITRequest jitRequest, Long userId)
+  public void revokeJIT(ZeroTrustAccessTokenRequest ztatRequest, Long userId)
       throws SQLException, GeneralSecurityException {
-    jitRequestService.revokeJIT(jitRequest, userId);
+    ztatRequestService.revokeJIT(ztatRequest, userId);
   }
 
-  public JITRequest addJITRequest(JITRequest request) {
-    return jitRequestService.addJITRequest(request);
+  public ZeroTrustAccessTokenRequest addJITRequest(ZeroTrustAccessTokenRequest request) {
+    return ztatRequestService.addJITRequest(request);
   }
 
   public boolean hasJITRequest(String command, User user, HostSystem system) {
-    return jitRequestService.hasJITRequest(command, user.getId(), system.getId());
+    return ztatRequestService.hasJITRequest(command, user.getId(), system.getId());
   }
 
     public List<JITTrackerDTO> getOpenJITRequests(User operatingUser) {
-        return jitRequestService.getOpenJITRequests(operatingUser);
+        return ztatRequestService.getOpenAccessTokenRequests(operatingUser);
     }
 
   public List<JITTrackerDTO> getOpenOpsRequests(User operatingUser) {
-      return jitRequestService.getOpenOpsRequests(operatingUser);
+      return ztatRequestService.getOpenOpsRequests(operatingUser);
   }
 
-  public OpsJITRequest getOpsJITRequest(Long jitId) {
-    return jitRequestService.getOpsJITRequestById(jitId);
+  public OpsZeroTrustAcessTokenRequest getOpsJITRequest(Long ztatId) {
+    return ztatRequestService.getOpsAccessTokenRequestById(ztatId);
   }
 
-  public JITRequest getJITRequest(Long jitId) {
-    return jitRequestService.getJITRequestById(jitId);
+  public ZeroTrustAccessTokenRequest getZtatRequest(Long ztatId) {
+    return ztatRequestService.getAccessTokenRequestById(ztatId);
   }
 }

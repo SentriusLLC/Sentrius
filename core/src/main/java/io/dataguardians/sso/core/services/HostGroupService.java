@@ -213,6 +213,10 @@ public class HostGroupService {
         return hostGroupRepository.findAll(spec);
     }
 
+    public void deleteHostSystem(User user, HostSystem hostSystem) {
+        systemRepository.delete(hostSystem);
+    }
+
 /*
     public List<HostSystem> getUnassignedHostsForUser(User operatingUser) {
         systemRepository.findAll().forEach(hostSystem -> {

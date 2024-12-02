@@ -7,7 +7,7 @@ import io.dataguardians.automation.auditing.TriggerAction;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class DeletePrevention extends ForbiddenCommandsRule {
+public class DeletePrevention extends CommandEvaluator {
 
   // Updated regex to match standalone and partial commands
   String deleteRegex = "\\b(rm(\\s+.*)?|rmdir\\s+\\S+|find\\s+[^\\n]*\\s+-delete)\\b";
@@ -24,15 +24,15 @@ public class DeletePrevention extends ForbiddenCommandsRule {
   public Optional<Trigger> trigger(String text) {
     text = text.strip();
     if (text.startsWith("#")) {
-      log.info("Skipping commented command: {}", text);
+      log.debug("Skipping commented command: {}", text);
       return Optional.empty();
     }
-    log.info("Checking command: {}", text);
+    log.debug("Checking command: {}", text);
     if (deletePattern.matcher(text).find()) {
-      log.info("Match found: {}", text);
+      log.debug("Match found: {}", text);
       return Optional.of(new Trigger(action, "Delete is not allowed"));
     }
-    log.info("No match for: {}", text);
+    log.debug("No match for: {}", text);
     return Optional.empty();
   }
 }

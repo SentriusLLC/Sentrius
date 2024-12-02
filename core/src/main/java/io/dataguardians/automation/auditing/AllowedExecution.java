@@ -2,7 +2,7 @@ package io.dataguardians.automation.auditing;
 
 import java.util.Optional;
 
-public class AllowedExecution extends AuditorRule {
+public class AllowedExecution extends AccessTokenEvaluator {
 
   // HashSet<>
   String command;

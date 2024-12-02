@@ -46,7 +46,7 @@ public class SystemOptions {
   /** Full admin can login. */
   @Builder.Default public Boolean fullAdminCanLogin = true;
 
-  @Builder.Default public Boolean jitRequiresTicket = false;
+  @Builder.Default public Boolean ztatRequiresTicket = false;
 
   @Builder.Default public Integer approvedJITPeriod = 60;
 
@@ -68,9 +68,9 @@ public class SystemOptions {
   @Builder.Default public Integer maxJitUses = 1;
 
   /**
-   * This is how long before a jit request ( that has been denied or approved ) can last.
+   * This is how long before a ztat request ( that has been denied or approved ) can last.
    */
-  @Updatable(description = "This is how long before a jit request ( that has been denied or approved ) can last.")
+  @Updatable(description = "This is how long before a ztat request ( that has been denied or approved ) can last.")
   @RequiresRestart
   @Builder.Default public Integer maxJitDurationMs = (1440 * 1000); // 60 min * 24 hrs * 1000 ms
 

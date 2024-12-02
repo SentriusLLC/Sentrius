@@ -8,6 +8,7 @@
     <script th:src="@{/js/bundled_session_pb.js}"></script>
 
     <script th:inline="javascript">
+        let persistentMessage = "";
 
         function showStatusBar(message) {
             const notification = document.getElementById('notification');
@@ -15,8 +16,28 @@
             notification.style.display = 'block';
 
             setTimeout(() => {
-                notification.style.display = 'none';
+                if (persistentMessage) {
+                    notification.textContent = persistentMessage;
+                    //notification.style.display = 'none';
+                } else {
+                    notification.style.display = 'none';
+                }
+
             }, 3000); // Hide after 3 seconds
+        }
+
+        function showWarningStatus(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                if (persistentMessage) {
+                    notification.textContent = persistentMessage;
+                    //notification.style.display = 'none';
+                } else {
+                    notification.style.display = 'none';
+                }
+            }, 10000); // Hide after 10 seconds
         }
         /*<![CDATA[*/
         document.addEventListener('DOMContentLoaded', () => {
@@ -26,8 +47,6 @@
             style = {};
 
             var sessionId = "";
-
-            var persistentMessage = "";
 
 
 
@@ -144,6 +163,7 @@
                 }
                 console.log("keydown " + e.keyCode);
                 if (termFocus) {
+
                     var keyCode = (e.keyCode) ? e.keyCode : e.charCode;
                     keys[keyCode] = true;
 
@@ -162,7 +182,9 @@
                     //34 - PG DOWN
                     //35 - END
                     //36 - HOME
-                    if ((e.ctrlKey && !e.altKey) || keyCode === 27 || keyCode === 37 || keyCode === 38 || keyCode === 39 || keyCode === 40 || keyCode === 13 || keyCode === 8 || keyCode === 9 || keyCode === 46 || keyCode === 45 || keyCode === 33 || keyCode === 34 || keyCode === 35 || keyCode === 36) {
+                    if ((e.ctrlKey && !e.altKey) || keyCode === 27 || keyCode === 37 || keyCode ===
+                        38 || keyCode
+                        === 39 || keyCode === 40 || keyCode === 13 || keyCode === 8 || keyCode === 9 || keyCode === 46 || keyCode === 45 || keyCode === 33 || keyCode === 34 || keyCode === 35 || keyCode === 36) {
 
                         e.preventDefault();
                         e.stopImmediatePropagation();
@@ -178,6 +200,16 @@
 
                         }
                         //connection.send(JSON.stringify({id: getActiveTermsInstanceIds(), keyCode: keyCode}));
+                    }
+                    if (e.key === '/') {
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        const message = new proto.io.dataguardians.protobuf.TerminalMessage();
+                        message.setType(proto.io.dataguardians.protobuf.MessageType.USER_DATA);
+                        message.setKeycode(-1);
+                        message.setCommand('/');
+                        const base64Message = btoa(String.fromCharCode(...message.serializeBinary()));
+                        connection.send(base64Message);
                     }
 
                     //prevent default for unix ctrl commands
@@ -420,10 +452,16 @@
                                     const description = triggerAction.getDescription();
                                     if (deserializedAuditLog.getType() == proto.io.dataguardians.protobuf.MessageType.PERSISTENT_MESSAGE) {
                                         persistentMessage = description;
+                                        showWarningStatus(description);
                                     } else {
                                         //alertWarn.textContent = description || persistentMessage || "";
                                         if (description) {
-                                            showStatusBar(description);
+                                            if (triggerAction.getAction() == proto.io.dataguardians.protobuf.TriggerAction.WARN_ACTION) {
+                                                showWarningStatus(description);
+                                            }
+                                            else {
+                                                showStatusBar(description);
+                                            }
                                         }
                                     }
                                     // Use textContent instead of innerHTML
@@ -461,6 +499,13 @@
                                     showSpinner();
                                 } else {
                                     hideSpinner();
+                                    if (triggerAction.getAction() == proto.io.dataguardians.protobuf.TriggerAction.WARN_ACTION) {
+                                        console.log("WARN_ACTION");
+                                        if (description) {
+                                            console.log("WARN_ACTION " + description);
+                                            showWarningStatus(description);
+                                        }
+                                    }
                                 }
 
                             }
@@ -531,6 +576,13 @@
 
                 fitMap[id] = new FitAddon.FitAddon()
                 term.loadAddon(fitMap[id])
+
+                term.onKey(({ key }) => {
+                    if (key === '/') {
+                        // Handle the keypress within the terminal
+                        console.log('Slash key pressed');
+                    }
+                });
                 term.open($("#sentrius_term_" + id).find('.output').get(0));
 
                 //term.setOption('logLevel', 'debug');
@@ -718,13 +770,12 @@
         <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
 
-                <!-- Pending JITs Badge -->
                 <li class="nav-item">
                     <span id="alertWarn" class="badge text-bg-warning ms-2"></span>
                 </li>
                 <li class="nav-item">
-                    <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#jitModal" onclick="refreshJITTable()">
-                    <span id="badge_jits" class="badge text-bg-dark">0 Pending JITs</span>
+                    <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#ztatModal" onclick="refreshAccessTokenTable()">
+                    <span id="badge_ztats" class="badge text-bg-dark">0 Pending Access Tokens</span>
                     </a>
                 </li>
 
@@ -754,15 +805,15 @@
 <div class="termwrapper">
 </div>
 <div id="csrf-token" style="display: none;" th:text="${_csrf.token}"></div>
-<div class="modal fade" id="jitModal" tabindex="-1" aria-labelledby="jitModalLabel" aria-hidden="true">
+<div class="modal fade" id="ztatModal" tabindex="-1" aria-labelledby="ztatModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="jitModalLabel">My JIT Requests</h5>
+                <h5 class="modal-title" id="ztatModalLabel">My JIT Requests</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <table id="jit-table" class="table table-striped table-bordered">
+                <table id="ztat-table" class="table table-striped table-bordered">
                     <thead>
                     <tr>
                         <th>Command</th>
@@ -791,7 +842,7 @@
             </div>
             <div class="modal-body">
                 <form id="assignIncidentForm">
-                    <input type="hidden" id="jitId" name="jitId">
+                    <input type="hidden" id="ztatId" name="ztatId">
                     <input type="hidden" id="ticketType" name="ticketType">
                     <div class="mb-3">
                         <label for="incidentId" class="form-label">Incident ID</label>
@@ -863,7 +914,7 @@
 
     function assignIncident() {
 
-        const jitId = document.getElementById('jitId').value;
+        const ztatId = document.getElementById('ztatId').value;
         const ticketType = document.getElementById('ticketType').value;
         const incidentId = document.getElementById('incidentId').value;
 
@@ -881,18 +932,18 @@
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': csrfToken
             },
-            body: JSON.stringify({ jitId: jitId, incidentId: incidentId, sessionId: mySessionId})
+            body: JSON.stringify({ ztatId: ztatId, incidentId: incidentId, sessionId: mySessionId})
         })
             .then(response => {
                 if (response.ok) {
 
-                    $('#jit-table').DataTable().ajax.reload(); // Refresh the DataTable
+                    $('#ztat-table').DataTable().ajax.reload(); // Refresh the DataTable
                     const assignIncidentModal = bootstrap.Modal.getInstance(document.getElementById('assignIncidentModal'));
                     assignIncidentModal.hide(); // Hide the modal
 
-                    const jitModalRef = bootstrap.Modal.getInstance(document.getElementById('jitModal'));
-                    if (jitModalRef) {
-                        jitModalRef.hide(); // Hide the JIT modal
+                    const ztatModalRef = bootstrap.Modal.getInstance(document.getElementById('ztatModal'));
+                    if (ztatModalRef) {
+                        ztatModalRef.hide(); // Hide the JIT modal
                     }
                     updateJitBadge(null);
                     setTimeout(() => {
@@ -909,14 +960,14 @@
     function revokeJIT(id){
 
         $.ajax({
-            url: '/api/v1/zerotrust/jit/terminal/revoke?jitId=' + id,
+            url: '/api/v1/zerotrust/accesstoken/terminal/revoke?ztatId=' + id,
             type: 'GET',
             headers: {
                 'content-type': 'application/json',
                 'X-CSRF-TOKEN': csrfToken
             },
             success: function(data) {
-                refreshJITTable();
+                refreshAccessTokenTable();
             },
             error: function(xhr, status, error) {
                 console.error("Failed to revoke JIT request:", error);
@@ -924,25 +975,25 @@
         });
     }
 
-    function openAssignIncidentModal(jitId) {
+    function openAssignIncidentModal(ztatId) {
         // Populate the hidden input field with the JIT ID
-        document.getElementById('jitId').value = jitId;
+        document.getElementById('ztatId').value = ztatId;
 
         // Show the modal
         const assignIncidentModal = new bootstrap.Modal(document.getElementById('assignIncidentModal'));
         assignIncidentModal.show();
     }
-    function refreshJITTable() {
-        const jitTable = $('#jit-table').DataTable();
+    function refreshAccessTokenTable() {
+        const ztatTable = $('#ztat-table').DataTable();
         const allowTicket = `[[${enclaveConfiguration.approveViaTicket}]]`;
-        if ($.fn.dataTable.isDataTable('#jit-table')) {
+        if ($.fn.dataTable.isDataTable('#ztat-table')) {
             // Reload the existing table
-            jitTable.destroy();
+            ztatTable.destroy();
         }
         // Initialize the DataTable if not already initialized
-        $('#jit-table').DataTable({
+        $('#ztat-table').DataTable({
             ajax: {
-                url: '/api/v1/zerotrust/jit/my/current', // API endpoint to fetch JIT requests
+                url: '/api/v1/zerotrust/accesstoken/my/current', // API endpoint to fetch JIT requests
                 dataSrc: '', // Adjust if the data is nested (e.g., 'data' for { data: [...] })
             },
             columns: [

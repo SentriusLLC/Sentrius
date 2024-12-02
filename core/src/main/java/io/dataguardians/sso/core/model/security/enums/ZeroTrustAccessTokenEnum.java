@@ -4,18 +4,18 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public enum JITAccessEnum {
-  CAN_VIEW_JITS(1),
+public enum ZeroTrustAccessTokenEnum {
+  CAN_VIEW_ZTATS(1),
 
-  CAN_APPROVE_JITS(3),
+  CAN_APPROVE_ZTATS(3),
 
-  CAN_DENY_JITS(7),
+  CAN_DENY_ZTATS(7),
 
-  CAN_MANAGE_JITS(15);
+  CAN_MANAGE_ZTATS(15);
 
   private final int value;
 
-  JITAccessEnum(int i) {
+  ZeroTrustAccessTokenEnum(int i) {
     value = i;
   }
 
@@ -33,7 +33,7 @@ public enum JITAccessEnum {
     return accessStrings;
   }
 
-  public static JITAccessEnum of(int value) {
+  public static ZeroTrustAccessTokenEnum of(int value) {
     for (var accessEnum : values()) {
       if (accessEnum.getValue() == value) {
         return accessEnum;
@@ -42,14 +42,14 @@ public enum JITAccessEnum {
     return null;
   }
 
-  public static JITAccessEnum of(List<String> userAccessList) {
+  public static ZeroTrustAccessTokenEnum of(List<String> userAccessList) {
     int value = 0;
     for (var accessEnum : values()) {
       if (userAccessList.contains(accessEnum.name())) {
         value = value | accessEnum.getValue();
       }
     }
-    return JITAccessEnum.of(value);
+    return ZeroTrustAccessTokenEnum.of(value);
   }
 
   public interface OpsIfc {

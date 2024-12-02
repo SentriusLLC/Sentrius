@@ -111,21 +111,21 @@
 
         function updateJitBadge(refreshId){
             $.ajax({
-                url: "/api/v1/zerotrust/jit/my/current",
+                url: "/api/v1/zerotrust/accesstoken/my/current",
                 type: 'GET',
             }).done(function (data) {
                 console.log(data);
                 if (data && Array.isArray(data)) {
                     count = Object.keys(data).length;
-                    $("#badge_jits").html('<span class="badge text-bg-info">' + count +
-                        ' Your JITs</span>');
+                    $("#badge_ztats").html('<span class="badge text-bg-info">' + count +
+                        ' Access Tokens</span>');
                 } else {
-                    $("#badge_jits").html('');
+                    $("#badge_ztats").html('');
                     $("#badge_errors").html('');
                 }
             }).fail(function (jqXHR, textStatus, errorThrown) {
 
-                $("#badge_jits").html('');
+                $("#badge_ztats").html('');
                 $("#badge_errors").html('');
                 if (refreshId) clearInterval(refreshId);
                 console.log("Error: " + errorThrown);
@@ -187,14 +187,14 @@
                     // Adjust interval as needed
 
                     $.ajax({
-                        url: "/api/v1/zerotrust/jit/my/current",
+                        url: "/api/v1/zerotrust/accesstoken/my/current",
                         type: 'GET',
                     }).done(function (data) {
                         count = Object.keys(data).length;
-                        $("#badge_jits").html('<span class="badge text-bg-info">' + count + ' Your JITs</span>');
+                        $("#badge_ztats").html('<span class="badge text-bg-info">' + count + ' Access Tokens</span>');
                     }).fail(function (jqXHR, textStatus, errorThrown) {
 
-                        $("#badge_jits").html('');
+                        $("#badge_ztats").html('');
                         $("#badge_errors").html('');
                     });
                     if ($("#badge_errors").length > 0) {
@@ -213,7 +213,7 @@
                                     }
                                 }
                             ).fail(function (jqXHR, textStatus, errorThrown) {
-                                $("#badge_jits").html('');
+                                $("#badge_ztats").html('');
                                 $("#badge_errors").html('');
                                 clearInterval(errorrefreshId);
                             });
@@ -230,7 +230,7 @@
                                 $("#badge_errors").html('');
                             }
                         }).fail(function (jqXHR, textStatus, errorThrown) {
-                            $("#badge_jits").html('');
+                            $("#badge_ztats").html('');
                             $("#badge_errors").html('');
                         });
                     }

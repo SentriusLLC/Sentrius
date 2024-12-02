@@ -130,6 +130,12 @@ public class SshListenerService {
             case APPROVE_ACTION:
                 triggerBuilder.setAction(Session.TriggerAction.APPROVE_ACTION);
                 break;
+            case WARN_ACTION:
+                triggerBuilder.setAction(Session.TriggerAction.WARN_ACTION);
+                break;
+            case PERSISTENT_MESSAGE:
+                triggerBuilder.setAction(Session.TriggerAction.PERSISTENT_MESSAGE);
+                break;
             default:
                 break;
         }
@@ -175,7 +181,9 @@ public class SshListenerService {
                     keyCode = keyCodeDbl.intValue();
                 }
 
-                if (terminalSessionId.getTerminalAuditor().getSessionTrigger().getAction() != TriggerAction.NO_ACTION) {
+                if (terminalSessionId.getTerminalAuditor().getSessionTrigger().getAction() != TriggerAction.NO_ACTION &&
+                    terminalSessionId.getTerminalAuditor().getSessionTrigger().getAction() != TriggerAction.WARN_ACTION &&
+                    terminalSessionId.getTerminalAuditor().getSessionTrigger().getAction() != TriggerAction.PERSISTENT_MESSAGE) {
                     log.info("Session Trigger action is not NO_ACTION");
                     return;
                 }

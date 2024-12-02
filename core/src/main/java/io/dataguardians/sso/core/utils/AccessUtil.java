@@ -3,7 +3,7 @@ package io.dataguardians.sso.core.utils;
 import io.dataguardians.sso.core.model.users.User;
 import io.dataguardians.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.dataguardians.sso.core.model.security.enums.AutomationAccessEnum;
-import io.dataguardians.sso.core.model.security.enums.JITAccessEnum;
+import io.dataguardians.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
 import io.dataguardians.sso.core.model.security.enums.RuleAccessEnum;
 import io.dataguardians.sso.core.model.security.enums.SSHAccessEnum;
 import io.dataguardians.sso.core.model.security.enums.UserAccessEnum;
@@ -22,9 +22,9 @@ public class AccessUtil {
             == accessLevel.getValue();
     }
 
-    public static boolean canAccess(User user, JITAccessEnum accessLevel) {
-        return null != user.getAuthorizationType().getJitAccess()
-            && (user.getAuthorizationType().getJitAccess().getValue() & accessLevel.getValue())
+    public static boolean canAccess(User user, ZeroTrustAccessTokenEnum accessLevel) {
+        return null != user.getAuthorizationType().getZtAccessTokenAccess()
+            && (user.getAuthorizationType().getZtAccessTokenAccess().getValue() & accessLevel.getValue())
             == accessLevel.getValue();
     }
 
@@ -66,7 +66,7 @@ public class AccessUtil {
         return value == null ? 0 : value.getValue();
     }
 
-    public static int getAccessLevel(JITAccessEnum value) {
+    public static int getAccessLevel(ZeroTrustAccessTokenEnum value) {
         return value == null ? 0 : value.getValue();
     }
 

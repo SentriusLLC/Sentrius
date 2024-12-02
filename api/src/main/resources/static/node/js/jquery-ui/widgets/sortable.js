@@ -451,7 +451,7 @@ return $.widget( "ui.sortable", $.ui.mouse, {
 			// currentContainer is switched before the placeholder is moved.
 			//
 			// Without this, moving items in "sub-sortables" can cause
-			// the placeholder to jitter between the outer and inner container.
+			// the placeholder to ztatter between the outer and inner container.
 			if ( item.instance !== this.currentContainer ) {
 				continue;
 			}

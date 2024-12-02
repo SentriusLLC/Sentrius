@@ -15,15 +15,13 @@ import io.dataguardians.sso.core.model.dto.TicketDTO;
 import io.dataguardians.sso.core.model.users.UserConfig;
 import io.dataguardians.sso.core.security.service.CryptoService;
 import io.dataguardians.sso.core.services.IntegrationSecurityTokenService;
-import io.dataguardians.sso.core.services.JITService;
-import io.dataguardians.sso.core.services.SessionService;
+import io.dataguardians.sso.core.services.ZeroTrustAccessTokenService;
 import io.dataguardians.sso.core.services.UserService;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
 import io.dataguardians.sso.integrations.ticketing.TicketService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.CharSet;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -44,7 +42,7 @@ public class TicketingApiController extends BaseController {
     final CryptoService  cryptoService;
     final SessionTrackingService sessionTrackingService;
     final TicketService ticketingService;
-    final JITService jitService;
+    final ZeroTrustAccessTokenService ztatService;
 
     static Map<String, Field> fields = new HashMap<>();
     static {
@@ -56,13 +54,13 @@ public class TicketingApiController extends BaseController {
     protected TicketingApiController(UserService userService, SystemOptions systemOptions,
                                      IntegrationSecurityTokenService integrationService, CryptoService  cryptoService,
                                      TicketService ticketingService,
-                                     JITService jitService, SessionTrackingService sessionTrackingService
+                                     ZeroTrustAccessTokenService ztatService, SessionTrackingService sessionTrackingService
     ) {
         super(userService, systemOptions);
         this.integrationService =     integrationService;
         this.cryptoService = cryptoService;
         this.ticketingService = ticketingService;
-        this.jitService = jitService;
+        this.ztatService = ztatService;
         this.sessionTrackingService = sessionTrackingService;
     }
 
@@ -74,14 +72,14 @@ public class TicketingApiController extends BaseController {
         throws GeneralSecurityException, SQLException {
         log.info("Assigning ticket: {}", ticketType);
         var sessionId = payload.get("sessionId");
-        var jitIdObj = payload.get("jitId");
+        var ztatIdObj = payload.get("ztatId");
         var incidentId = payload.get("incidentId");
-        if (null == jitIdObj || null == incidentId || null == sessionId){
+        if (null == ztatIdObj || null == incidentId || null == sessionId){
             return ResponseEntity.badRequest().build();
         }
         var sessionIdStr = cryptoService.decrypt(sessionId.toString());
-        var jitId = cryptoService.encrypt(jitIdObj.toString());
-        jitId = Hashing.sha256().hashString(jitIdObj.toString(), StandardCharsets.UTF_8).toString();
+        var ztatId = cryptoService.encrypt(ztatIdObj.toString());
+        ztatId = Hashing.sha256().hashString(ztatIdObj.toString(), StandardCharsets.UTF_8).toString();
         var operatingUser = getOperatingUser(request, response);
 
         switch(ticketType){
@@ -95,14 +93,14 @@ public class TicketingApiController extends BaseController {
 
                         ticketingService.assignJira(incidentId.toString(), operatingUser);
                         if (!ticketingService.updateJira(incidentId.toString(), operatingUser,
-                            "Automatic Assignment for JIT Reference: `" + jitId + "`"
+                            "Automatic Assignment for JIT Reference: `" + ztatId + "`"
                         )) {
                             return ResponseEntity.badRequest().body("Failed to update Jira");
                         }
-                        var jitRequest = jitService.getJITRequest(Long.parseLong(jitIdObj.toString()));
-                        if (null != jitRequest) {
-                            log.info("Approving JIT {}", jitRequest.getId());
-                            jitService.approveJIT(jitRequest, operatingUser);
+                        var ztatRequest = ztatService.getZtatRequest(Long.parseLong(ztatIdObj.toString()));
+                        if (null != ztatRequest) {
+                            log.info("Approving JIT {}", ztatRequest.getId());
+                            ztatService.approveAccessToken(ztatRequest, operatingUser);
                         }
                         else {
                             return ResponseEntity.badRequest().body("JIT not found");

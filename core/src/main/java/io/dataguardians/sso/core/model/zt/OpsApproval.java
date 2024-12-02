@@ -30,8 +30,8 @@ public class OpsApproval {
     private boolean approved;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "jit_request_id", nullable = false)
-    private OpsJITRequest jitRequest;
+    @JoinColumn(name = "ztat_request_id", nullable = false)
+    private OpsZeroTrustAcessTokenRequest ztatRequest;
 
     @Column(name = "uses", nullable = false)
     private int uses;

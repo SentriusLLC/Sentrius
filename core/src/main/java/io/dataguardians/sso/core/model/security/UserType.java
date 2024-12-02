@@ -2,7 +2,7 @@ package io.dataguardians.sso.core.model.security;
 
 import io.dataguardians.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.dataguardians.sso.core.model.security.enums.AutomationAccessEnum;
-import io.dataguardians.sso.core.model.security.enums.JITAccessEnum;
+import io.dataguardians.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
 import io.dataguardians.sso.core.model.security.enums.RuleAccessEnum;
 import io.dataguardians.sso.core.model.security.enums.SSHAccessEnum;
 import io.dataguardians.sso.core.model.security.enums.SpecialAccesses;
@@ -56,9 +56,9 @@ public class UserType {
     UserAccessEnum userAccess = UserAccessEnum.CAN_VIEW_USERS;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "jit_access")
+    @Column(name = "ztat_access")
     @Builder.Default
-    JITAccessEnum jitAccess = JITAccessEnum.CAN_VIEW_JITS;
+    ZeroTrustAccessTokenEnum ztAccessTokenAccess = ZeroTrustAccessTokenEnum.CAN_VIEW_ZTATS;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "application_access")
@@ -84,8 +84,8 @@ public class UserType {
             userAccess.getAccessStrings().forEach(accesses::add);
         if (null != applicationAccess)
             applicationAccess.getAccessStrings().forEach(accesses::add);
-        if (null != jitAccess)
-            jitAccess.getAccessStrings().forEach(accesses::add);
+        if (null != ztAccessTokenAccess)
+            ztAccessTokenAccess.getAccessStrings().forEach(accesses::add);
         return accesses;
     }
 
@@ -102,7 +102,7 @@ public class UserType {
             .systemAccess(SSHAccessEnum.CAN_MANAGE_SYSTEMS)
             .userAccess(UserAccessEnum.CAN_MANAGE_USERS)
             .applicationAccess(ApplicationAccessEnum.CAN_MANAGE_APPLICATION)
-            .jitAccess(JITAccessEnum.CAN_MANAGE_JITS)
+            .ztAccessTokenAccess(ZeroTrustAccessTokenEnum.CAN_MANAGE_ZTATS)
             .build();
     }
 
@@ -115,7 +115,7 @@ public class UserType {
             .systemAccess(SSHAccessEnum.CAN_VIEW_SYSTEMS)
             .userAccess(UserAccessEnum.IS_USER)
             .applicationAccess(ApplicationAccessEnum.CAN_LOG_IN)
-            .jitAccess(JITAccessEnum.CAN_VIEW_JITS)
+            .ztAccessTokenAccess(ZeroTrustAccessTokenEnum.CAN_VIEW_ZTATS)
             .build();
     }
 
@@ -128,7 +128,7 @@ public class UserType {
             .systemAccess(null)
             .userAccess(null)
             .applicationAccess(null)
-            .jitAccess(null)
+            .ztAccessTokenAccess(null)
             .build();
     }
 
@@ -141,7 +141,7 @@ public class UserType {
         systemAccess = SSHAccessEnum.of(userAccessList);
         ruleAccess = RuleAccessEnum.of(userAccessList);
         userAccess = UserAccessEnum.of(userAccessList);
-        jitAccess = JITAccessEnum.of(userAccessList);
+        ztAccessTokenAccess = ZeroTrustAccessTokenEnum.of(userAccessList);
         applicationAccess = ApplicationAccessEnum.of(userAccessList);
     }
 
@@ -190,8 +190,8 @@ public class UserType {
                 userTypeObj.userAccess.getAccessStrings().forEach(accesses::add);
             if (null != userTypeObj.applicationAccess)
                 userTypeObj.applicationAccess.getAccessStrings().forEach(accesses::add);
-            if (null != userTypeObj.jitAccess)
-                userTypeObj.jitAccess.getAccessStrings().forEach(accesses::add);
+            if (null != userTypeObj.ztAccessTokenAccess)
+                userTypeObj.ztAccessTokenAccess.getAccessStrings().forEach(accesses::add);
 //            if (null != userTypeObj.accessSet) userTypeObj.accessSet = accesses;
 
             return userTypeObj;

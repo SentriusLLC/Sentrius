@@ -10,27 +10,27 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import io.dataguardians.sso.core.data.auditing.RecordingStudio;
 import io.dataguardians.sso.core.model.ConnectedSystem;
-import io.dataguardians.sso.core.model.zt.JITReason;
-import io.dataguardians.sso.core.model.zt.JITRequest;
-import io.dataguardians.sso.core.services.JITService;
+import io.dataguardians.sso.core.model.zt.ZeroTrustAccessTokenReason;
+import io.dataguardians.sso.core.model.zt.ZeroTrustAccessTokenRequest;
+import io.dataguardians.sso.core.services.ZeroTrustAccessTokenService;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class RuleAlertAuditor extends BaseAuditor {
+public class AccessTokenAuditor extends BaseAccessTokenAuditor {
 
-  public List<AuditorRule> synchronousRules = new ArrayList<>();
+  public List<AccessTokenEvaluator> synchronousRules = new ArrayList<>();
 
-  public List<AuditorRule> synchronousFullRules = new ArrayList<>();
+  public List<AccessTokenEvaluator> synchronousFullRules = new ArrayList<>();
 
-  public List<AuditorRule> asyncRules = new ArrayList<>();
+  public List<AccessTokenEvaluator> asyncRules = new ArrayList<>();
 
-  public List<AuditorRule> asyncFullRules = new ArrayList<>();
+  public List<AccessTokenEvaluator> asyncFullRules = new ArrayList<>();
 
   final ExecutorService executorService;
 
-  private AsyncRuleAuditorRunner runner;
-  private AsyncRuleAuditorRunner fullRunner;
+  private AsyncAccessTokenAuditor runner;
+  private AsyncAccessTokenAuditor fullRunner;
 
   List<String> commands = new ArrayList<>();
 
@@ -43,14 +43,14 @@ public class RuleAlertAuditor extends BaseAuditor {
 
   final SessionTrackingService sessionTrackingService;
 
-  final JITService jitService;
+  final ZeroTrustAccessTokenService ztatService;
 
-  public RuleAlertAuditor(
-      JITService jitService,
+  public AccessTokenAuditor(
+      ZeroTrustAccessTokenService ztatService,
       ConnectedSystem schSession, SessionTrackingService sessionTrackingService, RecordingStudio recorder) {
     super(schSession.getUser(), schSession.getSession(), schSession.getHostSystem());
 
-    this.jitService = jitService;
+    this.ztatService = ztatService;
 
     this.connectedSystem = schSession;
 
@@ -76,7 +76,7 @@ public class RuleAlertAuditor extends BaseAuditor {
     }
     final String cstr = get();
     final String sanitized = getSantized();
-    for (AuditorRule rule : synchronousRules) {
+    for (AccessTokenEvaluator rule : synchronousRules) {
       try {
         Optional<Trigger> result = rule.trigger(rule.requiresSanitized() ? sanitized : cstr);
         if (result.isPresent()) {
@@ -102,21 +102,21 @@ public class RuleAlertAuditor extends BaseAuditor {
     // do nothing
   }
 
-  public void setStartupActions(List<SessionRuleIfc> startupActions) {
-    for (SessionRuleIfc action : startupActions) {
+  public void setStartupActions(List<SessionTokenEvaluator> startupActions) {
+    for (SessionTokenEvaluator action : startupActions) {
       if (action.describeAction() == TriggerAction.JIT_ACTION) {
         synchronousRules.add(action);
       }
     }
   }
 
-  public void setSynchronousRules(List<AuditorRule> synchronousRules)
+  public void setSynchronousRules(List<AccessTokenEvaluator> synchronousRules)
       throws ClassNotFoundException,
           NoSuchMethodException,
           InvocationTargetException,
           InstantiationException,
           IllegalAccessException {
-    for (AuditorRule newRule : synchronousRules) {
+    for (AccessTokenEvaluator newRule : synchronousRules) {
       switch (newRule.describeAction()) {
         case JIT_ACTION:
           if (newRule.onFullCommand()){
@@ -135,17 +135,23 @@ public class RuleAlertAuditor extends BaseAuditor {
           this.synchronousRules.add(newRule);
           break;
         default:
-          this.asyncRules.add(newRule);
+          if (newRule.onFullCommand()){
+            log.info("Adding full command rule {}", newRule.getClass());
+            this.asyncFullRules.add(newRule);
+          }
+          else {
+            this.asyncRules.add(newRule);
+          }
       }
     }
-    runner = new AsyncRuleAuditorRunner(jitService, asyncRules, connectedSystem, sessionTrackingService);
+    runner = new AsyncAccessTokenAuditor(ztatService, asyncRules, connectedSystem, sessionTrackingService);
     executorService.submit(runner);
 
-    fullRunner = new AsyncRuleAuditorRunner(jitService, asyncFullRules, connectedSystem, sessionTrackingService);
+    fullRunner = new AsyncAccessTokenAuditor(ztatService, asyncFullRules, connectedSystem, sessionTrackingService);
     executorService.submit(fullRunner);
   }
 
-  public void addRule(AuditorRule rule) {
+  public void addRule(AccessTokenEvaluator rule) {
     this.synchronousRules.add(rule);
   }
 
@@ -192,39 +198,39 @@ public class RuleAlertAuditor extends BaseAuditor {
     }
 
     if (currentTrigger.getAction() == TriggerAction.JIT_ACTION) {
-      // need to form a jit request
+      // need to form a ztat request
       try {
-        // has a jit request and not approved
-        if (!jitService.isApproved(command, user, system)) {
+        // has a ztat request and not approved
+        if (!ztatService.isApproved(command, user, system)) {
           log.info("on message not approved but has one {}", command);
           /*
-          if (!jitService.hasJITRequest(command, user, system)) {
-            JITReason reason = jitService.createReason("need ", " ticket ", " url");
-            JITRequest request = jitService.createRequest(command, reason, connectedSystem.getUser(),
+          if (!ztatService.hasJITRequest(command, user, system)) {
+            JITReason reason = ztatService.createReason("need ", " ticket ", " url");
+            JITRequest request = ztatService.createRequest(command, reason, connectedSystem.getUser(),
                 connectedSystem.getHostSystem()
             );
-            request = jitService.addJITRequest(request);
+            request = ztatService.addJITRequest(request);
             return TriggerAction.DENY_ACTION;
           } else {
             log.info("on message is approved {}", command);
 
            */
-            if (jitService.hasJITRequest(command, user, system) && !jitService.isActive(command, user, system)) {
+            if (ztatService.hasJITRequest(command, user, system) && !ztatService.isActive(command, user, system)) {
 
               log.info("on message is approved not active, awaiting response {}", command);
               return TriggerAction.DENY_ACTION;
             }else {
-              if (jitService.isApproved(command, user, system)) {
-                jitService.incrementUses(command, user, system);
+              if (ztatService.isApproved(command, user, system)) {
+                ztatService.incrementUses(command, user, system);
                 log.info("on message is approved {}", command);
                 return TriggerAction.NO_ACTION;
               }else {
-                //jitService.incrementUses(command, user, system);
-                JITReason reason = jitService.createReason("need ", " ticket ", " url");
-                JITRequest request = jitService.createRequest(command, reason, connectedSystem.getUser(),
+                //ztatService.incrementUses(command, user, system);
+                ZeroTrustAccessTokenReason reason = ztatService.createReason("need ", " ticket ", " url");
+                ZeroTrustAccessTokenRequest request = ztatService.createRequest(command, reason, connectedSystem.getUser(),
                     connectedSystem.getHostSystem()
                 );
-                request = jitService.addJITRequest(request);
+                request = ztatService.addJITRequest(request);
                 log.info("on message not approved, so let's wait {}", command);
                 return TriggerAction.DENY_ACTION;
               }
@@ -232,17 +238,17 @@ public class RuleAlertAuditor extends BaseAuditor {
           //}
 
           // keep the current trigger
-        } else if (jitService.hasJITRequest(command, user, system)){
+        } else if (ztatService.hasJITRequest(command, user, system)){
 
-            if (!jitService.isActive(command, user, system)) {
-              JITReason reason = jitService.createReason("need ", " ticket ", " url");
-              JITRequest request = jitService.createRequest(command, reason, connectedSystem.getUser(),
+            if (!ztatService.isActive(command, user, system)) {
+              ZeroTrustAccessTokenReason reason = ztatService.createReason("need ", " ticket ", " url");
+              ZeroTrustAccessTokenRequest request = ztatService.createRequest(command, reason, connectedSystem.getUser(),
                   connectedSystem.getHostSystem()
               );
-              request = jitService.addJITRequest(request);
+              request = ztatService.addJITRequest(request);
               return TriggerAction.DENY_ACTION;
             } else {
-              jitService.incrementUses(command, user, system);
+              ztatService.incrementUses(command, user, system);
               currentTrigger = Trigger.NO_ACTION;
             }
 
@@ -253,13 +259,13 @@ public class RuleAlertAuditor extends BaseAuditor {
         }
 
       } catch (SQLException e) {
-        log.error("error while evaluating jit action", e);
+        log.error("error while evaluating ztat action", e);
         throw new RuntimeException(e);
       } catch (GeneralSecurityException e) {
-        log.error("error while evaluating jit action", e);
+        log.error("error while evaluating ztat action", e);
         throw new RuntimeException(e);
       } catch (Throwable t) {
-        log.error("error while evaluating jit action", t);
+        log.error("error while evaluating ztat action", t);
         throw new RuntimeException(t.getMessage());
       }
 

@@ -83,7 +83,7 @@ public class TerminalWSHandler extends TextWebSocketHandler {
                     byte[] messageBytes = Base64.getDecoder().decode(message.getPayload());
                     Session.TerminalMessage auditLog =
                         io.dataguardians.protobuf.Session.TerminalMessage.parseFrom(messageBytes);
-
+                    log.info("got message {}; {}", uri, auditLog.getCommand());
                     // Decrypt the session ID
                     var sessionIdStr = cryptoService.decrypt(sessionId);
                     var sessionIdLong = Long.parseLong(sessionIdStr);
@@ -103,6 +103,12 @@ public class TerminalWSHandler extends TextWebSocketHandler {
                                 log.info("**** Setting JIT Trigger: {}", trigger.get());
                                 sessionTrackingService.addSystemTrigger(sys, trigger.get());
                                 return;
+                            } else if (trigger.get().getAction() == TriggerAction.WARN_ACTION) {
+                                allNoAction = false;
+                                // send the message
+                                log.info("**** Setting WARN Trigger: {}", trigger.get());
+                                sys.getTerminalAuditor().setSessionTrigger(trigger.get());
+                                sessionTrackingService.addSystemTrigger(sys, trigger.get());
                             }
                         }
                         if (allNoAction && sys.getSessionStartupActions().size() > 0) {

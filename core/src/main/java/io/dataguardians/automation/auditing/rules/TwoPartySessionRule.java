@@ -1,13 +1,13 @@
 package io.dataguardians.automation.auditing.rules;
 
 import java.util.Optional;
-import io.dataguardians.automation.auditing.SessionRuleIfc;
+import io.dataguardians.automation.auditing.SessionTokenEvaluator;
 import io.dataguardians.automation.auditing.Trigger;
 import io.dataguardians.automation.auditing.TriggerAction;
 import io.dataguardians.sso.core.model.ConnectedSystem;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
 
-public class TwoPartySessionRule extends SessionRuleIfc {
+public class TwoPartySessionRule extends SessionTokenEvaluator {
 
     private static final String DESCRIPTION = "Two Party Session Rule requires an active monitor of your session. We " +
         "have notified system administrators that a second party monitor is required for your to proceed. Please wait.";

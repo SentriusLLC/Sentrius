@@ -20,10 +20,10 @@ import com.jcraft.jsch.ChannelShell;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
-import io.dataguardians.automation.auditing.AuditorRule;
-import io.dataguardians.automation.auditing.RuleAlertAuditor;
+import io.dataguardians.automation.auditing.AccessTokenEvaluator;
+import io.dataguardians.automation.auditing.AccessTokenAuditor;
 import io.dataguardians.automation.auditing.RuleFactory;
-import io.dataguardians.automation.auditing.SessionRuleIfc;
+import io.dataguardians.automation.auditing.SessionTokenEvaluator;
 import io.dataguardians.automation.auditing.TriggerAction;
 import io.dataguardians.automation.auditing.rules.SudoPrevention;
 import io.dataguardians.sso.core.config.SystemOptions;
@@ -64,7 +64,7 @@ public class TerminalService {
     protected final AutomationService automationService;
     protected final UserPublicKeyService userPublicKeyService;
     protected final KeyStoreService keyStoreService;
-    protected final JITService jitService;
+    protected final ZeroTrustAccessTokenService ztatService;
     protected final ApplicationContext applicationContext;
 
     public static final int SESSION_TIMEOUT = 60000;
@@ -83,7 +83,7 @@ public class TerminalService {
         HostGroup enclave,
         String passphrase,
         String password,
-        HostSystem selectedSystem, List<SessionRuleIfc> sessionRules
+        HostSystem selectedSystem, List<SessionTokenEvaluator> sessionRules
     )
         throws SQLException, GeneralSecurityException {
 
@@ -142,9 +142,9 @@ public class TerminalService {
             Set<ProfileRule> rules = enclave.getRules();
 
             // rules that are in-line with data/command processing
-            List<AuditorRule> synchronousRules = new ArrayList<>();
+            List<AccessTokenEvaluator> synchronousRules = new ArrayList<>();
             // rules that are ONLY before a session begins.
-            List<SessionRuleIfc> definedSessionRules = new ArrayList<>();
+            List<SessionTokenEvaluator> definedSessionRules = new ArrayList<>();
 
             RuleFactory.createRules(schSession, sessionTrackingService, rules.stream().collect(Collectors.toList()),
                 synchronousRules, definedSessionRules, services);
@@ -180,8 +180,8 @@ public class TerminalService {
 
             InputStream outFromChannel = channel.getInputStream();
             RecordingStudio recorder = new RecordingStudio(schSession,sessionTrackingService, automationService);
-            RuleAlertAuditor terminalAuditor =
-                new RuleAlertAuditor(jitService, schSession, sessionOutputService,
+            AccessTokenAuditor terminalAuditor =
+                new AccessTokenAuditor(ztatService, schSession, sessionOutputService,
                     recorder);
 
             schSession.setChannel(channel);
@@ -363,13 +363,13 @@ public class TerminalService {
         sessionOutputService.shutdown();
     }
 
-    public List<SessionRuleIfc> createRules(ProfileConfiguration configuration)
+    public List<SessionTokenEvaluator> createRules(ProfileConfiguration configuration)
         throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException,
         IllegalAccessException {
-        List<SessionRuleIfc> rules = new ArrayList<>();
+        List<SessionTokenEvaluator> rules = new ArrayList<>();
         for (SessionRule rule : configuration.getSessionRules()){
             var clazz = Class.forName(rule.getSessionRuleClass());
-            var instance = clazz.asSubclass(SessionRuleIfc.class).getConstructor().newInstance();
+            var instance = clazz.asSubclass(SessionTokenEvaluator.class).getConstructor().newInstance();
             rules.add(instance);
         }
         return rules;

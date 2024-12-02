@@ -8,8 +8,9 @@ public enum TriggerAction {
   DENY_ACTION,
   JIT_ACTION,
   RECORD_ACTION,
-
-  APPROVE_ACTION;
+  CONVERT_ACTION,
+  APPROVE_ACTION,
+  PERSISTENT_MESSAGE;
 
   public static TriggerAction valueOfStr(String action) {
     if ("WARN".equals(action)) {
@@ -17,6 +18,12 @@ public enum TriggerAction {
     }
     if ("ALERT".equals(action)) {
       return ALERT_ACTION;
+    }
+    if ("CONVERT".equals(action)) {
+      return CONVERT_ACTION;
+    }
+    if ("PERSISTENT".equals(action)) {
+      return PERSISTENT_MESSAGE;
     }
     if ("JIT".equals(action)) {
       return JIT_ACTION;

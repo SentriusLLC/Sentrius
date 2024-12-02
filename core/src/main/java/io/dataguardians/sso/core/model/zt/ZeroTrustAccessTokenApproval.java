@@ -16,8 +16,8 @@ import lombok.Setter;
 @Entity
 @Setter
 @Getter
-@Table(name = "jit_approvals")
-public class JITApproval {
+@Table(name = "ztat_approvals")
+public class ZeroTrustAccessTokenApproval {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -30,8 +30,8 @@ public class JITApproval {
     private boolean approved;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "jit_request_id", nullable = false)
-    private JITRequest jitRequest;
+    @JoinColumn(name = "ztat_request_id", nullable = false)
+    private ZeroTrustAccessTokenRequest ztatRequest;
 
     @Column(name = "uses", nullable = false)
     private int uses;

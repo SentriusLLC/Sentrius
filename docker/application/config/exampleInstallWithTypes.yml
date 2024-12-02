@@ -2,9 +2,9 @@ userTypes:
   - userTypeName: testType
     systemAccess: CAN_VIEW_SYSTEMS
     ruleAccess: CAN_DEL_RULES
-  - userTypeName: jitType
+  - userTypeName: ztatType
     systemAccess: CAN_VIEW_SYSTEMS
-    jitAccess: CAN_MANAGE_JITS
+    ztatAccess: CAN_MANAGE_ZTATS
 users:
   - username: test
     firstNm: firstname
@@ -14,11 +14,11 @@ users:
     managementGroups:
       - name
       - testGroup
-  - username: jit
+  - username: ztat
     firstNm: firstname
     lastNm: lastname
-    password: jit
-    authorizationType: jitType
+    password: ztat
+    authorizationType: ztatType
     managementGroups:
       - name
       - testGroup

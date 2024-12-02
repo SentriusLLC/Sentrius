@@ -34,7 +34,7 @@ public class SessionOutput  {
     ConcurrentLinkedDeque<Trigger> warn = new ConcurrentLinkedDeque<>();
     ConcurrentLinkedDeque<Trigger> deny = new ConcurrentLinkedDeque<>();
 
-    ConcurrentLinkedDeque<Trigger> jit = new ConcurrentLinkedDeque<>();
+    ConcurrentLinkedDeque<Trigger> ztat = new ConcurrentLinkedDeque<>();
 
     private AtomicReference<Trigger> sessionMessage = new AtomicReference<>();
 
@@ -137,7 +137,7 @@ public class SessionOutput  {
                 + trg.getDescription();
         lock.lock();
         try {
-            jit.add(new Trigger(trg.getAction(), message));
+            ztat.add(new Trigger(trg.getAction(), message));
             warn.add(new Trigger(trg.getAction(), message));
             notEmpty.signalAll(); // Notify waiting threads
         } finally {
@@ -180,7 +180,7 @@ public class SessionOutput  {
         List<Session.TerminalMessage> messages = new ArrayList<>();
         lock.lock();
         try {
-            while ((output.length() == 0 && warn.isEmpty() && jit.isEmpty() && deny.isEmpty()) && condition.test(this) && sessionMessage.get() == null) {
+            while ((output.length() == 0 && warn.isEmpty() && ztat.isEmpty() && deny.isEmpty()) && condition.test(this) && sessionMessage.get() == null) {
                 notEmpty.await(time, unit); // Wait until notified
             }
 

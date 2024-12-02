@@ -8,9 +8,8 @@ import java.util.List;
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.UserInfo;
-import io.dataguardians.automation.auditing.BaseAuditor;
-import io.dataguardians.automation.auditing.SessionRuleIfc;
-import io.dataguardians.automation.auditing.Trigger;
+import io.dataguardians.automation.auditing.BaseAccessTokenAuditor;
+import io.dataguardians.automation.auditing.SessionTokenEvaluator;
 import io.dataguardians.sso.core.data.auditing.RecordingStudio;
 import io.dataguardians.sso.core.model.hostgroup.HostGroup;
 import io.dataguardians.sso.core.model.sessions.SessionLog;
@@ -40,10 +39,10 @@ public class ConnectedSystem {
     private OutputStream inputToChannel;
     private HostSystem hostSystem;
 
-    private BaseAuditor terminalAuditor;
+    private BaseAccessTokenAuditor terminalAuditor;
 
     @Builder.Default
-    private List<SessionRuleIfc> sessionStartupActions = new ArrayList<>();
+    private List<SessionTokenEvaluator> sessionStartupActions = new ArrayList<>();
 
     // websocket for the terminal
     @Builder.Default

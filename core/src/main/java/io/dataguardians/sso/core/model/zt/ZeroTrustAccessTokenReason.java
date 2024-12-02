@@ -14,11 +14,11 @@ import lombok.NoArgsConstructor;
 // JITReason Entity
 @Builder
 @Entity
-@Table(name = "jit_reasons")
+@Table(name = "ztat_reasons")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class JITReason {
+public class ZeroTrustAccessTokenReason {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

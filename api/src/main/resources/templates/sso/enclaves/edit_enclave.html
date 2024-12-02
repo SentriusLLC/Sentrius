@@ -5,7 +5,7 @@
 
     <meta th:replace="~{fragments/header}">
 
-    <title>[[${systemOptions.systemLogoName}]] - Edit Host Group / Enclave</title>
+    <title>[[${systemOptions.systemLogoName}]] - Edit Host Enclave</title>
     <style>
         body {
             background-color: #121212; /* Dark mode background */
@@ -100,7 +100,7 @@
                 <div th:replace="~{fragments/alerts}"></div>
 
 <div class="form-container">
-    <h2>Edit Host Group Configuration</h2>
+    <h2>Edit Enclave Configuration</h2>
     <p>Fill out the following options</p>
 
     <form th:action="@{/api/v1/enclaves/edit}" method="post" class="save_sys_form_add"
@@ -111,9 +111,9 @@
                th:value="${hostGroup.configuration.terminalsLocked}" />
 
         <div class="form-group">
-            <label for="displayName">Host Group Name</label>
+            <label for="displayName">Host Enclave Name</label>
             <input type="text" id="displayName" name="displayName" class="form-control"
-                   placeholder="Enter Host Group Name" th:value="${hostGroup.displayName}" />
+                   placeholder="Enter Host Enclave Name" th:value="${hostGroup.displayName}" />
         </div>
 
         <div class="form-group">
@@ -130,9 +130,9 @@
         </div>
 
         <div class="form-group">
-            <label for="description">Host Group Description</label>
+            <label for="description">Host Enclave Description</label>
             <input type="text" id="description" name="description" class="form-control"
-                   placeholder="Enter Host Group Description" th:value="${hostGroup.description}" />
+                   placeholder="Enter Host Enclave Description" th:value="${hostGroup.description}" />
         </div>
 
         <div class="form-group">

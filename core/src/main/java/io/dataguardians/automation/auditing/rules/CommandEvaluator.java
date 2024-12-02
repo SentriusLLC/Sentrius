@@ -1,11 +1,11 @@
 package io.dataguardians.automation.auditing.rules;
 
 import java.util.Optional;
-import io.dataguardians.automation.auditing.AuditorRule;
+import io.dataguardians.automation.auditing.AccessTokenEvaluator;
 import io.dataguardians.automation.auditing.Trigger;
 import io.dataguardians.automation.auditing.TriggerAction;
 
-public class ForbiddenCommandsRule extends AuditorRule {
+public class CommandEvaluator extends AccessTokenEvaluator {
 
   // HashSet<>
   String command;
@@ -14,7 +14,7 @@ public class ForbiddenCommandsRule extends AuditorRule {
 
   boolean isSanitized = true;
 
-  public ForbiddenCommandsRule() {
+  public CommandEvaluator() {
     action = TriggerAction.ALERT_ACTION;
   }
 

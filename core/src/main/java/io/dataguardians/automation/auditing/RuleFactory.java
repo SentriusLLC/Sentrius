@@ -15,24 +15,24 @@ public class RuleFactory {
     public static void createRules(
         ConnectedSystem connectedSystem,
         SessionTrackingService sessionTrackingService,
-        List<Rule> initialRules, List<AuditorRule> synchronousRules, List<SessionRuleIfc> beforeAndAfterRules,
+        List<Rule> initialRules, List<AccessTokenEvaluator> synchronousRules, List<SessionTokenEvaluator> beforeAndAfterRules,
         Map<String, PluggableServices> pluggableServicesMap)
         throws NoSuchMethodException, ClassNotFoundException, InvocationTargetException, InstantiationException,
         IllegalAccessException {
         for (Rule rule : initialRules) {
-            Class<? extends AuditorRule> newRuleClass =
-                Class.forName(rule.getRuleClass()).asSubclass(AuditorRule.class);
-            AuditorRule newRule = newRuleClass.getConstructor().newInstance();
+            Class<? extends AccessTokenEvaluator> newRuleClass =
+                Class.forName(rule.getRuleClass()).asSubclass(AccessTokenEvaluator.class);
+            AccessTokenEvaluator newRule = newRuleClass.getConstructor().newInstance();
             newRule.configure(rule.getRuleConfig());
             newRule.setConnectedSystem(connectedSystem);
             newRule.setTrackingService(sessionTrackingService);
-            if (newRule instanceof SessionRuleIfc) {
-                ((SessionRuleIfc) newRule).setPluggableServices(pluggableServicesMap);
-                if (((SessionRuleIfc) newRule).isOnlySessionRule()) {
-                    beforeAndAfterRules.add((SessionRuleIfc) newRule);
+            if (newRule instanceof SessionTokenEvaluator) {
+                ((SessionTokenEvaluator) newRule).setPluggableServices(pluggableServicesMap);
+                if (((SessionTokenEvaluator) newRule).isOnlySessionRule()) {
+                    beforeAndAfterRules.add((SessionTokenEvaluator) newRule);
                 } else {
                     log.info("Adding {} to synchronous rules", newRule.getClass().getName());
-                    beforeAndAfterRules.add((SessionRuleIfc) newRule);
+                    beforeAndAfterRules.add((SessionTokenEvaluator) newRule);
                     synchronousRules.add(newRule);
                 }
             } else {

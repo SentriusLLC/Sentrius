@@ -176,12 +176,12 @@
                         <td>
                             <div>
                                 <button th:id="'app_btn_' + ${s.id}"
-                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_JITS')
+                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_ZTATS')
                                      && !operatingUser.id.equals(s.user.id)}"
                                         class="btn btn-secondary app_btn spacer spacer-right">Approve
                                 </button>
                                 <button th:id="'den_btn_' + ${s.id}"
-                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_JITS')
+                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_ZTATS')
                                     && !operatingUser.id.equals(s.user.id)}"
                                         class="btn btn-secondary den_btn spacer spacer-right">Deny
                                 </button>
@@ -221,12 +221,12 @@
                     <td>
                         <div>
                             <button th:id="'ops_app_btn_' + ${s.id}"
-                                    th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_JITS')
+                                    th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_ZTATS')
                                          && !operatingUser.id.equals(s.user.id)}"
                                     class="btn btn-secondary ops_app_btn spacer spacer-right">Approve
                             </button>
                             <button th:id="'ops_den_btn_' + ${s.id}"
-                                    th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_JITS')
+                                    th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_ZTATS')
                                           && !operatingUser.id.equals(s.user.id) }"
                                     class="btn btn-secondary ops_den_btn spacer spacer-right">Deny
                             </button>
@@ -275,7 +275,7 @@
                         <td  th:if="${myJits==false}">
                             <div>
                                 <button th:id="'den_btn_' + ${s.id}"
-                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_JITS')
+                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_ZTATS')
                                                        && !operatingUser.id.equals(s.user.id)
                                                         }"
                                         class="btn btn-secondary den_btn spacer spacer-right">Deny
@@ -313,7 +313,7 @@
                         <td th:if="${myJits==false}">
                             <div>
                                 <button th:id="'ops_den_btn_' + ${s.id}"
-                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_JITS')
+                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_ZTATS')
                                             && !operatingUser.id.equals(s.user.id)}"
                                         class="btn btn-secondary ops_den_btn spacer spacer-right">Deny
                                 </button>
@@ -362,7 +362,7 @@
                         <td th:if="${myJits==false}">
                             <div>
                                 <button th:id="'app_btn_' + ${s.id}"
-                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_JITS')
+                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_ZTATS')
                                                        && !operatingUser.id.equals(s.user.id)
                                                         }"
                                         class="btn btn-secondary app_btn spacer spacer-right">Approve
@@ -398,7 +398,7 @@
                         <td th:if="${myJits==false}">
                             <div>
                                 <button th:id="'ops_app_btn_' + ${s.id}"
-                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_JITS')
+                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_ZTATS')
                                             && !operatingUser.id.equals(s.user.id)}"
                                         class="btn btn-secondary ops_app_btn spacer spacer-right">Approve
                                 </button>

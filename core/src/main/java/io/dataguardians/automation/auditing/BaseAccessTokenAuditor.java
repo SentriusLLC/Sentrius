@@ -6,7 +6,7 @@ import io.dataguardians.sso.core.model.HostSystem;
 import io.dataguardians.sso.core.model.sessions.SessionLog;
 import io.dataguardians.sso.core.model.users.User;
 
-public abstract class BaseAuditor {
+public abstract class BaseAccessTokenAuditor {
 /*
   protected final Long userId;
   protected final Long sessionId;
@@ -26,7 +26,7 @@ public abstract class BaseAuditor {
 
   protected AtomicReference<Trigger> sessionTrigger = new AtomicReference<>();
 
-  public BaseAuditor(User user, SessionLog session, HostSystem system) {
+  public BaseAccessTokenAuditor(User user, SessionLog session, HostSystem system) {
     this.user = user;
     this.session = session;
     this.system = system;

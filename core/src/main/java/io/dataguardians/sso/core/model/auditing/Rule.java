@@ -5,7 +5,7 @@
  */
 package io.dataguardians.sso.core.model.auditing;
 
-import io.dataguardians.automation.auditing.rules.ForbiddenCommandsRule;
+import io.dataguardians.automation.auditing.rules.CommandEvaluator;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,7 +21,7 @@ import lombok.experimental.SuperBuilder;
 public class Rule {
   Long id;
   String displayNm;
-  String ruleClass = ForbiddenCommandsRule.class.getCanonicalName();
+  String ruleClass = CommandEvaluator.class.getCanonicalName();
   String ruleConfig;
 
   String errorMsg;

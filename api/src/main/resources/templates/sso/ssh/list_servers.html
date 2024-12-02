@@ -35,9 +35,41 @@
 <div class="main-content">
     <div th:replace="~{fragments/alerts}"></div>
 
+    <div class="navbar navbar-dark fixed-top navbar-expand-md" role="navigation" xmlns:th="http://www.thymeleaf.org">
+        <div class="container bg-dark px-3 py-2" >
+            <!-- Brand Logo -->
+            <a class="navbar-brand" href="#" style="padding-left: 45px;">
+                <a href="/sso/v1/dashboard" class="nav-link">
+                    <img th:src="${systemOptions.systemLogoPathSmall}" alt="Logo" class="nav-img">
+                </a>
+            </a>
+
+            <!-- Toggler for Mobile -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <!-- Navbar Links -->
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                    <li class="nav-item">
+                        <span id="alertWarn" class="badge text-bg-warning ms-2"></span>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#hostFormModal">
+                            <span id="Add Hosts" class="badge text-bg-dark">Add Host</span>
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <div class="container-fluid">
         <br><br>
-        <h3>Assigned Host Groups (Enclaves)</h3>
+        <h3>Assigned Host Enclaves</h3>
         <table id="group-table" class="display" style="width:100%">
             <thead>
             <tr>
@@ -73,9 +105,45 @@
 </div>
 </div>
 </div>
-
+<script type="module" th:src="@{/js/add_system.js}" defer></script>
 <script type="module" th:src="@{/js/functions.js}"></script>
 <script>
+
+    function deleteServer(groupId,data) {
+        // The API URL you want to call
+        var csrf = "[[${_csrf.token}]]"
+        let terminalsInNewTab = [[${systemOptions.terminalsInNewTab != null ? systemOptions.terminalsInNewTab : false}]];
+        console.log("Data: ", data);
+        const apiUrl = `/api/v1/ssh/servers/delete/${groupId}/${data}`;
+
+        // Perform the API call
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrf // Include the CSRF token in the headers
+            }
+        })
+            .then(response => {
+                if (response.ok) {
+                    // Assuming the API returns a URL to redirect to
+                    return response.json();
+                } else {
+                    throw new Error('Failed to connect to server');
+                }
+            })
+            .then(data => {
+
+                $("#alertTopError").hide();
+                $("#alertTop").text("Server Deleted").show().delay(3000).fadeOut();
+                $('#ssh-table').DataTable().ajax.reload();
+            })
+            .catch(error => {
+                console.log(error);
+                $("#alertTop").hide();
+                $("#alertTopError").text("An unknown error occurred").show().delay(3000).fadeOut();
+            });
+    }
 
     function connectToServer(groupId,data) {
         // The API URL you want to call
@@ -121,7 +189,6 @@
             });
     }
     $(document).ready(function() {
-        console.log("table 1 ");
         let groupName = '[[${(currentGroup != null && currentGroup.displayName != null) ? currentGroup.displayName : "Default Group Name"}]]';
         let groupId = [[${null != currentGroup && currentGroup.groupId != null ? currentGroup.groupId : null}]];
 
@@ -161,7 +228,7 @@
             url = `/api/v1/ssh/servers/list?groupId=${groupId}`;
             console.log("url is " + url);
         }
-        console.log("table 2 ");
+        let canDelete = [[${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DEL_SYSTEMS')}]];
         $('#ssh-table').DataTable({
             ajax: {
                 url: url, // list
@@ -179,7 +246,11 @@
                     render: function(data, type, row) {
                         const groupId = row.group ? row.group.groupId : -1; // Access group.id
                         const id = row.id;
-                        return`<button class="btn btn-primary" onclick="connectToServer(${groupId}, ${id})">Connect</button>`;
+                        let ret=`<button class="btn btn-primary" onclick="connectToServer(${groupId}, ${id})">Connect</button> `;
+                        if (canDelete) {
+                            ret += `<button class="btn btn-primary" onclick="deleteServer(${groupId}, ${id})">Delete</button>`;
+                        }
+                        return ret;
                     }
                 }
 

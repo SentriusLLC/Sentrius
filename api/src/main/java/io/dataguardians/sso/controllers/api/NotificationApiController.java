@@ -118,17 +118,17 @@ public class NotificationApiController extends BaseController {
         if (!AccessUtil.canAccess(operatingUser, SSHAccessEnum.CAN_MANAGE_SYSTEMS)) {
             return ResponseEntity.ok(JsonUtil.MAPPER.createObjectNode());
         }
-        ArrayNode jitResponse = JsonUtil.MAPPER.createArrayNode();
+        ArrayNode ztatResponse = JsonUtil.MAPPER.createArrayNode();
         errorOutputService.getErrorOutputs(0, 10).stream()
             .forEach(
                 x -> {
                     ObjectNode node = JsonUtil.MAPPER.createObjectNode();
                     node.put("id", x.getId());
                     node.put("message", x.getErrorLogs());
-                    jitResponse.add(node);
+                    ztatResponse.add(node);
                 });
 
-        return ResponseEntity.ok(jitResponse);
+        return ResponseEntity.ok(ztatResponse);
     }
 
     @PostMapping("/remove")

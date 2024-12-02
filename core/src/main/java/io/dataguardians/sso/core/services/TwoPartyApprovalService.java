@@ -4,10 +4,10 @@ package io.dataguardians.sso.core.services;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dataguardians.sso.core.model.HostSystem;
 import io.dataguardians.sso.core.model.users.User;
-import io.dataguardians.sso.core.model.security.enums.JITAccessEnum;
+import io.dataguardians.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
 import io.dataguardians.sso.core.model.security.enums.SystemOperationsEnum;
-import io.dataguardians.sso.core.model.zt.JITReason;
-import io.dataguardians.sso.core.model.zt.JITRequest;
+import io.dataguardians.sso.core.model.zt.ZeroTrustAccessTokenReason;
+import io.dataguardians.sso.core.model.zt.ZeroTrustAccessTokenRequest;
 import io.dataguardians.sso.core.utils.MessagingUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,18 +22,18 @@ import java.sql.SQLException;
 public class TwoPartyApprovalService {
 
     private final TwoPartyApprovalConfigService configService;
-    private final JITRequestService jitRequestService;
+    private final ZeroTrustRequestService ztatRequestService;
     private final ObjectMapper objectMapper;
-    private final JITService jitService;
+    private final ZeroTrustAccessTokenService ztatService;
 
     private static HostSystem SENTRIUS_SYS = HostSystem.builder().id(-1L).build();
 
-    public TwoPartyApprovalService(TwoPartyApprovalConfigService configService, JITRequestService jitRequestService,
-                                   ObjectMapper objectMapper, JITService jitService) {
+    public TwoPartyApprovalService(TwoPartyApprovalConfigService configService, ZeroTrustRequestService ztatRequestService,
+                                   ObjectMapper objectMapper, ZeroTrustAccessTokenService ztatService) {
         this.configService = configService;
-        this.jitRequestService = jitRequestService;
+        this.ztatRequestService = ztatRequestService;
         this.objectMapper = objectMapper;
-        this.jitService = jitService;
+        this.ztatService = ztatService;
     }
 
     @Transactional
@@ -41,7 +41,7 @@ public class TwoPartyApprovalService {
         @NonNull SystemOperationsEnum systemOperationsEnum,
         @NonNull HttpServletRequest request,
         @NonNull User requestingUser,
-        @NonNull JITAccessEnum.OpsIfc lambda) throws ServletException {
+        @NonNull ZeroTrustAccessTokenEnum.OpsIfc lambda) throws ServletException {
 
         return validateApproval(systemOperationsEnum, request, requestingUser, lambda, null);
     }
@@ -51,7 +51,7 @@ public class TwoPartyApprovalService {
         @NonNull SystemOperationsEnum systemOperationsEnum,
         @NonNull HttpServletRequest request,
         @NonNull User requestingUser,
-        @NonNull JITAccessEnum.OpsIfc lambda,
+        @NonNull ZeroTrustAccessTokenEnum.OpsIfc lambda,
         String friendlyName) throws ServletException {
 
         var twoPartyApprovalConfig = configService.getApprovalConfig(systemOperationsEnum);
@@ -78,19 +78,19 @@ public class TwoPartyApprovalService {
                     objectNode.put("friendlyName", friendlyName);
                 }
 
-                JITReason reason = JITReason.builder()
+                ZeroTrustAccessTokenReason reason = ZeroTrustAccessTokenReason.builder()
                     .commandNeed(systemOperationsEnum.toString())
                     .build();
 
-                JITRequest jitRequest = JITRequest.builder()
+                ZeroTrustAccessTokenRequest ztatRequest = ZeroTrustAccessTokenRequest.builder()
                     .system(HostSystem.builder().id(-1L).build())
                     .command(objectNode.toString())
                     .user(requestingUser)
-                    .jitReason(reason)
+                    .ztatReason(reason)
                     .build();
 
                 try {
-                    return handleApprovalRequest(requestingUser, objectNode.toString(), referrer, referralUri, lambda, jitRequest);
+                    return handleApprovalRequest(requestingUser, objectNode.toString(), referrer, referralUri, lambda, ztatRequest);
                 } catch (SQLException | GeneralSecurityException e) {
                     throw new RuntimeException(e);
                 }
@@ -100,18 +100,18 @@ public class TwoPartyApprovalService {
         }
     }
 
-    private String handleApprovalRequest(User requestingUser, String command, String referrer, StringBuilder referralUri, JITAccessEnum.OpsIfc lambda, JITRequest jitRequest) throws SQLException, GeneralSecurityException {
-        if (jitRequestService.hasJITRequest(command, requestingUser.getId(), -1L)) {
-            if (!jitService.isExpired(command, requestingUser, SENTRIUS_SYS)) {
-                if (jitService.isApproved(command, requestingUser, SENTRIUS_SYS)) {
-                    if (jitService.isActive(command, requestingUser, SENTRIUS_SYS)) {
-                        jitService.incrementUses(command, requestingUser, SENTRIUS_SYS);
+    private String handleApprovalRequest(User requestingUser, String command, String referrer, StringBuilder referralUri, ZeroTrustAccessTokenEnum.OpsIfc lambda, ZeroTrustAccessTokenRequest ztatRequest) throws SQLException, GeneralSecurityException {
+        if (ztatRequestService.hasJITRequest(command, requestingUser.getId(), -1L)) {
+            if (!ztatService.isExpired(command, requestingUser, SENTRIUS_SYS)) {
+                if (ztatService.isApproved(command, requestingUser, SENTRIUS_SYS)) {
+                    if (ztatService.isActive(command, requestingUser, SENTRIUS_SYS)) {
+                        ztatService.incrementUses(command, requestingUser, SENTRIUS_SYS);
                         return lambda.approved(0L);
                     } else {
-                        jitRequestService.addJITRequest(jitRequest);
+                        ztatRequestService.addJITRequest(ztatRequest);
                         return createRedirect(referrer, referralUri, MessagingUtil.REQUIRE_APPROVAL);
                     }
-                } else if (jitService.isDenied(command, requestingUser, SENTRIUS_SYS)) {
+                } else if (ztatService.isDenied(command, requestingUser, SENTRIUS_SYS)) {
                     return createRedirect(referrer, referralUri, MessagingUtil.DENIED);
                 } else {
                     return createRedirect(referrer, referralUri, MessagingUtil.AWAITING_APPROVAL);
@@ -119,8 +119,8 @@ public class TwoPartyApprovalService {
             }
         }
 
-        jitRequestService.addJITRequest(jitRequest);
-        lambda.created(jitRequest.getId());
+        ztatRequestService.addJITRequest(ztatRequest);
+        lambda.created(ztatRequest.getId());
         return createRedirect(referrer, referralUri, MessagingUtil.REQUIRE_APPROVAL);
     }
 

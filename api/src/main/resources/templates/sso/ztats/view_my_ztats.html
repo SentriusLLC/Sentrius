@@ -3,7 +3,7 @@
 
 <head>
     <meta th:replace="~{fragments/header}" />
-    <title>[[${systemOptions.systemLogoName}]] - JIT Management</title>
+    <title>[[${systemOptions.systemLogoName}]] - ZTAT Management</title>
 
     <!-- Styles -->
     <style>
@@ -63,12 +63,12 @@
                 <div th:replace="~{fragments/alerts}"></div>
 
                 <div class="container-fluid">
-    <!-- JIT Management Sections -->
+    <!-- ZTAT Management Sections -->
     <div class="row">
-        <!-- Open Terminal JITs -->
+        <!-- Open Terminal ZTATs -->
         <div class="col-md-6 table-container">
-            <h2 class="toast-header">Open Terminal JITs</h2>
-            <table id="terminal-jits-table" class="display">
+            <h2 class="toast-header">Open Terminal ZTATs</h2>
+            <table id="terminal-ztats-table" class="display">
                 <thead>
                 <tr>
                     <th>Operation</th>
@@ -84,9 +84,9 @@
                     <td th:text="${s.hostName}"></td>
                     <td>
                         <button th:id="'app_btn_' + ${s.id}" class="btn btn-primary btn-sm app_btn"
-                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_JITS') && !s.isCurrentUser}">Approve</button>
+                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_ZTATS') && !s.isCurrentUser}">Approve</button>
                         <button th:id="'den_btn_' + ${s.id}" class="btn btn-danger btn-sm den_btn"
-                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_JITS') && !s.isCurrentUser}">Deny</button>
+                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_ZTATS') && !s.isCurrentUser}">Deny</button>
                         <button th:id="'rev_btn_' + ${s.id}"
                                 th:if="${s.isCurrentUser }"
                                 class="btn btn-secondary rev_btn spacer spacer-right">Revoke
@@ -98,8 +98,8 @@
         </div>
 
         <div class="col-md-6 table-container">
-            <h2 class="toast-header">Open OPS JITs</h2>
-            <table id="ops-jits-table" class="display">
+            <h2 class="toast-header">Open OPS ZTATs</h2>
+            <table id="ops-ztats-table" class="display">
                 <thead>
                 <tr>
                     <th>Operation</th>
@@ -113,12 +113,12 @@
                     <td th:text="${s.userName}"></td>
                     <td>
                          <button th:id="'ops_app_btn_' + ${s.id}"
-                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_JITS')
+                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_ZTATS')
                                          && !s.isCurrentUser}"
                                 class="btn btn-secondary ops_app_btn spacer spacer-right">Approve
                         </button>
                         <button th:id="'ops_den_btn_' + ${s.id}"
-                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_JITS')
+                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_ZTATS')
                                           && !s.isCurrentUser }"
                                 class="btn btn-secondary ops_den_btn spacer spacer-right">Deny
                         </button>
@@ -134,14 +134,14 @@
     </div>
                     </div>
 
-        <!-- Open OPS JITs -->
+        <!-- Open OPS ZTATs -->
 
 
-    <!-- Approved JITs -->
+    <!-- Approved ZTATs -->
     <div class="row">
         <div class="col-md-6 table-container">
-            <h2 class="toast-header">Approved Terminal JITs</h2>
-            <table id="approved-terminal-jits-table" class="display">
+            <h2 class="toast-header">Approved Terminal ZTATs</h2>
+            <table id="approved-terminal-ztats-table" class="display">
                 <thead>
                 <tr>
                     <th>Operation</th>
@@ -161,8 +161,8 @@
             </table>
         </div>
         <div class="col-md-6 table-container">
-            <h2 class="toast-header">Approved OPs JITs</h2>
-            <table id="approved-ops-jits-table" class="display">
+            <h2 class="toast-header">Approved OPs ZTATs</h2>
+            <table id="approved-ops-ztats-table" class="display">
                 <thead>
                 <tr>
                     <th>Operation</th>
@@ -185,8 +185,8 @@
 
     <div class="row">
         <div class="col-md-6 table-container">
-            <h2 class="toast-header">Denied Terminal JITs</h2>
-            <table id="denied-terminal-jits-table" class="display">
+            <h2 class="toast-header">Denied Terminal ZTATs</h2>
+            <table id="denied-terminal-ztats-table" class="display">
                 <thead>
                 <tr>
                     <th>Operation</th>
@@ -206,8 +206,8 @@
             </table>
         </div>
         <div class="col-md-6 table-container">
-            <h2 class="toast-header">Denied Ops JITs</h2>
-            <table id="denied-ops-jits-table" class="display">
+            <h2 class="toast-header">Denied Ops ZTATs</h2>
+            <table id="denied-ops-ztats-table" class="display">
                 <thead>
                 <tr>
                     <th>Operation</th>
@@ -240,7 +240,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">JIT Request Details</h5>
+                    <h5 class="modal-title">ZTAT Request Details</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -260,12 +260,12 @@
 <script>
     $(document).ready(function () {
         // Initialize DataTables
-        $('#terminal-jits-table').DataTable();
-        $('#ops-jits-table').DataTable();
-        $('#approved-terminal-jits-table').DataTable();
-        $('#approved-ops-jits-table').DataTable();
-        $('#denied-terminal-jits-table').DataTable();
-        $('#denied-ops-jits-table').DataTable();
+        $('#terminal-ztats-table').DataTable();
+        $('#ops-ztats-table').DataTable();
+        $('#approved-terminal-ztats-table').DataTable();
+        $('#approved-ops-ztats-table').DataTable();
+        $('#denied-terminal-ztats-table').DataTable();
+        $('#denied-ops-ztats-table').DataTable();
 
         // Handle modal display logic
         const queryString = window.location.search;
@@ -278,43 +278,43 @@
         //call delete action
         $(".den_btn").button().click(function () {
             var id = $(this).attr('id').replace("den_btn_", "");
-            window.location = '/api/v1/zerotrust/jit/terminal/deny?jitId=' + id;
+            window.location = '/api/v1/zerotrust/accesstoken/terminal/deny?ztatId=' + id;
         });
 
         $(".ops_den_btn").button().click(function () {
             var id = $(this).attr('id').replace("ops_den_btn_", "");
-            window.location = '/v1/zerotrust/jit/ops/deny?jitId=' + id;
+            window.location = '/v1/zerotrust/accesstoken/ops/deny?ztatId=' + id;
         });
 
         $(".rev_btn").button().click(function () {
             var id = $(this).attr('id').replace("rev_btn_", "");
-            window.location = '/api/v1/zerotrust/jit/terminal/revoke?jitId=' + id;
+            window.location = '/api/v1/zerotrust/accesstoken/terminal/revoke?ztatId=' + id;
         });
 
         $(".ops_rev_btn").button().click(function () {
             var id = $(this).attr('id').replace("ops_rev_btn_", "");
-            window.location = '/v1/zerotrust/jit/my/ops/revoke?jitId=' + id;
+            window.location = '/v1/zerotrust/accesstoken/my/ops/revoke?ztatId=' + id;
         });
 
         $(".up_den_btn").button().click(function () {
             var id = $(this).attr('id').replace("up_den_btn_", "");
-            window.location = '/manage/denyJIT?jitId=' + id;
+            window.location = '/manage/denyZTAT?ztatId=' + id;
         });
 
         $(".up_app_btn").button().click(function () {
             var id = $(this).attr('id').replace("up_app_btn_", "");
-            window.location = '/manage/approveJIT?jitId=' + id;
+            window.location = '/manage/approveZTAT?ztatId=' + id;
         });
 
         $(".app_btn").button().click(function () {
             var id = $(this).attr('id').replace("app_btn_", "");
             console.log("ALKJDSLKJG");
-            window.location = '/api/v1/zerotrust/jit/terminal/approve?jitId=' + id;
+            window.location = '/api/v1/zerotrust/accesstoken/terminal/approve?ztatId=' + id;
         });
 
         $(".ops_app_btn").button().click(function () {
             var id = $(this).attr('id').replace("ops_app_btn_", "");
-            window.location = '/api/v1/zerotrust/jit/ops/approve?jitId=' + id;
+            window.location = '/api/v1/zerotrust/accesstoken/ops/approve?ztatId=' + id;
         });
     });
 </script>

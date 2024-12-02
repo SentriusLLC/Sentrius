@@ -12,6 +12,7 @@ enum TriggerAction {
   RECORD_ACTION = 6;
   APPROVE_ACTION = 7;
   PERSISTENT_MESSAGE = 8;
+  CONVERT_ACTION=9;
 }
 
 enum MessageType {

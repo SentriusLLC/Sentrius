@@ -10,7 +10,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import io.dataguardians.sso.core.model.security.enums.ApplicationAccessEnum;
-import io.dataguardians.sso.core.model.security.enums.JITAccessEnum;
+import io.dataguardians.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
 import io.dataguardians.sso.core.model.security.enums.RuleAccessEnum;
 import io.dataguardians.sso.core.model.security.enums.SSHAccessEnum;
 import io.dataguardians.sso.core.model.security.enums.SystemOperationsEnum;
@@ -32,6 +32,6 @@ public @interface LimitAccess {
 
   SystemOperationsEnum[] systemOperations() default {};
 
-  JITAccessEnum[] jitAccess() default {};
+  ZeroTrustAccessTokenEnum[] ztatAccess() default {};
 
 }

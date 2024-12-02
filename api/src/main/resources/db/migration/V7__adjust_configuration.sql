@@ -1,1 +1,0 @@
-ALTER TABLE host_groups ALTER COLUMN configuration CLOB;

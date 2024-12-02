@@ -4,7 +4,7 @@ import java.util.Optional;
 import io.dataguardians.sso.core.model.ConnectedSystem;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
 
-public abstract class AuditorRule {
+public abstract class AccessTokenEvaluator {
 
   private ConnectedSystem connectedSystem;
   private SessionTrackingService sessionTrackingService;

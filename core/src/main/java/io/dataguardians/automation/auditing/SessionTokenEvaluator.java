@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.Optional;
 import io.dataguardians.sso.core.services.PluggableServices;
 
-public abstract class SessionRuleIfc extends AuditorRule {
+public abstract class SessionTokenEvaluator extends AccessTokenEvaluator {
 
     protected Map<String,PluggableServices> pluggableServices = new HashMap<>();
 

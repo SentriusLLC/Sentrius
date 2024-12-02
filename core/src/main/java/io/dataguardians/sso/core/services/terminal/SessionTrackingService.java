@@ -236,6 +236,7 @@ public class SessionTrackingService implements PluggableServices {
       switch(trigger.getAction()){
         case NO_ACTION -> userSessionsOutput.getSessionOutputMap().get(connectedSystem.getSession().getId()).addWarning(trigger);
         case WARN_ACTION -> userSessionsOutput.getSessionOutputMap().get(connectedSystem.getSession().getId()).addWarning(trigger);
+        case PERSISTENT_MESSAGE -> userSessionsOutput.getSessionOutputMap().get(connectedSystem.getSession().getId()).addWarning(trigger);
         case JIT_ACTION -> userSessionsOutput.getSessionOutputMap().get(connectedSystem.getSession().getId()).addJIT(trigger);
         case DENY_ACTION -> userSessionsOutput.getSessionOutputMap().get(connectedSystem.getSession().getId()).addDenial(trigger);
       }

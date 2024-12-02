@@ -11,7 +11,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dataguardians.sso.core.annotations.LimitAccess;
 import io.dataguardians.sso.core.controllers.BaseController;
 import io.dataguardians.sso.core.model.dto.SystemOption;
+import io.dataguardians.sso.core.model.dto.UserTypeDTO;
 import io.dataguardians.sso.core.model.security.enums.UserAccessEnum;
+import io.dataguardians.sso.core.model.users.User;
 import io.dataguardians.sso.core.model.users.UserConfig;
 import io.dataguardians.sso.core.model.users.UserSettings;
 import io.dataguardians.sso.core.services.UserCustomizationService;
@@ -43,6 +45,19 @@ public class UserController extends BaseController {
         var user = userService.getOperatingUser(request,response, null);
         return userThemeService.getUserSettingsById(user.getId()).orElse(null);
     }
+
+    @ModelAttribute("typeList")
+    public List<UserTypeDTO> getUserTypeList() {
+        var types = userService.getUserTypeList();
+        log.info("UserTypeList: {}", types);
+        return types;
+    }
+
+    @ModelAttribute("user")
+    public User getUser() {
+        return new User();
+    }
+
 
     @ModelAttribute("userOptions")
     public List<SystemOption> getUserOptions(HttpServletRequest request, HttpServletResponse response)

@@ -248,9 +248,9 @@
                                     <a href="#" class="btn btn-primary" data-bs-toggle="modal"
                                        data-bs-target="#userFormModal">Add User</a>
                                     <a href="/sso/v1/users/settings" class="btn btn-primary"
-                                       th:if="${!#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_JITS')}">Your Settings</a>
-                                    <a href="/sso/v1/zerotrust/jit/list" class="btn btn-primary"
-                                       th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_JITS')}">View JITs</a>
+                                       th:if="${!#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_ZTATS')}">Your Settings</a>
+                                    <a href="/sso/v1/zerotrust/accesstoken/list" class="btn btn-primary"
+                                       th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_ZTATS')}">View JITs</a>
                                 </div>
 
                                 <!-- Visualization Area -->

@@ -54,13 +54,48 @@
 
 <body>
 
-<div th:replace="fragments/add_system"></div>
+<div th:replace="fragments/add_user"></div>
 <div class="container-fluid">
     <div class="row flex-nowrap">
         <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
         <div class="col py-4">
-            <div class="main-content">
-                <div th:replace="~{fragments/alerts}"></div>
+                <div class="main-content">
+
+
+                    <div class="navbar navbar-dark fixed-top navbar-expand-md" role="navigation" xmlns:th="http://www.thymeleaf.org">
+                        <div class="container bg-dark px-3 py-2" >
+                            <!-- Brand Logo -->
+                            <a class="navbar-brand" href="#" style="padding-left: 45px;">
+                                <a href="/sso/v1/dashboard" class="nav-link">
+                                    <img th:src="${systemOptions.systemLogoPathSmall}" alt="Logo" class="nav-img">
+                                </a>
+                            </a>
+
+                            <!-- Toggler for Mobile -->
+                            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                                <span class="navbar-toggler-icon"></span>
+                            </button>
+
+                            <!-- Navbar Links -->
+                            <div class="collapse navbar-collapse" id="navbarCollapse">
+                                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                                    <li class="nav-item">
+                                        <span id="alertWarn" class="badge text-bg-warning ms-2"></span>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="#" class="nav-link" data-bs-toggle="modal"
+                                           data-bs-target="#userFormModal"
+                                           th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_EDIT_USERS')}">
+                                            <span id="Add Hosts" class="badge text-bg-dark">Add User</span>
+                                        </a>
+                                    </li>
+
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div th:replace="~{fragments/alerts}"></div>
 
     <h3>Users</h3>
     <table id="user-table" class="display" style="width:100%">
@@ -77,10 +112,12 @@
         </tbody>
     </table>
 
+
 </div>
 </div>
 </div>
 </div>
+<script type="module" th:src="@{/js/add_user.js}" defer></script>
 </body>
 
 </html>

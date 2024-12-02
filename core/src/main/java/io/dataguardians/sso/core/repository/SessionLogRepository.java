@@ -10,6 +10,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface SessionLogRepository extends JpaRepository<SessionLog, Long> {
-    @Query("SELECT DISTINCT t FROM SessionLog t")
+    @Query("SELECT DISTINCT t FROM SessionLog t order by t.sessionTm desc")
     List<SessionLog> findUniqueSessionIds();
 }

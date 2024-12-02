@@ -1,12 +1,12 @@
 package io.dataguardians.config.audting;
 
-import io.dataguardians.automation.auditing.RuleAlertAuditor;
+import io.dataguardians.automation.auditing.AccessTokenAuditor;
 
 public class DefaultAuditConfigProvider implements AuditingConfigProvider {
 
     @Override
     public String getAuditorClass() {
-        return RuleAlertAuditor.class.getCanonicalName();
+        return AccessTokenAuditor.class.getCanonicalName();
     }
 
     @Override

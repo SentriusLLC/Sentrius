@@ -27,12 +27,15 @@ document.addEventListener('DOMContentLoaded', function () {
                         modal.hide();
                     }
                     countUsers();
+                    const userTable = document.getElementById("user-table");
+                    if (userTable){
+                        $('#user-table').DataTable().ajax.reload(null, false);
+                    }
                 })
                 .catch((error) => {
                     $("#alertTop").hide();
                     $("#alertTopError").text("User Not Added").show().delay(3000).fadeOut();
-                    console.error("Error:", error);
-                });
+cd                });
         });
     }
 });

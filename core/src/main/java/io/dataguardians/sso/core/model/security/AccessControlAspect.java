@@ -3,7 +3,7 @@ package io.dataguardians.sso.core.model.security;
 import io.dataguardians.sso.core.annotations.LimitAccess;
 import io.dataguardians.sso.core.model.users.User;
 import io.dataguardians.sso.core.model.security.enums.ApplicationAccessEnum;
-import io.dataguardians.sso.core.model.security.enums.JITAccessEnum;
+import io.dataguardians.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
 import io.dataguardians.sso.core.model.security.enums.RuleAccessEnum;
 import io.dataguardians.sso.core.model.security.enums.SSHAccessEnum;
 import io.dataguardians.sso.core.model.security.enums.UserAccessEnum;
@@ -67,7 +67,7 @@ public class AccessControlAspect {
         return AccessUtil.canAccess(operatingUser, access);
     }
 
-    protected boolean canAccess(User operatingUser, JITAccessEnum access) {
+    protected boolean canAccess(User operatingUser, ZeroTrustAccessTokenEnum access) {
         return AccessUtil.canAccess(operatingUser, access);
     }
 

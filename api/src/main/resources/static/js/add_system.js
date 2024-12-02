@@ -127,6 +127,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                     $("#alertTop").text("Host added successfully").show().delay(3000).fadeOut();
                     countAssignedSystems();
+                    const grpTable = document.getElementById("group-table");
+                    if (grpTable) {
+                        $('#group-table').DataTable().ajax.reload(null, false);
+                    }
+                    const sshTable = document.getElementById("ssh-table");
+                    if (sshTable) {
+                        $('#ssh-table').DataTable().ajax.reload(null, false);
+                    }
                 })
                 .catch((error) => {
                     console.error("Error submitting the form:", error);

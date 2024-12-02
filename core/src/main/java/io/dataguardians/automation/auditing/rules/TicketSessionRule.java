@@ -1,14 +1,14 @@
 package io.dataguardians.automation.auditing.rules;
 
 import java.util.Optional;
-import io.dataguardians.automation.auditing.SessionRuleIfc;
+import io.dataguardians.automation.auditing.SessionTokenEvaluator;
 import io.dataguardians.automation.auditing.Trigger;
 import io.dataguardians.automation.auditing.TriggerAction;
 import io.dataguardians.sso.core.model.ConnectedSystem;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
 import io.dataguardians.sso.integrations.ticketing.TicketService;
 
-public class TicketSessionRule extends SessionRuleIfc {
+public class TicketSessionRule extends SessionTokenEvaluator {
 
     private static final String DESCRIPTION = "Require tickets to be filed with a high severity incident to proceed " +
         "with breakglass.";

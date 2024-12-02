@@ -1,7 +1,7 @@
 -- Insert a UserType with full access (e.g., a "System Admin")
-INSERT INTO usertypes (id, user_type_name, automation_access, system_access, rule_access, user_access, jit_access, application_access)
+INSERT INTO usertypes (id, user_type_name, automation_access, system_access, rule_access, user_access, ztat_access, application_access)
 VALUES (-1, 'Application Admin', 'CAN_RUN_AUTOMATION', 'CAN_MANAGE_SYSTEMS', 'CAN_VIEW_RULES', 'CAN_MANAGE_USERS',
-        'CAN_VIEW_JITS',
+        'CAN_VIEW_ZTATS',
         'CAN_MANAGE_APPLICATION');
 
 -- Insert a test user and associate with the UserType created above

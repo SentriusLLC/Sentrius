@@ -15,7 +15,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -23,11 +22,11 @@ import lombok.experimental.SuperBuilder;
 
 @SuperBuilder(toBuilder = true)
 @Entity
-@Table(name = "jit_requests")
+@Table(name = "ztat_requests")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class JITRequest  {
+public class ZeroTrustAccessTokenRequest {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -48,12 +47,12 @@ public class JITRequest  {
     private String commandHash;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "jit_reason_id")
-    private JITReason jitReason;
+    @JoinColumn(name = "ztat_reason_id")
+    private ZeroTrustAccessTokenReason ztatReason;
 
     @Column(name = "last_updated", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private java.sql.Timestamp lastUpdated;
     // Add the relationship to OpsApproval
-    @OneToMany(mappedBy = "jitRequest", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private List<JITApproval> approvals;
+    @OneToMany(mappedBy = "ztatRequest", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<ZeroTrustAccessTokenApproval> approvals;
 }

@@ -1,12 +1,12 @@
 package io.dataguardians.automation.auditing.rules;
 
 import java.util.Optional;
-import io.dataguardians.automation.auditing.AuditorRule;
+import io.dataguardians.automation.auditing.AccessTokenEvaluator;
 import io.dataguardians.automation.auditing.Trigger;
 import io.dataguardians.automation.auditing.TriggerAction;
 import org.apache.commons.collections4.trie.PatriciaTrie;
 
-public class AllowedCommandsRule extends AuditorRule {
+public class AllowedCommandsRule extends AccessTokenEvaluator {
 
   PatriciaTrie<String> commands = new PatriciaTrie<>();
   TriggerAction action;

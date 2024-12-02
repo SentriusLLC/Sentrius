@@ -6,7 +6,7 @@ CREATE TABLE usertypes (
                            system_access VARCHAR(255) DEFAULT 'CAN_VIEW_SYSTEMS',
                            rule_access VARCHAR(255) DEFAULT 'CAN_VIEW_RULES',
                            user_access VARCHAR(255) DEFAULT 'CAN_VIEW_USERS',
-                           jit_access VARCHAR(255) DEFAULT 'CAN_VIEW_JITS',
+                           ztat_access VARCHAR(255) DEFAULT 'CAN_VIEW_ZTATS',
                            application_access VARCHAR(255) DEFAULT 'CAN_LOG_IN'
 );
 
@@ -38,7 +38,7 @@ CREATE TABLE host_groups (
          id BIGSERIAL PRIMARY KEY,
          name VARCHAR(255),
          description VARCHAR(255),
-         configuration TEXT
+         configuration CLOB
 );
 
 CREATE TABLE user_hostgroups (
@@ -127,13 +127,20 @@ create table if not exists rules (
         ruleClass varchar,
         ruleConfig varchar);
 
-create table if not exists system_rules (
-    system_id INTEGER,
-    rule_id INTEGER,
-    primary key (system_id, rule_id),
-    foreign key (system_id) references host_groups(id),
-    foreign key (rule_id) references rules(id)
-);
+CREATE TABLE IF NOT EXISTS system_rules (
+                                            system_id INTEGER NOT NULL,
+                                            rule_id INTEGER NOT NULL,
+                                            PRIMARY KEY (system_id, rule_id),
+    CONSTRAINT fk_system
+    FOREIGN KEY (system_id)
+    REFERENCES host_groups(id)
+    ON DELETE CASCADE,
+    CONSTRAINT fk_rule
+    FOREIGN KEY (rule_id)
+    REFERENCES rules(id)
+    ON DELETE CASCADE
+    );
+
 
 create table if not exists terminal_log (
     session_id BIGINT, instance_id INTEGER,
@@ -145,32 +152,37 @@ create table if not exists terminal_log (
     port INTEGER not null,
     foreign key (session_id) references session_log(id) on delete cascade);
 
-create table if not exists jit_reasons (
+ALTER TABLE terminal_log
+ALTER COLUMN output TYPE TEXT;
+
+ALTER TABLE terminal_log ALTER COLUMN output CLOB;
+
+create table if not exists ztat_reasons (
     id BIGSERIAL PRIMARY KEY,
     command_need varchar not null,
     reason_identifier varchar, url varchar);
 
-create table if not exists jit_requests (
+create table if not exists ztat_requests (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT,
     system_id BIGINT,
     command varchar not null,
     command_hash varchar not null,
-    jit_reason_id BIGINT,
+    ztat_reason_id BIGINT,
     last_updated timestamp default CURRENT_TIMESTAMP,
     foreign key (user_id) references users(id),
-    foreign key (jit_reason_id) references jit_reasons(id),
+    foreign key (ztat_reason_id) references ztat_reasons(id),
     foreign key (system_id) references host_systems(host_system_id));
 
-create table if not exists jit_approvals (
+create table if not exists ztat_approvals (
     id BIGSERIAL PRIMARY KEY,
     approver_id BIGINT,
-    jit_request_id BIGINT,
+    ztat_request_id BIGINT,
     uses INTEGER,
     approved boolean not null default false,
     last_updated timestamp default CURRENT_TIMESTAMP,
     foreign key (approver_id) references users(id),
-    foreign key (jit_request_id) references jit_requests(id));
+    foreign key (ztat_request_id) references ztat_requests(id));
 
 
 create table if not exists notifications (
@@ -256,3 +268,41 @@ CREATE TABLE IF NOT EXISTS user_public_keys (
 
 create table if not exists application_key (id BIGSERIAL PRIMARY KEY, public_key TEXT not null,
                                             private_key TEXT not null, passphrase varchar);
+
+create table if not exists operations_request (id BIGINT PRIMARY KEY AUTO_INCREMENT, user_id BIGINT, command varchar not null, command_hash varchar not null, ztat_reason_id BIGINT, last_updated timestamp default CURRENT_TIMESTAMP,  foreign key (user_id) references users(id), foreign key (ztat_reason_id) references ztat_reasons(id));
+
+create table if not exists ops_approvals (id BIGINT PRIMARY KEY AUTO_INCREMENT, approver_id BIGINT, ztat_request_id BIGINT, uses INTEGER, approved boolean not null default false, last_updated timestamp default CURRENT_TIMESTAMP,  foreign key (approver_id) references users(id), foreign key (ztat_request_id) references operations_request(id));
+
+CREATE TABLE if not exists integration_security_tokens (
+     id BIGSERIAL PRIMARY KEY, -- Auto-incrementing ID
+     name VARCHAR(255) NOT NULL,                        -- Name of the integration
+     connection_info CLOB NOT NULL,                     -- JSON column to store connection details
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,    -- Timestamp for record creation
+     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE
+         CURRENT_TIMESTAMP, -- Timestamp for record updates
+     type VARCHAR(100) NOT NULL DEFAULT 'UNKNOWN'
+);
+
+
+create table if not exists user_settings (
+                                          user_id BIGINT PRIMARY KEY,
+                                          bg varchar(7),
+    fg varchar(7),
+    d1 varchar(7),
+    d2 varchar(7),
+    d3 varchar(7),
+    d4 varchar(7),
+    d5 varchar(7),
+    d6 varchar(7),
+    d7 varchar(7),
+    d8 varchar(7),
+    b1 varchar(7),
+    b2 varchar(7),
+    b3 varchar(7),
+    b4 varchar(7),
+    b5 varchar(7),
+    b6 varchar(7),
+    b7 varchar(7),
+    b8 varchar(7),
+    json_config TEXT,
+    foreign key (user_id) references users(id) on delete cascade);
