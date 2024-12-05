@@ -27,12 +27,9 @@ public class DeletePrevention extends CommandEvaluator {
       log.debug("Skipping commented command: {}", text);
       return Optional.empty();
     }
-    log.debug("Checking command: {}", text);
     if (deletePattern.matcher(text).find()) {
-      log.debug("Match found: {}", text);
       return Optional.of(new Trigger(action, "Delete is not allowed"));
     }
-    log.debug("No match for: {}", text);
     return Optional.empty();
   }
 }

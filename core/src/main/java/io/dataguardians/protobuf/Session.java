@@ -55,6 +55,14 @@ public final class Session {
      * <code>PERSISTENT_MESSAGE = 8;</code>
      */
     PERSISTENT_MESSAGE(8),
+    /**
+     * <code>CONVERT_ACTION = 9;</code>
+     */
+    CONVERT_ACTION(9),
+    /**
+     * <code>PROMPT_ACTION = 10;</code>
+     */
+    PROMPT_ACTION(10),
     UNRECOGNIZED(-1),
     ;
 
@@ -94,6 +102,14 @@ public final class Session {
      * <code>PERSISTENT_MESSAGE = 8;</code>
      */
     public static final int PERSISTENT_MESSAGE_VALUE = 8;
+    /**
+     * <code>CONVERT_ACTION = 9;</code>
+     */
+    public static final int CONVERT_ACTION_VALUE = 9;
+    /**
+     * <code>PROMPT_ACTION = 10;</code>
+     */
+    public static final int PROMPT_ACTION_VALUE = 10;
 
 
     public final int getNumber() {
@@ -129,6 +145,8 @@ public final class Session {
         case 6: return RECORD_ACTION;
         case 7: return APPROVE_ACTION;
         case 8: return PERSISTENT_MESSAGE;
+        case 9: return CONVERT_ACTION;
+        case 10: return PROMPT_ACTION;
         default: return null;
       }
     }
@@ -202,6 +220,14 @@ public final class Session {
      * <code>SESSION_DATA = 3;</code>
      */
     SESSION_DATA(3),
+    /**
+     * <code>PROMPT_DATA = 4;</code>
+     */
+    PROMPT_DATA(4),
+    /**
+     * <code>USER_PROMPT = 5;</code>
+     */
+    USER_PROMPT(5),
     UNRECOGNIZED(-1),
     ;
 
@@ -217,6 +243,14 @@ public final class Session {
      * <code>SESSION_DATA = 3;</code>
      */
     public static final int SESSION_DATA_VALUE = 3;
+    /**
+     * <code>PROMPT_DATA = 4;</code>
+     */
+    public static final int PROMPT_DATA_VALUE = 4;
+    /**
+     * <code>USER_PROMPT = 5;</code>
+     */
+    public static final int USER_PROMPT_VALUE = 5;
 
 
     public final int getNumber() {
@@ -246,6 +280,8 @@ public final class Session {
         case 0: return HEARTBEAT;
         case 1: return USER_DATA;
         case 3: return SESSION_DATA;
+        case 4: return PROMPT_DATA;
+        case 5: return USER_PROMPT;
         default: return null;
       }
     }
@@ -1036,6 +1072,18 @@ public final class Session {
      */
     com.google.protobuf.ByteString
         getCommandBytes();
+
+    /**
+     * <code>string prompt = 6;</code>
+     * @return The prompt.
+     */
+    java.lang.String getPrompt();
+    /**
+     * <code>string prompt = 6;</code>
+     * @return The bytes for prompt.
+     */
+    com.google.protobuf.ByteString
+        getPromptBytes();
   }
   /**
    * Protobuf type {@code io.dataguardians.protobuf.TerminalMessage}
@@ -1053,6 +1101,7 @@ public final class Session {
       sessionId_ = "";
       type_ = 0;
       command_ = "";
+      prompt_ = "";
     }
 
     @java.lang.Override
@@ -1119,6 +1168,12 @@ public final class Session {
               java.lang.String s = input.readStringRequireUtf8();
 
               command_ = s;
+              break;
+            }
+            case 50: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              prompt_ = s;
               break;
             }
             default: {
@@ -1285,6 +1340,44 @@ public final class Session {
       }
     }
 
+    public static final int PROMPT_FIELD_NUMBER = 6;
+    private volatile java.lang.Object prompt_;
+    /**
+     * <code>string prompt = 6;</code>
+     * @return The prompt.
+     */
+    @java.lang.Override
+    public java.lang.String getPrompt() {
+      java.lang.Object ref = prompt_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        prompt_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string prompt = 6;</code>
+     * @return The bytes for prompt.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getPromptBytes() {
+      java.lang.Object ref = prompt_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        prompt_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -1314,6 +1407,9 @@ public final class Session {
       if (!getCommandBytes().isEmpty()) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 5, command_);
       }
+      if (!getPromptBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 6, prompt_);
+      }
       unknownFields.writeTo(output);
     }
 
@@ -1340,6 +1436,9 @@ public final class Session {
       }
       if (!getCommandBytes().isEmpty()) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, command_);
+      }
+      if (!getPromptBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(6, prompt_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -1369,6 +1468,8 @@ public final class Session {
               other.getKeycode())) return false;
       if (!getCommand()
           .equals(other.getCommand())) return false;
+      if (!getPrompt()
+          .equals(other.getPrompt())) return false;
       if (!unknownFields.equals(other.unknownFields)) return false;
       return true;
     }
@@ -1393,6 +1494,8 @@ public final class Session {
           java.lang.Double.doubleToLongBits(getKeycode()));
       hash = (37 * hash) + COMMAND_FIELD_NUMBER;
       hash = (53 * hash) + getCommand().hashCode();
+      hash = (37 * hash) + PROMPT_FIELD_NUMBER;
+      hash = (53 * hash) + getPrompt().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -1540,6 +1643,8 @@ public final class Session {
 
         command_ = "";
 
+        prompt_ = "";
+
         return this;
       }
 
@@ -1575,6 +1680,7 @@ public final class Session {
         }
         result.keycode_ = keycode_;
         result.command_ = command_;
+        result.prompt_ = prompt_;
         onBuilt();
         return result;
       }
@@ -1638,6 +1744,10 @@ public final class Session {
         }
         if (!other.getCommand().isEmpty()) {
           command_ = other.command_;
+          onChanged();
+        }
+        if (!other.getPrompt().isEmpty()) {
+          prompt_ = other.prompt_;
           onChanged();
         }
         this.mergeUnknownFields(other.unknownFields);
@@ -2024,6 +2134,82 @@ public final class Session {
         onChanged();
         return this;
       }
+
+      private java.lang.Object prompt_ = "";
+      /**
+       * <code>string prompt = 6;</code>
+       * @return The prompt.
+       */
+      public java.lang.String getPrompt() {
+        java.lang.Object ref = prompt_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          prompt_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string prompt = 6;</code>
+       * @return The bytes for prompt.
+       */
+      public com.google.protobuf.ByteString
+          getPromptBytes() {
+        java.lang.Object ref = prompt_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          prompt_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string prompt = 6;</code>
+       * @param value The prompt to set.
+       * @return This builder for chaining.
+       */
+      public Builder setPrompt(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        prompt_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string prompt = 6;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearPrompt() {
+        
+        prompt_ = getDefaultInstance().getPrompt();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string prompt = 6;</code>
+       * @param value The bytes for prompt to set.
+       * @return This builder for chaining.
+       */
+      public Builder setPromptBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        prompt_ = value;
+        onChanged();
+        return this;
+      }
       @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -2099,18 +2285,20 @@ public final class Session {
       "\n\034src/main/proto/session.proto\022\031io.datag" +
       "uardians.protobuf\"X\n\007Trigger\0228\n\006action\030\001" +
       " \001(\0162(.io.dataguardians.protobuf.Trigger" +
-      "Action\022\023\n\013description\030\002 \001(\t\"\261\001\n\017Terminal" +
+      "Action\022\023\n\013description\030\002 \001(\t\"\301\001\n\017Terminal" +
       "Message\022\021\n\tsessionId\030\001 \001(\t\0224\n\004type\030\002 \001(\016" +
       "2&.io.dataguardians.protobuf.MessageType" +
       "\0223\n\007trigger\030\003 \001(\0132\".io.dataguardians.pro" +
       "tobuf.Trigger\022\017\n\007keycode\030\004 \001(\001\022\017\n\007comman" +
-      "d\030\005 \001(\t*\261\001\n\rTriggerAction\022\r\n\tNO_ACTION\020\000" +
-      "\022\016\n\nLOG_ACTION\020\001\022\020\n\014ALERT_ACTION\020\002\022\017\n\013WA" +
-      "RN_ACTION\020\003\022\017\n\013DENY_ACTION\020\004\022\016\n\nJIT_ACTI" +
-      "ON\020\005\022\021\n\rRECORD_ACTION\020\006\022\022\n\016APPROVE_ACTIO" +
-      "N\020\007\022\026\n\022PERSISTENT_MESSAGE\020\010*=\n\013MessageTy" +
-      "pe\022\r\n\tHEARTBEAT\020\000\022\r\n\tUSER_DATA\020\001\022\020\n\014SESS" +
-      "ION_DATA\020\003b\006proto3"
+      "d\030\005 \001(\t\022\016\n\006prompt\030\006 \001(\t*\330\001\n\rTriggerActio" +
+      "n\022\r\n\tNO_ACTION\020\000\022\016\n\nLOG_ACTION\020\001\022\020\n\014ALER" +
+      "T_ACTION\020\002\022\017\n\013WARN_ACTION\020\003\022\017\n\013DENY_ACTI" +
+      "ON\020\004\022\016\n\nJIT_ACTION\020\005\022\021\n\rRECORD_ACTION\020\006\022" +
+      "\022\n\016APPROVE_ACTION\020\007\022\026\n\022PERSISTENT_MESSAG" +
+      "E\020\010\022\022\n\016CONVERT_ACTION\020\t\022\021\n\rPROMPT_ACTION" +
+      "\020\n*_\n\013MessageType\022\r\n\tHEARTBEAT\020\000\022\r\n\tUSER" +
+      "_DATA\020\001\022\020\n\014SESSION_DATA\020\003\022\017\n\013PROMPT_DATA" +
+      "\020\004\022\017\n\013USER_PROMPT\020\005b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -2127,7 +2315,7 @@ public final class Session {
     internal_static_io_dataguardians_protobuf_TerminalMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_io_dataguardians_protobuf_TerminalMessage_descriptor,
-        new java.lang.String[] { "SessionId", "Type", "Trigger", "Keycode", "Command", });
+        new java.lang.String[] { "SessionId", "Type", "Trigger", "Keycode", "Command", "Prompt", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

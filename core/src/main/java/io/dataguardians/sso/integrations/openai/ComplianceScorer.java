@@ -3,7 +3,7 @@ package io.dataguardians.sso.integrations.openai;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.dataguardians.security.TokenProvider;
 import io.dataguardians.sso.integrations.exceptions.HttpException;
-import io.dataguardians.sso.integrations.openai.endpoints.ChatApiEndpointRequest;
+import io.dataguardians.sso.integrations.openai.model.endpoints.ChatApiEndpointRequest;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -21,7 +21,7 @@ import lombok.extern.slf4j.Slf4j;
  * calculating compliance scores based on input data.
  */
 @Slf4j
-public abstract class ComplianceScorer extends DataGenerator<Double> {
+public abstract class ComplianceScorer extends DataGenerator<String, Double> {
 
     protected ComplianceConfiguration complianceConfig;
 
@@ -37,7 +37,7 @@ public abstract class ComplianceScorer extends DataGenerator<Double> {
      */
     @Override
     public Double generate(String on) throws HttpException, JsonProcessingException {
-        ChatApiEndpointRequest request = ChatApiEndpointRequest.builder().input(generateInput(on)).build();
+        ChatApiEndpointRequest request = ChatApiEndpointRequest.builder().userInput(generateInput(on)).build();
         log.info("Generating compliance score for: " + on);
         request.setTemperature(0.5f);
         Response hello = api.sample(request, Response.class);

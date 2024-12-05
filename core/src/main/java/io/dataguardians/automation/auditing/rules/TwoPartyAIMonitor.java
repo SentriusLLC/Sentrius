@@ -9,10 +9,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import io.dataguardians.automation.auditing.SessionTokenEvaluator;
 import io.dataguardians.automation.auditing.Trigger;
 import io.dataguardians.automation.auditing.TriggerAction;
+import io.dataguardians.protobuf.Session;
 import io.dataguardians.sso.core.model.ConnectedSystem;
-import io.dataguardians.sso.core.services.openai.OpenAITerminalService;
 import io.dataguardians.sso.core.services.openai.OpenAITwoPartyMonitorService;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
+import io.dataguardians.sso.integrations.openai.Message;
+import io.dataguardians.sso.integrations.openai.model.TwoPartyRequest;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -30,6 +32,7 @@ public class TwoPartyAIMonitor extends SessionTokenEvaluator {
 
     // Flag to indicate malicious activity
     private AtomicReference<String> llmResponse = new AtomicReference<>(null);
+    private AtomicReference<String> llmQuestion = new AtomicReference<>(null);
     private volatile boolean flaggedAsMalicious = false;
     private volatile long lastCommandTime = 0;
 
@@ -78,17 +81,26 @@ public class TwoPartyAIMonitor extends SessionTokenEvaluator {
             lastCommandTime = System.currentTimeMillis();
             return Optional.of(trg);
         }
+        else {
+            lastCommandTime = System.currentTimeMillis();
+        }
 
         // Merge recent commands into a single payload
         String mergedCommands = String.join("\n", recentCommands);
         log.info("merged commands: {}", mergedCommands);
         // Submit merged commands for asynchronous analysis
         CompletableFuture<Void> analysis =
-            ((OpenAITwoPartyMonitorService)openAi).analyzeTerminalLogs(mergedCommands).thenAccept(response -> {
+            ((OpenAITwoPartyMonitorService)openAi).analyzeTerminalLogs(TwoPartyRequest.builder().userInput(mergedCommands).build()).thenAccept(response -> {
                 log.info("OpenAI analysis completed. Malicious: {}", response);
                 if (response != null) {
                     flaggedAsMalicious = response.getScore()>0.8;
                     llmResponse.set(response.getResponse());
+                    if (response.getQuestion() != null && !flaggedAsMalicious && response.getScore()>=0.75){
+                        llmQuestion.set(response.getQuestion());
+                    }
+                    else {
+                        llmQuestion.set(null);
+                    }
                 }
             });
 
@@ -104,7 +116,9 @@ public class TwoPartyAIMonitor extends SessionTokenEvaluator {
         }
 
         if (llmResponse.get() != null) {
-            Trigger trg = new Trigger(TriggerAction.PERSISTENT_MESSAGE, llmResponse.get());
+            Trigger trg = llmQuestion.get() != null ? new Trigger(TriggerAction.PROMPT_ACTION, llmResponse.get(),
+                llmQuestion.get()) :
+                new Trigger(TriggerAction.PERSISTENT_MESSAGE, llmResponse.get());
             return Optional.of(trg);
         }
 
@@ -128,12 +142,59 @@ public class TwoPartyAIMonitor extends SessionTokenEvaluator {
     }
 
     @Override
-    public Optional<Trigger> onMessage(String text) {
+    public Optional<Trigger> onMessage(Session.TerminalMessage text) {
         // Return a trigger based on current state
-        log.info("flagged as malicious: {}", flaggedAsMalicious);
+        if (text.getType() == Session.MessageType.USER_PROMPT) {
+            log.info("*** response");
+            var openAi = pluggableServices.get("openaitwoparty");
+            if (null == openAi) {
+                log.info("no open ai integration");
+                Trigger trg = new Trigger(TriggerAction.NO_ACTION, "");
+                return Optional.of(trg);
+            }
+
+            String mergedCommands = String.join("\n", recentCommands);
+
+            CompletableFuture<Void> analysis =
+                ((OpenAITwoPartyMonitorService)openAi).analyzeTerminalLogs(TwoPartyRequest.builder().previousPrompt(text.getCommand()).promptResponse(text.getPrompt()).userInput(mergedCommands).build()).thenAccept(response -> {
+                    log.info("From user response: OpenAI analysis completed. Malicious: {}", response);
+                    if (response != null) {
+                        flaggedAsMalicious = response.getScore()>0.8;
+                        llmResponse.set(response.getResponse());
+                        if (response.getQuestion() != null && !flaggedAsMalicious && response.getScore()>=0.75){
+                            llmQuestion.set(response.getQuestion());
+                        }
+                        else {
+                            llmQuestion.set(null);
+                        }
+                    }
+                });
+
+            try {
+                analysis.get();
+
+                if (llmResponse.get() != null && llmQuestion.get() != null) {
+                    Trigger trg = llmQuestion.get() != null ? new Trigger(TriggerAction.PROMPT_ACTION, llmResponse.get(),
+                        llmQuestion.get()) :
+                        new Trigger(TriggerAction.PERSISTENT_MESSAGE, llmResponse.get());
+                    return Optional.of(trg);
+                }
+
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }
         if ((connectedSystem.getWebsocketListenerSessionId() == null || connectedSystem.getWebsocketListenerSessionId().isEmpty() ) && flaggedAsMalicious) {
-            Trigger trg = new Trigger(TriggerAction.JIT_ACTION, DESCRIPTION);
-            return Optional.of(trg);
+            if (llmQuestion.get()!= null){
+                Trigger trg = new Trigger(TriggerAction.PROMPT_ACTION, DESCRIPTION);
+                return Optional.of(trg);
+            }
+            else {
+                Trigger trg = new Trigger(TriggerAction.JIT_ACTION, DESCRIPTION);
+                return Optional.of(trg);
+            }
         }
         /*
         if (llmResponse.get() != null) {
@@ -141,7 +202,6 @@ public class TwoPartyAIMonitor extends SessionTokenEvaluator {
             Trigger trg = new Trigger(TriggerAction.WARN_ACTION, llmResponse.get());
             return Optional.of(trg);
         }else {*/
-            log.info("OpenAI analysis completed. not malicious or llm response");
             Trigger trg = new Trigger(TriggerAction.NO_ACTION, CLASS_NAME);
             return Optional.of(trg);
 //        }

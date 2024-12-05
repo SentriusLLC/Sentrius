@@ -14,6 +14,7 @@ import io.dataguardians.sso.integrations.openai.GeneratorConfiguration;
 import io.dataguardians.sso.integrations.openai.OpenAITwoPartyMonitor;
 import io.dataguardians.sso.integrations.openai.TerminalComplianceScorer;
 import io.dataguardians.sso.integrations.openai.TerminalLogConfiguration;
+import io.dataguardians.sso.integrations.openai.model.TwoPartyRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -64,7 +65,7 @@ public class OpenAITwoPartyMonitorService implements io.dataguardians.sso.core.s
     }
 
     // Asynchronous method for scoring terminal commands
-    public CompletableFuture<LLMResponse> analyzeTerminalLogs(String terminalLog) {
+    public CompletableFuture<LLMResponse> analyzeTerminalLogs(TwoPartyRequest terminalLog) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 log.info("analyzing terminal log {}", (terminalComplianceScorer == null) );

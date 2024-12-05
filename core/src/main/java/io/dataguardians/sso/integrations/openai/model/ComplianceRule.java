@@ -1,4 +1,4 @@
-package io.dataguardians.sso.integrations.openai;
+package io.dataguardians.sso.integrations.openai.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

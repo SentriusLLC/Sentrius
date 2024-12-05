@@ -128,19 +128,25 @@ public class AuditService {
 
     @Async
     public void audit(final ConnectedSystem ident, String sessionOutput) {
-        if (isRunning.get()){
-            if (sessionOutput == null) return;
-            var trimmed = sessionOutput.trim();
-            if (hasEscapeSequence(trimmed)) {
-                return;
+        try {
+            if (isRunning.get()) {
+                if (sessionOutput == null) return;
+                var trimmed = sessionOutput.trim();
+                if (hasEscapeSequence(trimmed)) {
+                    return;
+                }
+                sessionAuditMap.merge(
+                    ident,
+                    TerminalLogs.from(ident, sessionOutput),
+                    (oldVal, newVal) -> {
+                        oldVal.append(newVal.getOutput().toString());
+                        return oldVal;
+                    }
+                );
             }
-            sessionAuditMap.merge(
-                ident,
-                TerminalLogs.from(ident,sessionOutput),
-                (oldVal, newVal) -> {
-                    oldVal.append(newVal.getOutput().toString());
-                    return oldVal;
-                });
+        }catch(Throwable t){
+            t.printStackTrace();
+            throw t;
         }
     }
 

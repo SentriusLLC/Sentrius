@@ -83,19 +83,19 @@ public class TerminalWSHandler extends TextWebSocketHandler {
                     byte[] messageBytes = Base64.getDecoder().decode(message.getPayload());
                     Session.TerminalMessage auditLog =
                         io.dataguardians.protobuf.Session.TerminalMessage.parseFrom(messageBytes);
-                    log.info("got message {}; {}", uri, auditLog.getCommand());
+                    log.info("got message {}; {}; {}", uri,sessionId, auditLog.getCommand());
                     // Decrypt the session ID
-                    var sessionIdStr = cryptoService.decrypt(sessionId);
-                    var sessionIdLong = Long.parseLong(sessionIdStr);
-
+//                    var sessionIdStr = cryptoService.decrypt(sessionId);
+  //                  var sessionIdLong = Long.parseLong(sessionIdStr);
+                    var lookupId = sessionId + "==";
                     // Retrieve ConnectedSystem from your persistent map using the session ID
-                    var sys = sessionTrackingService.getConnectedSession(sessionIdLong);
+                    var sys = sessionTrackingService.getEncryptedConnectedSession(lookupId);
                     if (null != sys ) {
                         boolean allNoAction = true;
                         log.info("**** Processing message for session ID: {} with {} actions", sessionId,
                             sys.getSessionStartupActions().size());
                         for (var action : sys.getSessionStartupActions()) {
-                            var trigger = action.onMessage("");
+                            var trigger = action.onMessage(auditLog);
                             if (trigger.get().getAction() == TriggerAction.JIT_ACTION) {
                                 allNoAction = false;
                                 // drop the message
@@ -109,6 +109,9 @@ public class TerminalWSHandler extends TextWebSocketHandler {
                                 log.info("**** Setting WARN Trigger: {}", trigger.get());
                                 sys.getTerminalAuditor().setSessionTrigger(trigger.get());
                                 sessionTrackingService.addSystemTrigger(sys, trigger.get());
+                            } else if (trigger.get().getAction() == TriggerAction.PROMPT_ACTION) {
+                                sessionTrackingService.addTrigger(sys, trigger.get());
+                                return;
                             }
                         }
                         if (allNoAction && sys.getSessionStartupActions().size() > 0) {

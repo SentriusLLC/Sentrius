@@ -10,7 +10,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import io.dataguardians.sso.core.model.ConnectedSystem;
 import io.dataguardians.sso.core.services.ZeroTrustAccessTokenService;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 final class AsyncAccessTokenAuditor implements Runnable {
 
     private final SessionTrackingService sessionTrackingService;
@@ -53,6 +55,8 @@ final class AsyncAccessTokenAuditor implements Runnable {
                         Trigger trg = result.get();
                         switch (trg.getAction()) {
                             case PERSISTENT_MESSAGE:
+                            case PROMPT_ACTION:
+                                log.info("Adding persistent message: {}", trg.getDescription());
                             case WARN_ACTION:
                                 sessionTrackingService.addTrigger(connectedSystem, trg);
                                 break;

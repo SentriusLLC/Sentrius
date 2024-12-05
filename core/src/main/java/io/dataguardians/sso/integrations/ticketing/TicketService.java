@@ -29,6 +29,7 @@ public class TicketService {
         for(IntegrationSecurityToken integration : integrationAPI){
             try {
                 var jiraService = new JiraService(restTemplateBuilder.build(), integration);
+                log.info("Jira service created for " + integration.getConnectionType());
                 jiraServiceList.add(jiraService);
             }catch (Exception e){
                 e.printStackTrace();

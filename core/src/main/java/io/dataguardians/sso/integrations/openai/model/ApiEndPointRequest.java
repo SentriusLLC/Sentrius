@@ -1,4 +1,4 @@
-package io.dataguardians.sso.integrations.openai.endpoints;
+package io.dataguardians.sso.integrations.openai.model;
 
 import lombok.Builder;
 import lombok.Data;
@@ -14,7 +14,9 @@ public abstract class ApiEndPointRequest {
 
     protected String user;
 
-    protected String input;
+    protected String userInput;
+
+    protected String systemInput;
 
     @Builder.Default
     protected int maxTokens = 4096;

@@ -3,6 +3,7 @@ package io.dataguardians.automation.auditing;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import io.dataguardians.protobuf.Session;
 import io.dataguardians.sso.core.services.PluggableServices;
 
 public abstract class SessionTokenEvaluator extends AccessTokenEvaluator {
@@ -10,7 +11,7 @@ public abstract class SessionTokenEvaluator extends AccessTokenEvaluator {
     protected Map<String,PluggableServices> pluggableServices = new HashMap<>();
 
 
-    public abstract Optional<Trigger> onMessage(String text);
+    public abstract Optional<Trigger> onMessage(Session.TerminalMessage text);
 
     public abstract boolean isOnlySessionRule();
 

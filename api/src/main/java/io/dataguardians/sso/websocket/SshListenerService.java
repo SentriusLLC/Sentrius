@@ -115,7 +115,11 @@ public class SshListenerService {
 
     private Session.TerminalMessage getTrigger(Trigger trigger) {
         var terminalMessage = Session.TerminalMessage.newBuilder();
-        terminalMessage.setType(Session.MessageType.USER_DATA);
+        if (trigger.getAsk() != null) {
+            terminalMessage.setType(Session.MessageType.PROMPT_DATA);
+        } else {
+            terminalMessage.setType(Session.MessageType.USER_DATA);
+        }
         Session.Trigger.Builder triggerBuilder = Session.Trigger.newBuilder();
         switch(trigger.getAction()){
             case DENY_ACTION:
@@ -135,6 +139,9 @@ public class SshListenerService {
                 break;
             case PERSISTENT_MESSAGE:
                 triggerBuilder.setAction(Session.TriggerAction.PERSISTENT_MESSAGE);
+                break;
+            case PROMPT_ACTION:
+                triggerBuilder.setAction(Session.TriggerAction.PROMPT_ACTION);
                 break;
             default:
                 break;
@@ -183,6 +190,7 @@ public class SshListenerService {
 
                 if (terminalSessionId.getTerminalAuditor().getSessionTrigger().getAction() != TriggerAction.NO_ACTION &&
                     terminalSessionId.getTerminalAuditor().getSessionTrigger().getAction() != TriggerAction.WARN_ACTION &&
+                    terminalSessionId.getTerminalAuditor().getSessionTrigger().getAction() != TriggerAction.PROMPT_ACTION &&
                     terminalSessionId.getTerminalAuditor().getSessionTrigger().getAction() != TriggerAction.PERSISTENT_MESSAGE) {
                     log.info("Session Trigger action is not NO_ACTION");
                     return;

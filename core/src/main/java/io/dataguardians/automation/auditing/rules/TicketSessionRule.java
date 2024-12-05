@@ -4,6 +4,7 @@ import java.util.Optional;
 import io.dataguardians.automation.auditing.SessionTokenEvaluator;
 import io.dataguardians.automation.auditing.Trigger;
 import io.dataguardians.automation.auditing.TriggerAction;
+import io.dataguardians.protobuf.Session;
 import io.dataguardians.sso.core.model.ConnectedSystem;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
 import io.dataguardians.sso.integrations.ticketing.TicketService;
@@ -57,7 +58,7 @@ public class TicketSessionRule extends SessionTokenEvaluator {
     }
 
     @Override
-    public Optional<Trigger> onMessage(String text) {
+    public Optional<Trigger> onMessage(Session.TerminalMessage text) {
         return Optional.empty();
     }
 

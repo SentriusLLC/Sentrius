@@ -28,16 +28,21 @@
 
         function showWarningStatus(message) {
             const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.style.display = 'block';
-            setTimeout(() => {
-                if (persistentMessage) {
-                    notification.textContent = persistentMessage;
-                    //notification.style.display = 'none';
-                } else {
-                    notification.style.display = 'none';
-                }
-            }, 10000); // Hide after 10 seconds
+            if (message) {
+                notification.textContent = message;
+                notification.style.display = 'block';
+
+                setTimeout(() => {
+                    if (persistentMessage) {
+                        notification.textContent = persistentMessage;
+                        //notification.style.display = 'none';
+                    } else {
+                        notification.style.display = 'none';
+                    }
+                }, 10000); // Hide after 10 seconds
+            } else {
+                notification.style.display = 'none';
+            }
         }
         /*<![CDATA[*/
         document.addEventListener('DOMContentLoaded', () => {
@@ -48,7 +53,15 @@
 
             var sessionId = "";
 
+            const questionText = document.getElementById('question-text');
+            const responseInput = document.getElementById('response-input');
+            const submitButton = document.getElementById('submit-button');
+            const modalElement = document.getElementById('llmModal');
+            let modalInstance = bootstrap.Modal.getInstance(modalElement);
 
+            if (!modalInstance) {
+                modalInstance = new bootstrap.Modal(modalElement);
+            }
 
             $.ajaxSetup({
                 cache: false,
@@ -137,6 +150,10 @@
                 if (isModalVisible) {
                     return; // Prevent terminal actions if modal is visible
                 }
+                const isllmModalVisible = $('#llmModal').is(':visible');
+                if (isllmModalVisible) {
+                    return; // Prevent terminal actions if modal is visible
+                }
                 if (termFocus) {
                     var keyCode = (e.keyCode) ? e.keyCode : e.charCode;
 
@@ -155,13 +172,43 @@
 
                 }
             });
+
+            // Function to hide the popup
+            function hidePopup() {
+                modalInstance.hide();
+            }
+
+
+            submitButton.addEventListener('click', () => {
+                const userResponse = responseInput.value.trim();
+                if (userResponse) {
+                    console.log('User response:', userResponse); // Replace with your logic to handle the response
+                    // Example: Call the LLM with the user's response and update the next question
+                    const message = new proto.io.dataguardians.protobuf.TerminalMessage();
+                    message.setCommand(questionText.textContent);
+                    message.setPrompt(userResponse);
+                    message.setKeycode(-1);
+                    message.setType(proto.io.dataguardians.protobuf.MessageType.USER_PROMPT);
+                    const base64Message = btoa(String.fromCharCode(...message.serializeBinary()));
+                    connection.send(base64Message);
+                    hidePopup(); // Close the popup
+                }
+            });
+
             //function for command keys (ie ESC, CTRL, etc..)
             $(document).keydown(function (e) {
                 const isModalVisible = $('#assignIncidentModal').is(':visible');
                 if (isModalVisible) {
                     return; // Prevent terminal actions if modal is visible
                 }
+
+                const isllmModalVisible = $('#llmModal').is(':visible');
+                if (isllmModalVisible) {
+                    return; // Prevent terminal actions if modal is visible
+                }
+
                 console.log("keydown " + e.keyCode);
+                //term.focus();
                 if (termFocus) {
 
                     var keyCode = (e.keyCode) ? e.keyCode : e.charCode;
@@ -234,6 +281,10 @@
 
             $(document).click(function (e) {
                 if (termFocus && !$('body').hasClass('modal-open')) {
+                    //$("#sentrius_term_0").focus();
+                    console.log("click");
+                    document.activeElement.blur(); // Remove focus from terminal
+                    document.body.focus();
                     //$('#dummy').focus();
                     // $("#sentrius_term_0").focus();
                 }
@@ -342,6 +393,13 @@
 
             }
 
+            // Example function to display a new question from the LLM
+            function promptQuestion(question) {
+                questionText.textContent = question;
+                responseInput.value = ''; // Clear the input for a new response
+                modalInstance.show();
+            }
+
             function resize(element, width, height) {
                 var id = element.attr("id").replace("output_", "");
                 if (term) {
@@ -432,9 +490,10 @@
                         if (deserializedAuditLog.getType() == proto.io.dataguardians.protobuf.MessageType.USER_DATA) {
 
                             const alertWarn = document.getElementById("alertWarn");
-                            if (!deserializedAuditLog.getTrigger()) {
+                            if (!deserializedAuditLog.getTrigger() || deserializedAuditLog.getTrigger() == proto.io.dataguardians.protobuf.TriggerAction.NO_ACTION) {
+                                console.log("only command");
                                 if (!deserializedAuditLog.getCommand()) {
-                                    console.warn("Malformed message received 402");
+                                    console.warn("No content message     ");
                                     return;
                                 }
                                 if (!term) {
@@ -450,10 +509,24 @@
                                 if (alertWarn) {
                                     const triggerAction = deserializedAuditLog.getTrigger();
                                     const description = triggerAction.getDescription();
-                                    if (deserializedAuditLog.getType() == proto.io.dataguardians.protobuf.MessageType.PERSISTENT_MESSAGE) {
+                                    if (deserializedAuditLog.getType() ==
+                                        proto.io.dataguardians.protobuf.MessageType.PERSISTENT_MESSAGE ||
+                                        triggerAction.getAction() ==
+                                        proto.io.dataguardians.protobuf.TriggerAction.PERSISTENT_MESSAGE) {
+                                        console.log("persistent message");
                                         persistentMessage = description;
                                         showWarningStatus(description);
+                                    } else  if (deserializedAuditLog.getType() ==
+                                        proto.io.dataguardians.protobuf.MessageType.PROMPT_DATA) {
+                                        console.log("question is" + deserializedAuditLog.getPrompt());
+                                        persistentMessage = description;
+                                        showWarningStatus(description);
+                                        promptQuestion(deserializedAuditLog.getPrompt());
+
                                     } else {
+                                        console.log("non-persistent message " + description + " " + triggerAction.getAction());
+                                        console.log("is no action "  + (triggerAction.getAction() ==
+                                            proto.io.dataguardians.protobuf.TriggerAction.NO_ACTION));
                                         //alertWarn.textContent = description || persistentMessage || "";
                                         if (description) {
                                             if (triggerAction.getAction() == proto.io.dataguardians.protobuf.TriggerAction.WARN_ACTION) {
@@ -492,7 +565,7 @@
                                     overlay.classList.add("hidden");
                                 }
 
-                               overlay.innerText = description;
+                                overlay.innerText = description;
 
 
                                 if (triggerAction.getAction() == proto.io.dataguardians.protobuf.TriggerAction.JIT_ACTION) {
@@ -509,6 +582,16 @@
                                 }
 
                             }
+                        } else if (deserializedAuditLog.getType() ==
+                            proto.io.dataguardians.protobuf.MessageType.PROMPT_DATA) {
+                            console.log("question");
+                            const triggerAction = deserializedAuditLog.getTrigger();
+                            const description = triggerAction.getDescription();
+                            console.log("question is" + deserializedAuditLog.getPrompt());
+                            persistentMessage = description;
+                            showWarningStatus(description);
+                            promptQuestion(deserializedAuditLog.getPrompt());
+
                         } else {
                             console.warn("Unknown message type received:", deserializedAuditLog.getType());
                         }
@@ -594,39 +677,29 @@
 
             }
 
-            //function to set all terminal bindings when creating a term window
-            function setTerminalEvents(element) {
-
-                //if terminal window toggle active for commands
-                element.mousedown(function (e) {
-                    //check for cmd-click / ctr-click
-                    /*
-                    if (!e.ctrlKey && !e.metaKey) {
-                        $(".sentrius_term").removeClass('sentrius_term_active');
-                    }else{
-                        element.addClass('sentrius_term_active')
-                    }
-*/
-                    /*
-                    if (element.hasClass('sentrius_term_active')) {
-                        element.removeClass('sentrius_term_active');
-                    } else {*/
-                    //  element.addClass('sentrius_term_active')
-                    // }
-                    //element.focus();
-                });
-                $('.ter').toggleClass('fullscreen');
-
-            }
 
             function setTerminalEvents(element, id) {
+                // Ensure `element` is a jQuery object
+                const $element = $(element);
+                /*
+                $element.mousedown(function (event) {
+                    event.preventDefault(); // Prevent default mousedown behavior
 
-                //if terminal window toggle active for commands
-                element.mousedown(function (e) {
+                    // Dynamically get the correct helper textarea for the given terminal instance
+                    const helperTextarea = document.querySelector(`#sentrius_term_${id} .xterm-helper-textarea`);
 
+                    if (helperTextarea) {
+                        helperTextarea.focus(); // Explicitly focus the terminal input field
+                    } else {
+                        console.warn("Helper textarea not found for terminal ID:", id);
+                    }
+
+                    console.log("mousedown on terminal", id);
                 });
+                */
 
             }
+
             //returns div for newly created terminal element
             function createTermElement(instanceId, hostId, displayName) {
                 var instance =
@@ -668,6 +741,38 @@
     </script>
 
     <style>
+
+        #popup-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1075;
+        }
+
+        #overlay-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 1074;
+        }
+
+        #response-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
 
         #notification {
             position: fixed;
@@ -723,6 +828,23 @@
     <title>[[${systemOptions.systemLogoName}]] - Terminals</title>
 </head>
 <body>
+<div class="modal fade" id="llmModal" tabindex="-1" aria-labelledby="llmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="llmModalLabel">Question</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="question-text">What is your favorite color?</p>
+                <input type="text" id="response-input" class="form-control" placeholder="Type your answer here...">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="submit-button">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
 <div id="overlay" class="overlay hidden">
     <div class="spinner"></div>
     <p class="overlay-message">Please wait while the session is being prepared...</p>

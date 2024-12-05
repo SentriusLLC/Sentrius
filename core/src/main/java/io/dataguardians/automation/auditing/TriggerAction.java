@@ -10,6 +10,7 @@ public enum TriggerAction {
   RECORD_ACTION,
   CONVERT_ACTION,
   APPROVE_ACTION,
+  PROMPT_ACTION, // used when an LLM prompts the user
   PERSISTENT_MESSAGE;
 
   public static TriggerAction valueOfStr(String action) {
@@ -33,6 +34,9 @@ public enum TriggerAction {
     }
     if ("LOG".equals(action)) {
       return LOG_ACTION;
+    }
+    if ("PROMPT".equals(action)) {
+      return PROMPT_ACTION;
     }
     if ("RECORD".equals(action)) {
       return RECORD_ACTION;

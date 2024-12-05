@@ -2,6 +2,7 @@ package io.dataguardians.sso.integrations.openai;
 
 import java.util.ArrayList;
 import java.util.List;
+import io.dataguardians.sso.integrations.openai.model.ComplianceRule;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

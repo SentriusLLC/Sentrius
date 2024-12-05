@@ -10,6 +10,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import io.dataguardians.automation.auditing.PersistentMessage;
 import io.dataguardians.automation.auditing.Trigger;
+import io.dataguardians.automation.auditing.TriggerAction;
 import io.dataguardians.protobuf.Session;
 import io.dataguardians.sso.core.model.ConnectedSystem;
 import lombok.EqualsAndHashCode;
@@ -29,7 +30,8 @@ public class SessionOutput  {
     private StringBuilder output = new StringBuilder(256);
     private final ReentrantLock lock = new ReentrantLock();
     private final Condition notEmpty = lock.newCondition();
-    ConcurrentLinkedDeque<PersistentMessage> persistentMessage = new ConcurrentLinkedDeque<>();
+    ConcurrentLinkedDeque<Trigger> persistentMessage = new ConcurrentLinkedDeque<>();
+    ConcurrentLinkedDeque<Trigger> prompt = new ConcurrentLinkedDeque<>();
 
     ConcurrentLinkedDeque<Trigger> warn = new ConcurrentLinkedDeque<>();
     ConcurrentLinkedDeque<Trigger> deny = new ConcurrentLinkedDeque<>();
@@ -54,6 +56,7 @@ public class SessionOutput  {
             lock.unlock();
         }
     }
+
 
     public void append(char[] str, int offset, int count) {
         lock.lock();
@@ -97,10 +100,23 @@ public class SessionOutput  {
 
     }
 
-    public void addPersistentMessage(PersistentMessage message) {
+
+    public void addPersistentMessage(Trigger trigger) {
         lock.lock();
         try {
-            persistentMessage.add(message);
+            log.info("Adding persistent message: {}", trigger.getDescription());
+            persistentMessage.add(trigger);
+            notEmpty.signalAll(); // Notify waiting threads
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void addPrompt(Trigger trigger) {
+        lock.lock();
+        try {
+            log.info("Adding persistent message: {}", trigger.getDescription());
+            prompt.add(trigger);
             notEmpty.signalAll(); // Notify waiting threads
         } finally {
             lock.unlock();
@@ -110,7 +126,9 @@ public class SessionOutput  {
     public void addDenial(Trigger trigger) {
         lock.lock();
         try {
+
             deny.add(trigger);
+            log.info("Adding Denial message: {} is empty ? {}", trigger.getDescription(), deny.isEmpty());
             notEmpty.signalAll(); // Notify waiting threads
         } finally {
             lock.unlock();
@@ -147,7 +165,13 @@ public class SessionOutput  {
 
 
     private Session.TerminalMessage getTrigger(Trigger trigger){
-       return getTrigger(trigger, Session.MessageType.USER_DATA);
+        if (trigger.getAction() == TriggerAction.PROMPT_ACTION){
+            log.info("Prompting: {}", trigger);
+            return getTrigger(trigger, Session.MessageType.PROMPT_DATA);
+        }
+        else {
+            return getTrigger(trigger, Session.MessageType.USER_DATA);
+        }
     }
 
     private Session.TerminalMessage getTrigger(Trigger trigger, Session.MessageType messageType){
@@ -167,20 +191,34 @@ public class SessionOutput  {
             case APPROVE_ACTION:
                 triggerBuilder.setAction(Session.TriggerAction.APPROVE_ACTION);
                 break;
+            case WARN_ACTION:
+                triggerBuilder.setAction(Session.TriggerAction.WARN_ACTION);
+                break;
+            case PERSISTENT_MESSAGE:
+                triggerBuilder.setAction(Session.TriggerAction.PERSISTENT_MESSAGE);
+                break;
+            case PROMPT_ACTION:
+                triggerBuilder.setAction(Session.TriggerAction.PROMPT_ACTION);
+                break;
             default:
                 break;
         }
         triggerBuilder.setDescription(trigger.getDescription().isEmpty() ? "" : trigger.getDescription());
+        if (trigger.getAction() == TriggerAction.PROMPT_ACTION && trigger.getAsk() != null) {
+            terminalMessage.setPrompt(trigger.getAsk());
+        }
         terminalMessage.setTrigger(triggerBuilder.build());
         return terminalMessage.build();
     }
 
-    public List<Session.TerminalMessage> waitForOutput(Long time,
+    public AuditOutput waitForOutput(Long time,
                                                        TimeUnit unit, Predicate<SessionOutput> condition) throws InterruptedException {
-        List<Session.TerminalMessage> messages = new ArrayList<>();
+        List<Session.TerminalMessage> triggers = new ArrayList<>();
+        var bldr = AuditOutput.builder();
+
         lock.lock();
         try {
-            while ((output.length() == 0 && warn.isEmpty() && ztat.isEmpty() && deny.isEmpty()) && condition.test(this) && sessionMessage.get() == null) {
+            while ((output.length() == 0 && persistentMessage.isEmpty()  && prompt.isEmpty() && warn.isEmpty() && ztat.isEmpty() && deny.isEmpty()) && condition.test(this) && sessionMessage.get() == null) {
                 notEmpty.await(time, unit); // Wait until notified
             }
 
@@ -189,25 +227,48 @@ public class SessionOutput  {
                 terminalMessage.setType(Session.MessageType.USER_DATA);
                 terminalMessage.setCommand(output.toString());
                 output = new StringBuilder(256);
-                messages.add( terminalMessage.build());
+                bldr.outputMessage( terminalMessage.build());
             }
 
             var systemTrigger = sessionMessage.getAndSet(null);
             if (null != systemTrigger){
                 log.info("System Trigger: {}", systemTrigger);
-                messages.add( getTrigger(systemTrigger, Session.MessageType.SESSION_DATA));
+                triggers.add( getTrigger(systemTrigger, Session.MessageType.SESSION_DATA));
             }
 
             if (!warn.isEmpty()){
+
                 var trigger = warn.pop();
-                messages.add( getTrigger(trigger));
+                log.info("Warning: {}", trigger);
+                triggers.add( getTrigger(trigger));
             }
             if (!deny.isEmpty()){
                 var trigger = deny.pop();
-                messages.add( getTrigger(trigger));
+                log.info("Denial: {}", trigger);
+                triggers.add( getTrigger(trigger));
             }
 
-            return messages;
+            if (!persistentMessage.isEmpty()){
+                var trigger = persistentMessage.pop();
+                triggers.add( getTrigger(trigger));
+            }
+
+            if (!prompt.isEmpty()){
+                var trigger = prompt.pop();
+                triggers.add( getTrigger(trigger));
+            }
+
+            bldr.triggers(triggers);
+            return bldr.build();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void clearOutput() {
+        lock.lock();
+        try {
+            output = new StringBuilder(256);
         } finally {
             lock.unlock();
         }

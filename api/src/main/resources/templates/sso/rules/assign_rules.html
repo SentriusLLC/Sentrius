@@ -87,12 +87,15 @@
         // Get the value from the ruleName input field
         const ruleName = document.getElementById('ruleName').value;
 
-
+        console.log("Rule Class: " + ruleClass);
+        console.log("Rule Name: " + ruleName);
         // Construct the URL based on the selected rule class and rule name
         let url = "";
-        if (ruleClass.includes("ForbiddenCommandsRule")) {
+        if (ruleClass.includes("CommandEvaluator")) {
+            console.log("CommandEvaluator: " + ruleClass);
             url = "/sso/v1/zerotrust/rules/config/forbidden_commands_rule?ruleName=" + encodeURIComponent(ruleName);
         } else if (ruleClass.includes("AllowedCommandsRule")) {
+            console.log("AllowedCommandsRule: " + ruleClass);
             url = "/sso/v1/zerotrust/rules/config/allowed_commands_rule?ruleName=" + encodeURIComponent(ruleName);
         } else if (ruleClass.includes("DeletePrevention")) {
             url = "/api/v1/zerotrust/rules/save";

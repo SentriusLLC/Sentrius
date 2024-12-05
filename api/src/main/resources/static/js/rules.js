@@ -187,7 +187,7 @@ $(document).ready(function () {
 
         // Construct the URL based on the selected rule class and rule name
         let url = "";
-        if (ruleClass.includes("ForbiddenCommandsRule")) {
+        if (ruleClass.includes("CommandEvaluator")) {
             url = "/sso/v1/zerotrust/rules/config/forbidden_commands_rule?ruleName=" + encodeURIComponent(ruleName);
         } else if (ruleClass.includes("AllowedCommandsRule")) {
             url = "/sso/v1/zerotrust/rules/config/allowed_commands_rule?ruleName=" + encodeURIComponent(ruleName);

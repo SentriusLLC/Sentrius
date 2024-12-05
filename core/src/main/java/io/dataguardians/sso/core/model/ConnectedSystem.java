@@ -39,6 +39,8 @@ public class ConnectedSystem {
     private OutputStream inputToChannel;
     private HostSystem hostSystem;
 
+
+
     private BaseAccessTokenAuditor terminalAuditor;
 
     @Builder.Default

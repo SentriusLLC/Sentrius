@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutionException;
 import io.dataguardians.automation.auditing.SessionTokenEvaluator;
 import io.dataguardians.automation.auditing.Trigger;
 import io.dataguardians.automation.auditing.TriggerAction;
+import io.dataguardians.protobuf.Session;
 import io.dataguardians.sso.core.model.ConnectedSystem;
 import io.dataguardians.sso.core.services.openai.OpenAITerminalService;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
@@ -103,7 +104,7 @@ public class OpenAISessionRule extends SessionTokenEvaluator {
     }
 
     @Override
-    public Optional<Trigger> onMessage(String text) {
+    public Optional<Trigger> onMessage(Session.TerminalMessage text) {
         // Return a trigger based on current state
         log.info("flagged as malicious: {}", flaggedAsMalicious);
         if ((connectedSystem.getWebsocketListenerSessionId() == null || connectedSystem.getWebsocketListenerSessionId().isEmpty() ) && flaggedAsMalicious) {

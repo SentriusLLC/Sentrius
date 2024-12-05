@@ -1,4 +1,4 @@
-package io.dataguardians.sso.integrations.openai.api.chat;
+package io.dataguardians.sso.integrations.openai.model;
 
 import java.util.List;
 import java.util.Map;

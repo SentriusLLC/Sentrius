@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import io.dataguardians.security.TokenProvider;
 import io.dataguardians.sso.integrations.exceptions.HttpException;
 
-public abstract class DataGenerator<T> {
+public abstract class DataGenerator<I, T> {
 
     protected final TokenProvider token;
     protected final GenerativeAPI api;
@@ -17,8 +17,8 @@ public abstract class DataGenerator<T> {
         this.config = config;
     }
 
-    protected abstract String generateInput(String on);
+    protected abstract String generateInput(I on);
 
-    public abstract T generate(String on) throws HttpException, JsonProcessingException;
+    public abstract T generate(I on ) throws HttpException, JsonProcessingException;
 
 }

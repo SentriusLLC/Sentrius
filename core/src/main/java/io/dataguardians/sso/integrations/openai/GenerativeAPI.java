@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.dataguardians.security.TokenProvider;
 import io.dataguardians.sso.integrations.exceptions.HttpException;
-import io.dataguardians.sso.integrations.openai.endpoints.ApiEndPointRequest;
+import io.dataguardians.sso.integrations.openai.model.ApiEndPointRequest;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;

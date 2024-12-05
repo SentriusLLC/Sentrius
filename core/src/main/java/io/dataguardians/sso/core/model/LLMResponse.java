@@ -10,5 +10,6 @@ import lombok.Getter;
 public class LLMResponse {
 
     String response;
+    String question;
     Double score;
 }

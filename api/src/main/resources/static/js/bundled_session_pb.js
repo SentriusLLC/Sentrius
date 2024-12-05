@@ -408,7 +408,8 @@ proto.io.dataguardians.protobuf.TerminalMessage.toObject = function(includeInsta
     type: jspb.Message.getFieldWithDefault(msg, 2, 0),
     trigger: (f = msg.getTrigger()) && proto.io.dataguardians.protobuf.Trigger.toObject(includeInstance, f),
     keycode: jspb.Message.getFloatingPointFieldWithDefault(msg, 4, 0.0),
-    command: jspb.Message.getFieldWithDefault(msg, 5, "")
+    command: jspb.Message.getFieldWithDefault(msg, 5, ""),
+    prompt: jspb.Message.getFieldWithDefault(msg, 6, "")
   };
 
   if (includeInstance) {
@@ -465,6 +466,10 @@ proto.io.dataguardians.protobuf.TerminalMessage.deserializeBinaryFromReader = fu
     case 5:
       var value = /** @type {string} */ (reader.readString());
       msg.setCommand(value);
+      break;
+    case 6:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setPrompt(value);
       break;
     default:
       reader.skipField();
@@ -528,6 +533,13 @@ proto.io.dataguardians.protobuf.TerminalMessage.serializeBinaryToWriter = functi
   if (f.length > 0) {
     writer.writeString(
       5,
+      f
+    );
+  }
+  f = message.getPrompt();
+  if (f.length > 0) {
+    writer.writeString(
+      6,
       f
     );
   }
@@ -644,6 +656,24 @@ proto.io.dataguardians.protobuf.TerminalMessage.prototype.setCommand = function(
 
 
 /**
+ * optional string prompt = 6;
+ * @return {string}
+ */
+proto.io.dataguardians.protobuf.TerminalMessage.prototype.getPrompt = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 6, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.io.dataguardians.protobuf.TerminalMessage} returns this
+ */
+proto.io.dataguardians.protobuf.TerminalMessage.prototype.setPrompt = function(value) {
+  return jspb.Message.setProto3StringField(this, 6, value);
+};
+
+
+/**
  * @enum {number}
  */
 proto.io.dataguardians.protobuf.TriggerAction = {
@@ -655,7 +685,9 @@ proto.io.dataguardians.protobuf.TriggerAction = {
   JIT_ACTION: 5,
   RECORD_ACTION: 6,
   APPROVE_ACTION: 7,
-  PERSISTENT_MESSAGE: 8
+  PERSISTENT_MESSAGE: 8,
+  CONVERT_ACTION: 9,
+  PROMPT_ACTION: 10
 };
 
 /**
@@ -664,7 +696,9 @@ proto.io.dataguardians.protobuf.TriggerAction = {
 proto.io.dataguardians.protobuf.MessageType = {
   HEARTBEAT: 0,
   USER_DATA: 1,
-  SESSION_DATA: 3
+  SESSION_DATA: 3,
+  PROMPT_DATA: 4,
+  USER_PROMPT: 5
 };
 
 goog.object.extend(exports, proto.io.dataguardians.protobuf);

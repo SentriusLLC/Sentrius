@@ -5,6 +5,7 @@
  */
 package io.dataguardians.sso.core.services.terminal;
 
+import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +25,7 @@ import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.model.ConnectedSystem;
 import io.dataguardians.sso.core.model.sessions.SessionOutput;
 import io.dataguardians.sso.core.model.users.User;
+import io.dataguardians.sso.core.security.service.CryptoService;
 import io.dataguardians.sso.core.services.PluggableServices;
 import io.dataguardians.sso.core.services.auditing.AuditService;
 import io.dataguardians.sso.core.utils.terminal.UserSessionsOutput;
@@ -51,12 +53,15 @@ public class SessionTrackingService implements PluggableServices {
 
   private final Map<Long, ConnectedSystem> userConnectionMap =
       new ConcurrentHashMap<>();
+  private final Map<String, ConnectedSystem> userConnectionMapEncrypted =
+      new ConcurrentHashMap<>();
 
   private static final ExecutorService executor = Executors.newCachedThreadPool();
 
 
   private static final Logger systemAuditLogger =
       LoggerFactory.getLogger("io.bastillion.manage.util.SystemAudit");
+  private final CryptoService cryptoService;
 
 
   public List<ConnectedSystem> getConnectedSession() {
@@ -68,7 +73,13 @@ public class SessionTrackingService implements PluggableServices {
    */
   public void removeUserSession(ConnectedSystem connectedSystem) {
     userConnectionMap.remove(connectedSystem.getSession().getId());
-    UserSessionsOutput userSessionsOutput = userSessionsOutputMap.get(connectedSystem.getSession().getId());
+      try {
+          userConnectionMapEncrypted.remove(
+              cryptoService.encrypt(connectedSystem.getSession().getId().toString()) );
+      } catch (GeneralSecurityException e) {
+          throw new RuntimeException(e);
+      }
+      UserSessionsOutput userSessionsOutput = userSessionsOutputMap.get(connectedSystem.getSession().getId());
     if (userSessionsOutput != null) {
       userSessionsOutput.getSessionOutputMap().clear();
     }
@@ -97,14 +108,20 @@ public class SessionTrackingService implements PluggableServices {
 
     UserSessionsOutput userSessionsOutput = userSessionsOutputMap.get(sessionOutput.getSessionId());
     if (userSessionsOutput == null) {
-      log.trace("Creating new session output for " + sessionOutput.getSessionId());
+      log.info("Creating new session output for " + sessionOutput.getSessionId());
       userSessionsOutputMap.put(sessionOutput.getSessionId(), new UserSessionsOutput());
       userSessionsOutput = userSessionsOutputMap.get(sessionOutput.getSessionId());
       userConnectionMap.put(sessionOutput.getSessionId(), sessionOutput.getConnectedSystem());
+        try {
+            userConnectionMapEncrypted.put(cryptoService.encrypt(sessionOutput.getSessionId().toString()),
+                sessionOutput.getConnectedSystem());
+        } catch (GeneralSecurityException e) {
+            throw new RuntimeException(e);
+        }
     }
     else {
       if (userSessionsOutput.getSessionOutputMap().containsKey(sessionOutput.getSessionId())) {
-        log.trace("*not new session output for " + sessionOutput.getSessionId());
+        log.info("*not new session output for " + sessionOutput.getSessionId());
         userSessionsOutput.getSessionOutputMap().get(sessionOutput.getSessionId()).append(sessionOutput.getOutput());
         return;
       }
@@ -154,7 +171,7 @@ public class SessionTrackingService implements PluggableServices {
    * returns list of output lines
    *
   * @return session output list
-   */
+
   public List<SessionOutput> getOutput(ConnectedSystem connectedSystem)
       throws SQLException {
     List<SessionOutput> outputList = new ArrayList<>();
@@ -187,7 +204,7 @@ public class SessionTrackingService implements PluggableServices {
     }
 
     return outputList;
-  }
+  }*/
 
   /**
    * returns list of output lines
@@ -208,19 +225,31 @@ public class SessionTrackingService implements PluggableServices {
         SessionOutput sessionOutput = userSessionsOutput.getSessionOutputMap().get(key);
 
         if (sessionOutput != null) {
-          nextTerminalMessage = sessionOutput.waitForOutput(
+          var output = sessionOutput.waitForOutput(
               time, unit, predicate);
 
 
           // send to audit logger
 
           if (systemOptions.enableInternalAudit) {
-            sessionAuditService.audit(connectedSystem, sessionOutput.getOutput());
+            if (output.getOutputMessage() != null) {
+              sessionAuditService.audit(connectedSystem, output.getOutputMessage().getCommand());
+            }
+          }
+          if (output.getOutputMessage() != null) {
+            nextTerminalMessage.add(output.getOutputMessage());
+          }
+          if (null != output.getTriggers() && !output.getTriggers().isEmpty()) {
+            nextTerminalMessage.addAll(output.getTriggers());
           }
 
+/*
+          sessionOutput.clearOutput();
           userSessionsOutput
               .getSessionOutputMap()
               .put(key, new SessionOutput(connectedSystem));
+*/
+          // */
         } else {
           Thread.sleep(50);
         }
@@ -234,9 +263,9 @@ public class SessionTrackingService implements PluggableServices {
     UserSessionsOutput userSessionsOutput = userSessionsOutputMap.get(connectedSystem.getSession().getId());
     if (userSessionsOutput != null) {
       switch(trigger.getAction()){
-        case NO_ACTION -> userSessionsOutput.getSessionOutputMap().get(connectedSystem.getSession().getId()).addWarning(trigger);
-        case WARN_ACTION -> userSessionsOutput.getSessionOutputMap().get(connectedSystem.getSession().getId()).addWarning(trigger);
-        case PERSISTENT_MESSAGE -> userSessionsOutput.getSessionOutputMap().get(connectedSystem.getSession().getId()).addWarning(trigger);
+        case NO_ACTION, WARN_ACTION -> userSessionsOutput.getSessionOutputMap().get(connectedSystem.getSession().getId()).addWarning(trigger);
+        case PERSISTENT_MESSAGE -> userSessionsOutput.getSessionOutputMap().get(connectedSystem.getSession().getId()).addPersistentMessage(trigger);
+        case PROMPT_ACTION -> userSessionsOutput.getSessionOutputMap().get(connectedSystem.getSession().getId()).addPrompt(trigger);
         case JIT_ACTION -> userSessionsOutput.getSessionOutputMap().get(connectedSystem.getSession().getId()).addJIT(trigger);
         case DENY_ACTION -> userSessionsOutput.getSessionOutputMap().get(connectedSystem.getSession().getId()).addDenial(trigger);
       }
@@ -256,6 +285,10 @@ public class SessionTrackingService implements PluggableServices {
 
   public ConnectedSystem getConnectedSession(Long sessionId) {
     return userConnectionMap.get(sessionId);
+  }
+
+  public ConnectedSystem getEncryptedConnectedSession(String sessionId) {
+    return userConnectionMapEncrypted.get(sessionId);
   }
 
   public boolean userContainsActiveTunnel(Long userId, Long sessionId, Long proxySessionId) {

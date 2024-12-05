@@ -13,12 +13,15 @@ enum TriggerAction {
   APPROVE_ACTION = 7;
   PERSISTENT_MESSAGE = 8;
   CONVERT_ACTION=9;
+  PROMPT_ACTION=10;
 }
 
 enum MessageType {
   HEARTBEAT = 0;
   USER_DATA = 1;
   SESSION_DATA = 3;
+  PROMPT_DATA = 4;
+  USER_PROMPT = 5;
 }
 
 message Trigger {
@@ -32,4 +35,5 @@ message TerminalMessage {
   Trigger trigger = 3;
   double keycode = 4;
   string command = 5;
+  string prompt = 6;
 }

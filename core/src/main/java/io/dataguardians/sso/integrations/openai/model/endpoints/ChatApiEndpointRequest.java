@@ -1,10 +1,11 @@
-package io.dataguardians.sso.integrations.openai.endpoints;
+package io.dataguardians.sso.integrations.openai.model.endpoints;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import io.dataguardians.sso.integrations.openai.Message;
-import io.dataguardians.sso.integrations.openai.api.chat.ChatRequest;
+import io.dataguardians.sso.integrations.openai.model.ApiEndPointRequest;
+import io.dataguardians.sso.integrations.openai.model.ChatRequest;
 import lombok.Builder;
 import lombok.Data;
 import lombok.experimental.SuperBuilder;
@@ -69,7 +70,10 @@ public class ChatApiEndpointRequest extends ApiEndPointRequest {
     public Object create() {
         List<Message> messages = new ArrayList<>();
         String role = StringUtils.isBlank(user) ? "user" : user;
-        messages.add(Message.builder().role(role).content(input).build());
+        messages.add(Message.builder().role(role).content(userInput).build());
+        if (StringUtils.isNotBlank(systemInput)) {
+            messages.add(Message.builder().role("system").content(systemInput).build());
+        }
         var requestBody = ChatRequest.builder().model("gpt-3.5-turbo").user(role).messages(messages);
         if (temperature != 1.0F) {
             requestBody.temperature(temperature);

@@ -4,6 +4,7 @@ import java.util.Optional;
 import io.dataguardians.automation.auditing.SessionTokenEvaluator;
 import io.dataguardians.automation.auditing.Trigger;
 import io.dataguardians.automation.auditing.TriggerAction;
+import io.dataguardians.protobuf.Session;
 import io.dataguardians.sso.core.model.ConnectedSystem;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
 
@@ -51,7 +52,7 @@ public class TwoPartySessionRule extends SessionTokenEvaluator {
     }
 
     @Override
-    public Optional<Trigger> onMessage(String text) {
+    public Optional<Trigger> onMessage(Session.TerminalMessage text) {
         if (connectedSystem.getWebsocketListenerSessionId() == null || connectedSystem.getWebsocketListenerSessionId().isEmpty()) {
             Trigger trg = new Trigger(TriggerAction.JIT_ACTION, DESCRIPTION);
             return Optional.of(trg);
