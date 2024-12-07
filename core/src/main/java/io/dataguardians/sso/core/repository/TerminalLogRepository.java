@@ -14,7 +14,7 @@ public interface TerminalLogRepository extends JpaRepository<TerminalLogs, Long>
 
     List<TerminalLogs> findBySessionId(Long sessionId);
 
-    @Query("SELECT new io.dataguardians.sso.core.model.dto.TerminalLogOutputDTO(t.logTm, LENGTH(t.output)) " +
+    @Query("SELECT new io.dataguardians.sso.core.model.dto.TerminalLogOutputDTO(t.logTm, t.output) " +
         "FROM TerminalLogs t " +
         "WHERE (:username IS NULL OR t.username = :username)")
     List<TerminalLogOutputDTO> findOutputSizeByUserOrAll(@Param("username") String username);

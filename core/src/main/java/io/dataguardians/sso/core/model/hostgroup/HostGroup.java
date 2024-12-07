@@ -60,7 +60,7 @@ public class HostGroup {
   )
   private List<HostSystem> hostSystemList;
 
-  @Column(name = "configuration", columnDefinition = "CLOB")
+  @Column(name = "configuration", columnDefinition = "TEXT")
   @Builder.Default
   private String configurationJson = "{}";
 

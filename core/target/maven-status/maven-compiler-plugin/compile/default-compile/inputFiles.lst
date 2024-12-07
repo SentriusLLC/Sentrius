@@ -52,6 +52,7 @@
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/automation/auditing/AllowedExecution.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/automation/runner/AutomationRunner.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/core/model/ErrorOutput.java
+/mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/install/configuration/DatabaseConfiguration.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/automation/RunShellScript.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/core/repository/ApplicationKeyRepository.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/core/model/security/zt/JITStatus.java
@@ -86,6 +87,7 @@
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/core/data/NotificationType.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/automation/factory/PluginFactory.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/core/model/zt/ZeroTrustAccessTokenReason.java
+/mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/install/configuration/InstallConfiguration.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/automation/auditing/rules/CommandEvaluator.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/core/annotations/LimitAccess.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/automation/auditing/rules/SudoPrevention.java
@@ -93,6 +95,7 @@
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/automation/runner/Automota.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/core/repository/UserTypeRepository.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/core/annotations/Model.java
+/mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/install/configuration/HostConfiguration.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/core/config/SystemOptions.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/automation/auditing/Trigger.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/integrations/openai/model/ChatRequest.java
@@ -221,6 +224,7 @@
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/core/model/security/SessionRule.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/core/repository/NotificationRepository.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/core/model/automation/AutomationCronEntry.java
+/mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/core/model/sessions/AuditOutput.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/protobuf/Session.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/core/config/TimeChecker.java
 /mnt/ExtraDrive/repos/Sentrius/core/src/main/java/io/dataguardians/sso/core/services/IntegrationSecurityTokenService.java

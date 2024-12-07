@@ -8,10 +8,10 @@ public class TerminalLogOutputDTO {
     private LocalDateTime logTm;
     private long outputSize;
 
-    public TerminalLogOutputDTO(Timestamp logTm, long outputSize) {
+    public TerminalLogOutputDTO(Timestamp logTm, String output) {
         // Convert java.sql.Timestamp to java.time.LocalDateTime
         this.logTm = logTm.toLocalDateTime();
-        this.outputSize = outputSize;
+        this.outputSize = output != null ? output.length() : 0;
     }
 
     public LocalDateTime getLogTm() {

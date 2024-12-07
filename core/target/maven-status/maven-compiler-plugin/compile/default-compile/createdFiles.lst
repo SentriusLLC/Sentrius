@@ -1,3 +1,4 @@
+io/dataguardians/sso/install/configuration/DatabaseConfiguration.class
 io/dataguardians/config/ApplicationConfig.class
 io/dataguardians/sso/core/repository/TimeConfigRepository.class
 io/dataguardians/sso/core/config/ThreadSafeDynamicPropertiesService.class
@@ -125,12 +126,14 @@ io/dataguardians/sso/core/annotations/Model.class
 io/dataguardians/sso/integrations/openai/model/ComplianceRule.class
 io/dataguardians/automation/auditing/AllowedExecution.class
 io/dataguardians/sso/core/model/auditing/Rule.class
+io/dataguardians/sso/install/configuration/HostConfiguration.class
 io/dataguardians/sso/core/breadcrumbs/BreadcrumbService.class
 io/dataguardians/config/Configuration.class
 io/dataguardians/sso/core/model/sessions/AuditOutput$AuditOutputBuilder.class
 io/dataguardians/sso/core/model/hostgroup/ProfileRule.class
 io/dataguardians/sso/core/model/HostSystem$HostSystemBuilder.class
 io/dataguardians/sso/core/model/security/zt/JITReason.class
+io/dataguardians/sso/install/configuration/InstallConfiguration.class
 io/dataguardians/sso/core/repository/JITReasonRepository.class
 io/dataguardians/sso/core/services/UserPublicKeyService.class
 io/dataguardians/sso/core/repository/OpsJITRequestRepository.class
@@ -168,6 +171,7 @@ io/dataguardians/sso/core/services/CustomUserDetailsService.class
 io/dataguardians/sso/integrations/openai/ApiKey.class
 io/dataguardians/sso/core/config/Configuration.class
 io/dataguardians/sso/core/model/hostgroup/TimeConfigJson.class
+io/dataguardians/sso/install/configuration/InstallConfiguration$InstallConfigurationBuilder.class
 io/dataguardians/sso/core/services/terminal/SessionTrackingService$1.class
 io/dataguardians/sso/core/model/dto/JITTrackerDTO.class
 io/dataguardians/sso/integrations/openai/TerminalLogConfiguration$TerminalLogConfigurationBuilder.class

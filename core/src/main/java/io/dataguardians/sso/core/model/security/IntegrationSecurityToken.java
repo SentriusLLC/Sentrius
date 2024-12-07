@@ -22,7 +22,7 @@ public class IntegrationSecurityToken {
     @Column(nullable = false, length = 255)
     private String name;
 
-    @Column(name = "connection_info", columnDefinition = "CLOB", nullable = false)
+    @Column(name = "connection_info", columnDefinition = "TEXT", nullable = false)
     private String connectionInfo;
 
     @Column(name = "type", updatable = false)

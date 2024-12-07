@@ -34,7 +34,7 @@ public class TerminalLogs {
     @Column(name = "instance_id")
     private Integer instanceId;
 
-    @Column(name = "output", columnDefinition = "CLOB")
+    @Column(name = "output", columnDefinition = "TEXT")
     @Lob
     private String output;
 

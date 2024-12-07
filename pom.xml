@@ -34,6 +34,8 @@
         <commons-codec-version>1.17.1</commons-codec-version>
         <guava-version>33.3.1-jre</guava-version>
         <okhttp-version>4.10.0</okhttp-version>
+        <jackson-dataformat-xml-version>2.18.2</jackson-dataformat-xml-version>
+        <postgresql-version>42.7.4</postgresql-version>
     </properties>
 
     <dependencyManagement>
@@ -131,6 +133,12 @@
                 <artifactId>flyway-core</artifactId>
                 <version>${flyway.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-database-postgresql</artifactId>
+                <version>${flyway.version}</version>
+            </dependency>
+
 
             <dependency>
                 <groupId>jakarta.persistence</groupId>
@@ -243,6 +251,17 @@
                 <artifactId>httpclient</artifactId>
                 <version>4.5.14</version>
             </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.dataformat</groupId>
+                <artifactId>jackson-dataformat-yaml</artifactId>
+                <version>${jackson-dataformat-xml-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${postgresql-version}</version>
+            </dependency>
+
         </dependencies>
 
 

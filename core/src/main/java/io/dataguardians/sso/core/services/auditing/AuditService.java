@@ -88,6 +88,7 @@ public class AuditService {
         TerminalLogsRepository.save(log);
     }
 
+    @Transactional(readOnly = true)
     public List<TerminalLogs> getTerminalLogsForSession(Long sessionId) {
         return TerminalLogsRepository.findBySessionId(sessionId);
     }
