@@ -22,6 +22,7 @@ io/dataguardians/sso/core/model/zt/ZeroTrustAccessTokenApproval.class
 io/dataguardians/sso/core/model/zt/OpsZeroTrustAcessTokenRequest.class
 io/dataguardians/config/Configuration$ConfigurationBuilderImpl.class
 io/dataguardians/rollback/RollbackFunction.class
+io/dataguardians/sso/core/model/ConfigurationOption.class
 io/dataguardians/sso/core/model/zt/ZeroTrustAccessTokenRequest$ZeroTrustAccessTokenRequestBuilderImpl.class
 io/dataguardians/sso/integrations/openai/Response.class
 io/dataguardians/sso/core/repository/automation/ScriptCronEntryRepository.class
@@ -151,7 +152,6 @@ io/dataguardians/sso/core/repository/UserRepository.class
 io/dataguardians/sso/integrations/exceptions/HttpException.class
 io/dataguardians/protobuf/Session$MessageType.class
 io/dataguardians/sso/core/services/TwoPartyApprovalService.class
-io/dataguardians/sso/core/model/hostgroup/HostGroup$HostGroupBuilderImpl.class
 io/dataguardians/sso/core/model/auditing/Rule$RuleBuilderImpl.class
 io/dataguardians/automation/sideeffects/state/State.class
 io/dataguardians/sso/core/model/sessions/SessionIdentifier$SessionIdentifierBuilder.class
@@ -178,7 +178,9 @@ io/dataguardians/sso/integrations/openai/TerminalLogConfiguration$TerminalLogCon
 io/dataguardians/automation/ShellScript.class
 io/dataguardians/sso/core/model/security/enums/UserAccessEnum.class
 io/dataguardians/sso/integrations/external/ExternalIntegrationDTO$ExternalIntegrationDTOBuilder.class
+io/dataguardians/sso/core/repository/ConfigurationOptionRepository.class
 io/dataguardians/sso/core/model/security/enums/AutomationAccessEnum.class
+io/dataguardians/config/startup/PostStartupTask.class
 io/dataguardians/automation/auditing/TriggerAction.class
 io/dataguardians/sso/core/model/security/enums/TwoPartyApprovalConfig.class
 io/dataguardians/sso/core/model/dto/DtoHasAccess.class
@@ -241,6 +243,7 @@ io/dataguardians/sso/core/config/TwoPartyApprovalProperties.class
 io/dataguardians/automation/watchdog/WatchDog$WatchDogBuilderImpl.class
 io/dataguardians/sso/core/config/SchedulerConfig.class
 io/dataguardians/automation/auditing/Trigger.class
+io/dataguardians/sso/install/configuration/dtos/ProfileConfigurationDTO.class
 io/dataguardians/sso/integrations/openai/model/TwoPartyRequest.class
 io/dataguardians/sso/core/model/users/UserConfig$UserConfigBuilder.class
 io/dataguardians/sso/core/model/users/User$UserBuilderImpl.class
@@ -367,5 +370,6 @@ io/dataguardians/sso/core/model/users/UserPublicKey.class
 io/dataguardians/sso/core/repository/OpsApprovalRepository.class
 io/dataguardians/sso/core/model/zt/ZeroTrustAccessTokenReason$ZeroTrustAccessTokenReasonBuilder.class
 io/dataguardians/sso/core/services/NotificationService.class
+io/dataguardians/sso/install/configuration/dtos/HostGroupConfigurationDTO.class
 io/dataguardians/sso/core/model/NotificationRecipient.class
 io/dataguardians/sso/core/model/security/enums/SystemKeyConfiguration$SystemKeyConfigurationBuilder.class

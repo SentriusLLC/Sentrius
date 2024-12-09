@@ -124,7 +124,7 @@ public class KeyStoreService {
     }
 
     @Transactional
-    public ApplicationKey getApplicationKey() throws JSchException, IOException, GeneralSecurityException {
+    public ApplicationKey getGlobalKey() throws JSchException, IOException, GeneralSecurityException {
         var appKeys = applicationKeyRepository.findAll();
         if (appKeys.isEmpty()) {
             log.info("Generating new application key");
@@ -142,12 +142,13 @@ public class KeyStoreService {
         return appKey;
     }
 
+
     /**
      * generates system's public/private key par and returns passphrase
      *
      * @return passphrase for system generated key
      */
-    public void keyGen(String passphrase) throws JSchException, IOException, KeyStoreException {
+    private void keyGen(String passphrase) throws JSchException, IOException, KeyStoreException {
 
         JSch jsch = new JSch();
         String typeStr = systemOptions.sshKeyType;

@@ -105,7 +105,7 @@ public class TerminalService {
             ConnectedSystem.builder().hostSystem(selectedSystem).enclave(enclave).user(user).session(sessionLog).build();
 
         try {
-            ApplicationKey appKey = keyStoreService.getApplicationKey();
+            ApplicationKey appKey = keyStoreService.getGlobalKey();
             // check to see if passphrase has been provided
             if (passphrase == null || passphrase.trim().equals("")) {
                 passphrase = appKey.getPassphrase();

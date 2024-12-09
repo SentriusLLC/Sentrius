@@ -97,6 +97,16 @@ postgres:
     POSTGRES_PASSWORD: password
     POSTGRES_DB: sentrius
 
+ssh:
+  image:
+    repository: postgres
+    tag: 15
+  port: 5432
+  env:
+    POSTGRES_USER: admin
+    POSTGRES_PASSWORD: password
+    POSTGRES_DB: sentrius
+
 # Secrets
 secrets:
   db:

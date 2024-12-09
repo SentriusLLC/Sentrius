@@ -1,0 +1,13 @@
+users:
+  - username: test
+    name: firstname lastname
+
+systems:
+    - displayName: host
+      user: root
+      port: 22
+      authorizedKeys: ~/.ssh/authorized_keys
+      proxies:
+        - host: dw
+          port: 9995
+

@@ -11,8 +11,10 @@ import java.util.List;
 import java.util.Set;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.dataguardians.sso.core.model.ApplicationKey;
 import io.dataguardians.sso.core.model.HostSystem;
 import io.dataguardians.sso.core.model.users.User;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -22,6 +24,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
@@ -33,7 +36,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 /** Value object that contains profile information */
-@SuperBuilder
+@Builder
 @Getter
 @Setter
 @NoArgsConstructor
@@ -87,6 +90,10 @@ public class HostGroup {
       inverseJoinColumns = @JoinColumn(name = "rule_id")
   )
   private Set<ProfileRule> rules;
+
+  @OneToOne(cascade = CascadeType.ALL)
+  @JoinColumn(name = "application_key_id", referencedColumnName = "id", unique = true)
+  private ApplicationKey applicationKey;
 
   public void setSystems(Collection<String> systems) {
     hostSystemList = new java.util.ArrayList<>();

@@ -12,6 +12,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SystemKeyConfiguration {
+  String keyConfigurationName;
   String pathToPrivateKey;
   String privateKeyPassphrase;
   String pathToPublicKey;

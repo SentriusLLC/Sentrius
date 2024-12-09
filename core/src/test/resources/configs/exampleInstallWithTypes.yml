@@ -1,0 +1,105 @@
+userTypes:
+  - userTypeName: testType
+    systemAccess: CAN_MANAGE_SYSTEMS
+    ruleAccess: CAN_DEL_RULES
+
+users:
+  - username: test
+    name: firstname
+    password: test
+    authorizationType: testType
+    managementGroups:
+      - name
+      - testGroup
+
+systems:
+  - displayName: host
+    user: marc
+    port: 22
+    host: localhost
+    authorizedKeys: ~/.ssh/authorized_keys
+    proxies:
+      - host: dw
+        port: 9995
+
+## Define groups of users who are assigned to systems
+## also entails the configuration that is applied to group
+## Some users may not have access to all systems in the group
+## or may have restricted accesses to systems.
+managementGroups:
+    - name: testGroup
+      description: test group
+      systems:
+        - host
+      configuration:
+        configurationName: testConfig
+        terminalsLocked: false
+        allowSudo: false
+
+## Define Automation used within the platform
+
+automation:
+    - automationName: testAutomation
+      description: test automation
+      automationType: shell
+      script: |
+        #!/bin/bash
+        echo "hello world"
+    - automationName: Start Accumulo
+      description: starts accumulo
+      automationType: io.bastillion.automation.accumulo.StartStopAccumulo
+      automationOptions:
+          shell.script.location.dir: /
+          shell.script.location.name: muchos
+          command: start
+          start_mechanism: start accumulo
+
+systemKeyConfiguration:
+  - keyConfigurationName: testKey
+    #can also include paths. Note that this private key should not be used
+    ## for production purposes.
+    #pathToPrivateKey: /home/user/.ssh/id_rsa
+    #pathToPublicKey: /home/user/.ssh/id_rsa.pub
+    privateKey: |
+      -----BEGIN OPENSSH PRIVATE KEY-----
+      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
+      3LOzbzv5dTxnMe4TjoOct1zbsGU=
+      -----END OPENSSH PRIVATE KEY-----
+    publicKey: |
+      ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDmanENTLBjxp7ZwbNoNaIU9nl7dIPAm0yyVAKPs3d3GSw6VEAxQIEAbPxygxlQta5YZ6oLKVIA7oUadg/r7fWo095Ah9IPDvZOgV1Z0LVM/qGSBLFFMIZqyeA+N28M9LfO2mG2vLrvWRv1jbCKUVOgnWiTisU78ubV26zScTelJh/UQE4bAkdRfs+YfJMvkNm1LpoHIKaaKtSgTrf912L/cIPbW3sM5Vi6j7mR0/Ya2+q+uacpTPL4EMRmF8Fg6/F/OcqIjUcsr5FtI6owXu2GWuIeud28DqHVxXqEZ6ZYR2/J5Y/fOEoTpSJ2fNwvCl1fm2NM8a+Ndngokb40zsn8lDwfslEefRcZfPrDEe97s+kmP5ed5s/xpyVAy3YgAF21HUWqTu4GrS34cUqmEZEQb4xTrsNoJ94nQrmEFOlPKKCxCsNH3Gj4/RiNLxIBKdwoEVOk/S3yHh2U11ngjQEzVwK0n5CbAGik5UKPQ++k1b2gi3FbthM58MJgltc/k9M= user@public-key
+    privateKeyPassphrase: password

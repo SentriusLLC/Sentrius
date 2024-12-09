@@ -53,4 +53,18 @@ public class HostSystemDTO {
         this.hostConnection = hostConnectionString;
         this.lastAccessed = TimeAgoFormatter.formatTimestampToMinutesAgo(connectedSystem.getSession().getSessionTm());
     }
+
+    public static HostSystem fromDTO(HostSystemDTO dto) {
+        HostSystem hostSystem = new HostSystem();
+        if (null != dto) {
+            hostSystem.setId(dto.getId());
+        }
+        hostSystem.setDisplayName(dto.getDisplayName());
+        hostSystem.setStatusCd(dto.getStatusCd());
+        hostSystem.setPublicKeyList(dto.getPublicKeyList());
+        hostSystem.setErrorMsg(dto.getErrorMsg());
+        hostSystem.setPort(dto.getPort());
+        hostSystem.setSshUser(dto.getSshUser());
+        return hostSystem;
+    }
 }

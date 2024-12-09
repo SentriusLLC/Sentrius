@@ -7,11 +7,13 @@ import java.util.List;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.dataguardians.sso.core.model.HostSystem;
+import io.dataguardians.sso.core.model.dto.HostSystemDTO;
 import io.dataguardians.sso.core.model.hostgroup.HostGroup;
 import io.dataguardians.sso.core.model.security.UserType;
 import io.dataguardians.sso.core.model.security.enums.CertKeyConfiguration;
 import io.dataguardians.sso.core.model.security.enums.SystemKeyConfiguration;
 import io.dataguardians.sso.core.model.users.User;
+import io.dataguardians.sso.install.configuration.dtos.HostGroupConfigurationDTO;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,7 +27,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class InstallConfiguration {
 
-  private List<HostSystem> systems;
+  private List<HostSystemDTO> systems;
 
   private List<User> users;
 
@@ -40,9 +42,9 @@ public class InstallConfiguration {
 
   @Builder.Default private List<UserType> userTypes = new ArrayList<>();
 
-  @Builder.Default private List<HostGroup> managementGroups = new ArrayList<>();
+  @Builder.Default private List<HostGroupConfigurationDTO> managementGroups = new ArrayList<>();
 
-  private SystemKeyConfiguration systemKeyConfiguration;
+  private List<SystemKeyConfiguration> systemKeyConfigurations;
 
   private CertKeyConfiguration certKeyConfiguration;
 

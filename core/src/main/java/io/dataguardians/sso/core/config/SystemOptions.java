@@ -105,6 +105,10 @@ public class SystemOptions {
 
   public Integer serverAliveInterval = 60;
 
+  public String yamlConfiguration = "";
+
+  public Boolean deleteYamlConfigurationFile = true;
+
 
   public Boolean sshEnabled = true;
 
