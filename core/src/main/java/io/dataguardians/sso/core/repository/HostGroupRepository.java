@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface HostGroupRepository extends JpaRepository<HostGroup, Long>, JpaSpecificationExecutor<HostGroup> {
 
+
     @Query("SELECT hg FROM HostGroup hg JOIN hg.users u WHERE u.id = :userId")
     List<HostGroup> findAllByUserId(@Param("userId") Long userId);
 

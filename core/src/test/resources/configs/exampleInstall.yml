@@ -4,10 +4,6 @@ users:
 
 systems:
     - displayName: host
-      user: root
+      sshUser: root
       port: 22
       authorizedKeys: ~/.ssh/authorized_keys
-      proxies:
-        - host: dw
-          port: 9995
-

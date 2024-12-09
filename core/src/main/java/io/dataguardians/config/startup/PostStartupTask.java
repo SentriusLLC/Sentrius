@@ -25,6 +25,7 @@ import io.dataguardians.sso.core.model.ConfigurationOption;
 import io.dataguardians.sso.core.model.HostSystem;
 import io.dataguardians.sso.core.model.ProxyHost;
 import io.dataguardians.sso.core.model.dto.HostSystemDTO;
+import io.dataguardians.sso.core.model.dto.UserTypeDTO;
 import io.dataguardians.sso.core.model.hostgroup.HostGroup;
 import io.dataguardians.sso.core.model.security.UserType;
 import io.dataguardians.sso.core.model.users.User;
@@ -220,7 +221,12 @@ public class PostStartupTask {
     protected List<UserType> createUserTypes(InstallConfiguration installConfiguration) throws SQLException, GeneralSecurityException {
         List<UserType> types = new ArrayList<>();
         if (null != installConfiguration.getUserTypes()) {
-            for (UserType type : installConfiguration.getUserTypes()) {
+            for (UserTypeDTO type : installConfiguration.getUserTypes()) {
+                UserType newType = UserType.builder()
+                    .userTypeName(type.getUserTypeName())
+                    .ruleAccess(type.getRuleAccess())
+                    .systemAccess(type.getSystemAccess())
+                    .build();
                 type.setId( userTypeRepository.save(type).getId() );
                 types.add(type);
             }
@@ -234,28 +240,28 @@ public class PostStartupTask {
         List<User> users = new ArrayList<>();
         Map<Long, Set<Long>> assignments = new HashMap<>();
         if (null != installConfiguration.getUsers()) {
-            for (User user : installConfiguration.getUsers()) {
+            for (var userDTO : installConfiguration.getUsers()) {
 
                 // set the UserType from the configuration
-                if (null != user.getAuthorizationType()) {
+                if (null != userDTO.getAuthorizationType()) {
                     for (UserType type : userTypes) {
-                        if (type.getUserTypeName().equals(user.getAuthorizationType().getUserTypeName())) {
-                            user.setAuthorizationType(type);
+                        if (type.getUserTypeName().equals(userDTO.getAuthorizationType().getUserTypeName())) {
+                            userDTO.setAuthorizationType(type);
                             break;
                         }
                     }
                 } else {
-                    user.setAuthorizationType(UserType.createSystemAdmin());
+                    userDTO.setAuthorizationType(UserType.createSystemAdmin());
                 }
 
-                user = userService.addUscer(user);
+                var user = userService.addUscer(User.from(userDTO));
                 users.add(user);
 
-                if (null != user.getHostGroups()) {
+                if (null != userDTO.getHostGroups()) {
                     for (HostGroup profile : user.getHostGroups()) {
                         for (HostGroup profile1 : profiles) {
                             if (profile1.getName().equals(profile.getName())) {
-                                createOrUpdate(assignments, profile1.getId(), user.getId());
+                                createOrUpdate(assignments, profile1.getId(), userDTO.getId());
                                 break;
                             }
                         }
@@ -277,7 +283,7 @@ public class PostStartupTask {
 
     protected void createAdminUser(InstallConfiguration installConfiguration) throws NoSuchAlgorithmException {
 
-        User user = installConfiguration.getAdminUser();
+        var user = installConfiguration.getAdminUser();
 
         if (null == user) {
             throw new IllegalStateException("Admin user not found in configuration");
@@ -288,7 +294,7 @@ public class PostStartupTask {
         // insert default admin user
         user.setAuthorizationType(UserType.createSuperUser());
 
-        user = userService.addUscer(user);
+        userService.addUscer(User.from(user));
 
     }
 

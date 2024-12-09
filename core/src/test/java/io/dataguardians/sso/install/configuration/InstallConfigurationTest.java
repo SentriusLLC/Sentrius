@@ -47,7 +47,7 @@ public class InstallConfigurationTest extends ConfiguredClass {
             objectMapper.readValue(inputStream, InstallConfiguration.class);
         assertNotNull(configuration);
         assertEquals("root", configuration.getSystems().get(0).getSshUser());
-        assertEquals("name", configuration.getUsers().get(0).getName());
+        assertEquals("firstname lastname", configuration.getUsers().get(0).getName());
 
     }
 

@@ -2,9 +2,16 @@ package io.dataguardians.sso.core.model.dto;
 
 import io.dataguardians.sso.core.model.security.UserType;
 import io.dataguardians.sso.core.model.users.User;
-import lombok.Data;
+import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
+@Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserDTO {
     public Long id;
     public String userId;
@@ -12,6 +19,12 @@ public class UserDTO {
     public String name;
     public String emailAddress;
     public UserType authorizationType;
+
+    public String team;
+    public String password;
+
+    @Builder.Default
+    public List<HostGroupDTO> hostGroups = new ArrayList<>();
 
 
     public UserDTO(User user){

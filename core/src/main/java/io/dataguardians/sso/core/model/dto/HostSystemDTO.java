@@ -7,11 +7,13 @@ import io.dataguardians.sso.core.model.ConnectedSystem;
 import io.dataguardians.sso.core.model.HostSystem;
 import io.dataguardians.sso.core.model.hostgroup.HostGroup;
 import io.dataguardians.sso.core.utils.TimeAgoFormatter;
-import lombok.Data;
-import lombok.Getter;
+import lombok.*;
 
 @Getter
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class HostSystemDTO {
     private Long id;
     private int port;
@@ -23,6 +25,8 @@ public class HostSystemDTO {
     private String errorMsg;
     private String hostConnection;
     private String lastAccessed;
+
+    private String authorizedKeys;
 
     public HostSystemDTO(HostSystem hostSystem) {
         this.id = hostSystem.getId();

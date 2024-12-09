@@ -3,6 +3,8 @@ package io.dataguardians.sso.core.model.users;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import io.dataguardians.sso.core.model.dto.UserDTO;
 import io.dataguardians.sso.core.model.hostgroup.HostGroup;
 import io.dataguardians.sso.core.model.security.UserType;
 import io.dataguardians.sso.core.model.actors.UserActor;
@@ -116,4 +118,14 @@ public class User implements UserActor {
          */
     }
 
+    public static User from(UserDTO dto){
+        return User.builder().id(dto.getId())
+            .username(dto.getUsername())
+            .name(dto.getName())
+            .password(dto.getPassword())
+            .emailAddress(dto.getEmailAddress())
+            .authorizationType(UserType.builder().id(dto.getAuthorizationType().getId()).build())
+            .team(dto.getTeam())
+            .build();
+    }
 }

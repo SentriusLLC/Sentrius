@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.dataguardians.sso.core.model.HostSystem;
 import io.dataguardians.sso.core.model.dto.HostSystemDTO;
+import io.dataguardians.sso.core.model.dto.UserDTO;
+import io.dataguardians.sso.core.model.dto.UserTypeDTO;
 import io.dataguardians.sso.core.model.hostgroup.HostGroup;
 import io.dataguardians.sso.core.model.security.UserType;
 import io.dataguardians.sso.core.model.security.enums.CertKeyConfiguration;
@@ -29,18 +31,18 @@ public class InstallConfiguration {
 
   private List<HostSystemDTO> systems;
 
-  private List<User> users;
+  private List<UserDTO> users;
 
   @Builder.Default
-  private User adminUser =
-      User.builder()
+  private UserDTO adminUser =
+      UserDTO.builder()
           .id(0L)
           .authorizationType(UserType.createSuperUser())
           .username("admin")
           .password("changeme")
           .build();
 
-  @Builder.Default private List<UserType> userTypes = new ArrayList<>();
+  @Builder.Default private List<UserTypeDTO> userTypes = new ArrayList<>();
 
   @Builder.Default private List<HostGroupConfigurationDTO> managementGroups = new ArrayList<>();
 
