@@ -34,5 +34,8 @@ public class ApplicationKey {
     @Column(name = "passphrase")
     String passphrase;
 
-    @Builder.Default boolean isFile = false;
+
+    @Builder.Default
+    @Column(name = "is_file", nullable = false) // Explicit mapping
+    boolean isFile = false;
 }

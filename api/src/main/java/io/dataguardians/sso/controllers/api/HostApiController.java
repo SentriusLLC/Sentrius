@@ -5,6 +5,7 @@ import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.dataguardians.sso.core.annotations.LimitAccess;
@@ -185,8 +186,17 @@ public class HostApiController extends BaseController {
 
         // operating user
         var user = getOperatingUser(request, response);
-        var hostGroup = hostGroupService.getHostGroupWithHostSystems(user, enclaveId);
+        Optional<HostGroup> hostGroup = hostGroupService.getHostGroupWithHostSystems(user, enclaveId);
 
+        if (hostGroup.isEmpty()) {
+            if (AccessUtil.canAccess(user, SSHAccessEnum.CAN_MANAGE_SYSTEMS)) {
+                hostGroup = Optional.of( hostGroupService.getHostGroup(enclaveId) );
+            } else {
+                node.put("sessionId","");
+                node.put("errorToUser","You are not assigned to this host group.");
+                return ResponseEntity.ok(node);
+            }
+        }
         if (hostGroup.get().getConfiguration().getTerminalsLocked()){
             node.put("sessionId","");
             node.put("errorToUser","Terminals for this host group are locked, please reach out to your system admin.");

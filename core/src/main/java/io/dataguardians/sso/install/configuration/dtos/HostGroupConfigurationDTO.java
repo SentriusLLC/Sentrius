@@ -17,5 +17,5 @@ public class HostGroupConfigurationDTO {
     private String displayName;
     private String description;
     private List<String> systems;
-    private ProfileConfigurationDTO configuration;
+    private ProfileConfiguration configuration;
 }

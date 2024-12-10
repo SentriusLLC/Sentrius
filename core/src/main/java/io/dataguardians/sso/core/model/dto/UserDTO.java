@@ -18,7 +18,7 @@ public class UserDTO {
     public String username;
     public String name;
     public String emailAddress;
-    public UserType authorizationType;
+    public UserTypeDTO authorizationType;
 
     public String team;
     public String password;
@@ -32,6 +32,6 @@ public class UserDTO {
         this.username = user.getUsername();
         this.name = user.getName();
         this.emailAddress= user.getEmailAddress();
-        this.authorizationType = user.getAuthorizationType();
+        this.authorizationType = new UserTypeDTO(user.getAuthorizationType());
     }
 }

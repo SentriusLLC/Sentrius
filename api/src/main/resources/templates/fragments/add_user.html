@@ -17,7 +17,7 @@
                         <label for="authorizationType" class="form-label">Access Type</label>
                         <select name="authorizationType" class="form-select" th:field="*{authorizationType}" id="authorizationType">
                             <option th:each="u: ${typeList}" th:value="${u.id}"
-                                    th:text="${u.name}"></option>
+                                    th:text="${u.userTypeName}"></option>
                         </select>
                     </div>
                     <div class="mb-3">

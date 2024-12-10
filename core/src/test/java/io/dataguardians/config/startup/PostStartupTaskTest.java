@@ -6,10 +6,12 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.jcraft.jsch.JSchException;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.model.ConfigurationOption;
+import io.dataguardians.sso.core.model.users.User;
 import io.dataguardians.sso.core.repository.*;
 import io.dataguardians.sso.core.security.service.CryptoService;
 import io.dataguardians.sso.core.services.HostGroupService;
 import io.dataguardians.sso.core.services.UserService;
+import io.dataguardians.sso.core.startup.ConfigurationApplicationTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,18 +55,22 @@ class PostStartupTaskTest {
     private CryptoService cryptoService;
 
     @InjectMocks
-    private PostStartupTask postStartupTask;
+    private ConfigurationApplicationTask postStartupTask;
 
     @BeforeEach
     void setUp() {
         // Set up default mocks if necessary
-        when(systemOptions.getYamlConfiguration()).thenReturn("configs/exampleInstall.yml");
-        when(systemOptions.deleteYamlConfigurationFile).thenReturn(true);
+        System.out.println(getClass().getClassLoader().getResource("configs/exampleInstall.yml"));
+
+        when(systemOptions.getYamlConfiguration()).thenReturn(getClass().getClassLoader().getResource("configs" +
+            "/exampleInstall.yml").getPath());
+
     }
 
     @Test
     void testAfterStartupWithYamlConfiguration()
         throws IOException, GeneralSecurityException, JSchException, SQLException {
+        when(systemOptions.getDeleteYamlConfigurationFile()).thenReturn(false);
         // Mock behavior for configurationOptionRepository
         var mockConfigOption = new ConfigurationOption();
         mockConfigOption.setConfigurationName("yamlConfigurationFileHash");
@@ -73,6 +79,7 @@ class PostStartupTaskTest {
         when(configurationOptionRepository.findByConfigurationName("yamlConfigurationFileHash"))
             .thenReturn(Optional.of(mockConfigOption));
 
+        when(userService.addUscer(any(User.class))).thenReturn(User.builder().id(1L).name("name").build());
         // Call the method
         postStartupTask.afterStartup();
 

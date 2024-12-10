@@ -65,12 +65,7 @@ public class DashboardController extends BaseController {
         return "sso/login";
     }
 
-    @GetMapping("/v1/settings")
-    public String displaySettings() {
 
-
-        return "sso/system_settings";
-    }
 
 
     @GetMapping("/v1/logout")

@@ -71,6 +71,35 @@ public class UserType {
     @Builder.Default
     Set<String> specialControlSet = new HashSet<>();
 
+    public AutomationAccessEnum getAutomationAccess() {
+        return null != automationAccess ? automationAccess : AutomationAccessEnum.CAN_VIEW_AUTOMATION;
+    }
+
+    public SSHAccessEnum getSystemAccess() {
+        return null != systemAccess ? systemAccess : SSHAccessEnum.CAN_VIEW_SYSTEMS;
+    }
+
+    public RuleAccessEnum getRuleAccess() {
+        return null != ruleAccess ? ruleAccess : RuleAccessEnum.CAN_VIEW_RULES;
+    }
+
+    public UserAccessEnum getUserAccess() {
+        return null != userAccess ? userAccess : UserAccessEnum.CAN_VIEW_USERS;
+    }
+
+    public ZeroTrustAccessTokenEnum getZtAccessTokenAccess() {
+        return null != ztAccessTokenAccess ? ztAccessTokenAccess : ZeroTrustAccessTokenEnum.CAN_VIEW_ZTATS;
+    }
+
+    public ApplicationAccessEnum getApplicationAccess() {
+        return null != applicationAccess ? applicationAccess : ApplicationAccessEnum.CAN_LOG_IN;
+    }
+
+    public Set<String> getSpecialControlSet() {
+        return specialControlSet;
+    }
+
+
     public Set<String> getAccessSet() {
         Set<String> accesses = new HashSet<>();
 

@@ -62,7 +62,7 @@ public class InstallConfigurationTest extends ConfiguredClass {
             objectMapper.readValue(inputStream, InstallConfiguration.class);
         assertNotNull(configuration);
         assertEquals("marc", configuration.getSystems().get(0).getSshUser());
-        assertEquals("name", configuration.getUsers().get(0).getName());
+        assertEquals("firstname", configuration.getUsers().get(0).getName());
         var userType = configuration.getUsers().get(0).getAuthorizationType();
 
         assertNotNull(userType);
@@ -70,8 +70,8 @@ public class InstallConfigurationTest extends ConfiguredClass {
         var setType = configuration.getUserTypes().get(0);
 
         assertEquals(userType.getUserTypeName(), setType.getUserTypeName());
-        assertEquals(SSHAccessEnum.CAN_MANAGE_SYSTEMS, setType.getSystemAccess());
-        assertEquals(RuleAccessEnum.CAN_DEL_RULES, setType.getRuleAccess());
+        assertEquals(SSHAccessEnum.CAN_MANAGE_SYSTEMS.name(), setType.getSystemAccess());
+        assertEquals(RuleAccessEnum.CAN_DEL_RULES.name(), setType.getRuleAccess());
 
     }
 

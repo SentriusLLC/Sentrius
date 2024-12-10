@@ -10,7 +10,7 @@ export function countUsers(){
 }
 
 export function countTypes(){
-    fetch('/api/v1/users/groups/list')
+    fetch('/api/v1/users/types/list')
         .then(response => response.json())
         .then(data => {
             if (null != data) {

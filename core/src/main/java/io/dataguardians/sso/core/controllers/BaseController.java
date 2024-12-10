@@ -1,10 +1,8 @@
 package io.dataguardians.sso.core.controllers;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import io.dataguardians.sso.core.model.dto.TopBarLinks;
 import io.dataguardians.sso.core.model.users.User;
 import io.dataguardians.sso.core.services.UserService;
 import io.dataguardians.sso.core.config.SystemOptions;
@@ -71,17 +69,25 @@ public abstract class BaseController {
 
     @ModelAttribute("authenticated")
     public boolean isAuthenticated(HttpServletRequest request, HttpServletResponse response) {
-        var operatingUser = userService.getOperatingUser(request, response, getUserMessage(request,null, null));
-        if (null == operatingUser ){
+        try {
+            var operatingUser = userService.getOperatingUser(request, response, getUserMessage(request, null, null));
+            if (null == operatingUser) {
+                return false;
+            }
+            return true;
+        }catch(Exception e){
             return false;
         }
-        return true;
     }
 
     @ModelAttribute("operatingUser")
     public User getOperatingUser(HttpServletRequest request, HttpServletResponse response) {
         // Logic to retrieve the operating user, e.g., from a JWT token
-        return userService.getOperatingUser(request, response, getUserMessage(request,null, null));
+        try {
+            return userService.getOperatingUser(request, response, getUserMessage(request, null, null));
+        }catch(Exception e){
+            return null;
+        }
     }
 
     @ModelAttribute("fieldErrors")

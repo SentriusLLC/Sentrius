@@ -1,10 +1,15 @@
 package io.dataguardians.sso.controllers.api;
 
+import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.jcraft.jsch.JSchException;
+import io.dataguardians.automation.sideeffects.SideEffect;
 import io.dataguardians.sso.core.annotations.LimitAccess;
 import io.dataguardians.sso.core.annotations.Model;
 import io.dataguardians.sso.core.config.SystemOptions;
@@ -16,10 +21,14 @@ import io.dataguardians.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.dataguardians.sso.core.model.security.enums.UserAccessEnum;
 import io.dataguardians.sso.core.model.users.User;
 import io.dataguardians.sso.core.security.service.CryptoService;
+import io.dataguardians.sso.core.services.ConfigurationService;
 import io.dataguardians.sso.core.services.HostGroupService;
+import io.dataguardians.sso.core.services.ObfuscationService;
 import io.dataguardians.sso.core.services.UserService;
+import io.dataguardians.sso.core.startup.ConfigurationApplicationTask;
 import io.dataguardians.sso.core.utils.JsonUtil;
 import io.dataguardians.sso.core.utils.MessagingUtil;
+import io.dataguardians.sso.install.configuration.InstallConfiguration;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +42,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @Controller
@@ -44,6 +54,9 @@ public class SystemApiController extends BaseController {
     final HostGroupService hostGroupService;
     final CryptoService  cryptoService;
     private final MessagingUtil messagingUtil;
+    final ConfigurationService configurationService;
+    final ObfuscationService obfuscationService;
+    final ConfigurationApplicationTask configurationApplicationTask;
 
     @ModelAttribute("systemSettings")
     public List<SystemOption> getSystemSettings() throws IllegalAccessException {
@@ -52,12 +65,17 @@ public class SystemApiController extends BaseController {
 
     protected SystemApiController(UserService userService, SystemOptions systemOptions,
                                   HostGroupService hostGroupService, CryptoService  cryptoService,
-                                  MessagingUtil messagingUtil
+                                  MessagingUtil messagingUtil, ConfigurationService configurationService,
+                                  ObfuscationService obfuscationService,
+                                  ConfigurationApplicationTask configurationApplicationTask
     ) {
         super(userService, systemOptions);
         this.hostGroupService =     hostGroupService;
         this.cryptoService = cryptoService;
         this.messagingUtil = messagingUtil;
+        this.configurationService = configurationService;
+        this.obfuscationService = obfuscationService;
+        this.configurationApplicationTask = configurationApplicationTask;
     }
 
     @GetMapping("/settings/sshEnabled")
@@ -141,6 +159,59 @@ public class SystemApiController extends BaseController {
 
     }
 
+    @PostMapping(value = "/settings/upload", consumes = "multipart/form-data")
+    public ResponseEntity<ObjectNode> uploadConfig(
+        HttpServletRequest request, HttpServletResponse response,
+        @RequestParam("configFile") MultipartFile file) {
+        try {
+            var config = InstallConfiguration.fromYaml(file.getInputStream());
+
+            String content = new String(file.getBytes());
+            String configName = file.getOriginalFilename();
+
+            var operatingUser = getOperatingUser(request,response);
+
+            // Save or update the configuration in the database
+            var insertedConfig = configurationService.saveOrUpdateConfiguration(operatingUser, configName, content);
+            var node = JsonUtil.MAPPER.createObjectNode();
+            node.put("id", obfuscationService.obfuscate(insertedConfig.getId()));
+            return ResponseEntity.ok(node);
+
+        } catch (Exception e) {
+            var node = JsonUtil.MAPPER.createObjectNode();
+            node.put("error", "Failed to parse YAML");
+            return ResponseEntity.badRequest().body(node);
+        }
+    }
+
+    @PostMapping("/settings/apply")
+    public ResponseEntity<Map<String, Object>> applySettings(@RequestParam("id") String id)
+        throws GeneralSecurityException, IOException, JSchException, SQLException {
+        // Perform validation or logic with the ID
+        if (id == null || id.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "ID cannot be empty"));
+        }
+
+        var databaseId = obfuscationService.deobfuscate(id);
+        log.info("wut");
+        var configuration = configurationService.findById(databaseId);
+
+        if (configuration.isPresent()) {
+            var config = InstallConfiguration.fromYaml(configuration.get().getContent());
+
+            List<SideEffect> sideEffects = configurationApplicationTask.initialize(config, true);
+            for (SideEffect sideEffect : sideEffects) {
+                log.info("SideEffect: {}", sideEffect);
+            }
+            log.info("no side effects?");
+            return ResponseEntity.ok(Map.of("id", id));
+        }
+log.info("wut");
+
+        return ResponseEntity.badRequest().body(Map.of("error", "ID cannot be empty"));
+        // Respond with success and an ID for redirection
+
+    }
 
 
 

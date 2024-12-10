@@ -6,15 +6,12 @@ import java.util.ArrayList;
 import java.util.List;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import io.dataguardians.sso.core.model.HostSystem;
 import io.dataguardians.sso.core.model.dto.HostSystemDTO;
 import io.dataguardians.sso.core.model.dto.UserDTO;
 import io.dataguardians.sso.core.model.dto.UserTypeDTO;
-import io.dataguardians.sso.core.model.hostgroup.HostGroup;
 import io.dataguardians.sso.core.model.security.UserType;
 import io.dataguardians.sso.core.model.security.enums.CertKeyConfiguration;
 import io.dataguardians.sso.core.model.security.enums.SystemKeyConfiguration;
-import io.dataguardians.sso.core.model.users.User;
 import io.dataguardians.sso.install.configuration.dtos.HostGroupConfigurationDTO;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -37,7 +34,7 @@ public class InstallConfiguration {
   private UserDTO adminUser =
       UserDTO.builder()
           .id(0L)
-          .authorizationType(UserType.createSuperUser())
+          .authorizationType(new UserTypeDTO(UserType.createSuperUser()))
           .username("admin")
           .password("changeme")
           .build();

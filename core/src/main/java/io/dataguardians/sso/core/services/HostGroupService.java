@@ -195,6 +195,11 @@ public class HostGroupService {
         return hostGroupRepository.findAll();
     }
 
+    public List<HostGroup> getHostGroupsByName(String name) {
+        return hostGroupRepository.findByName(name);
+    }
+
+
     public List<HostGroup> getAllHostGroups(User user) {
         return hostGroupRepository.findAllByUserId(user.getId());
     }

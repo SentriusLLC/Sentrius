@@ -3,6 +3,7 @@ package io.dataguardians.sso.core.services;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import io.dataguardians.sso.core.model.dto.UserTypeDTO;
 import io.dataguardians.sso.core.repository.ProfileRepository;
@@ -50,10 +51,13 @@ public class UserService {
 
     @Transactional
     public User getUserWithDetails(String userName) {
-        User user = UserDB.findByUsername(userName).orElseThrow();
+        var user = UserDB.findByUsername(userName);
+        if (user.isEmpty()) {
+            return null;
+        }
         // Initialize lazy-loaded associations while the session is still active
-        Hibernate.initialize(user.getAuthorizationType());
-        return user;
+        Hibernate.initialize(user.get().getAuthorizationType());
+        return user.get();
     }
 
     public User getOperatingUser(HttpServletRequest request,
@@ -167,7 +171,6 @@ public class UserService {
     }
 
     public List<UserTypeDTO> getUserTypeList() {
-        log.info("****SDGLKJDSGLKSJ");
         return userTypeRepository.findAll().stream().map(UserTypeDTO::new).collect(Collectors.toList());
     }
 
@@ -187,5 +190,25 @@ public class UserService {
     @Transactional
     public void deleteUser(Long userId) {
         userRepository.deleteById(userId);
+    }
+
+    @Transactional
+    public UserType saveUserType(UserType userDto) {
+        return userTypeRepository.save(userDto);
+    }
+
+    @Transactional
+    public void deleteUserType(Long id) {
+        userTypeRepository.deleteById(id);
+    }
+
+    public Optional<User> findByUsername(String username) {
+        var user = UserDB.findByUsername(username);
+        if (user.isEmpty()) {
+            return Optional.empty();
+        }
+        // Initialize lazy-loaded associations while the session is still active
+        Hibernate.initialize(user.get().getAuthorizationType());
+        return user;
     }
 }

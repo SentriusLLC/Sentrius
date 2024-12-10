@@ -52,7 +52,8 @@ public class HostSystem implements Host {
     private String sshPassword = "";
 
     @Column(name = "host")
-    private String host;
+    @Builder.Default
+    private String host = "";
 
     @Builder.Default
     @Column(name = "port")

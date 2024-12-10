@@ -107,7 +107,9 @@ public class SystemOptions {
 
   public String yamlConfiguration = "";
 
-  public Boolean deleteYamlConfigurationFile = true;
+  public Boolean deleteYamlConfigurationFile = false;
+
+  public Boolean allowUploadSystemConfiguration = false;
 
 
   public Boolean sshEnabled = true;

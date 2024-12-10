@@ -7,6 +7,8 @@ public enum SideEffectType {
   LIST_DIRECTORY,
   CHANGE_FILE,
 
+  UPDATE_DATABASE,
+
   MKDIR,
   MOVE_DIRECTORY,
   CHANGE_DIRECTORY,

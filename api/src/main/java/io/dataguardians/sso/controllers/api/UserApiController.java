@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import io.dataguardians.sso.core.annotations.LimitAccess;
 import io.dataguardians.sso.core.annotations.Model;
 import io.dataguardians.sso.core.controllers.BaseController;
+import io.dataguardians.sso.core.model.security.UserType;
 import io.dataguardians.sso.core.model.users.User;
 import io.dataguardians.sso.core.model.dto.UserDTO;
 import io.dataguardians.sso.core.model.dto.UserTypeDTO;
@@ -34,6 +35,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -73,18 +75,8 @@ public class UserApiController extends BaseController {
     public ResponseEntity<List<UserDTO>> listusers(HttpServletRequest request, HttpServletResponse response) {
 
         var users = userService.getAllUsers();
-        for(UserDTO user : users) {
-            log.info("User: {}", user.getAuthorizationType());
-        }
 
         return ResponseEntity.ok(users);
-    }
-
-    @GetMapping("/groups/list")
-    @LimitAccess(userAccess = {UserAccessEnum.CAN_VIEW_USERS})
-    public ResponseEntity<List<UserTypeDTO>> listGroups(HttpServletRequest request, HttpServletResponse response) {
-
-        return ResponseEntity.ok(userService.getUserTypeList());
     }
 
 
@@ -165,4 +157,55 @@ public class UserApiController extends BaseController {
         return "redirect:/sso/v1/users/settings?message=" + MessagingUtil.getMessageId(MessagingUtil.SETTINGS_UPDATED);
     }
 
+    @GetMapping("/types/list")
+    @LimitAccess(userAccess = {UserAccessEnum.CAN_MANAGE_USERS})
+    public ResponseEntity<List<UserTypeDTO>> getUserTypes() throws GeneralSecurityException {
+
+
+        var userDtos = userService.getUserTypeList();
+        userDtos.forEach( userDto -> {
+            try {
+                if (userDto.getId() > 0) {
+                    userDto.setDtoId(cryptoService.encrypt(userDto.getId().toString()));
+                }
+            } catch (GeneralSecurityException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        return ResponseEntity.ok(userDtos);
+    }
+
+    @PostMapping("/types/add")
+    @LimitAccess(userAccess = {UserAccessEnum.CAN_MANAGE_USERS})
+    public ResponseEntity<String> createUserType(
+        UserTypeDTO dto) throws GeneralSecurityException {
+
+        var userDto = new UserType();
+        if (null != dto) {
+            log.info("Creating user type: {}", dto);
+            userDto.setUserTypeName(dto.getUserTypeName());
+            userDto.setAccesses(dto.getAccessSet().stream().toList());
+            userDto = userService.saveUserType(userDto);
+            return ResponseEntity.ok(cryptoService.encrypt(userDto.getId().toString()));
+        }
+
+
+        return ResponseEntity.badRequest().build();
+
+
+    }
+
+    @GetMapping("/types/delete")
+    @LimitAccess(userAccess = {UserAccessEnum.CAN_MANAGE_USERS})
+    public String deleteType(@RequestParam("id") String dtoId) throws GeneralSecurityException {
+        log.info("Deleting user with id: {}", dtoId);
+        Long id = Long.parseLong(cryptoService.decrypt(dtoId));
+        if (id < 0) {
+            return "redirect:/sso/v1/users/list?message=" + MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR);
+        }
+        userService.deleteUserType(id);
+        return "redirect:/sso/v1/users/list?message=" + MessagingUtil.getMessageId(MessagingUtil.USER_DELETE_SUCCESS);
+    }
+
 }
+

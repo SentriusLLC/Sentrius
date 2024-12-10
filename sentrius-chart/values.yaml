@@ -6,8 +6,8 @@ namespace: default
 sentrius:
   image:
     repository: sentrius
-    tag: v1.0.1
-    pullPolicy: IfNotPresent
+    tag: v1.0.3
+    pullPolicy: Never
   port: 8080
   env:
     SPRING_DATASOURCE_USERNAME: admin

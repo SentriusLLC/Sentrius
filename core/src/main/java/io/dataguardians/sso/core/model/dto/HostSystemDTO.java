@@ -12,6 +12,7 @@ import lombok.*;
 @Getter
 @Data
 @Builder
+@ToString
 @AllArgsConstructor
 @NoArgsConstructor
 public class HostSystemDTO {
@@ -19,7 +20,9 @@ public class HostSystemDTO {
     private int port;
     private HostGroupDTO group;
     private String sshUser;
+    private String host;
     private String displayName;
+    private String password;
     private String statusCd;
     private List<String> publicKeyList;
     private String errorMsg;
@@ -31,6 +34,7 @@ public class HostSystemDTO {
     public HostSystemDTO(HostSystem hostSystem) {
         this.id = hostSystem.getId();
         this.displayName = hostSystem.getDisplayName();
+        this.host = hostSystem.getHost();
         this.statusCd = hostSystem.getStatusCd();
         this.publicKeyList = hostSystem.getPublicKeyList() != null ? new ArrayList<>(hostSystem.getPublicKeyList()) : new ArrayList<>();
         this.errorMsg = hostSystem.getErrorMsg();
@@ -45,6 +49,7 @@ public class HostSystemDTO {
         this.displayName = hostSystem.getDisplayName();
         this.statusCd = hostSystem.getStatusCd();
         this.port = hostSystem.getPort();
+        this.host = hostSystem.getHost();
         this.sshUser = hostSystem.getSshUser();
         this.publicKeyList = new ArrayList<>(hostSystem.getPublicKeyList());
         this.errorMsg = hostSystem.getErrorMsg();
@@ -63,6 +68,9 @@ public class HostSystemDTO {
         if (null != dto) {
             hostSystem.setId(dto.getId());
         }
+        hostSystem.setHost(dto.getHost());
+        hostSystem.setSshPassword(dto.getPassword());
+        hostSystem.setDisplayLabel(dto.getDisplayName());
         hostSystem.setDisplayName(dto.getDisplayName());
         hostSystem.setStatusCd(dto.getStatusCd());
         hostSystem.setPublicKeyList(dto.getPublicKeyList());

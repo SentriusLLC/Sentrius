@@ -34,14 +34,52 @@
                 { data: 'name' },
                 { data: 'username' },
                 { data: 'emailAddress' },
-
+                {
+                    data: 'authorizationType',
+                    render: function(data, type, row) {
+                        return `<span  class=\"badge text-bg-info ms-2\">${data.userTypeName}</span>`;
+                    }
+                },
                 {
                     data: 'userId',
                     render: function(data, type, row) {
                         var myId = encodeURIComponent(data);
+                        var actions = "";
                         if (cmu){
                             actions = `<a href="/sso/v1/users/lock/${myId}" class="btn btn-primary" >Lock</a> &nbsp; | &nbsp;`;
                             actions += `<a href="/api/v1/users/delete?userId=${myId}" class="btn btn-primary" >Delete</a>`;
+                        }
+                        return actions;
+                    }
+                }
+            ]
+        });
+
+        $('#user-types-table').DataTable({
+            ajax: {
+                url: '/api/v1/users/types/list', // list
+                dataSrc: '', // Specify the property where the data is located (e.g. use 'data' if response has a "data" field)
+            },
+            columns: [
+                { data: 'userTypeName' },
+                {
+                    data: 'accessSet',
+                    render: function(data, type, row) {
+                        if (Array.isArray(data)) {
+                            return data.map(item => `<span class="badge text-bg-info ms-2">${item}</span>`).join(' ');
+                        } else {
+                            // Fallback for unexpected data format
+                            return `<span class="badge text-bg-info ms-2">${data}</span>`;
+                        }
+                    }
+                },
+                {
+                    data: 'dtoId',
+                    render: function(data, type, row) {
+                        var actions = "";
+                        if (cmu && data){
+                        var myId = encodeURIComponent(data);
+                            actions = `<a href="/api/v1/users/types/delete?id=${myId}" class="btn btn-primary" >Delete</a>`;
                         }
                         return actions;
                     }
@@ -55,6 +93,7 @@
 <body>
 
 <div th:replace="fragments/add_user"></div>
+<div th:replace="fragments/add_type"></div>
 <div class="container-fluid">
     <div class="row flex-nowrap">
         <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
@@ -90,13 +129,34 @@
                                             <span id="Add Hosts" class="badge text-bg-dark">Add User</span>
                                         </a>
                                     </li>
+                                    <li class="nav-item">
+                                        <a href="#" class="nav-link" data-bs-toggle="modal"
+                                           data-bs-target="#userTypeFormModal"
+                                           th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_USERS')}">
+                                            <span id="AddType" class="badge text-bg-dark">Add Type</span>
+                                        </a>
+                                    </li>
 
                                 </ul>
                             </div>
                         </div>
                     </div>
                     <div th:replace="~{fragments/alerts}"></div>
-
+                    <div  th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_USERS')}">
+    <h3>User Types</h3>
+    <table id="user-types-table" class="display" style="width:100%">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Access Set</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- Data will be dynamically loaded here -->
+        </tbody>
+    </table>
+    </div>
     <h3>Users</h3>
     <table id="user-table" class="display" style="width:100%">
         <thead>
@@ -104,6 +164,7 @@
             <th>Name</th>
             <th>Username</th>
             <th>Email Address</th>
+            <th>User Type</th>
             <th>Actions</th>
         </tr>
         </thead>
@@ -118,6 +179,7 @@
 </div>
 </div>
 <script type="module" th:src="@{/js/add_user.js}" defer></script>
+<script type="module" th:src="@{/js/add_type.js}" defer></script>
 </body>
 
 </html>

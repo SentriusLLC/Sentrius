@@ -7,27 +7,25 @@ users:
   - username: test
     name: firstname
     password: test
-    authorizationType: testType
-    managementGroups:
-      - name
-      - testGroup
+    authorizationType:
+      userTypeName: testType
+    hostGroups:
+      - displayName: name
+      - displayName: testGroup
 
 systems:
   - displayName: host
-    user: marc
+    sshUser: marc
     port: 22
     host: localhost
     authorizedKeys: ~/.ssh/authorized_keys
-    proxies:
-      - host: dw
-        port: 9995
 
 ## Define groups of users who are assigned to systems
 ## also entails the configuration that is applied to group
 ## Some users may not have access to all systems in the group
 ## or may have restricted accesses to systems.
 managementGroups:
-    - name: testGroup
+    - displayName: testGroup
       description: test group
       systems:
         - host
@@ -38,23 +36,7 @@ managementGroups:
 
 ## Define Automation used within the platform
 
-automation:
-    - automationName: testAutomation
-      description: test automation
-      automationType: shell
-      script: |
-        #!/bin/bash
-        echo "hello world"
-    - automationName: Start Accumulo
-      description: starts accumulo
-      automationType: io.bastillion.automation.accumulo.StartStopAccumulo
-      automationOptions:
-          shell.script.location.dir: /
-          shell.script.location.name: muchos
-          command: start
-          start_mechanism: start accumulo
-
-systemKeyConfiguration:
+systemKeyConfigurations:
   - keyConfigurationName: testKey
     #can also include paths. Note that this private key should not be used
     ## for production purposes.

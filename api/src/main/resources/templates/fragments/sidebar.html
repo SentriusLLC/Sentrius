@@ -23,7 +23,7 @@
                 </a>
             </li>
             <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
-                <a href="/sso/v1/settings" class="nav-link px-0 align-middle">
+                <a href="/sso/v1/system/settings" class="nav-link px-0 align-middle">
                     <i class="fas fa-cog"></i> <span class="ms-1 d-none d-sm-inline">Settings</span>
                 </a>
             </li>

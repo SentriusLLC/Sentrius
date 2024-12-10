@@ -49,6 +49,10 @@ public class HostController extends BaseController {
 
             // Retrieve ConnectedSystem from your persistent map using the session ID
             var sys = sessionTrackingService.getConnectedSession(sessionIdLong);
+            if (sys == null || sys.getHostSystem() == null) {
+                log.error("No connected system found for session ID: {}", sessionIdLong);
+                return null;
+            }
             log.info("Connected system: {}", sys.getHostSystem().getDisplayName());
             log.info("Connected system: {}", sys.getHostSystem().getStatusCd());
             return new HostSystemDTO(sys.getHostSystem());

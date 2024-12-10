@@ -4,41 +4,36 @@ userTypes:
     ruleAccess: CAN_DEL_RULES
   - userTypeName: jitType
     systemAccess: CAN_VIEW_SYSTEMS
-    jitAccess: CAN_MANAGE_JITS
+    ztAccessTokenAccess: CAN_MANAGE_ZTATS
 users:
   - username: test
-    firstNm: firstname
-    lastNm: lastname
+    name: firstname lastname
     password: test
-    authorizationType: testType
-    managementGroups:
-      - name
-      - testGroup
+    authorizationType:
+      userTypeName: testType
+    hostGroups:
+      - displayName: testGroup
   - username: jit
-    firstNm: firstname
-    lastNm: lastname
+    name: firstname lastname
     password: jit
-    authorizationType: jitType
-    managementGroups:
-      - name
-      - testGroup
+    authorizationType:
+      userTypeName: jitType
+    hostGroups:
+      - displayName: testGroup
 
 systems:
-  - displayNm: SSH-HOST
-    user: ubuntu
+  - displayName: SSH-HOST
+    sshUser: ubuntu
     port: 22
     host: ssh.guard.local
     authorizedKeys: ~/.ssh/authorized_keys
-    proxies:
-      - host: home.guard.local
-        port: 80
 
 ## Define groups of users who are assigned to systems
-## also entails the configuration that is applied to group
+## also entails the configuration that is applied to groupf
 ## Some users may not have access to all systems in the group
 ## or may have restricted accesses to systems.
-hostGroups:
-  - name: testGroup
+managementGroups:
+  - displayName: testGroup
     description: test group
     systems:
       - SSH-HOST

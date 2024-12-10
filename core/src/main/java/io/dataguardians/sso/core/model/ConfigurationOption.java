@@ -23,7 +23,7 @@ public class ConfigurationOption {
     private Long id;
 
     @Column(name = "configuration_name")
-    private String ConfigurationName;
+    private String configurationName;
 
     @Column(name = "configuration_value", nullable = false)
     private String configurationValue;

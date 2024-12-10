@@ -81,16 +81,21 @@ public class KeyStoreService {
             }
         } catch (IOException | GeneralSecurityException ex) {
             log.error("Error initializing KeyStore", ex);
+        } catch (JSchException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    private void createNewKeyStore() throws GeneralSecurityException, IOException {
+    private void createNewKeyStore() throws GeneralSecurityException, IOException, JSchException {
         keyStore = KeyStore.getInstance("JCEKS");
         keyStore.load(null, keyStorePassword);
 
         KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
         keyGenerator.init(keyLength);
         setSecret(alias, keyGenerator.generateKey().getEncoded());
+
+        var passphrase = UUID.randomUUID().toString();
+        keyGen(passphrase); //
 
 
         try (FileOutputStream fos = new FileOutputStream(keyStoreFile)) {
@@ -125,21 +130,25 @@ public class KeyStoreService {
 
     @Transactional
     public ApplicationKey getGlobalKey() throws JSchException, IOException, GeneralSecurityException {
+        /**
+         * Should store in the DB
+
         var appKeys = applicationKeyRepository.findAll();
         if (appKeys.isEmpty()) {
             log.info("Generating new application key");
             var passphrase = UUID.randomUUID().toString();
             keyGen(passphrase); //
-            ApplicationKey applicationKey = new ApplicationKey();
-            applicationKey.setPrivateKey(getPrivateKey());
-            applicationKey.setPublicKey(getPublicKey());
+
             applicationKey.setPassphrase("");
             applicationKeyRepository.save(applicationKey);
         }
-
-        var appKey = applicationKeyRepository.findAll().get(0);
-        appKey.setPassphrase(getSecretBytes(PASSPHRASE).toString());
-        return appKey;
+         */
+        ApplicationKey applicationKey = new ApplicationKey();
+        applicationKey.setId(-1L);
+        applicationKey.setPrivateKey(getPrivateKey());
+        applicationKey.setPublicKey(getPublicKey());
+        applicationKey.setPassphrase(getSecretBytes(PASSPHRASE).toString());
+        return applicationKey;
     }
 
 
@@ -151,7 +160,7 @@ public class KeyStoreService {
     private void keyGen(String passphrase) throws JSchException, IOException, KeyStoreException {
 
         JSch jsch = new JSch();
-        String typeStr = systemOptions.sshKeyType;
+        String typeStr = null != systemOptions ? systemOptions.sshKeyType : "rsa";
         int type = KeyPair.RSA;
         switch(typeStr) {
             case "dsa":

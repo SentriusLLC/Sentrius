@@ -4,12 +4,16 @@ import java.util.ArrayList;
 import java.util.List;
 import io.dataguardians.sso.core.model.hostgroup.HostGroup;
 import io.dataguardians.sso.core.model.hostgroup.ProfileConfiguration;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 @Data
+@Builder
 @ToString
+@AllArgsConstructor
 public class HostGroupDTO {
 
     private Long groupId;
@@ -39,4 +43,7 @@ public class HostGroupDTO {
             this.users = group.getUsers().stream().map(UserDTO::new).toList();
         }
     }
+
+
+
 }

@@ -12,6 +12,7 @@ import io.dataguardians.sso.core.annotations.LimitAccess;
 import io.dataguardians.sso.core.controllers.BaseController;
 import io.dataguardians.sso.core.model.dto.SystemOption;
 import io.dataguardians.sso.core.model.dto.UserTypeDTO;
+import io.dataguardians.sso.core.model.security.UserType;
 import io.dataguardians.sso.core.model.security.enums.UserAccessEnum;
 import io.dataguardians.sso.core.model.users.User;
 import io.dataguardians.sso.core.model.users.UserConfig;
@@ -24,6 +25,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -138,7 +140,9 @@ public class UserController extends BaseController {
 
     @GetMapping("/list")
     @LimitAccess(userAccess = {UserAccessEnum.CAN_VIEW_USERS})
-    public String listUsers() {
+    public String listUsers(Model model) {
+        model.addAttribute("globalAccessSet", UserType.createSuperUser().getAccessSet());
+
         return "sso/users/list_users";
     }
 

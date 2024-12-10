@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta th:replace="~{fragments/header}">
-    <title>[[${systemOptions.systemLogoName}]] - System Settings</title>
+    <title>[[${systemOptions.systemLogoName}]] - Validate YAML Configuration</title>
     <style>
 
         .form-container {
@@ -111,44 +111,44 @@
                     </div>
                 </div>
                 <div th:replace="~{fragments/alerts}"></div>
-<div class="form-container">
-    <form th:action="@{/api/v1/system/settings}" method="post" autocomplete="off">
+<div class="form-container" th:if="${sideEffects != null && !sideEffects.empty}">
+    <form id="applySettingsForm" method="post" autocomplete="off">
         <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
-
-        <div class="form-title">System Settings</div>
+        <input type="hidden" name="id" th:value="${id}"/>
+        <div class="form-title">Changes to be made</div>
 
         <div class="table-container">
-            <table th:if="${systemSettings != null && !systemSettings.empty}">
+            <table th:if="${sideEffects != null && !sideEffects.empty}">
                 <thead>
                 <tr>
-                    <th>Setting Name</th>
-                    <th>Value</th>
+                    <th>Side Effect</th>
+                    <th>Description</th>
                 </tr>
                 </thead>
                 <tbody>
-                <template th:each="s : ${systemSettings}" th:remove="tag">
+                <template th:each="s : ${sideEffects}" th:remove="tag">
                     <tr>
                         <td>
-                                <span style="display: flex; align-items: center; gap: 5px;">
-                                    <div th:text="${s.name}"></div>
-                                    <i class="fa-regular fa-circle-question info-icon" th:title="${s.description}"
-                                       th:if="${s.description != null && !s.description.empty}"></i>
-                                </span>
+                            <div th:text="${s.type}"></div>
                         </td>
                         <td>
-                            <input type="text" th:name="${s.name}" th:value="${s.value}" class="form-control"/>
+                            <div th:text="${s.sideEffectDescription}"></div>
                         </td>
                     </tr>
                 </template>
                 </tbody>
             </table>
+
         </div>
 
         <div class="form-footer mt-4">
-            <button type="submit" class="submit-btn">Save</button>
+            <button type="submit" class="submit-btn">Apply</button>
         </div>
     </form>
 </div>
+                <div class="form-container" th:if="${sideEffects == null || sideEffects.empty}">All Side Effects
+                    applied <a
+                        href="/sso/v1/system/settings">Return to System Settings</a> </div>
             </div>
         </div>
     </div>
