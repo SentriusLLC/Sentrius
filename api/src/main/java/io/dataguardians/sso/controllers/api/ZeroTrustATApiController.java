@@ -6,6 +6,7 @@ import java.util.List;
 import io.dataguardians.sso.core.controllers.BaseController;
 import io.dataguardians.sso.core.model.dto.JITTrackerDTO;
 import io.dataguardians.sso.core.model.users.User;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.ZeroTrustAccessTokenService;
 import io.dataguardians.sso.core.services.NotificationService;
 import io.dataguardians.sso.core.services.UserService;
@@ -26,8 +27,9 @@ public class ZeroTrustATApiController extends BaseController {
     private final ZeroTrustAccessTokenService ztatService;
     private final NotificationService notificationService;
 
-    protected ZeroTrustATApiController(UserService userService, SystemOptions systemOptions, ZeroTrustAccessTokenService ztatService, NotificationService notificationService) {
-        super(userService, systemOptions);
+    protected ZeroTrustATApiController(UserService userService, SystemOptions systemOptions,
+                                       ErrorOutputService errorOutputService, ZeroTrustAccessTokenService ztatService, NotificationService notificationService) {
+        super(userService, systemOptions, errorOutputService);
         this.ztatService = ztatService;
         this.notificationService=notificationService;
     }

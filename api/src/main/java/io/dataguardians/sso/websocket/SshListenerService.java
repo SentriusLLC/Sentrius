@@ -1,10 +1,8 @@
 package io.dataguardians.sso.websocket;
-import io.dataguardians.automation.auditing.ShellAuditable;
-import io.dataguardians.automation.auditing.Trigger;
-import io.dataguardians.automation.auditing.TriggerAction;
-import io.dataguardians.protobuf.Session;
+import io.dataguardians.sso.automation.auditing.Trigger;
+import io.dataguardians.sso.automation.auditing.TriggerAction;
+import io.dataguardians.sso.protobuf.Session;
 import io.dataguardians.sso.core.model.ConnectedSystem;
-import io.dataguardians.sso.core.model.sessions.SessionOutput;
 import io.dataguardians.sso.core.security.service.CryptoService;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
 import lombok.RequiredArgsConstructor;
@@ -17,10 +15,8 @@ import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.sql.SQLException;
 import java.util.Base64;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;

@@ -220,10 +220,10 @@
                         }, 60000);
 
                         $.ajax({
-                            url: "/api/v1/notification/error/log/list",
+                            url: "/api/v1/notification/error/log/count",
                             type: 'GET',
                         }).done(function (data) {
-                            count = Object.keys(data).length;
+                            count = data.count;
                             if (count > 0) {
                                 $("#badge_errors").html('<span class="badge text-bg-danger">' + count + ' Errors</span>');
                             } else {

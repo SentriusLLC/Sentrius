@@ -1,7 +1,6 @@
 package io.dataguardians.sso.controllers.view;
 
 import java.security.GeneralSecurityException;
-import io.dataguardians.automation.auditing.rules.TwoPartySessionRule;
 import io.dataguardians.sso.core.annotations.LimitAccess;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.controllers.BaseController;
@@ -9,6 +8,7 @@ import io.dataguardians.sso.core.model.dto.TerminalLogDTO;
 import io.dataguardians.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.dataguardians.sso.core.model.security.enums.UserAccessEnum;
 import io.dataguardians.sso.core.security.service.CryptoService;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.UserService;
 import io.dataguardians.sso.core.services.auditing.AuditService;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
@@ -32,11 +32,12 @@ public class AuditController extends BaseController {
     public AuditController(
         UserService userService,
         SystemOptions systemOptions,
+        ErrorOutputService errorOutputService,
         AuditService auditService,
         CryptoService cryptoService,
         SessionTrackingService sessionTrackingService
     ) {
-        super(userService, systemOptions);
+        super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
         this.cryptoService = cryptoService;
         this.sessionTrackingService = sessionTrackingService;

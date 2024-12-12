@@ -9,6 +9,7 @@ import io.dataguardians.sso.core.model.dto.HostSystemDTO;
 import io.dataguardians.sso.core.model.dto.TerminalLogOutputDTO;
 import io.dataguardians.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.dataguardians.sso.core.security.service.CryptoService;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.HostGroupService;
 import io.dataguardians.sso.core.services.SessionService;
 import io.dataguardians.sso.core.services.TerminalService;
@@ -40,12 +41,13 @@ public class TerminalApiController extends BaseController {
     protected TerminalApiController(
         UserService userService,
         SystemOptions systemOptions,
+        ErrorOutputService errorOutputService,
         HostGroupService hostGroupService,
         TerminalService terminalService,
         SessionService sessionService,
         CryptoService cryptoService,
         SessionTrackingService sessionTrackingService) {
-        super(userService, systemOptions);
+        super(userService, systemOptions, errorOutputService);
         this.hostGroupService =     hostGroupService;
         this.terminalService = terminalService;
         this.sessionService = sessionService;

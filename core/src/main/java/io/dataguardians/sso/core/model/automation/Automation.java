@@ -1,6 +1,6 @@
 package io.dataguardians.sso.core.model.automation;
 
-import io.dataguardians.automation.sideeffects.state.State;
+import io.dataguardians.sso.automation.sideeffects.state.State;
 import io.dataguardians.sso.core.model.users.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

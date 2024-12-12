@@ -3,7 +3,10 @@ package io.dataguardians.sso.core.controllers;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import io.dataguardians.sso.core.model.ErrorOutput;
 import io.dataguardians.sso.core.model.users.User;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.UserService;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.utils.MessagingUtil;
@@ -23,14 +26,17 @@ public abstract class BaseController {
 
     protected final SystemOptions systemOptions;
 
+    protected final ErrorOutputService errorOutputService;
+
     protected UIMessaging messaging = new UIMessaging();
 
     protected Map<String, String> fieldErrors = new HashMap<>();
 
     @Autowired  // Ensures Spring injects dependencies here
-    protected BaseController(UserService userService, SystemOptions systemOptions) {
+    protected BaseController(UserService userService, SystemOptions systemOptions, ErrorOutputService errorOutputService) {
         this.userService = userService;
         this.systemOptions = systemOptions;
+        this.errorOutputService = errorOutputService;
         this.fieldErrors = new HashMap<>();
     }
 
@@ -46,6 +52,18 @@ public abstract class BaseController {
         } else if (null != errorMessageId){
 
             var msg = MessagingUtil.getMessageFromId(errorMessageId);
+            String referrer = request.getHeader("Referer");
+            String location = "unknown";
+            if (null != referrer){
+                location = referrer;
+            }
+            ErrorOutput errorOutput = ErrorOutput.builder()
+                .errorType("USER_ERROR")
+                .errorLocation(location)
+                .errorHash(UUID.randomUUID().toString())
+                .errorLogs(msg)
+                .build();
+            errorOutputService.saveErrorOutput(errorOutput);
             log.info("Error message id: {} is {}", errorMessageId, msg);
             if (null != msg){
                 messaging = UIMessaging.builder().errorToUser(msg).build();

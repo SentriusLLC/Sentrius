@@ -2,9 +2,9 @@ package io.dataguardians.sso.core.utils;
 
 import java.util.ArrayList;
 import java.util.List;
-import io.dataguardians.automation.auditing.AccessTokenEvaluator;
-import io.dataguardians.automation.auditing.AccessTokenAuditor;
-import io.dataguardians.automation.auditing.rules.RuleConfiguration;
+import io.dataguardians.sso.automation.auditing.AccessTokenEvaluator;
+import io.dataguardians.sso.automation.auditing.AccessTokenAuditor;
+import io.dataguardians.sso.automation.auditing.rules.RuleConfiguration;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.config.ThreadSafeDynamicPropertiesService;
 import lombok.RequiredArgsConstructor;

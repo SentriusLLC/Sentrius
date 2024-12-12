@@ -3,11 +3,13 @@ package io.dataguardians.sso.controllers.api;
 import java.util.List;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
+import java.util.Map;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.dataguardians.sso.core.annotations.LimitAccess;
 import io.dataguardians.sso.core.controllers.BaseController;
+import io.dataguardians.sso.core.model.DataTableResponse;
 import io.dataguardians.sso.core.model.ErrorOutput;
 import io.dataguardians.sso.core.model.security.enums.SSHAccessEnum;
 import io.dataguardians.sso.core.services.ErrorOutputService;
@@ -20,6 +22,10 @@ import io.dataguardians.sso.core.config.SystemOptions;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,7 +41,6 @@ public class NotificationApiController extends BaseController {
 
 
     protected final NotificationService notificationService;
-    protected final ErrorOutputService errorOutputService;
 
     private List<ErrorOutput> errorOutput;
 
@@ -48,9 +53,8 @@ public class NotificationApiController extends BaseController {
                                         SystemOptions systemOptions,
                                         NotificationService notificationService,
                                         ErrorOutputService errorOutputService) {
-        super(userService, systemOptions);
+        super(userService, systemOptions, errorOutputService);
         this.notificationService = notificationService;
-        this.errorOutputService= errorOutputService;
     }
 
     @GetMapping("/latest")
@@ -80,37 +84,19 @@ public class NotificationApiController extends BaseController {
 
 
 
-    @GetMapping("/error/log/get")
+
+
+    @PostMapping("/errors/clear")
     @LimitAccess(sshAccess = SSHAccessEnum.CAN_MANAGE_SYSTEMS, notificationMessage = MessagingUtil.CANNOT_MANAGE_SYSTEMS)
-    public String getErrorLog() throws GeneralSecurityException, SQLException {
+    public ResponseEntity<String> clearLogs() {
 
-        errorOutput = errorOutputService.getErrorOutputs(0, 10);
+        log.info("clear");
+        errorOutputService.clear();
 
-        return "/sso/error_output";
-    }
-
-    @PostMapping("/error/log/clear")
-    @LimitAccess(sshAccess = SSHAccessEnum.CAN_MANAGE_SYSTEMS, notificationMessage = MessagingUtil.CANNOT_MANAGE_SYSTEMS)
-    public String clearLogs(HttpServletRequest request, HttpServletResponse response) throws GeneralSecurityException,
-        SQLException {
-
-        request
-            .getParameterNames()
-            .asIterator()
-            .forEachRemaining(
-                x -> {
-                    if (x.startsWith("log_")) {
-                        errorOutputService.deleteErrorOutput(Long.parseLong(x.substring(4)));
-                    }
-                });
-
-        errorOutput = errorOutputService.getErrorOutputs(1, 10);
-
-        return "/sso/error_output";
+        return ResponseEntity.ok("");
     }
 
     @GetMapping("/error/log/list")
-
     public ResponseEntity<JsonNode> listErrorLog(HttpServletRequest request, HttpServletResponse response) throws GeneralSecurityException,
         SQLException {
 
@@ -130,6 +116,71 @@ public class NotificationApiController extends BaseController {
 
         return ResponseEntity.ok(ztatResponse);
     }
+
+    @GetMapping("/error/log/count")
+    @LimitAccess(sshAccess = SSHAccessEnum.CAN_MANAGE_SYSTEMS, notificationMessage = MessagingUtil.CANNOT_MANAGE_SYSTEMS)
+    public ResponseEntity<JsonNode> countErrorLog(HttpServletRequest request, HttpServletResponse response) throws GeneralSecurityException,
+        SQLException {
+
+        var operatingUser = getOperatingUser(request, response);;
+        if (!AccessUtil.canAccess(operatingUser, SSHAccessEnum.CAN_MANAGE_SYSTEMS)) {
+            return ResponseEntity.ok(JsonUtil.MAPPER.createObjectNode());
+        }
+        ObjectNode resp = JsonUtil.MAPPER.createObjectNode();
+        resp.put("count", errorOutputService.count());
+        return ResponseEntity.ok(resp);
+    }
+
+    @GetMapping("/errors/list")
+    @LimitAccess(sshAccess = SSHAccessEnum.CAN_MANAGE_SYSTEMS, notificationMessage = MessagingUtil.CANNOT_MANAGE_SYSTEMS)
+    public ResponseEntity<?> listErrors(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(defaultValue = "logTm,asc") String sort,
+        @RequestParam(defaultValue = "") String search) {
+
+        log.info("Page: {}, Size: {}, Sort: {}, Search: {}", page, size, sort, search);
+
+        try {
+            // Validate input
+            if (page < 0 || size <= 0) {
+                throw new IllegalArgumentException("Page must be >= 0 and size must be > 0");
+            }
+
+            // Sanitize and validate sort parameter
+            String[] sortParams = sort.replaceAll("'", "").split(",");
+            if (sortParams.length != 2) {
+                throw new IllegalArgumentException("Invalid sort format. Expected: 'column,asc|desc'");
+            }
+            String column = sortParams[0].trim();
+            String direction = sortParams[1].trim();
+
+            // Build Sort object
+            Sort sortBy = Sort.by(Sort.Direction.fromString(direction), column);
+
+            // Fetch paginated data
+            Page<ErrorOutput> errorPage = errorOutputService.getErrorOutputs(PageRequest.of(page, size, sortBy));
+
+            // Create response
+            DataTableResponse<ErrorOutput> response = new DataTableResponse<>(
+                errorPage.getContent(),
+                search,
+                sort,
+                errorOutputService.count(),
+                errorPage.getTotalElements()
+            );
+
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException ex) {
+            log.error("Invalid request parameters: {}", ex.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        } catch (Exception ex) {
+            log.error("Unexpected error: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Internal Server Error"));
+        }
+    }
+
+
 
     @PostMapping("/remove")
     public ResponseEntity<String> removeNotification(HttpServletRequest request, HttpServletResponse response,

@@ -17,15 +17,16 @@ import java.util.stream.Collectors;
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.ChannelShell;
+import com.jcraft.jsch.HostKey;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
-import io.dataguardians.automation.auditing.AccessTokenEvaluator;
-import io.dataguardians.automation.auditing.AccessTokenAuditor;
-import io.dataguardians.automation.auditing.RuleFactory;
-import io.dataguardians.automation.auditing.SessionTokenEvaluator;
-import io.dataguardians.automation.auditing.TriggerAction;
-import io.dataguardians.automation.auditing.rules.SudoPrevention;
+import io.dataguardians.sso.automation.auditing.AccessTokenEvaluator;
+import io.dataguardians.sso.automation.auditing.AccessTokenAuditor;
+import io.dataguardians.sso.automation.auditing.RuleFactory;
+import io.dataguardians.sso.automation.auditing.SessionTokenEvaluator;
+import io.dataguardians.sso.automation.auditing.TriggerAction;
+import io.dataguardians.sso.automation.auditing.rules.SudoPrevention;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.data.SchUserInfo;
 import io.dataguardians.sso.core.data.auditing.RecordingStudio;
@@ -41,6 +42,7 @@ import io.dataguardians.sso.core.model.users.User;
 import io.dataguardians.sso.core.model.users.UserPublicKey;
 import io.dataguardians.sso.core.model.hostgroup.HostGroup;
 import io.dataguardians.sso.core.repository.ApplicationKeyRepository;
+import io.dataguardians.sso.core.repository.SystemRepository;
 import io.dataguardians.sso.core.security.service.KeyStoreService;
 import io.dataguardians.sso.core.services.automation.AutomationService;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
@@ -66,6 +68,7 @@ public class TerminalService {
     protected final KeyStoreService keyStoreService;
     protected final ZeroTrustAccessTokenService ztatService;
     protected final ApplicationContext applicationContext;
+    protected final KnownHostService knownHostService;
 
     public static final int SESSION_TIMEOUT = 60000;
     public static final int CHANNEL_TIMEOUT = 60000;
@@ -75,7 +78,7 @@ public class TerminalService {
     public static final String PRIVATE_KEY = "privateKey";
     public static final String PUBLIC_KEY = "publicKey";
     private final SessionTrackingService sessionTrackingService;
-
+    private final SystemRepository systemRepository;
 
     public ConnectedSystem openSSHTermOnSystem(
         User user,
@@ -84,6 +87,18 @@ public class TerminalService {
         String passphrase,
         String password,
         HostSystem selectedSystem, List<SessionTokenEvaluator> sessionRules
+    ) throws SQLException, GeneralSecurityException {
+        return openSSHTermOnSystem(user, sessionLog, enclave, passphrase, password, selectedSystem, sessionRules, false);
+    }
+
+
+    public ConnectedSystem openSSHTermOnSystem(
+        User user,
+        SessionLog sessionLog,
+        HostGroup enclave,
+        String passphrase,
+        String password,
+        HostSystem selectedSystem, List<SessionTokenEvaluator> sessionRules, boolean fetchedHostKey
     )
         throws SQLException, GeneralSecurityException {
 
@@ -98,6 +113,7 @@ public class TerminalService {
                 log.info("Service name: " + service.getName());
             }
         }
+
 
         JSch jsch = new JSch();
 
@@ -115,6 +131,12 @@ public class TerminalService {
                 }
             }
 
+            if (!selectedSystem.getStatusCd().equals(HostSystem.SUCCESS_STATUS)) {
+                log.info("System is not ready for connection: " + selectedSystem.getDisplayName());
+                authorizePublicKey(selectedSystem, enclave, passphrase, password);
+            }
+
+
             // add private key
             jsch.addIdentity(
                 appKey.getId().toString(),
@@ -124,9 +146,6 @@ public class TerminalService {
 
             // create session
             log.info("Connecting to system: " + schSession.getHostSystem().getDisplayName());
-            log.info("Using public key: " + appKey.getPublicKey());
-            log.info("Using user: " + schSession.getUser().getUsername());
-            log.info("Using password: " + password);
             Session session =
                 jsch.getSession(selectedSystem.getSshUser(), schSession.getHostSystem().getHost(),
                     schSession.getHostSystem().getPort());
@@ -135,6 +154,8 @@ public class TerminalService {
             // set password if it exists
             if (password != null && !password.trim().equals("")) {
                 session.setPassword(password);
+            } else {
+                log.info("Using public key for user {} ; {}", schSession.getUser().getUsername(),appKey.getPublicKey());
             }
             if (systemOptions.getTestMode()) {
                 session.setConfig("StrictHostKeyChecking", "no");
@@ -165,7 +186,7 @@ public class TerminalService {
             schSession.setSessionStartupActions(sessionRules);
 
             var serverAliveInterval = systemOptions.getServerAliveInterval() * 1000;
-            jsch.setKnownHosts(systemOptions.knownHostsPath);
+            jsch.setKnownHosts(knownHostService.getKnownHostsPath());
             session.setConfig("PreferredAuthentications", "publickey,keyboard-interactive,password");
             session.setServerAliveInterval(serverAliveInterval);
             session.connect(SESSION_TIMEOUT);
@@ -230,6 +251,8 @@ public class TerminalService {
             // refresh keys for session
             addPubKey(user, enclave, selectedSystem, session, appKey.getPublicKey());
             schSession.getHostSystem().setStatusCd(HostSystem.SUCCESS_STATUS);
+            // we've connected
+            systemRepository.save(schSession.getHostSystem());
         } catch (JSchException
                  | IOException
                  | GeneralSecurityException
@@ -247,6 +270,33 @@ public class TerminalService {
                 || ex.getMessage().toLowerCase().contains("auth cancel")) {
                 ex.printStackTrace();
                 schSession.getHostSystem().setStatusCd(HostSystem.AUTH_FAIL_STATUS);
+            } else if (ex.getMessage().toLowerCase().contains("reject hostkey")) {
+                // we need to add the host key to known hosts
+                if (!fetchedHostKey) {
+                    schSession.getHostSystem().setStatusCd(HostSystem.PUBLIC_KEY_FAIL_STATUS);
+                    systemRepository.save(schSession.getHostSystem());
+                    log.info("Failed to connect to system: " + schSession.getHostSystem().getDisplayName());
+                    // remove the tracking
+                    sessionOutputService.removeOutput(schSession);
+                    sessionService.closeSession(sessionLog);
+                    ApplicationKey appKey = null;
+                    try {
+                        appKey = keyStoreService.getGlobalKey();
+                    } catch (JSchException e) {
+                        throw new RuntimeException(e);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    fetchHostKey(selectedSystem, appKey, passphrase, password);
+
+                    return openSSHTermOnSystem(user, sessionLog, enclave, passphrase, password, selectedSystem,
+                        sessionRules, true
+                    );
+                } else {
+                    schSession.getHostSystem().setStatusCd(HostSystem.PUBLIC_KEY_FAIL_STATUS);
+                }
+
+
             } else if (ex.getMessage().toLowerCase().contains("unknownhostexception")) {
                 schSession.getHostSystem().setErrorMsg("DNS Lookup Failed");
                 schSession.getHostSystem().setStatusCd(HostSystem.HOST_FAIL_STATUS);
@@ -257,6 +307,7 @@ public class TerminalService {
 
         // add session to map
         if (!schSession.getHostSystem().getStatusCd().equals(HostSystem.SUCCESS_STATUS)) {
+            systemRepository.save(schSession.getHostSystem());
             log.info("Failed to connect to system: " + schSession.getHostSystem().getDisplayName());
             // remove the tracking
             sessionOutputService.removeOutput(schSession);
@@ -289,6 +340,129 @@ public class TerminalService {
         return schSession;
     }
 
+    protected void fetchHostKey(HostSystem hostSystem, ApplicationKey appKey, String passphrase, String password) {
+        Session session = null;
+        try{
+                JSch jsch = new JSch();
+
+                // Create a dummy session to fetch the host key
+            // add private key
+            jsch.addIdentity(
+                appKey.getId().toString(),
+                appKey.getPrivateKey().trim().getBytes(),
+                appKey.getPublicKey().getBytes(),
+                passphrase.getBytes());
+
+            // create session
+
+                session =
+                    jsch.getSession(hostSystem.getSshUser(), hostSystem.getHost(),
+                        hostSystem.getPort());
+                SchUserInfo userInfo = SchUserInfo.builder().build();
+                session.setUserInfo(userInfo);
+                // set password if it exists
+                if (password != null && !password.trim().equals("")) {
+                    session.setPassword(password);
+                }
+
+                // Disable authentication since we're only fetching the host key
+                session.setConfig("StrictHostKeyChecking", "no");
+                session.setConfig("UserKnownHostsFile", "/dev/null");
+
+
+
+                // Connect to fetch the host key
+                session.connect(5000); // Timeout in milliseconds
+
+                // Get the host key
+                HostKey hostKey = session.getHostKey();
+                System.out.println("Fetched Host Key:");
+                System.out.println("Host: " + hostKey.getHost());
+                System.out.println("Type: " + hostKey.getType());
+                System.out.println("Key: " + hostKey.getKey());
+
+                knownHostService.saveHostKey(hostSystem.getHost(), hostKey.getType(), hostKey.getKey());
+
+                // Disconnect session
+
+            } catch (JSchException e) {
+                e.printStackTrace();
+            } finally {
+                if (session != null) {
+                    session.disconnect();
+                }
+        }
+    }
+
+    /**
+     * distributes authorized keys for host system
+     *
+     * @param hostSystem object contains host system information
+     * @param passphrase ssh key passphrase
+     * @param password password to host system if needed
+     * @return status of key distribution
+     */
+    public HostSystem authorizePublicKey(
+        HostSystem hostSystem,HostGroup enclave, String passphrase, String password) {
+
+        JSch jsch = new JSch();
+        Session session = null;
+        hostSystem.setStatusCd(HostSystem.SUCCESS_STATUS);
+        try {
+            ApplicationKey appKey = keyStoreService.getGlobalKey();
+            // check to see if passphrase has been provided
+            if (passphrase == null || passphrase.trim().equals("")) {
+                passphrase = appKey.getPassphrase();
+                // check for null inorder to use key without passphrase
+                if (passphrase == null) {
+                    passphrase = "";
+                }
+            }
+            // add private key
+            jsch.addIdentity(
+                appKey.getId().toString(),
+                appKey.getPrivateKey().trim().getBytes(),
+                appKey.getPublicKey().getBytes(),
+                passphrase.getBytes());
+
+            // create session
+            session = jsch.getSession(hostSystem.getSshUser(), hostSystem.getHost(), hostSystem.getPort());
+
+            // set password if passed in
+            if (password != null && !password.equals("")) {
+                session.setPassword(password);
+            }
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.setConfig("PreferredAuthentications", "publickey,keyboard-interactive,password");
+            session.setServerAliveInterval(SESSION_TIMEOUT);
+            session.connect(SESSION_TIMEOUT);
+
+            addPubKey(null, enclave,hostSystem, session, appKey.getPublicKey());
+
+        } catch (JSchException | GeneralSecurityException ex) {
+            log.info(ex.toString(), ex);
+            hostSystem.setErrorMsg(ex.getMessage());
+            if (ex.getMessage().toLowerCase().contains("userauth fail")) {
+                hostSystem.setStatusCd(HostSystem.PUBLIC_KEY_FAIL_STATUS);
+            } else if (ex.getMessage().toLowerCase().contains("auth fail")
+                || ex.getMessage().toLowerCase().contains("auth cancel")) {
+                hostSystem.setStatusCd(HostSystem.AUTH_FAIL_STATUS);
+            } else if (ex.getMessage().toLowerCase().contains("unknownhostexception")) {
+                hostSystem.setErrorMsg("DNS Lookup Failed");
+                hostSystem.setStatusCd(HostSystem.HOST_FAIL_STATUS);
+            } else {
+                hostSystem.setStatusCd(HostSystem.GENERIC_FAIL_STATUS);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (session != null) {
+            session.disconnect();
+        }
+
+        return hostSystem;
+    }
 
     public  HostSystem addPubKey(User user, HostGroup enclave, HostSystem hostSystem, Session session,
                                  String appPublicKey) {
@@ -323,12 +497,16 @@ public class TerminalService {
             StringBuilder newKeysBuilder = new StringBuilder();
             if (systemOptions.getKeyManagementEnabled()) {
                 // get keys assigned to system
-                List<UserPublicKey> assignedKeys = userPublicKeyService.getPublicKeysForHostGroup(user.getId(),
-                    enclave.getId());
+                List<UserPublicKey> assignedKeys = null == user ? userPublicKeyService.getPublicKeysForHostGroup(
+                    enclave.getId()) : userPublicKeyService.getPublicKeysForHostGroup(
+                    user.getId(),
+                    enclave.getId()
+                );
                 for (UserPublicKey pkey : assignedKeys) {
                     var key = pkey.getPublicKey();
                     newKeysBuilder.append(key.replace("\n", "").trim()).append("\n");
                 }
+                newKeysBuilder.append(existingKeys);
                 newKeysBuilder.append(appPubKey);
             } else {
                 if (existingKeys.indexOf(appPubKey) < 0) {
@@ -339,8 +517,9 @@ public class TerminalService {
             }
 
             String newKeys = newKeysBuilder.toString();
+            log.info("Update Public Keys  ==> " + newKeys);
             if (!newKeys.equals(existingKeys)) {
-                log.info("Update Public Keys  ==> " + newKeys);
+
                 channel = session.openChannel("exec");
                 ((ChannelExec) channel)
                     .setCommand(

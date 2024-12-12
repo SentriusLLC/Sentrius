@@ -11,13 +11,13 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.dataguardians.sso.core.annotations.LimitAccess;
 import io.dataguardians.sso.core.controllers.BaseController;
 import io.dataguardians.sso.core.model.HostSystem;
-import io.dataguardians.sso.core.model.dto.HostGroupDTO;
 import io.dataguardians.sso.core.model.dto.HostSystemDTO;
 import io.dataguardians.sso.core.model.hostgroup.HostGroup;
 import io.dataguardians.sso.core.model.hostgroup.ProfileConfiguration;
 import io.dataguardians.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.dataguardians.sso.core.model.security.enums.SSHAccessEnum;
 import io.dataguardians.sso.core.security.service.CryptoService;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.SessionService;
 import io.dataguardians.sso.core.services.TerminalService;
 import io.dataguardians.sso.core.services.UserService;
@@ -52,11 +52,12 @@ public class HostApiController extends BaseController {
     protected HostApiController(
         UserService userService,
         SystemOptions systemOptions,
+        ErrorOutputService errorOutputService,
         HostGroupService hostGroupService,
         TerminalService terminalService,
         SessionService sessionService,
         CryptoService cryptoService) {
-        super(userService, systemOptions);
+        super(userService, systemOptions, errorOutputService);
         this.hostGroupService =     hostGroupService;
         this.terminalService = terminalService;
         this.sessionService = sessionService;

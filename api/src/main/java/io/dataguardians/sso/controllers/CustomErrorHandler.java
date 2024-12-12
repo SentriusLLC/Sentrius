@@ -6,11 +6,13 @@ import io.dataguardians.sso.core.utils.MessagingUtil;
 import io.dataguardians.sso.core.utils.ZTATUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.servlet.error.ErrorController;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+@Slf4j
 @Controller
 @RequiredArgsConstructor
 public class CustomErrorHandler implements ErrorController {
@@ -37,12 +39,17 @@ public class CustomErrorHandler implements ErrorController {
 
         // Log error details (optional)
         if (ex != null) {
+            ex.printStackTrace();
+            for(StackTraceElement element : ex.getStackTrace()) {
+                log.info(element.toString());
+            }
             String message = "Received Error Message: " + ex.getCause();
             ErrorOutput errorOutput = ErrorOutput.builder()
                 .errorType(ex.getClass().getName())
                 .errorLocation(ex.getStackTrace()[0].toString())
                 .errorHash(createErrorHash(ex.getStackTrace(), ex.getMessage()))
                 .errorLogs(message)
+                .logTm(new java.sql.Timestamp(System.currentTimeMillis()))
                 .build();
             errorOutputService.saveErrorOutput(errorOutput);
 

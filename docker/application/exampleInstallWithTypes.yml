@@ -25,7 +25,7 @@ systems:
   - displayName: SSH-HOST
     sshUser: ubuntu
     port: 22
-    host: ssh.guard.local
+    host: sentrius-ssh
     authorizedKeys: ~/.ssh/authorized_keys
 
 ## Define groups of users who are assigned to systems

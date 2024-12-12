@@ -19,8 +19,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import com.jcraft.jsch.JSchException;
-import io.dataguardians.automation.sideeffects.SideEffect;
-import io.dataguardians.automation.sideeffects.SideEffectType;
+import io.dataguardians.sso.automation.sideeffects.SideEffect;
+import io.dataguardians.sso.automation.sideeffects.SideEffectType;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.model.ConfigurationOption;
 import io.dataguardians.sso.core.model.HostSystem;
@@ -233,6 +233,10 @@ public class ConfigurationApplicationTask {
                         hostGroup = hostGroupRepository.save(hostGroup);
                         profiles.add(hostGroup);
                         for(var hs : hostGroup.getHostSystems()) {
+                            if (null == hs.getHostGroups()){
+                                hs.setHostGroups(new ArrayList<>());
+                            }
+
                             hs.getHostGroups().add(hostGroup);
                             systemRepository.save(hs);
                         }

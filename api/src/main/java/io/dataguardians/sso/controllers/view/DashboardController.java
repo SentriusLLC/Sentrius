@@ -1,17 +1,15 @@
 package io.dataguardians.sso.controllers.view;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 import io.dataguardians.sso.core.controllers.BaseController;
 import io.dataguardians.sso.core.model.dto.SystemOption;
 import io.dataguardians.sso.core.model.users.User;
 import io.dataguardians.sso.core.model.dto.UserTypeDTO;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.UserService;
 import io.dataguardians.sso.core.config.SystemOptions;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -21,8 +19,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @Controller
 @RequestMapping("/sso")
 public class DashboardController extends BaseController {
-    protected DashboardController(UserService userService, SystemOptions systemOptions) {
-        super(userService, systemOptions);
+    protected DashboardController(UserService userService, SystemOptions systemOptions,
+                                  ErrorOutputService errorOutputService) {
+        super(userService, systemOptions, errorOutputService);
     }
 
 
@@ -31,7 +30,6 @@ public class DashboardController extends BaseController {
     @ModelAttribute("typeList")
     public List<UserTypeDTO> getUserTypeList() {
         var types = userService.getUserTypeList();
-        log.info("UserTypeList: {}", types);
         return types;
     }
 
@@ -58,9 +56,6 @@ public class DashboardController extends BaseController {
 
     @GetMapping("/login")
     public String displayLoginForm() {
-
-        log.info("Navigating to login page");
-
 
         return "sso/login";
     }

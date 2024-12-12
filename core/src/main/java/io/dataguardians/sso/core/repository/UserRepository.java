@@ -27,4 +27,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT COUNT(u) > 0 FROM User u JOIN u.hostGroups hg WHERE u.id = :userId AND hg.id IN :hostGroupIds")
     boolean isAssignedToHostGroups(@Param("userId") Long userId, @Param("hostGroupIds") List<Long> hostGroupIds);
 
+    User getByUsername(String userIdStr);
+
+    User getByUserId(String userIdStr);
 }

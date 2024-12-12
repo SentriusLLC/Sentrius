@@ -6,18 +6,14 @@ import java.util.Map;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.controllers.BaseController;
-import io.dataguardians.sso.core.model.dto.SystemOption;
-import io.dataguardians.sso.core.model.dto.UserTypeDTO;
-import io.dataguardians.sso.core.model.users.User;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.IntegrationSecurityTokenService;
 import io.dataguardians.sso.core.services.UserService;
 import io.dataguardians.sso.integrations.external.ExternalIntegrationDTO;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -27,8 +23,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class IntegrationController extends BaseController {
 
     final IntegrationSecurityTokenService integrationService;
-    protected IntegrationController(UserService userService, SystemOptions systemOptions, IntegrationSecurityTokenService integrationService) {
-        super(userService, systemOptions);
+    protected IntegrationController(UserService userService, SystemOptions systemOptions,
+                                    ErrorOutputService errorOutputService, IntegrationSecurityTokenService integrationService) {
+        super(userService, systemOptions, errorOutputService);
         this.integrationService = integrationService;
     }
 

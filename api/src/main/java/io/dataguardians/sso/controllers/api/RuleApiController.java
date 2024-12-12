@@ -14,6 +14,7 @@ import io.dataguardians.sso.core.model.hostgroup.HostGroup;
 import io.dataguardians.sso.core.model.hostgroup.ProfileRule;
 import io.dataguardians.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.dataguardians.sso.core.model.security.enums.RuleAccessEnum;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.HostGroupService;
 import io.dataguardians.sso.core.services.RuleService;
 import io.dataguardians.sso.core.services.UserService;
@@ -28,7 +29,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -41,8 +41,9 @@ public class RuleApiController extends BaseController {
     final RuleService ruleService;
 
     protected RuleApiController(UserService userService, SystemOptions systemOptions,
+                                ErrorOutputService errorOutputService,
                                 HostGroupService hostGroupService, RuleService ruleService) {
-        super(userService, systemOptions);
+        super(userService, systemOptions, errorOutputService);
         this.hostGroupService =     hostGroupService;
         this.ruleService = ruleService;
     }

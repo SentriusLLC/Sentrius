@@ -2,8 +2,8 @@ package io.dataguardians.sso.controllers.view;
 
 import java.util.ArrayList;
 import java.util.List;
-import io.dataguardians.automation.auditing.rules.CommandEvaluator;
-import io.dataguardians.automation.auditing.rules.RuleConfiguration;
+import io.dataguardians.sso.automation.auditing.rules.CommandEvaluator;
+import io.dataguardians.sso.automation.auditing.rules.RuleConfiguration;
 import io.dataguardians.sso.core.annotations.LimitAccess;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.controllers.BaseController;
@@ -11,6 +11,7 @@ import io.dataguardians.sso.core.model.dto.ProfileRuleDTO;
 import io.dataguardians.sso.core.model.dto.TopBarLinks;
 import io.dataguardians.sso.core.model.security.enums.RuleAccessEnum;
 import io.dataguardians.sso.core.model.users.User;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.RuleService;
 import io.dataguardians.sso.core.services.UserService;
 import io.dataguardians.sso.core.utils.AuditConfigProvider;
@@ -31,8 +32,9 @@ public class ZeroTrustRuleController extends BaseController {
     private final AuditConfigProvider auditor;
     private final RuleService ruleService;
 
-    protected ZeroTrustRuleController(UserService userService, SystemOptions systemOptions, AuditConfigProvider auditor, RuleService ruleService) {
-        super(userService, systemOptions);
+    protected ZeroTrustRuleController(UserService userService, SystemOptions systemOptions,
+                                      ErrorOutputService errorOutputService, AuditConfigProvider auditor, RuleService ruleService) {
+        super(userService, systemOptions, errorOutputService);
         this.auditor = auditor;
         this.ruleService = ruleService;
     }

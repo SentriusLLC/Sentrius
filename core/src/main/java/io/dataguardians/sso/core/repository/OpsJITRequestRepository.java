@@ -10,25 +10,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface OpsJITRequestRepository extends JpaRepository<OpsZeroTrustAcessTokenRequest, Long> {
-    List<OpsZeroTrustAcessTokenRequest> findByUserId(Long userId);
-    List<OpsZeroTrustAcessTokenRequest> findBySystemId(Long systemId);
-    List<OpsZeroTrustAcessTokenRequest> findByCommandContaining(String keyword);
-
-    boolean existsByCommandAndUserIdAndSystemId(String command, Long userId, Long systemId);
-    void deleteByIdAndUserId(Long id, Long userId);
-    List<OpsZeroTrustAcessTokenRequest> findByCommandHash(String commandHash);
-
-    @Query("SELECT j FROM OpsZeroTrustAcessTokenRequest j " +
-        "LEFT JOIN FETCH j.ztatReason r " +
-        "WHERE j.commandHash = :commandHash " +
-        "AND j.user.id = :userId " +
-        "AND j.system.id = :systemId " +
-        "ORDER BY j.lastUpdated DESC")
-    List<OpsZeroTrustAcessTokenRequest> findOpsJITRequests(
-        @Param("commandHash") String commandHash,
-        @Param("userId") Long userId,
-        @Param("systemId") Long systemId
-    );
 
     @Query("SELECT j FROM OpsZeroTrustAcessTokenRequest j " +
         "LEFT JOIN FETCH j.ztatReason r " +

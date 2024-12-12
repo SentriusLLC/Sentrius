@@ -9,16 +9,15 @@ import io.dataguardians.sso.core.controllers.BaseController;
 import io.dataguardians.sso.core.model.dto.HostGroupDTO;
 import io.dataguardians.sso.core.model.security.enums.SSHAccessEnum;
 import io.dataguardians.sso.core.model.users.User;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.HostGroupService;
 import io.dataguardians.sso.core.services.UserService;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.utils.AccessUtil;
 import io.dataguardians.sso.core.utils.MessagingUtil;
-import jakarta.persistence.Access;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,8 +33,8 @@ public class EnclaveApiController extends BaseController {
 
     final HostGroupService hostGroupService;
 
-    protected EnclaveApiController(UserService userService, SystemOptions systemOptions, HostGroupService hostGroupService) {
-        super(userService, systemOptions);
+    protected EnclaveApiController(UserService userService, SystemOptions systemOptions, ErrorOutputService errorOutputService, HostGroupService hostGroupService) {
+        super(userService, systemOptions, errorOutputService);
         this.hostGroupService =     hostGroupService;
     }
 

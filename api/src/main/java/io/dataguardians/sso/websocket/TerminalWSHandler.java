@@ -1,9 +1,9 @@
 
 package io.dataguardians.sso.websocket;
 
-import io.dataguardians.automation.auditing.Trigger;
-import io.dataguardians.automation.auditing.TriggerAction;
-import io.dataguardians.protobuf.Session;
+import io.dataguardians.sso.automation.auditing.Trigger;
+import io.dataguardians.sso.automation.auditing.TriggerAction;
+import io.dataguardians.sso.protobuf.Session;
 import io.dataguardians.sso.core.security.service.CryptoService;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
 import lombok.RequiredArgsConstructor;
@@ -82,7 +82,7 @@ public class TerminalWSHandler extends TextWebSocketHandler {
                     // Deserialize the protobuf message
                     byte[] messageBytes = Base64.getDecoder().decode(message.getPayload());
                     Session.TerminalMessage auditLog =
-                        io.dataguardians.protobuf.Session.TerminalMessage.parseFrom(messageBytes);
+                        Session.TerminalMessage.parseFrom(messageBytes);
                     log.info("got message {}; {}; {}", uri,sessionId, auditLog.getCommand());
                     // Decrypt the session ID
 //                    var sessionIdStr = cryptoService.decrypt(sessionId);

@@ -4,24 +4,19 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jcraft.jsch.JSchException;
-import io.dataguardians.automation.sideeffects.SideEffect;
+import io.dataguardians.sso.automation.sideeffects.SideEffect;
 import io.dataguardians.sso.core.annotations.LimitAccess;
-import io.dataguardians.sso.core.annotations.Model;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.controllers.BaseController;
 import io.dataguardians.sso.core.model.dto.SystemOption;
-import io.dataguardians.sso.core.model.dto.UserDTO;
-import io.dataguardians.sso.core.model.dto.UserTypeDTO;
 import io.dataguardians.sso.core.model.security.enums.ApplicationAccessEnum;
-import io.dataguardians.sso.core.model.security.enums.UserAccessEnum;
-import io.dataguardians.sso.core.model.users.User;
 import io.dataguardians.sso.core.security.service.CryptoService;
 import io.dataguardians.sso.core.services.ConfigurationService;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.HostGroupService;
 import io.dataguardians.sso.core.services.ObfuscationService;
 import io.dataguardians.sso.core.services.UserService;
@@ -32,12 +27,10 @@ import io.dataguardians.sso.install.configuration.InstallConfiguration;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.aspectj.bridge.Message;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -64,12 +57,13 @@ public class SystemApiController extends BaseController {
     }
 
     protected SystemApiController(UserService userService, SystemOptions systemOptions,
+                                  ErrorOutputService errorOutputService,
                                   HostGroupService hostGroupService, CryptoService  cryptoService,
                                   MessagingUtil messagingUtil, ConfigurationService configurationService,
                                   ObfuscationService obfuscationService,
                                   ConfigurationApplicationTask configurationApplicationTask
     ) {
-        super(userService, systemOptions);
+        super(userService, systemOptions, errorOutputService);
         this.hostGroupService =     hostGroupService;
         this.cryptoService = cryptoService;
         this.messagingUtil = messagingUtil;

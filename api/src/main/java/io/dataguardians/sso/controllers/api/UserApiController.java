@@ -21,6 +21,7 @@ import io.dataguardians.sso.core.model.security.enums.UserAccessEnum;
 import io.dataguardians.sso.core.model.users.UserConfig;
 import io.dataguardians.sso.core.model.users.UserSettings;
 import io.dataguardians.sso.core.security.service.CryptoService;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.UserCustomizationService;
 import io.dataguardians.sso.core.services.UserService;
 import io.dataguardians.sso.core.services.HostGroupService;
@@ -35,7 +36,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -59,11 +59,12 @@ public class UserApiController extends BaseController {
     }
 
     protected UserApiController(UserService userService, SystemOptions systemOptions,
+                                ErrorOutputService errorOutputService,
                                 HostGroupService hostGroupService, CryptoService  cryptoService,
                                 MessagingUtil messagingUtil,
                                 UserCustomizationService userThemeService
     ) {
-        super(userService, systemOptions);
+        super(userService, systemOptions, errorOutputService);
         this.hostGroupService =     hostGroupService;
         this.cryptoService = cryptoService;
         this.messagingUtil = messagingUtil;

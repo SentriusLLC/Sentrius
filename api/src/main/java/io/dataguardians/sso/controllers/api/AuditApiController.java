@@ -10,10 +10,10 @@ import io.dataguardians.sso.core.controllers.BaseController;
 import io.dataguardians.sso.core.model.dto.SessionLogDTO;
 import io.dataguardians.sso.core.model.dto.TerminalLogDTO;
 import io.dataguardians.sso.core.model.security.enums.SSHAccessEnum;
-import io.dataguardians.sso.core.model.security.enums.SystemOperationsEnum;
 import io.dataguardians.sso.core.model.sessions.SessionLog;
 import io.dataguardians.sso.core.model.sessions.TerminalLogs;
 import io.dataguardians.sso.core.security.service.CryptoService;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.UserService;
 import io.dataguardians.sso.core.services.auditing.AuditService;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
@@ -34,16 +34,16 @@ public class AuditApiController extends BaseController {
     public AuditApiController(
         UserService userService,
         SystemOptions systemOptions,
+        ErrorOutputService errorOutputService,
         AuditService auditService,
         CryptoService cryptoService,SessionTrackingService sessionTrackingService
     ) {
-        super(userService, systemOptions);
+        super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
         this.cryptoService = cryptoService;
         this.sessionTrackingService = sessionTrackingService;
     }
 
-    @PostMapping
     public SessionLog createSession(@RequestParam String username, @RequestParam String ipAddress) {
         return auditService.createSession(username, ipAddress);
     }

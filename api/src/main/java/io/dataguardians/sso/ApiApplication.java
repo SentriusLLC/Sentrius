@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
-@SpringBootApplication(scanBasePackages = {"io.dataguardians.sso"})
+@SpringBootApplication(scanBasePackages = {"io.dataguardians.sso", "org.springframework.security.oauth2.jwt"})
 //@ComponentScan(basePackages = {"io.dataguardians.sso"})
 @EnableJpaRepositories(basePackages = {"io.dataguardians.sso.core.data", "io.dataguardians.sso.core.repository"})
 @EntityScan(basePackages = "io.dataguardians.sso.core.model") // Replace with your actual entity package

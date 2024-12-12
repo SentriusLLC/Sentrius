@@ -1,7 +1,6 @@
 package io.dataguardians.sso.core.model.zt;
 
 import java.util.List;
-import io.dataguardians.sso.core.model.HostSystem;
 import io.dataguardians.sso.core.model.users.User;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -35,10 +34,6 @@ public class OpsZeroTrustAcessTokenRequest {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "system_id")
-    private HostSystem system;
 
     @Column(name = "command", nullable = false)
     private String command;

@@ -1,23 +1,23 @@
 package io.dataguardians.sso.controllers.view;
 
-import java.util.ArrayList;
+import java.security.GeneralSecurityException;
+import java.sql.SQLException;
 import java.util.List;
+import io.dataguardians.sso.core.annotations.LimitAccess;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.controllers.BaseController;
 import io.dataguardians.sso.core.model.dto.NotificationDTO;
-import io.dataguardians.sso.core.model.dto.SystemOption;
-import io.dataguardians.sso.core.model.dto.UserTypeDTO;
-import io.dataguardians.sso.core.model.users.User;
+import io.dataguardians.sso.core.model.security.enums.SSHAccessEnum;
 import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.NotificationService;
 import io.dataguardians.sso.core.services.UserService;
+import io.dataguardians.sso.core.utils.MessagingUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @Slf4j
@@ -33,7 +33,7 @@ public class NotificationController extends BaseController {
                                      SystemOptions systemOptions,
                                      NotificationService notificationService,
                                      ErrorOutputService errorOutputService) {
-        super(userService, systemOptions);
+        super(userService, systemOptions, errorOutputService);
         this.notificationService = notificationService;
         this.errorOutputService= errorOutputService;
     }
@@ -47,6 +47,14 @@ public class NotificationController extends BaseController {
         model.addAttribute("myNotifications", notifications);
         model.addAttribute("unreadCount", notifications.size());
         return "/sso/notifications/view_notifications"; // Redirect to login page
+    }
+
+    @GetMapping("/error/log/get")
+    @LimitAccess(sshAccess = SSHAccessEnum.CAN_MANAGE_SYSTEMS, notificationMessage = MessagingUtil.CANNOT_MANAGE_SYSTEMS)
+    public String getErrorLog() throws GeneralSecurityException, SQLException {
+
+
+        return "/sso/errors/list_errors"; // Redirect to login page
     }
 
 }

@@ -14,6 +14,7 @@ import io.dataguardians.sso.core.controllers.BaseController;
 import io.dataguardians.sso.core.model.dto.TicketDTO;
 import io.dataguardians.sso.core.model.users.UserConfig;
 import io.dataguardians.sso.core.security.service.CryptoService;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.IntegrationSecurityTokenService;
 import io.dataguardians.sso.core.services.ZeroTrustAccessTokenService;
 import io.dataguardians.sso.core.services.UserService;
@@ -52,11 +53,12 @@ public class TicketingApiController extends BaseController {
     }
 
     protected TicketingApiController(UserService userService, SystemOptions systemOptions,
+                                     ErrorOutputService errorOutputService,
                                      IntegrationSecurityTokenService integrationService, CryptoService  cryptoService,
                                      TicketService ticketingService,
                                      ZeroTrustAccessTokenService ztatService, SessionTrackingService sessionTrackingService
     ) {
-        super(userService, systemOptions);
+        super(userService, systemOptions, errorOutputService);
         this.integrationService =     integrationService;
         this.cryptoService = cryptoService;
         this.ticketingService = ticketingService;

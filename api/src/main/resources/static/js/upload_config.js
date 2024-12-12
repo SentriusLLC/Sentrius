@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         modal.hide();
                     }
                     var id = encodeURIComponent(data['id']);
-                    window.location.href = "/sso/v1/system/settings/validate/" + id ;
+                    window.location.href = "/sso/v1/system/settings/validate?id=" + id ;
                 })
                 .catch((error) => {
                     $("#alertTop").hide();

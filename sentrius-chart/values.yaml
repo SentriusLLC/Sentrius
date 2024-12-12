@@ -6,9 +6,11 @@ namespace: default
 sentrius:
   image:
     repository: sentrius
-    tag: v1.0.3
+    tag: v1.0.11
     pullPolicy: Never
   port: 8080
+  ssh:
+    port: 22
   env:
     SPRING_DATASOURCE_USERNAME: admin
     SPRING_DATASOURCE_PASSWORD: password
@@ -62,6 +64,7 @@ sentrius:
       spring.servlet.multipart.enabled=true
       spring.servlet.multipart.max-file-size=10MB
       spring.servlet.multipart.max-request-size=10MB
+      server.error.whitelabel.enabled=false
     dynamic: |
       auditorClass=io.dataguardians.automation.auditing.AccessTokenAuditor
       twopartyapproval.option.LOCKING_SYSTEMS=true
@@ -99,9 +102,10 @@ postgres:
 
 ssh:
   image:
-    repository: postgres
-    tag: 15
-  port: 5432
+    repository: sentrius-ssh
+    tag: v1.0.1
+    pullPolicy: Never
+  port: 22
   env:
     POSTGRES_USER: admin
     POSTGRES_PASSWORD: password
@@ -124,3 +128,17 @@ metallb:
   enabled: true
   addressPool:
     - 192.168.122.100-192.168.122.110
+
+keycloak:
+  image: quay.io/keycloak/keycloak:21.1.1
+  adminUser: admin
+  adminPassword: admin
+  db:
+    image: postgres:15
+    user: keycloak
+    password: password
+    database: keycloak
+  replicas: 1
+  hostname: keycloak.local
+  volumes:
+    realmsPath: /opt/keycloak/data/import

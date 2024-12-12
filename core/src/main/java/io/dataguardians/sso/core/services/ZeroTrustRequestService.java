@@ -311,7 +311,7 @@ public class ZeroTrustRequestService {
             .command(request.getCommand())
             .commandHash(request.getCommandHash())
             .userName(request.getUser().getUsername())
-            .hostName(request.getSystem().getHost())
+            .hostName("")
             .reasonIdentifier(request.getZtatReason() != null ? request.getZtatReason().getReasonIdentifier() : null)
             .reasonUrl(request.getZtatReason() != null ? request.getZtatReason().getUrl() : null)
             .usesRemaining(getUsesRemaining(request)) // Add logic to calculate uses remaining

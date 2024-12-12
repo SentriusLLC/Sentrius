@@ -12,17 +12,16 @@ import io.dataguardians.sso.core.model.dto.HostSystemDTO;
 import io.dataguardians.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.dataguardians.sso.core.model.users.UserSettings;
 import io.dataguardians.sso.core.security.service.CryptoService;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.HostGroupService;
 import io.dataguardians.sso.core.services.UserService;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.services.UserCustomizationService;
 import io.dataguardians.sso.core.services.terminal.SessionTrackingService;
-import io.dataguardians.sso.core.utils.JsonUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,6 +39,22 @@ public class HostController extends BaseController {
     final CryptoService cryptoService;
     final UserCustomizationService userThemeService;
     private ConnectedSystem connectedSystem;
+
+
+    protected HostController(UserService userService,
+                             SystemOptions systemOptions,
+                             ErrorOutputService errorOutputService,
+                             HostGroupService hostGroupService,
+                             SessionTrackingService sessionTrackingService,
+                             CryptoService cryptoService,
+                             UserCustomizationService userThemeService) {
+        super(userService, systemOptions, errorOutputService);
+        this.hostGroupService = hostGroupService;
+        this.sessionTrackingService = sessionTrackingService;
+        this.cryptoService = cryptoService;
+        this.userThemeService = userThemeService;
+    }
+
 
     @ModelAttribute("connectedSystem")
     public HostSystemDTO getConnectedSystem(@RequestParam(name = "sessionId", required = false) String encryptedId) throws GeneralSecurityException {
@@ -129,18 +144,6 @@ public class HostController extends BaseController {
     @ModelAttribute("/enclave")
     public String getEnclave() {
         return "enclave";
-    }
-    protected HostController(UserService userService,
-                             SystemOptions systemOptions,
-                             HostGroupService hostGroupService,
-                             SessionTrackingService sessionTrackingService,
-                             CryptoService cryptoService,
-                             UserCustomizationService userThemeService) {
-        super(userService, systemOptions);
-        this.hostGroupService = hostGroupService;
-        this.sessionTrackingService = sessionTrackingService;
-        this.cryptoService = cryptoService;
-        this.userThemeService = userThemeService;
     }
 
     @GetMapping("/list")

@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS system_rules (
     );
 
 CREATE TABLE IF NOT EXISTS terminal_log (
+                                            id BIGSERIAL PRIMARY KEY,
                                             session_id BIGINT,
                                             instance_id INTEGER,
                                             output TEXT NOT NULL,

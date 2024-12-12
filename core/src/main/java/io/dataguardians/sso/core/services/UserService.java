@@ -4,7 +4,12 @@ import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.dataguardians.sso.core.model.dto.UserTypeDTO;
 import io.dataguardians.sso.core.repository.ProfileRepository;
 import io.dataguardians.sso.core.repository.UserRepository;
@@ -18,6 +23,7 @@ import io.dataguardians.sso.core.security.service.AuthService;
 import io.dataguardians.sso.core.security.service.CookieService;
 import io.dataguardians.sso.core.security.service.CryptoService;
 import io.dataguardians.sso.core.utils.ByteUtils;
+import io.dataguardians.sso.core.utils.JsonUtil;
 import io.dataguardians.sso.core.utils.UIMessaging;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,16 +31,22 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.minidev.json.JSONObject;
 import org.hibernate.Hibernate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
+    @Value("${keycloak.realm}")
+    private String realm;
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String TOKEN_PREFIX = "Bearer ";
@@ -64,11 +76,37 @@ public class UserService {
                                  HttpServletResponse response,
                                  UIMessaging userMessage
                                  ) {
-        String userIdStr = getUserId(request.getSession());
-        if (userIdStr != null) {
+        var jwt = getJWT();
+        Optional<String> userIdStr = getUserId(jwt);
+        Optional<String> usernameStr = getUsername(jwt);
+        Optional<String> email = getEmail(jwt);
+        if (userIdStr.isPresent() && usernameStr.isPresent()) {
             try {
-                Long userId = ByteUtils.convertToLong(userIdStr);
-                User operatingUser = UserDB.getById(userId);
+                //Long userId = ByteUtils.convertToLong(userIdStr);
+                User operatingUser = UserDB.getByUserId(userIdStr.get());
+                if (operatingUser == null) {
+                    operatingUser = User.builder()
+                        .username(usernameStr.get())
+                        .emailAddress(email.get())
+                        .password(UUID.randomUUID().toString())
+                        .userId(userIdStr.get())
+                        .authorizationType(UserType.createUnknownUser())
+                        .build();
+                    log.info("Creating new user: {}", operatingUser);
+                    save(operatingUser);
+                    HostGroup newHg =
+                        HostGroup.builder().name("Host Group for " + operatingUser.getUsername()).description(
+                            "Default Host Group").build();
+                    ProfileDB.save(newHg);
+
+                    operatingUser.getHostGroups().add(newHg);
+                    save(operatingUser);
+                    // create their first host group!
+
+
+
+                }
+                Long userId = operatingUser.getId();
                 Hibernate.initialize(operatingUser.getAuthorizationType());
                 log.trace("Operating user: {} and {}", operatingUser.getUsername(),
                     operatingUser.getAuthorizationType());
@@ -138,14 +176,77 @@ public class UserService {
         }
     }
 
-    private String getUserId(HttpSession session) {
+    private Optional<String> getEmail(ObjectNode jwt) {
+        var claims = jwt.get("claims");
+        if (claims != null) {
+            var email = claims.get("email");
+            if (null != email){
+                return Optional.of(email.asText());
+            }
+        }
+        return Optional.of("");
+    }
+
+    private ObjectNode getJWT() {
+        /*
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated()) {
             if (null != session.getAttribute(USER_ID_CLAIM) ) {
                 return session.getAttribute(USER_ID_CLAIM).toString();
             }
         }
-        return null;
+        return null;*/
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication != null && authentication.isAuthenticated()) {
+            if (authentication.getPrincipal() instanceof Jwt) {
+                Jwt jwt = (Jwt) authentication.getPrincipal();
+                ObjectNode node = JsonUtil.MAPPER.createObjectNode();
+                node.put("sub",jwt.getClaimAsString("sub"));
+                return node; // Keycloak's default user ID claim
+            } else {
+                try {
+                    String jwt = JsonUtil.MAPPER
+                        .registerModule(new JavaTimeModule())
+                        .writeValueAsString(authentication.getPrincipal());
+                    ObjectNode node = (ObjectNode) JsonUtil.MAPPER.readTree(jwt);
+                   return node;
+
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+        }
+        return JsonUtil.MAPPER.createObjectNode();
+    }
+
+    private Optional<String> getUserId(ObjectNode jwt) {
+
+            var claims = jwt.get("claims");
+            if (claims != null) {
+                var userId = claims.get("sub"); // change to sub for a user id
+                if (null != userId){
+                    return Optional.of(userId.asText());
+                }
+        }
+            return Optional.empty();
+
+    }
+
+    private Optional<String> getUsername(ObjectNode jwt) {
+
+        var claims = jwt.get("claims");
+        if (claims != null) {
+            var userId = claims.get("preferred_username"); // change to sub for a user id
+            if (null != userId){
+                return Optional.of(userId.asText());
+            }
+        }
+        return Optional.empty();
+
     }
 
     private User createUnknownUser() {
@@ -210,5 +311,9 @@ public class UserService {
         // Initialize lazy-loaded associations while the session is still active
         Hibernate.initialize(user.get().getAuthorizationType());
         return user;
+    }
+
+    public User save(User user) {
+        return UserDB.save(user);
     }
 }

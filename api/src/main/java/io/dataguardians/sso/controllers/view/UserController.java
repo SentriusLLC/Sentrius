@@ -17,6 +17,7 @@ import io.dataguardians.sso.core.model.security.enums.UserAccessEnum;
 import io.dataguardians.sso.core.model.users.User;
 import io.dataguardians.sso.core.model.users.UserConfig;
 import io.dataguardians.sso.core.model.users.UserSettings;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.UserCustomizationService;
 import io.dataguardians.sso.core.services.UserService;
 import io.dataguardians.sso.core.config.SystemOptions;
@@ -37,8 +38,8 @@ public class UserController extends BaseController {
 
     final UserCustomizationService userThemeService;
 
-    protected UserController(UserService userService, SystemOptions systemOptions, UserCustomizationService userThemeService) {
-        super(userService, systemOptions);
+    protected UserController(UserService userService, SystemOptions systemOptions, ErrorOutputService errorOutputService, UserCustomizationService userThemeService) {
+        super(userService, systemOptions, errorOutputService);
         this.userThemeService = userThemeService;
     }
 

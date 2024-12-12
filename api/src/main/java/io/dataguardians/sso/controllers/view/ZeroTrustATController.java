@@ -5,6 +5,7 @@ import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.controllers.BaseController;
 import io.dataguardians.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
 import io.dataguardians.sso.core.model.users.User;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.ZeroTrustRequestService;
 import io.dataguardians.sso.core.services.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,9 +23,9 @@ public class ZeroTrustATController extends BaseController {
     private final ZeroTrustRequestService ztatRequestService;
 
     protected ZeroTrustATController(UserService userService,
-                                    SystemOptions systemOptions,
+                                    SystemOptions systemOptions, ErrorOutputService errorOutputService,
                                     ZeroTrustRequestService ztatRequestService) {
-        super(userService, systemOptions);
+        super(userService, systemOptions, errorOutputService);
         this.ztatRequestService = ztatRequestService;
     }
 

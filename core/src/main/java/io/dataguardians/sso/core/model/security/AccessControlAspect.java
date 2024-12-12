@@ -11,6 +11,7 @@ import io.dataguardians.sso.core.services.UserService;
 import io.dataguardians.sso.core.utils.AccessUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.springframework.stereotype.Component;
@@ -24,13 +25,11 @@ import java.sql.SQLException;
 
 @Aspect
 @Component
+@RequiredArgsConstructor
 public class AccessControlAspect {
 
     private final UserService userService;
 
-    public AccessControlAspect(UserService userService) {
-        this.userService = userService;
-    }
 
     //@Before("@annotation(io.dataguardians.core.security.access.LimitAccess)")
     //public void checkAccess(ProceedingJoinPoint joinPoint) throws Throwable {

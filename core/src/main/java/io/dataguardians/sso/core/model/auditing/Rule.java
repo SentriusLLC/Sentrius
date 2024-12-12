@@ -5,7 +5,7 @@
  */
 package io.dataguardians.sso.core.model.auditing;
 
-import io.dataguardians.automation.auditing.rules.CommandEvaluator;
+import io.dataguardians.sso.automation.auditing.rules.CommandEvaluator;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

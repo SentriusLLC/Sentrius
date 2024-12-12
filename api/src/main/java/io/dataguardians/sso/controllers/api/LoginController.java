@@ -1,6 +1,7 @@
 package io.dataguardians.sso.controllers.api;
 
 import io.dataguardians.sso.core.controllers.BaseController;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.UserService;
 import io.dataguardians.sso.core.config.SystemOptions;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,8 +18,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class LoginController extends BaseController {
 
 
-    protected LoginController(UserService userService, SystemOptions systemOptions) {
-        super(userService, systemOptions);
+    protected LoginController(UserService userService, SystemOptions systemOptions, ErrorOutputService errorOutputService) {
+        super(userService, systemOptions, errorOutputService);
     }
 
     @PostMapping("/authenticate")

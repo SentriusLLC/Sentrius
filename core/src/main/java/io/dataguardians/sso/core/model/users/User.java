@@ -55,8 +55,8 @@ public class User implements UserActor {
     @Column(name = "email_address")
     private String emailAddress;
 
-    @Column(name = "image_url")
-    private String imageUrl;
+    @Column(name = "user_id")
+    private String userId;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "role_id", referencedColumnName = "id")

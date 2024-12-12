@@ -26,6 +26,9 @@ public class ErrorOutputService {
     @Transactional
     public void saveErrorOutput(ErrorOutput errorOutput) {
         try {
+            if (errorOutput.getLogTm() == null){
+                errorOutput.setLogTm(new java.sql.Timestamp(System.currentTimeMillis()));
+            }
             errorOutputRepository.save(errorOutput);
             log.info("ErrorOutput saved: {}", errorOutput);
         } catch (Exception e) {
@@ -53,6 +56,22 @@ public class ErrorOutputService {
         PageRequest pageRequest = PageRequest.of(page, size);
         Page<ErrorOutput> result = errorOutputRepository.findAllByOrderByLogTmDesc(pageRequest);
         return result.getContent();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ErrorOutput> getErrorOutputs(PageRequest pageRequest) {
+        Page<ErrorOutput> result = errorOutputRepository.findAllByOrderByLogTmDesc(pageRequest);
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public Long count() {
+        return errorOutputRepository.count();
+    }
+
+    @Transactional
+    public void clear() {
+        errorOutputRepository.deleteAll();
     }
 }
 

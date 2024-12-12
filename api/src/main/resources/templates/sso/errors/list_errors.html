@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - List Users</title>
+    <style>
+        .grid-stack-item-content {
+            background-color: #405d80;
+            color: #fff;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .grid-stack-item-content:hover {
+            transform: scale(1.05);
+        }
+    </style>
+    <script type="module" th:src="@{/js/error_logs.js}" defer></script>
+    <!-- Load an inline script to attach the event handler -->
+    <script type="module">
+        import { clearLogs } from '/js/error_logs.js'; // Ensure the correct path
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const clearLogsButton = document.getElementById('clearLogsButton');
+            if (clearLogsButton) {
+                clearLogsButton.addEventListener('click', clearLogs);
+            }
+        });
+    </script>
+</head>
+<script>
+    $(document).ready(function() {
+
+        $('#error-table').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: '/api/v1/notification/errors/list', // list
+                type: 'GET',
+                dataType: 'json', // Ensure the response is JSON
+                contentType: 'application/json', // Request JSON
+                data: function(d) {
+                    // Map DataTables parameters to your endpoint's parameters
+                    console.log("response is " );
+                    console.log(d);
+
+                    return {
+                        page: Math.floor(d.start / d.length), // Calculate page number
+                        size: d.length, // Records per page
+                        sort: d.columns[d.order[0].column].data + ',' + d.order[0].dir, // Sorting
+                        search: d.search.value // Search term
+                    };
+                }
+            },
+            columns: [
+                { data: 'errorType', orderable: true },
+                { data: 'errorLocation', orderable: true },
+                { data: 'errorLogs' , orderable: true},
+                { data: 'logTm', orderable: true }
+            ]
+        });
+
+    });
+</script>
+
+
+<body>
+
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+                <div class="main-content">
+
+
+                    <div class="navbar navbar-dark fixed-top navbar-expand-md" role="navigation" xmlns:th="http://www.thymeleaf.org">
+                        <div class="container bg-dark px-3 py-2" >
+                            <!-- Brand Logo -->
+                            <a class="navbar-brand" href="#" style="padding-left: 45px;">
+                                <a href="/sso/v1/dashboard" class="nav-link">
+                                    <img th:src="${systemOptions.systemLogoPathSmall}" alt="Logo" class="nav-img">
+                                </a>
+                            </a>
+
+                            <!-- Toggler for Mobile -->
+                            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                                <span class="navbar-toggler-icon"></span>
+                            </button>
+
+                            <!-- Navbar Links -->
+                            <div class="collapse navbar-collapse" id="navbarCollapse">
+                                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                                    <li class="nav-item">
+                                        <span id="alertWarn" class="badge text-bg-warning ms-2"></span>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="#" id="clearLogsButton" class="nav-link" >
+                                            <span id="AddType" class="badge text-bg-dark">Clear Logs</span>
+                                        </a>
+                                    </li>
+
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div th:replace="~{fragments/alerts}"></div>
+                    <div  th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_USERS')}">
+
+    <h3>Errors</h3>
+    <table id="error-table" class="display" style="width:100%">
+        <thead>
+        <tr>
+            <th>Error Type</th>
+            <th>Error Location</th>
+            <th>Error Logs</th>
+            <th>Timestamp</th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- Data will be dynamically loaded here -->
+        </tbody>
+    </table>
+        <div id="csrf-token" style="display: none;" th:text="${_csrf.token}"></div>
+
+
+</div>
+</div>
+</div>
+</div>
+</div>
+</body>
+
+</html>

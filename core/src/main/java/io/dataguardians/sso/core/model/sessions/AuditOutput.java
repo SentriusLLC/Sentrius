@@ -1,7 +1,7 @@
 package io.dataguardians.sso.core.model.sessions;
 
 import java.util.List;
-import io.dataguardians.protobuf.Session;
+import io.dataguardians.sso.protobuf.Session;
 import lombok.Builder;
 import lombok.Getter;
 

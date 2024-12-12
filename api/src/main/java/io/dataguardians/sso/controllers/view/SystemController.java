@@ -1,9 +1,10 @@
 package io.dataguardians.sso.controllers.view;
 
 import java.util.List;
-import io.dataguardians.automation.sideeffects.SideEffect;
+import io.dataguardians.sso.automation.sideeffects.SideEffect;
 import io.dataguardians.sso.core.annotations.LimitAccess;
 import io.dataguardians.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.startup.ConfigurationApplicationTask;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.controllers.BaseController;
@@ -21,7 +22,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -37,9 +37,10 @@ public class SystemController extends BaseController {
     final ConfigurationApplicationTask configurationApplicationTask;
 
     protected SystemController(UserService userService, SystemOptions systemOptions,
+                               ErrorOutputService errorOutputService,
                                ObfuscationService obfuscationService, ConfigurationService configurationService,
                                ConfigurationApplicationTask configurationApplicationTask) {
-        super(userService, systemOptions);
+        super(userService, systemOptions, errorOutputService);
         this.obfuscationService = obfuscationService;
         this.configurationService = configurationService;
         this.configurationApplicationTask = configurationApplicationTask;
