@@ -46,7 +46,7 @@ public class NotificationController extends BaseController {
         List<NotificationDTO> notifications = notificationService.findUnseenNotifications(getOperatingUser(request, response)).stream().map(NotificationDTO::new).toList();
         model.addAttribute("myNotifications", notifications);
         model.addAttribute("unreadCount", notifications.size());
-        return "/sso/notifications/view_notifications"; // Redirect to login page
+        return "sso/notifications/view_notifications"; // Redirect to login page
     }
 
     @GetMapping("/error/log/get")
@@ -54,7 +54,7 @@ public class NotificationController extends BaseController {
     public String getErrorLog() throws GeneralSecurityException, SQLException {
 
 
-        return "/sso/errors/list_errors"; // Redirect to login page
+        return "sso/errors/list_errors"; // Redirect to login page
     }
 
 }

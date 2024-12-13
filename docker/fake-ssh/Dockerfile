@@ -14,8 +14,8 @@ RUN apt-get update \
 RUN useradd -ms /bin/bash ubuntu
 RUN passwd -d ubuntu
 
-COPY docker/fake-ssh/entrypoint.sh /usr/local/bin/
+COPY entrypoint.sh /usr/local/bin/
 RUN chmod 755 /usr/local/bin/entrypoint.sh
-COPY api/src/test/resources/configs/priv_key.pub /home/ubuntu/.ssh/authorized_keys
+COPY priv_key.pub /home/ubuntu/.ssh/authorized_keys
 
 ENTRYPOINT ["entrypoint.sh"]

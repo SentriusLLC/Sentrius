@@ -148,6 +148,19 @@ public class UserType {
             .build();
     }
 
+    public static UserType createBaseUser() {
+        return UserType.builder()
+            .id(-4L)
+            .userTypeName("Default User")
+            .ruleAccess(null)
+            .automationAccess(null)
+            .systemAccess(SSHAccessEnum.CAN_VIEW_SYSTEMS)
+            .userAccess(null)
+            .applicationAccess(ApplicationAccessEnum.CAN_LOG_IN)
+            .ztAccessTokenAccess(null)
+            .build();
+    }
+
     public static UserType createUnknownUser() {
         return UserType.builder()
             .id(-3L)

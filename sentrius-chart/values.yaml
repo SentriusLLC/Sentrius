@@ -6,7 +6,6 @@ namespace: default
 sentrius:
   image:
     repository: sentrius
-    tag: v1.0.11
     pullPolicy: Never
   port: 8080
   ssh:
@@ -22,33 +21,27 @@ sentrius:
       keystore.password=${KEYSTORE_PASSWORD}
       keystore.alias=KEYBOX-ENCRYPTION_KEY
       keystore.algorithm=AES
-  
       spring.main.web-application-type=servlet
       spring.thymeleaf.enabled=true
       spring.freemarker.enabled=false
-  
       #flyway configuration
       spring.flyway.enabled=true
       spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
       spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
       spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
       spring.datasource.driver-class-name=org.postgresql.Driver
-      
       # Connection pool settings
       spring.datasource.hikari.maximum-pool-size=10
       spring.datasource.hikari.minimum-idle=5
       spring.datasource.hikari.idle-timeout=30000
       spring.datasource.hikari.max-lifetime=1800000
-      
       # Hibernate settings (optional, for JPA)
       spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
        # Disable automatic schema generation in production
       spring.jpa.hibernate.ddl-auto=none
-      
       # Ensure this path matches your project structure
       #spring.flyway.locations=classpath:db/migration/
       spring.flyway.baseline-on-migrate=true
-      
       # Thymeleaf settings
       spring.thymeleaf.prefix=classpath:/templates/
       spring.thymeleaf.suffix=.html
@@ -56,31 +49,37 @@ sentrius:
       logging.level.org.springframework.web=INFO
       logging.level.org.springframework.security=INFO
       logging.level.io.dataguardians=DEBUG
-  
       logging.level.org.thymeleaf=INFO
-  
       spring.thymeleaf.servlet.produce-partial-output-while-processing=false
-  
       spring.servlet.multipart.enabled=true
       spring.servlet.multipart.max-file-size=10MB
       spring.servlet.multipart.max-request-size=10MB
       server.error.whitelabel.enabled=false
+      keycloak.realm=sentrius
+      # keycloak configuration
+      spring.security.oauth2.client.registration.keycloak.client-id=sentrius-api
+      spring.security.oauth2.client.registration.keycloak.client-secret=nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0
+      spring.security.oauth2.client.registration.keycloak.authorization-grant-type=authorization_code
+      spring.security.oauth2.client.registration.keycloak.redirect-uri=http://sentrius-keycloak:30080/login/oauth2/code/keycloak
+      spring.security.oauth2.client.registration.keycloak.scope=openid,profile,email
+      spring.security.oauth2.resourceserver.jwt.issuer-uri=http://sentrius-keycloak:30081/realms/sentrius
+      spring.security.oauth2.client.provider.keycloak.issuer-uri=http://sentrius-keycloak:30081/realms/sentrius
     dynamic: |
-      auditorClass=io.dataguardians.automation.auditing.AccessTokenAuditor
+      auditorClass=io.dataguardians.sso.automation.auditing.AccessTokenAuditor
       twopartyapproval.option.LOCKING_SYSTEMS=true
       requireProfileForLogin=true
       maxJitDurationMs=1440000
       sshEnabled=true
       systemLogoName=Sentrius
-      AccessTokenAuditor.rule.4=io.dataguardians.automation.auditing.rules.OpenAISessionRule;Malicious AI Monitoring
-      AccessTokenAuditor.rule.5=io.dataguardians.automation.auditing.rules.TwoPartyAIMonitor;AI Second Party Monitor
+      AccessTokenAuditor.rule.4=io.dataguardians.sso.automation.auditing.rules.OpenAISessionRule;Malicious AI Monitoring
+      AccessTokenAuditor.rule.5=io.dataguardians.sso.automation.auditing.rules.TwoPartyAIMonitor;AI Second Party Monitor
       allowProxies=true
-      AccessTokenAuditor.rule.2=io.dataguardians.automation.auditing.rules.DeletePrevention;Delete Prevention
-      AccessTokenAuditor.rule.3=io.dataguardians.automation.auditing.rules.TwoPartySessionRule;Require Second Party Monitoring
-      AccessTokenAuditor.rule.0=io.dataguardians.automation.auditing.rules.CommandEvaluator;Restricted Commands
+      AccessTokenAuditor.rule.2=io.dataguardians.sso.automation.auditing.rules.DeletePrevention;Delete Prevention
+      AccessTokenAuditor.rule.3=io.dataguardians.sso.automation.auditing.rules.TwoPartySessionRule;Require Second Party Monitoring
+      AccessTokenAuditor.rule.0=io.dataguardians.sso.automation.auditing.rules.CommandEvaluator;Restricted Commands
       terminalsInNewTab=false
       auditFlushIntervalMs=5000
-      AccessTokenAuditor.rule.1=io.dataguardians.automation.auditing.rules.AllowedCommandsRule;Approved Commands
+      AccessTokenAuditor.rule.1=io.dataguardians.sso.automation.auditing.rules.AllowedCommandsRule;Approved Commands
       knownHostsPath=/home/marc/.ssh/known_hosts
       systemLogoPathLarge=/images/sentrius_large.jpg
       maxJitUses=1
@@ -103,7 +102,6 @@ postgres:
 ssh:
   image:
     repository: sentrius-ssh
-    tag: v1.0.1
     pullPolicy: Never
   port: 22
   env:
@@ -130,7 +128,10 @@ metallb:
     - 192.168.122.100-192.168.122.110
 
 keycloak:
-  image: quay.io/keycloak/keycloak:21.1.1
+  image:
+    repository: sentrius-keycloak
+    pullPolicy: IfNotPresent
+  host: keycloak.default.svc.cluster.local
   adminUser: admin
   adminPassword: admin
   db:
@@ -139,6 +140,6 @@ keycloak:
     password: password
     database: keycloak
   replicas: 1
-  hostname: keycloak.local
+  hostname: sentrius-keycloak
   volumes:
     realmsPath: /opt/keycloak/data/import

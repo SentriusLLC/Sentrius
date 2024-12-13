@@ -78,7 +78,7 @@ public class AuditController extends BaseController {
             model.addAttribute("sessionAudit", new TerminalLogDTO(logs.get(0),sessionId));
         }
 
-        return "/sso/sessions/view_terms";
+        return "sso/sessions/view_terms";
     }
 
 }

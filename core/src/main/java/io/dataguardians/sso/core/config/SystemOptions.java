@@ -92,6 +92,9 @@ public class SystemOptions {
 
   @Builder.Default public Boolean testMode = false;
 
+  @Updatable(description = "This is the default user type new users are assigned if not passed in via jwt.")
+  @Builder.Default public String defaultUserTypeName = "";
+
   @Builder.Default
   public Integer globalCacheExpirationMinutes = 1440; // 24 hours
 

@@ -90,13 +90,13 @@ public class UserService {
                         .emailAddress(email.get())
                         .password(UUID.randomUUID().toString())
                         .userId(userIdStr.get())
-                        .authorizationType(UserType.createUnknownUser())
+                        .authorizationType(UserType.createSystemAdmin())
                         .build();
                     log.info("Creating new user: {}", operatingUser);
                     save(operatingUser);
                     HostGroup newHg =
                         HostGroup.builder().name("Host Group for " + operatingUser.getUsername()).description(
-                            "Default Host Group").build();
+                            operatingUser.getUsername() + "'s Host Group").build();
                     ProfileDB.save(newHg);
 
                     operatingUser.getHostGroups().add(newHg);
