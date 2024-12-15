@@ -14,7 +14,9 @@ RUN /opt/keycloak/bin/kc.sh build
 FROM quay.io/keycloak/keycloak:24.0.1
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
 
-COPY ./realms/sentrius-realm.json /opt/keycloak/data/import/
+COPY ./realms/sentrius-realm.json /opt/keycloak/data/import/sentrius-realm.json
+
+RUN ls -l /opt/keycloak/data/import/sentrius-realm.json
 
 ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
 CMD ["start-dev", "--proxy=passthrough", "--import-realm"]

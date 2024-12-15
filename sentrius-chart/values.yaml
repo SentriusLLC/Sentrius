@@ -55,6 +55,7 @@ sentrius:
       spring.servlet.multipart.max-file-size=10MB
       spring.servlet.multipart.max-request-size=10MB
       server.error.whitelabel.enabled=false
+      dynamic.properties.path=/config/dynamic.properties
       keycloak.realm=sentrius
       # keycloak configuration
       spring.security.oauth2.client.registration.keycloak.client-id=sentrius-api
@@ -87,6 +88,7 @@ sentrius:
       enableInternalAudit=true
       twopartyapproval.require.explanation.LOCKING_SYSTEMS=false
       canApproveOwnJITs=false
+      yamlConfiguration=/app/exampleInstallWithTypes.yml
 
 # PostgreSQL configuration
 postgres:
@@ -141,5 +143,3 @@ keycloak:
     database: keycloak
   replicas: 1
   hostname: sentrius-keycloak
-  volumes:
-    realmsPath: /opt/keycloak/data/import

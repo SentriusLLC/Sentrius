@@ -76,7 +76,7 @@ public class ConfigurationApplicationTask {
         // Your logic here
 
         if (!StringUtils.isEmpty(systemOptions.getYamlConfiguration())) {
-
+            log.info("Checking for configuration file {}", systemOptions.getYamlConfiguration());
             var digestStream = new DigestInputStream(
                 new FileInputStream(systemOptions.getYamlConfiguration()),
                 MessageDigest.getInstance("SHA256")
@@ -96,7 +96,7 @@ public class ConfigurationApplicationTask {
                     },
                     () -> {
                         var configurationOption = new ConfigurationOption();
-                        configurationOption.setConfigurationName("yamlHash");
+                        configurationOption.setConfigurationName("yamlConfigurationFileHash");
                         configurationOption.setConfigurationValue(hash);
                         configurationOptionRepository.save(configurationOption);
                         recreate.set(true);
@@ -119,6 +119,8 @@ public class ConfigurationApplicationTask {
 
                 initialize(installConfiguration, true);
             }
+        } else {
+            log.info("No configuration file found");
         }
     }
 

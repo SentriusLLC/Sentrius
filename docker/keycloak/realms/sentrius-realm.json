@@ -7,7 +7,9 @@
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
       "secret": "nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0",
-      "redirectUris": ["/*"],
+      "rootUrl": "http://sentrius-keycloak:30080/",
+      "baseUrl": "http://sentrius-keycloak:30080/",
+      "redirectUris": ["http://sentrius-keycloak:30080/*"],
       "protocol": "openid-connect"
     }
   ],

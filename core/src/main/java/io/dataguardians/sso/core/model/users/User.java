@@ -121,6 +121,7 @@ public class User implements UserActor {
     public static User from(UserDTO dto){
         return User.builder().id(dto.getId())
             .username(dto.getUsername())
+            .userId(dto.getUserId())
             .name(dto.getName())
             .password(dto.getPassword())
             .emailAddress(dto.getEmailAddress())

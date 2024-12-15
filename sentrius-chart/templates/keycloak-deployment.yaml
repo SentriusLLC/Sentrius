@@ -50,9 +50,3 @@ spec:
               value: DEBUG
           command: [ "/opt/keycloak/bin/kc.sh" ]
           args: [ "start-dev", "--proxy=edge", "--import-realm"]
-          volumeMounts:
-            - name: keycloak-realms
-              mountPath: {{ .Values.keycloak.volumes.realmsPath }}
-      volumes:
-        - name: keycloak-realms
-          emptyDir: {} # Replace with persistent volume configuration if needed

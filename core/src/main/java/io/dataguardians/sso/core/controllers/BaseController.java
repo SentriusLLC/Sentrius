@@ -52,18 +52,6 @@ public abstract class BaseController {
         } else if (null != errorMessageId){
 
             var msg = MessagingUtil.getMessageFromId(errorMessageId);
-            String referrer = request.getHeader("Referer");
-            String location = "unknown";
-            if (null != referrer){
-                location = referrer;
-            }
-            ErrorOutput errorOutput = ErrorOutput.builder()
-                .errorType("USER_ERROR")
-                .errorLocation(location)
-                .errorHash(UUID.randomUUID().toString())
-                .errorLogs(msg)
-                .build();
-            errorOutputService.saveErrorOutput(errorOutput);
             log.info("Error message id: {} is {}", errorMessageId, msg);
             if (null != msg){
                 messaging = UIMessaging.builder().errorToUser(msg).build();

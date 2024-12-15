@@ -5,6 +5,7 @@ userTypes:
 
 users:
   - username: test
+    userId: 6c1980d6-63e5-49e5-bd88-435cb07c9e7f
     name: firstname
     password: test
     authorizationType:

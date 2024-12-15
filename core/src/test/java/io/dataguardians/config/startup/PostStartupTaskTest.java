@@ -60,7 +60,6 @@ class PostStartupTaskTest {
     @BeforeEach
     void setUp() {
         // Set up default mocks if necessary
-        System.out.println(getClass().getClassLoader().getResource("configs/exampleInstall.yml"));
 
         when(systemOptions.getYamlConfiguration()).thenReturn(getClass().getClassLoader().getResource("configs" +
             "/exampleInstall.yml").getPath());
