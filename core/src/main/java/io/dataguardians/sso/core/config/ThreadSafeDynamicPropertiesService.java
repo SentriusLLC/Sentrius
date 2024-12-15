@@ -15,7 +15,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 @Service
 public class ThreadSafeDynamicPropertiesService {
 
-    @Value("${dynamic.properties.path}")
+    @Value("${dynamic.properties.path:}")
     private String configLocation;
 
     private static final String DYNAMIC_CONFIG_PATH = "dynamic.properties";
@@ -49,7 +49,7 @@ public class ThreadSafeDynamicPropertiesService {
         log.info("Properties path is {}" , path);
         try (FileInputStream in = new FileInputStream(path)) {
             properties.load(in);
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         } finally {
             lock.writeLock().unlock();
