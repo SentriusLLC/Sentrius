@@ -27,13 +27,39 @@
   },
   "users": [
     {
-      "username": "testuser",
+      "username": "test",
       "enabled": true,
       "emailVerified": true,
       "credentials": [
         {
           "type": "password",
-          "value": "password123",
+          "value": "test",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "jit",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "jit",
           "temporary": false
         }
       ],

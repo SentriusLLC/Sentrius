@@ -29,8 +29,11 @@ import io.dataguardians.sso.core.model.dto.HostSystemDTO;
 import io.dataguardians.sso.core.model.dto.UserTypeDTO;
 import io.dataguardians.sso.core.model.hostgroup.HostGroup;
 import io.dataguardians.sso.core.model.security.UserType;
+import io.dataguardians.sso.core.model.security.enums.AutomationAccessEnum;
 import io.dataguardians.sso.core.model.security.enums.RuleAccessEnum;
 import io.dataguardians.sso.core.model.security.enums.SSHAccessEnum;
+import io.dataguardians.sso.core.model.security.enums.UserAccessEnum;
+import io.dataguardians.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
 import io.dataguardians.sso.core.model.users.User;
 import io.dataguardians.sso.core.repository.ConfigurationOptionRepository;
 import io.dataguardians.sso.core.repository.HostGroupRepository;
@@ -89,12 +92,16 @@ public class ConfigurationApplicationTask {
                 .ifPresentOrElse(
                     configurationOption -> {
                         if (!hash.equals(configurationOption.getConfigurationValue())) {
+                            log.info("Configuration file hash has changed, recreating database");
                             recreate.set(true);
+                        }else {
+                            log.info("Configuration file hash has not changed");
                         }
                         configurationOption.setConfigurationValue(hash);
                         configurationOptionRepository.save(configurationOption);
                     },
                     () -> {
+                        log.info("No configuration file hash found, creating one");
                         var configurationOption = new ConfigurationOption();
                         configurationOption.setConfigurationName("yamlConfigurationFileHash");
                         configurationOption.setConfigurationValue(hash);
@@ -112,7 +119,7 @@ public class ConfigurationApplicationTask {
             }
 
             if (recreate.get()) {
-
+                log.info("Recreating database");
                 var installConfiguration =
                     InstallConfiguration.fromYaml(new FileInputStream(systemOptions.getYamlConfiguration()));
                 // recreate the database
@@ -313,11 +320,24 @@ public class ConfigurationApplicationTask {
         List<UserType> types = new ArrayList<>();
         if (null != installConfiguration.getUserTypes()) {
             for (UserTypeDTO type : installConfiguration.getUserTypes()) {
-                UserType newType = UserType.builder()
-                    .userTypeName(type.getUserTypeName())
-                    .ruleAccess(RuleAccessEnum.of(List.of(type.getRuleAccess())))
-                    .systemAccess(SSHAccessEnum.of(List.of(type.getSystemAccess())))
-                    .build();
+                var builder = UserType.builder();
+                if (null != type.getRuleAccess()){
+                    builder.ruleAccess(RuleAccessEnum.of(List.of(type.getRuleAccess())));
+                }
+                if (null != type.getSystemAccess()){
+                    builder.systemAccess(SSHAccessEnum.of(List.of(type.getSystemAccess())));
+                }
+                if (null != type.getUserAccess()){
+                    builder.userAccess(UserAccessEnum.of(List.of(type.getUserAccess())));
+                }
+                if (null != type.getAutomationAccess()){
+                    builder.automationAccess(AutomationAccessEnum.of(List.of(type.getAutomationAccess())));
+                }
+                if (null != type.getZtAccessTokenAccess()){
+                    builder.ztAccessTokenAccess(ZeroTrustAccessTokenEnum.of(List.of(type.getZtAccessTokenAccess())));
+                }
+
+                UserType newType = builder.userTypeName(type.getUserTypeName()).build();
                 userTypeRepository.findByUserTypeName(type.getUserTypeName())
                     .ifPresentOrElse(
                         userType -> {

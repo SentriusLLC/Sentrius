@@ -51,7 +51,7 @@ public class UserTypeDTO {
     Set<String> accessSet = new HashSet<>();
 
     public UserTypeDTO(UserType type){
-        log.trace("UserTypeDTO: {}", type.getUserTypeName());
+        log.info("UserTypeDTO: {}", type);
         this.id = type.getId() ;
         this.userTypeName = type.getUserTypeName();
         this.automationAccess = type.getAutomationAccess().name();

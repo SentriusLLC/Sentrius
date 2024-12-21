@@ -37,10 +37,6 @@ build_image() {
     echo "Building $name:$version..."
     docker build -t "$name:$version" "$context_dir" || { echo "Failed to build $name"; exit 1; }
     echo "Successfully built $name:$version"
-    echo docker tag "$name:$version" 060808646119.dkr.ecr.us-east-1.amazonaws.com/$name:$version
-    docker tag "$name:$version" 060808646119.dkr.ecr.us-east-1.amazonaws.com/$name:$version
-    echo docker push 060808646119.dkr.ecr.us-east-1.amazonaws.com/$name:$version
-    docker push 060808646119.dkr.ecr.us-east-1.amazonaws.com/$name:$version
 }
 
 
@@ -66,6 +62,8 @@ if $update_sentrius; then
     build_image "sentrius" "$SENTRIUS_VERSION" "."
     update_env_var "SENTRIUS_VERSION" "$SENTRIUS_VERSION"
     ## for local, replace minikube with docker
+    echo "Loading image into minikube"
+    minikube image load sentrius:$SENTRIUS_VERSION
 fi
 
 if $update_sentrius_ssh; then
@@ -73,6 +71,8 @@ if $update_sentrius_ssh; then
     build_image "sentrius-ssh" "$SENTRIUS_SSH_VERSION" "./docker/fake-ssh"
     update_env_var "SENTRIUS_SSH_VERSION" "$SENTRIUS_SSH_VERSION"
     ## for local, replace minikube with docker
+    echo "Loading image into minikube"
+    minikube image load sentrius-ssh:$SENTRIUS_SSH_VERSION
 fi
 
 if $update_sentrius_keycloak; then
@@ -80,4 +80,6 @@ if $update_sentrius_keycloak; then
     build_image "sentrius-keycloak" "$SENTRIUS_KEYCLOAK_VERSION" "./docker/keycloak"
     update_env_var "SENTRIUS_KEYCLOAK_VERSION" "$SENTRIUS_KEYCLOAK_VERSION"
     ## for local, replace minikube with docker
+    echo "Loading image into minikube"
+    minikube image load sentrius-keycloak:$SENTRIUS_KEYCLOAK_VERSION
 fi

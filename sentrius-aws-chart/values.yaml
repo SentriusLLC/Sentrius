@@ -1,3 +1,4 @@
+
 # General settings
 replicaCount: 1
 namespace: default
@@ -5,15 +6,28 @@ namespace: default
 # Sentrius configuration
 sentrius:
   image:
-    repository: sentrius
-    pullPolicy: Never
+    repository: 060808646119.dkr.ecr.us-east-1.amazonaws.com/sentrius
+    tag: 1.0.65
+    pullPolicy: IfNotPresent
   port: 8080
   ssh:
     port: 22
   env:
-    SPRING_DATASOURCE_USERNAME: admin
-    SPRING_DATASOURCE_PASSWORD: password
-    KEYSTORE_PASSWORD: sentrius
+    - name: SPRING_DATASOURCE_USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: sentrius-rds-secret
+          key: username
+    - name: SPRING_DATASOURCE_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: sentrius-rds-secret
+          key: password
+    - name: KEYSTORE_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: sentrius-rds-secret
+          key: keystore-password
   resources: {}
   config:
     application: |
@@ -97,50 +111,89 @@ postgres:
     tag: 15
   port: 5432
   env:
-    POSTGRES_USER: admin
-    POSTGRES_PASSWORD: password
-    POSTGRES_DB: sentrius
+    - POSTGRES_DB: sentrius
+    - name: POSTGRES_USER
+      valueFrom:
+        secretKeyRef:
+          name: sentrius-rds-secret
+          key: username
+    - name: POSTGRES_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: sentrius-rds-secret
+          key: password
+  enabled: false  # Disable the local PostgreSQL container
+  external:
+    host: sentrius-customer-1.c18msi2yms14.us-east-1.rds.amazonaws.com
+    port: 5432
+    user: admin
+    password: password
+    database: sentrius
 
 ssh:
   image:
-    repository: sentrius-ssh
-    pullPolicy: Never
+    repository: 060808646119.dkr.ecr.us-east-1.amazonaws.com/sentrius-ssh
+    tag: 1.0.27
+    pullPolicy: IfNotPresent
   port: 22
   env:
-    POSTGRES_USER: admin
-    POSTGRES_PASSWORD: password
-    POSTGRES_DB: sentrius
 
-# Secrets
-secrets:
-  db:
-    username: YWRtaW4=       # admin
-    password: cGFzc3dvcmQ=   # password
-    keystorePassword: c2VudHJpdXM= # sentrius
 
 # Service settings
 service:
-  type: NodePort
-  nodePort: 30080
-
-# MetalLB (optional)
-metallb:
-  enabled: true
-  addressPool:
-    - 192.168.122.100-192.168.122.110
+  type: LoadBalancer
+  ports:
+    http: 8080
+    https: 8443
 
 keycloak:
   image:
-    repository: sentrius-keycloak
+    repository: 060808646119.dkr.ecr.us-east-1.amazonaws.com/sentrius-keycloak
+    tag: 1.0.41
     pullPolicy: IfNotPresent
   host: keycloak.default.svc.cluster.local
   adminUser: admin
   adminPassword: admin
-  db:
-    image: postgres:15
-    user: keycloak
-    password: password
-    database: keycloak
+  env:
+    - DB_VENDOR: POSTGRES
+    - DB_ADDR: sentrius-customer-1.c18msi2yms14.us-east-1.rds.amazonaws.com
+    - DB_PORT: 5432
+    - DB_DATABASE: keycloak
+    - name: DB_USER
+      valueFrom:
+        secretKeyRef:
+          name: sentrius-rds-secret
+          key: username
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: sentrius-rds-secret
+          key: password
+  persistence:
+    enabled: true
+    storageClass: gp2
+    accessModes:
+      - ReadWriteOnce
+    size: 5Gi
   replicas: 1
   hostname: sentrius-keycloak
 
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/backend-protocol: HTTPS
+    alb.ingress.kubernetes.io/healthcheck-path: /auth/realms/master
+  hosts:
+    - host: ""
+      paths:
+        - path: /*
+          pathType: ImplementationSpecific
+
+
+
+debug:
+  enabled: true

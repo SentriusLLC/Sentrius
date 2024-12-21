@@ -131,7 +131,8 @@ public class TerminalService {
                 }
             }
 
-            if (!selectedSystem.getStatusCd().equals(HostSystem.SUCCESS_STATUS)) {
+            if (null == selectedSystem.getStatusCd() ||
+                !selectedSystem.getStatusCd().equals(HostSystem.SUCCESS_STATUS)) {
                 log.info("System is not ready for connection: " + selectedSystem.getDisplayName());
                 authorizePublicKey(selectedSystem, enclave, passphrase, password);
             }
@@ -278,7 +279,7 @@ public class TerminalService {
                     log.info("Failed to connect to system: " + schSession.getHostSystem().getDisplayName());
                     // remove the tracking
                     sessionOutputService.removeOutput(schSession);
-                    sessionService.closeSession(sessionLog);
+                    //sessionService.closeSession(sessionLog);
                     ApplicationKey appKey = null;
                     try {
                         appKey = keyStoreService.getGlobalKey();
@@ -376,10 +377,10 @@ public class TerminalService {
 
                 // Get the host key
                 HostKey hostKey = session.getHostKey();
-                System.out.println("Fetched Host Key:");
-                System.out.println("Host: " + hostKey.getHost());
-                System.out.println("Type: " + hostKey.getType());
-                System.out.println("Key: " + hostKey.getKey());
+                log.info("Fetched Host Key:");
+                log.info("Host: " + hostKey.getHost());
+                log.info("Type: " + hostKey.getType());
+                log.info("Key: " + hostKey.getKey());
 
                 knownHostService.saveHostKey(hostSystem.getHost(), hostKey.getType(), hostKey.getKey());
 

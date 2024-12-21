@@ -83,7 +83,7 @@ public class UserService {
         if (userIdStr.isPresent() && usernameStr.isPresent()) {
             try {
                 //Long userId = ByteUtils.convertToLong(userIdStr);
-                User operatingUser = UserDB.getByUserId(userIdStr.get());
+                User operatingUser = UserDB.getByUsername(usernameStr.get());
                 if (operatingUser == null) {
                     operatingUser = User.builder()
                         .username(usernameStr.get())
@@ -105,6 +105,12 @@ public class UserService {
 
 
 
+                }
+                else {
+                    if ( operatingUser.getUserId() == null || operatingUser.getUserId().isEmpty()) {
+                        operatingUser.setUserId(userIdStr.get());
+                        save(operatingUser);
+                    }
                 }
                 Long userId = operatingUser.getId();
                 Hibernate.initialize(operatingUser.getAuthorizationType());

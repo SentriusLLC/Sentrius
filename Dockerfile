@@ -15,4 +15,4 @@ RUN apt-get update && apt-get install -y curl
 
 
 # Command to run the app
-CMD ["java", "-jar", "/app/sentrius.jar", "--spring.config.location=/config/application.properties,/config/dynamic.properties"]
+CMD ["java", "-jar", "/app/sentrius.jar", "--spring.config.location=/config/application.properties", "--dynamic.properties.path=/config/dynamic.properties"]

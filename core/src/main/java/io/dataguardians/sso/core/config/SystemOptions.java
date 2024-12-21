@@ -52,7 +52,7 @@ public class SystemOptions {
   @Updatable(description = "Defined whether or not proxied are allowed.")
   @Builder.Default public Boolean allowProxies = true;
 
-  @Builder.Default public String auditorClass = "io.dataguardians.automation.auditing.RuleAlertAuditor";
+  @Builder.Default public String auditorClass = "io.dataguardians.sso.automation.auditing.RuleAlertAuditor";
 
   @Builder.Default public Integer automationThreads = 10;
 

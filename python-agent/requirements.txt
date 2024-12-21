@@ -1,0 +1,6 @@
+argparse
+langchain
+sqlalchemy
+openai
+pyyaml
+psycopg2

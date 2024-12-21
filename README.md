@@ -141,3 +141,101 @@ Contact
 
 For support or questions, please contact the project maintainers at support@sentrius.io.
 
+
+
+Deploying to EKS
+
+```bash
+eksctl create cluster \
+  --name sentrius-cluster \
+  --region us-east-1 \
+  --nodegroup-name sentrius-nodegroup \
+  --nodes 2 \
+  --nodes-min 1 \
+  --nodes-max 3 \
+  --managed \
+  --tags tenant=multi-tenant,project=sentrius
+
+
+```
+
+## Create customer namesapce
+
+```bash
+
+kubectl create namespace sentrius-customer-1
+
+```
+
+### Attach policy to an iam role
+
+```bash
+
+eksctl create iamserviceaccount \
+  --name sentrius-service-account \
+  --namespace sentrius \
+  --cluster sentrius-cluster \
+  --attach-policy-arn arn:aws:iam::<account-id>:policy/secretsmanager-read-policy \
+  --approve
+```
+
+
+
+
+{
+"repository": {
+"repositoryArn": "arn:aws:ecr:us-east-1:060808646119:repository/sentrius-keycloak",
+"registryId": "060808646119",
+"repositoryName": "sentrius-keycloak",
+"repositoryUri": "060808646119.dkr.ecr.us-east-1.amazonaws.com/sentrius-keycloak",
+"createdAt": "2024-12-20T11:47:28.432000-05:00",
+"imageTagMutability": "MUTABLE",
+"imageScanningConfiguration": {
+"scanOnPush": false
+},
+"encryptionConfiguration": {
+"encryptionType": "AES256"
+}
+}
+}
+{
+"repository": {
+"repositoryArn": "arn:aws:ecr:us-east-1:060808646119:repository/sentrius-sentrius",
+"registryId": "060808646119",
+"repositoryName": "sentrius-sentrius",
+"repositoryUri": "060808646119.dkr.ecr.us-east-1.amazonaws.com/sentrius-sentrius",
+"createdAt": "2024-12-20T11:47:28.974000-05:00",
+"imageTagMutability": "MUTABLE",
+"imageScanningConfiguration": {
+"scanOnPush": false
+},
+"encryptionConfiguration": {
+"encryptionType": "AES256"
+}
+}
+}
+{
+"repository": {
+"repositoryArn": "arn:aws:ecr:us-east-1:060808646119:repository/sentrius-ssh",
+"registryId": "060808646119",
+"repositoryName": "sentrius-ssh",
+"repositoryUri": "060808646119.dkr.ecr.us-east-1.amazonaws.com/sentrius-ssh",
+"createdAt": "2024-12-20T11:47:29.517000-05:00",
+"imageTagMutability": "MUTABLE",
+"imageScanningConfiguration": {
+"scanOnPush": false
+},
+"encryptionConfiguration": {
+"encryptionType": "AES256"
+}
+}
+}
+
+060808646119.dkr.ecr.us-east-1.amazonaws.com/sentrius-ssh
+
+docker tag sentrius-keycloak:latest 060808646119.dkr.ecr.us-east-1.amazonaws.com/sentrius-keycloak:latest
+docker tag sentrius-sentrius:latest 060808646119.dkr.ecr.us-east-1.amazonaws.com/sentrius-sentrius:latest
+docker tag sentrius-ssh:latest 060808646119.dkr.ecr.us-east-1.amazonaws.com/sentrius-ssh:latest
+
+
+kubectl config use-context minikube

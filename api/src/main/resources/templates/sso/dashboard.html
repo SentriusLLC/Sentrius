@@ -213,7 +213,8 @@
                             </div>
                         </div>
 
-                        <div id="system-visualizer-card" class="card custom-dark-card shadow-sm p-3" style="max-width: 800px; flex: 1;">
+                        <div id="system-visualizer-card" class="card custom-dark-card shadow-sm p-3"
+                             style="max-width: 800px; flex: 1;" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
                             <div class="card-header">
                                 <h5 class="card-title">System Operations</h5>
                             </div>
@@ -223,7 +224,8 @@
                                     <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
                                     <a href="#" id="disable-ssh-button" class="btn btn-danger">Lock Down SSH</a>
                                     <a href="/sso/v1/settings" class="btn btn-primary">Update Settings</a>
-                                    <a href="/sso/v1/sessions/audit/list" class="btn btn-primary" >Audit User</a>
+                                    <a href="/sso/v1/sessions/audit/list" class="btn btn-primary"
+                                       th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">Audit User</a>
                                 </div>
 
                                 <!-- Visualization Area -->
@@ -236,7 +238,7 @@
                         </div>
 
                         <div id="system-visualizer-card2" class="card custom-dark-card shadow-sm p-3"
-                             style="max-width: 800px; flex: 1;">
+                             style="max-width: 800px; flex: 1;" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
                             <div class="card-header">
                                 <h5 class="card-title">User Operations</h5>
                             </div>

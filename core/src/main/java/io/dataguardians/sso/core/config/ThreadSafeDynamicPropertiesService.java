@@ -1,7 +1,12 @@
 package io.dataguardians.sso.core.config;
 
+import io.dataguardians.sso.core.model.ConfigurationOption;
+import io.dataguardians.sso.core.repository.ConfigurationOptionRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import java.io.FileOutputStream;
 import java.io.FileInputStream;
@@ -12,18 +17,27 @@ import java.util.Properties;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @Slf4j
-@Service
+@Component
 public class ThreadSafeDynamicPropertiesService {
 
-    @Value("${dynamic.properties.path:}")
-    private String configLocation;
+    private final String configLocation;
 
     private static final String DYNAMIC_CONFIG_PATH = "dynamic.properties";
     private final Properties properties = new Properties();
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    final ConfigurationOptionRepository configurationOptionRepository;
 
-    public ThreadSafeDynamicPropertiesService() throws IllegalAccessException {
+    public ThreadSafeDynamicPropertiesService(ConfigurationOptionRepository configurationOptionRepository,
+                                              @Value("$" +
+        "{dynamic.properties.path:/config/dynamic.properties}") String configLocation) throws IllegalAccessException {
+        this.configLocation = configLocation;
+        this.configurationOptionRepository = configurationOptionRepository;
         loadProperties();
+    }
+
+    @PostConstruct
+    public void logConfigLocation() {
+        log.info("*** Dynamic Properties Path: " + configLocation);
     }
 
     private String getDynamicPropertiesPath() {
@@ -39,11 +53,18 @@ public class ThreadSafeDynamicPropertiesService {
     private void loadProperties() {
         lock.writeLock().lock();
         var path = configLocation;
-        if (null == configLocation || configLocation.isEmpty()) {
-            path = getDynamicPropertiesPath();
-        }
-        else {
-            path = Paths.get(configLocation).toString();
+        try{
+        try {
+            if (null == configLocation || configLocation.isEmpty()) {
+                log.info("No dynamic properties path provided, using default");
+                path = getDynamicPropertiesPath();
+            } else {
+                log.info("Using dynamic properties path provided {}", configLocation);
+                path = Paths.get(configLocation).toString();
+            }
+        }catch(Exception e){
+            log.error("Error getting dynamic properties path", e);
+            return;
         }
 
         log.info("Properties path is {}" , path);
@@ -51,22 +72,22 @@ public class ThreadSafeDynamicPropertiesService {
             properties.load(in);
         } catch (Exception e) {
             e.printStackTrace();
+        }
+
+
+
         } finally {
             lock.writeLock().unlock();
         }
+
+
     }
 
     // Updates a property if it's in the allowed list
     public void updateProperty(String key, String value) throws IOException {
-
         lock.writeLock().lock();
-        try (FileOutputStream out = new FileOutputStream(DYNAMIC_CONFIG_PATH)) {
-            if (null == value || value.isEmpty()) {
-                properties.remove(key);
-            }else {
-                properties.setProperty(key, value);
-            }
-            properties.store(out, null);
+        try{
+            configurationOptionRepository.save(ConfigurationOption.builder().build());
         } finally {
             lock.writeLock().unlock();
         }
@@ -76,10 +97,11 @@ public class ThreadSafeDynamicPropertiesService {
     public String getProperty(String key, String defaultValue) {
         lock.readLock().lock();
         try {
-            if (key.equals("yamlConfigurationPath")){
-                System.out.println("yamlConfigurationPath: " + properties.getProperty(key, defaultValue));
+            var dbOption = configurationOptionRepository.findByConfigurationName(key);
+            if (dbOption.isEmpty()) {
+                return properties.getProperty(key, defaultValue);
             }
-            return properties.getProperty(key, defaultValue);
+            return dbOption.get().getConfigurationValue();
         } finally {
             lock.readLock().unlock();
         }

@@ -53,7 +53,7 @@ public class UserType {
     @Enumerated(EnumType.STRING)
     @Column(name = "user_access")
     @Builder.Default
-    UserAccessEnum userAccess = UserAccessEnum.CAN_VIEW_USERS;
+    UserAccessEnum userAccess = UserAccessEnum.IS_USER;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "ztat_access")
@@ -84,7 +84,7 @@ public class UserType {
     }
 
     public UserAccessEnum getUserAccess() {
-        return null != userAccess ? userAccess : UserAccessEnum.CAN_VIEW_USERS;
+        return null != userAccess ? userAccess : UserAccessEnum.IS_USER;
     }
 
     public ZeroTrustAccessTokenEnum getZtAccessTokenAccess() {
