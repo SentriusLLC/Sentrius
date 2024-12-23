@@ -3,12 +3,14 @@ package io.dataguardians.sso.core.model.automation;
 import io.dataguardians.sso.core.model.HostSystem;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 
 // ScriptExecution Entity
 @Entity
+@Builder
 @Table(name = "automation_executions")
 @Data
 @NoArgsConstructor

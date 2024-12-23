@@ -48,6 +48,7 @@ build_image() {
 update_sentrius=false
 update_sentrius_ssh=false
 update_sentrius_keycloak=false
+update_session_agent=false
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in

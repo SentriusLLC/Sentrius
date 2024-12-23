@@ -90,6 +90,73 @@ sentrius:
       canApproveOwnJITs=false
       yamlConfiguration=/app/exampleInstallWithTypes.yml
 
+sentriusagent:
+  service:
+    type: NodePort
+    nodePort: 30083
+  image:
+    repository: sentrius-agent
+    pullPolicy: Never
+  port: 8080
+  ssh:
+    port: 22
+  env:
+    SPRING_DATASOURCE_USERNAME: admin
+    SPRING_DATASOURCE_PASSWORD: password
+    KEYSTORE_PASSWORD: sentrius
+  resources: {}
+  config:
+    application: |
+      keystore.file=sso.jceks
+      keystore.password=${KEYSTORE_PASSWORD}
+      keystore.alias=KEYBOX-ENCRYPTION_KEY
+      keystore.algorithm=AES
+      spring.main.web-application-type=servlet
+      spring.thymeleaf.enabled=true
+      spring.freemarker.enabled=false
+      #flyway configuration
+      spring.flyway.enabled=true
+      spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
+      spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
+      spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+      spring.datasource.driver-class-name=org.postgresql.Driver
+      # Connection pool settings
+      spring.datasource.hikari.maximum-pool-size=10
+      spring.datasource.hikari.minimum-idle=5
+      spring.datasource.hikari.idle-timeout=30000
+      spring.datasource.hikari.max-lifetime=1800000
+      # Hibernate settings (optional, for JPA)
+      spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+       # Disable automatic schema generation in production
+      spring.jpa.hibernate.ddl-auto=none
+      # Ensure this path matches your project structure
+      #spring.flyway.locations=classpath:db/migration/
+      spring.flyway.baseline-on-migrate=true
+      # Thymeleaf settings
+      spring.thymeleaf.prefix=classpath:/templates/
+      spring.thymeleaf.suffix=.html
+      #spring.datasource.url=jdbc:h2:mem:testdb
+      logging.level.org.springframework.web=INFO
+      logging.level.org.springframework.security=INFO
+      logging.level.io.dataguardians=DEBUG
+      logging.level.org.thymeleaf=INFO
+      spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+      spring.servlet.multipart.enabled=true
+      spring.servlet.multipart.max-file-size=10MB
+      spring.servlet.multipart.max-request-size=10MB
+      server.error.whitelabel.enabled=false
+      dynamic.properties.path=/config/dynamic.properties
+      keycloak.realm=sentrius
+      # keycloak configuration
+      spring.security.oauth2.client.registration.keycloak.client-id=sentrius-api
+      spring.security.oauth2.client.registration.keycloak.client-secret=nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0
+      spring.security.oauth2.client.registration.keycloak.authorization-grant-type=authorization_code
+      spring.security.oauth2.client.registration.keycloak.redirect-uri=http://sentrius-keycloak:30080/login/oauth2/code/keycloak
+      spring.security.oauth2.client.registration.keycloak.scope=openid,profile,email
+      spring.security.oauth2.resourceserver.jwt.issuer-uri=http://sentrius-keycloak:30081/realms/sentrius
+      spring.security.oauth2.client.provider.keycloak.issuer-uri=http://sentrius-keycloak:30081/realms/sentrius
+      agents.session-analytics.enabled=true
+
 # PostgreSQL configuration
 postgres:
   image:
@@ -122,6 +189,8 @@ secrets:
 service:
   type: NodePort
   nodePort: 30080
+
+
 
 # MetalLB (optional)
 metallb:

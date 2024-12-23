@@ -218,7 +218,7 @@ public class HostApiController extends BaseController {
         var sessionRules = terminalService.createRules(config);
 
 
-        var connectedSystem = terminalService.openSSHTermOnSystem(user, sessionLog, hostGroup.get(), "",
+        var connectedSystem = terminalService.openTerminal(user, sessionLog, hostGroup.get(), "",
             hostSystem.get().getSshPassword(),
             hostSystem.get(),
             sessionRules);

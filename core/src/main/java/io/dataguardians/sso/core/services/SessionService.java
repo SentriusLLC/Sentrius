@@ -1,8 +1,10 @@
 
 package io.dataguardians.sso.core.services;
 
+import io.dataguardians.sso.core.model.ScriptOutput;
 import io.dataguardians.sso.core.model.dto.TerminalLogOutputDTO;
 import io.dataguardians.sso.core.model.sessions.SessionLog;
+import io.dataguardians.sso.core.model.sessions.SessionOutput;
 import io.dataguardians.sso.core.model.sessions.TerminalLogs;
 import io.dataguardians.sso.core.repository.SessionLogRepository;
 import io.dataguardians.sso.core.repository.TerminalLogRepository;
@@ -101,6 +103,5 @@ public class SessionService {
     public List<TerminalLogOutputDTO> getLogOutputSummary(String username) {
         return terminalLogRepository.findOutputSizeByUserOrAll(username);
     }
-
 
 }

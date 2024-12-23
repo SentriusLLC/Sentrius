@@ -80,7 +80,7 @@ public class TerminalService {
     private final SessionTrackingService sessionTrackingService;
     private final SystemRepository systemRepository;
 
-    public ConnectedSystem openSSHTermOnSystem(
+    public ConnectedSystem openTerminal(
         User user,
         SessionLog sessionLog,
         HostGroup enclave,
@@ -88,11 +88,11 @@ public class TerminalService {
         String password,
         HostSystem selectedSystem, List<SessionTokenEvaluator> sessionRules
     ) throws SQLException, GeneralSecurityException {
-        return openSSHTermOnSystem(user, sessionLog, enclave, passphrase, password, selectedSystem, sessionRules, false);
+        return openTerminal(user, sessionLog, enclave, passphrase, password, selectedSystem, sessionRules, false);
     }
 
 
-    public ConnectedSystem openSSHTermOnSystem(
+    public ConnectedSystem openTerminal(
         User user,
         SessionLog sessionLog,
         HostGroup enclave,
@@ -290,7 +290,7 @@ public class TerminalService {
                     }
                     fetchHostKey(selectedSystem, appKey, passphrase, password);
 
-                    return openSSHTermOnSystem(user, sessionLog, enclave, passphrase, password, selectedSystem,
+                    return openTerminal(user, sessionLog, enclave, passphrase, password, selectedSystem,
                         sessionRules, true
                     );
                 } else {

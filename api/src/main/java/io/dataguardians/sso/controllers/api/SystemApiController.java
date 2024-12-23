@@ -20,7 +20,7 @@ import io.dataguardians.sso.core.services.ErrorOutputService;
 import io.dataguardians.sso.core.services.HostGroupService;
 import io.dataguardians.sso.core.services.ObfuscationService;
 import io.dataguardians.sso.core.services.UserService;
-import io.dataguardians.sso.core.startup.ConfigurationApplicationTask;
+import io.dataguardians.sso.startup.ConfigurationApplicationTask;
 import io.dataguardians.sso.core.utils.JsonUtil;
 import io.dataguardians.sso.core.utils.MessagingUtil;
 import io.dataguardians.sso.install.configuration.InstallConfiguration;
