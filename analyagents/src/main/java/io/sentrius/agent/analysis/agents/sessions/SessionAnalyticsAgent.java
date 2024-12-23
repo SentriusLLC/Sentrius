@@ -15,10 +15,12 @@ import io.sentrius.sso.core.services.metadata.TerminalRiskIndicatorService;
 import io.sentrius.sso.core.services.metadata.TerminalSessionMetadataService;
 import io.sentrius.sso.core.services.metadata.UserExperienceMetricsService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "agents.session-analytics.enabled", havingValue = "true", matchIfMissing = false)
@@ -34,6 +36,7 @@ public class SessionAnalyticsAgent {
 
     @Scheduled(fixedRate = 60000) // Runs every 60 seconds
     public void processSessions() {
+        log.info("Processing unprocessed sessions...");
         List<TerminalSessionMetadata> unprocessedSessions = sessionService.getAllSessions().stream()
             .filter(session -> !trackingRepository.existsBySessionId(session.getId()))
             .collect(Collectors.toList());

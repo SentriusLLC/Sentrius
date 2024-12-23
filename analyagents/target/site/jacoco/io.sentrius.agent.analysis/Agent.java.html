@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 
-@SpringBootApplication(scanBasePackages = {&quot;io.sentrius.sentrius&quot;, &quot;io.sentrius.sso&quot;})
+@SpringBootApplication(scanBasePackages = {&quot;io.sentrius.agent&quot;, &quot;io.sentrius.sso&quot;})
 //@ComponentScan(basePackages = {&quot;io.sentrius.sso&quot;})
 @EnableJpaRepositories(basePackages = {&quot;io.sentrius.sso.core.data&quot;, &quot;io.sentrius.sso.core.repository&quot;})
 @EntityScan(basePackages = {&quot;io.sentrius.sso.core.model&quot;, &quot;io.sentrius.sentrius.ai.model&quot;}) // Replace with

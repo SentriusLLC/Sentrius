@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-sentriusagent-config
+  labels:
+    {{- include "sentriusagent.labels" . | nindent 4 }}
+data:
+  application.properties: |
+    {{ .Values.sentriusagent.config.application | nindent 4 }}
