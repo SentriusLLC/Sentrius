@@ -179,11 +179,11 @@
                 if (connection.readyState !== 1) return;
                 console.log("seneding hb3");
                 console.log("proto:", proto);
-                console.log("proto.io.dataguardians.protobuf:", proto?.io?.dataguardians?.protobuf);
+                console.log("proto.io.sentrius.protobuf:", proto?.io?.sentrius?.protobuf);
 
 
-                const auditLog = new proto.io.dataguardians.protobuf.TerminalMessage();
-                auditLog.setType(proto.io.dataguardians.protobuf.MessageType.HEARTBEAT);
+                const auditLog = new proto.io.sentrius.protobuf.TerminalMessage();
+                auditLog.setType(proto.io.sentrius.protobuf.MessageType.HEARTBEAT);
 
                 console.log("seneding hb3.5");
                 // Serialize the message to binary

@@ -162,10 +162,10 @@
                         && !keys[38] && !keys[39] && !keys[40] && !keys[13] && !keys[8] && !keys[9]
                         && !keys[46] && !keys[45] && !keys[33] && !keys[34] && !keys[35] && !keys[36]) {
                         var cmdStr = String.fromCharCode(keyCode);
-                        const message = new proto.io.dataguardians.protobuf.TerminalMessage();
+                        const message = new proto.io.sentrius.protobuf.TerminalMessage();
                         message.setCommand(cmdStr);
                         message.setKeycode(-1);
-                        message.setType(proto.io.dataguardians.protobuf.MessageType.USER_DATA);
+                        message.setType(proto.io.sentrius.protobuf.MessageType.USER_DATA);
                         const base64Message = btoa(String.fromCharCode(...message.serializeBinary()));
                         connection.send(base64Message);
                     }
@@ -184,11 +184,11 @@
                 if (userResponse) {
                     console.log('User response:', userResponse); // Replace with your logic to handle the response
                     // Example: Call the LLM with the user's response and update the next question
-                    const message = new proto.io.dataguardians.protobuf.TerminalMessage();
+                    const message = new proto.io.sentrius.protobuf.TerminalMessage();
                     message.setCommand(questionText.textContent);
                     message.setPrompt(userResponse);
                     message.setKeycode(-1);
-                    message.setType(proto.io.dataguardians.protobuf.MessageType.USER_PROMPT);
+                    message.setType(proto.io.sentrius.protobuf.MessageType.USER_PROMPT);
                     const base64Message = btoa(String.fromCharCode(...message.serializeBinary()));
                     connection.send(base64Message);
                     hidePopup(); // Close the popup
@@ -235,8 +235,8 @@
 
                         e.preventDefault();
                         e.stopImmediatePropagation();
-                        const message = new proto.io.dataguardians.protobuf.TerminalMessage();
-                        message.setType(proto.io.dataguardians.protobuf.MessageType.USER_DATA);
+                        const message = new proto.io.sentrius.protobuf.TerminalMessage();
+                        message.setType(proto.io.sentrius.protobuf.MessageType.USER_DATA);
                         message.setKeycode(keyCode);
                         const base64Message = btoa(String.fromCharCode(...message.serializeBinary()));
                         connection.send(base64Message);
@@ -251,8 +251,8 @@
                     if (e.key === '/') {
                         e.preventDefault();
                         e.stopImmediatePropagation();
-                        const message = new proto.io.dataguardians.protobuf.TerminalMessage();
-                        message.setType(proto.io.dataguardians.protobuf.MessageType.USER_DATA);
+                        const message = new proto.io.sentrius.protobuf.TerminalMessage();
+                        message.setType(proto.io.sentrius.protobuf.MessageType.USER_DATA);
                         message.setKeycode(-1);
                         message.setCommand('/');
                         const base64Message = btoa(String.fromCharCode(...message.serializeBinary()));
@@ -298,9 +298,9 @@
                 //$('#dummy').val('');
                 setTimeout(function () {
                     var cmdStr = $('#dummy').val();
-                    const message = new proto.io.dataguardians.protobuf.TerminalMessage();
+                    const message = new proto.io.sentrius.protobuf.TerminalMessage();
                     message.setCommand(cmdStr);
-                    message.setType(proto.io.dataguardians.protobuf.MessageType.USER_DATA);
+                    message.setType(proto.io.sentrius.protobuf.MessageType.USER_DATA);
                     const base64Message = btoa(String.fromCharCode(...message.serializeBinary()));
                     connection.send(base64Message);
                     //connection.send(JSON.stringify({id: getActiveTermsInstanceIds(), command: cmdStr}));
@@ -449,8 +449,8 @@
                 if (connection.readyState !== 1) return;
 
 
-                const auditLog = new proto.io.dataguardians.protobuf.TerminalMessage();
-                auditLog.setType(proto.io.dataguardians.protobuf.MessageType.HEARTBEAT);
+                const auditLog = new proto.io.sentrius.protobuf.TerminalMessage();
+                auditLog.setType(proto.io.sentrius.protobuf.MessageType.HEARTBEAT);
 
                 // Serialize the message to binary
                 const binaryData = auditLog.serializeBinary();
@@ -482,15 +482,15 @@
                 try {
                     const binaryMessage = Uint8Array.from(atob(e.data), c => c.charCodeAt(0));
                     try {
-                        const deserializedAuditLog = proto.io.dataguardians.protobuf.TerminalMessage.deserializeBinary(binaryMessage);
+                        const deserializedAuditLog = proto.io.sentrius.protobuf.TerminalMessage.deserializeBinary(binaryMessage);
                         if (!deserializedAuditLog ) {
                             console.warn("Malformed message received");
                             return;
                         }
-                        if (deserializedAuditLog.getType() == proto.io.dataguardians.protobuf.MessageType.USER_DATA) {
+                        if (deserializedAuditLog.getType() == proto.io.sentrius.protobuf.MessageType.USER_DATA) {
 
                             const alertWarn = document.getElementById("alertWarn");
-                            if (!deserializedAuditLog.getTrigger() || deserializedAuditLog.getTrigger() == proto.io.dataguardians.protobuf.TriggerAction.NO_ACTION) {
+                            if (!deserializedAuditLog.getTrigger() || deserializedAuditLog.getTrigger() == proto.io.sentrius.protobuf.TriggerAction.NO_ACTION) {
                                 console.log("only command");
                                 if (!deserializedAuditLog.getCommand()) {
                                     console.warn("No content message     ");
@@ -510,14 +510,14 @@
                                     const triggerAction = deserializedAuditLog.getTrigger();
                                     const description = triggerAction.getDescription();
                                     if (deserializedAuditLog.getType() ==
-                                        proto.io.dataguardians.protobuf.MessageType.PERSISTENT_MESSAGE ||
+                                        proto.io.sentrius.protobuf.MessageType.PERSISTENT_MESSAGE ||
                                         triggerAction.getAction() ==
-                                        proto.io.dataguardians.protobuf.TriggerAction.PERSISTENT_MESSAGE) {
+                                        proto.io.sentrius.protobuf.TriggerAction.PERSISTENT_MESSAGE) {
                                         console.log("persistent message");
                                         persistentMessage = description;
                                         showWarningStatus(description);
                                     } else  if (deserializedAuditLog.getType() ==
-                                        proto.io.dataguardians.protobuf.MessageType.PROMPT_DATA) {
+                                        proto.io.sentrius.protobuf.MessageType.PROMPT_DATA) {
                                         console.log("question is" + deserializedAuditLog.getPrompt());
                                         persistentMessage = description;
                                         showWarningStatus(description);
@@ -526,10 +526,10 @@
                                     } else {
                                         console.log("non-persistent message " + description + " " + triggerAction.getAction());
                                         console.log("is no action "  + (triggerAction.getAction() ==
-                                            proto.io.dataguardians.protobuf.TriggerAction.NO_ACTION));
+                                            proto.io.sentrius.protobuf.TriggerAction.NO_ACTION));
                                         //alertWarn.textContent = description || persistentMessage || "";
                                         if (description) {
-                                            if (triggerAction.getAction() == proto.io.dataguardians.protobuf.TriggerAction.WARN_ACTION) {
+                                            if (triggerAction.getAction() == proto.io.sentrius.protobuf.TriggerAction.WARN_ACTION) {
                                                 showWarningStatus(description);
                                             }
                                             else {
@@ -549,7 +549,7 @@
 
                              */
                             }
-                        } else if (deserializedAuditLog.getType() == proto.io.dataguardians.protobuf.MessageType.SESSION_DATA) {
+                        } else if (deserializedAuditLog.getType() == proto.io.sentrius.protobuf.MessageType.SESSION_DATA) {
                             if (deserializedAuditLog.getTrigger()) {
                                 const triggerAction = deserializedAuditLog.getTrigger();
                                 const description = triggerAction.getDescription();
@@ -568,11 +568,11 @@
                                 overlay.innerText = description;
 
 
-                                if (triggerAction.getAction() == proto.io.dataguardians.protobuf.TriggerAction.JIT_ACTION) {
+                                if (triggerAction.getAction() == proto.io.sentrius.protobuf.TriggerAction.JIT_ACTION) {
                                     showSpinner();
                                 } else {
                                     hideSpinner();
-                                    if (triggerAction.getAction() == proto.io.dataguardians.protobuf.TriggerAction.WARN_ACTION) {
+                                    if (triggerAction.getAction() == proto.io.sentrius.protobuf.TriggerAction.WARN_ACTION) {
                                         console.log("WARN_ACTION");
                                         if (description) {
                                             console.log("WARN_ACTION " + description);
@@ -583,7 +583,7 @@
 
                             }
                         } else if (deserializedAuditLog.getType() ==
-                            proto.io.dataguardians.protobuf.MessageType.PROMPT_DATA) {
+                            proto.io.sentrius.protobuf.MessageType.PROMPT_DATA) {
                             console.log("question");
                             const triggerAction = deserializedAuditLog.getTrigger();
                             const description = triggerAction.getDescription();
