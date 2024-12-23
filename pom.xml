@@ -9,7 +9,7 @@
   <modules>
     <module>core</module>
     <module>api</module>
-    <module>ai-agents</module>
+    <module>analyagents</module>
   </modules>
   <properties>
     <java.version>17</java.version>
