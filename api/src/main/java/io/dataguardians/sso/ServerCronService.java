@@ -1,9 +1,7 @@
-package io.dataguardians.sso.core.utils.terminal;
+package io.dataguardians.sso;
 
-import io.dataguardians.sso.core.model.automation.AutomationAssignment;
 import io.dataguardians.sso.core.repository.automation.ScriptAssignmentRepository;
 import io.dataguardians.sso.core.repository.automation.ScriptCronEntryRepository;
-import io.dataguardians.sso.core.repository.automation.ScriptRepository;
 import io.dataguardians.sso.core.utils.ScriptCronTask;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,8 +9,6 @@ import org.quartz.*;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
-import java.security.GeneralSecurityException;
-import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;

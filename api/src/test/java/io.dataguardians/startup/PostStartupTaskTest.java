@@ -1,4 +1,4 @@
-package io.dataguardians.config.startup;
+package io.dataguardians.startup;
 
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -11,12 +11,15 @@ import io.dataguardians.sso.core.repository.*;
 import io.dataguardians.sso.core.security.service.CryptoService;
 import io.dataguardians.sso.core.services.HostGroupService;
 import io.dataguardians.sso.core.services.UserService;
-import io.dataguardians.sso.core.startup.ConfigurationApplicationTask;
+import io.dataguardians.sso.startup.ConfigurationApplicationTask;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
@@ -61,7 +64,8 @@ class PostStartupTaskTest {
     void setUp() {
         // Set up default mocks if necessary
 
-        when(systemOptions.getYamlConfiguration()).thenReturn(getClass().getClassLoader().getResource("configs" +
+        Mockito.when(systemOptions.getYamlConfiguration()).thenReturn(getClass().getClassLoader().getResource(
+            "configs" +
             "/exampleInstall.yml").getPath());
 
     }
@@ -69,36 +73,37 @@ class PostStartupTaskTest {
     @Test
     void testAfterStartupWithYamlConfiguration()
         throws IOException, GeneralSecurityException, JSchException, SQLException {
-        when(systemOptions.getDeleteYamlConfigurationFile()).thenReturn(false);
+        Mockito.when(systemOptions.getDeleteYamlConfigurationFile()).thenReturn(false);
         // Mock behavior for configurationOptionRepository
         var mockConfigOption = new ConfigurationOption();
         mockConfigOption.setConfigurationName("yamlConfigurationFileHash");
         mockConfigOption.setConfigurationValue("oldHash");
 
-        when(configurationOptionRepository.findByConfigurationName("yamlConfigurationFileHash"))
+        Mockito.when(configurationOptionRepository.findByConfigurationName("yamlConfigurationFileHash"))
             .thenReturn(Optional.of(mockConfigOption));
 
-        when(userService.addUscer(any(User.class))).thenReturn(User.builder().id(1L).name("name").build());
+        Mockito.when(userService.addUscer(ArgumentMatchers.any(User.class))).thenReturn(User.builder().id(1L).name("name").build());
         // Call the method
         postStartupTask.afterStartup();
 
         // Verify interactions
-        verify(configurationOptionRepository).findByConfigurationName("yamlConfigurationFileHash");
-        verify(configurationOptionRepository).save(mockConfigOption);
+        Mockito.verify(configurationOptionRepository).findByConfigurationName("yamlConfigurationFileHash");
+        Mockito.verify(configurationOptionRepository).save(mockConfigOption);
 
         // Assertions
-        assertNotEquals("oldHash", mockConfigOption.getConfigurationValue());
+        Assertions.assertNotEquals("oldHash", mockConfigOption.getConfigurationValue());
     }
 
     @Test
     void testAfterStartupNoYamlConfiguration() throws IOException, GeneralSecurityException, JSchException,
         SQLException {
-        when(systemOptions.getYamlConfiguration()).thenReturn(null);
+        Mockito.when(systemOptions.getYamlConfiguration()).thenReturn(null);
 
         // Call the method
         postStartupTask.afterStartup();
 
         // Verify no interactions with repositories
-        verify(configurationOptionRepository, never()).findByConfigurationName(anyString());
+        Mockito.verify(configurationOptionRepository, Mockito.never()).findByConfigurationName(
+            ArgumentMatchers.anyString());
     }
 }

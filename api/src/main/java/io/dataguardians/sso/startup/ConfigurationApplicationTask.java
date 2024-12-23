@@ -1,4 +1,4 @@
-package io.dataguardians.sso.core.startup;
+package io.dataguardians.sso.startup;
 
 import java.io.FileInputStream;
 import java.io.IOException;

@@ -5,7 +5,7 @@ import io.dataguardians.sso.automation.sideeffects.SideEffect;
 import io.dataguardians.sso.core.annotations.LimitAccess;
 import io.dataguardians.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.dataguardians.sso.core.services.ErrorOutputService;
-import io.dataguardians.sso.core.startup.ConfigurationApplicationTask;
+import io.dataguardians.sso.startup.ConfigurationApplicationTask;
 import io.dataguardians.sso.core.config.SystemOptions;
 import io.dataguardians.sso.core.controllers.BaseController;
 import io.dataguardians.sso.core.model.dto.SystemOption;

@@ -1,3 +1,16 @@
+CREATE TABLE terminal_session_metadata (
+                                           id BIGSERIAL PRIMARY KEY,
+                                           session_id BIGINT NOT NULL REFERENCES session_log(id) ON DELETE CASCADE,
+                                           user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                           host_system_id BIGINT NOT NULL REFERENCES host_systems(host_system_id),
+                                           start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                           end_time TIMESTAMP,
+                                           ip_address VARCHAR(45),
+                                           session_status VARCHAR(50) DEFAULT 'ACTIVE', -- e.g., ACTIVE, CLOSED, INTERRUPTED
+                                           is_suspicious BOOLEAN DEFAULT FALSE
+);
+
+
 CREATE TABLE user_experience_metrics (
                                          id BIGSERIAL PRIMARY KEY,
                                          user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -39,17 +52,6 @@ CREATE TABLE terminal_commands (
                                    FOREIGN KEY (session_id) REFERENCES terminal_session_metadata(id) ON DELETE CASCADE
 );
 
-CREATE TABLE terminal_session_metadata (
-                                           id BIGSERIAL PRIMARY KEY,
-                                           session_id BIGINT NOT NULL REFERENCES session_log(id) ON DELETE CASCADE,
-                                           user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                                           host_system_id BIGINT NOT NULL REFERENCES host_systems(host_system_id),
-                                           start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                           end_time TIMESTAMP,
-                                           ip_address VARCHAR(45),
-                                           session_status VARCHAR(50) DEFAULT 'ACTIVE', -- e.g., ACTIVE, CLOSED, INTERRUPTED
-                                           is_suspicious BOOLEAN DEFAULT FALSE
-);
 
 
 CREATE TABLE analytics_tracking (

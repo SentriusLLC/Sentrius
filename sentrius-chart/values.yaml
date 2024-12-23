@@ -96,7 +96,6 @@ sentriusagent:
     nodePort: 30083
   image:
     repository: sentrius-agent
-    tag: latest
     pullPolicy: Never
   port: 8080
   ssh:
