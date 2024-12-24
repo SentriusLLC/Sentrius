@@ -33,7 +33,9 @@ replay_pid*
 target/*
 api/target/**
 core/target/**
+analyagents/target/**
 core/target/
+analyagents/target/
 node/*
 node_modules/*
 api/node_modules/*
@@ -47,3 +49,4 @@ api/node_modules/*
 # Eclipse Project Setting #
 
 .settings/*
+.env.bak

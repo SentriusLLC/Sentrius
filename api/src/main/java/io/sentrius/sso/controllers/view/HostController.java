@@ -1,6 +1,7 @@
 package io.sentrius.sso.controllers.view;
 
 import java.security.GeneralSecurityException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import io.sentrius.sso.core.annotations.LimitAccess;
@@ -17,6 +18,7 @@ import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.services.UserCustomizationService;
+import io.sentrius.sso.core.services.metadata.TerminalSessionMetadataService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -38,6 +40,7 @@ public class HostController extends BaseController {
     final SessionTrackingService sessionTrackingService;
     final CryptoService cryptoService;
     final UserCustomizationService userThemeService;
+    final TerminalSessionMetadataService terminalSessionMetadataService;
     private ConnectedSystem connectedSystem;
 
 
@@ -47,12 +50,14 @@ public class HostController extends BaseController {
                              HostGroupService hostGroupService,
                              SessionTrackingService sessionTrackingService,
                              CryptoService cryptoService,
-                             UserCustomizationService userThemeService) {
+                             UserCustomizationService userThemeService,
+                             TerminalSessionMetadataService terminalSessionMetadataService) {
         super(userService, systemOptions, errorOutputService);
         this.hostGroupService = hostGroupService;
         this.sessionTrackingService = sessionTrackingService;
         this.cryptoService = cryptoService;
         this.userThemeService = userThemeService;
+        this.terminalSessionMetadataService = terminalSessionMetadataService;
     }
 
 
@@ -221,6 +226,14 @@ public class HostController extends BaseController {
         }
 
         this.connectedSystem = myConnectedSystem;
+
+        if (null != connectedSystem){
+            terminalSessionMetadataService.getSessionBySessionLog(connectedSystem.getSession()).ifPresent(sessionMetadata -> {
+                sessionMetadata.setEndTime(new Timestamp(System.currentTimeMillis()));
+                sessionMetadata.setSessionStatus("ACTIVE");
+                terminalSessionMetadataService.saveSession(sessionMetadata);
+            });
+        }
 
         sessionTrackingService.flushSessionOutput(myConnectedSystem);
 

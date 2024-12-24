@@ -228,7 +228,7 @@ public class HostApiController extends BaseController {
             hostSystem.get(),
             sessionRules);
 
-        /*
+
         TerminalSessionMetadata sessionMetadata = TerminalSessionMetadata.builder().sessionStatus("ACTIVE")
             .hostSystem(hostSystem.get())
             .user(user)
@@ -237,7 +237,7 @@ public class HostApiController extends BaseController {
             .build();
 
         sessionMetadata = terminalSessionMetadataService.createSession(sessionMetadata);
-*/
+
         var encryptedSessionId = cryptoService.encrypt(connectedSystem.getSession().getId().toString());
 
         log.info("returning " + encryptedSessionId);

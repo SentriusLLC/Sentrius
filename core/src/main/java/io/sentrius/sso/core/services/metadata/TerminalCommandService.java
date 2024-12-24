@@ -37,4 +37,8 @@ public class TerminalCommandService {
             .filter(command -> command.getSession().getId().equals(sessionId))
             .count();
     }
+
+    public List<TerminalCommand> saveAll(List<TerminalCommand> terminalCommands) {
+        return commandRepository.saveAll(terminalCommands);
+    }
 }

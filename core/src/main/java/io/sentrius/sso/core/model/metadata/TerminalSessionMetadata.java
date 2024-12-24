@@ -52,10 +52,12 @@ public class TerminalSessionMetadata {
     @Column(name = "ip_address", length = 45)
     private String ipAddress;
 
+    // ACTIVE -> (INACTIVE) -> (ACTIVE) -> CLOSED -> PROCESSED
     @Column(name = "session_status", nullable = false)
     private String sessionStatus = "ACTIVE";
 
     @Column(name = "is_suspicious", nullable = false)
+    @Builder.Default
     private Boolean isSuspicious = false;
 
     // Getters and Setters

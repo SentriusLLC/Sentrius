@@ -3,6 +3,8 @@ package io.sentrius.sso.websocket;
 
 import io.sentrius.sso.automation.auditing.Trigger;
 import io.sentrius.sso.automation.auditing.TriggerAction;
+import io.sentrius.sso.core.model.metadata.TerminalSessionMetadata;
+import io.sentrius.sso.core.services.metadata.TerminalSessionMetadataService;
 import io.sentrius.sso.protobuf.Session;
 import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
@@ -15,6 +17,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.sql.Timestamp;
 import java.util.Base64;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -32,6 +35,7 @@ public class TerminalWSHandler extends TextWebSocketHandler {
     final SessionTrackingService sessionTrackingService;
     final SshListenerService sshListenerService;
     final CryptoService cryptoService;
+    final TerminalSessionMetadataService terminalSessionMetadataService;
 
 
     // Store active sessions, using session ID or a custom identifier
@@ -143,9 +147,21 @@ public class TerminalWSHandler extends TextWebSocketHandler {
 
             if (sessionId != null) {
                 // Remove the session when connection is closed
+                var lookupId = sessionId + "==";
+                var sys = sessionTrackingService.getEncryptedConnectedSession(lookupId);
+                if (null != sys){
+                    log.info("**** Closing session for {}", sys.getSession());
+                    terminalSessionMetadataService.getSessionBySessionLog(sys.getSession()).ifPresent(sessionMetadata -> {
+                        sessionMetadata.setEndTime(new Timestamp(System.currentTimeMillis()));
+                        sessionMetadata.setSessionStatus("CLOSED");
+                        terminalSessionMetadataService.saveSession(sessionMetadata);
+                    });
+                }
+
                 sessions.remove(sessionId);
                 sshListenerService.removeSession(sessionId);
-                log.trace("Connection closed, session ID: " + sessionId);
+
+                log.info("Connection closed, session ID: " + sessionId);
             }
         }
     }
