@@ -2,6 +2,11 @@ userTypes:
   - userTypeName: testType
     systemAccess: CAN_VIEW_SYSTEMS
     ruleAccess: CAN_DEL_RULES
+  - userTypeName: adminType
+    systemAccess: CAN_MANAGE_SYSTEMS
+    ruleAccess: CAN_MANAGE_RULES
+    applicationAccess: CAN_MANAGE_APPLICATION
+    ztAccessTokenAccess: CAN_MANAGE_ZTATS
   - userTypeName: jitType
     systemAccess: CAN_VIEW_SYSTEMS
     ztAccessTokenAccess: CAN_MANAGE_ZTATS
@@ -20,6 +25,14 @@ users:
       userTypeName: jitType
     hostGroups:
       - displayName: testGroup
+  - username: admin
+    name: firstname lastname
+    password: admin
+    authorizationType:
+      userTypeName: adminType
+    hostGroups:
+      - displayName: testGroup
+
 
 systems:
   - displayName: SSH-HOST
