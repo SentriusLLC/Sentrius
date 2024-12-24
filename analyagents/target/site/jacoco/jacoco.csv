@@ -1,4 +1,6 @@
 GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
-analyagents,io.sentrius.agent.analysis.agents.sessions,SessionAnalyticsAgent,137,0,4,0,30,0,8,0,6,0
-analyagents,io.sentrius.agent.analysis.api,AgentController,7,0,0,0,2,0,2,0,2,0
+analyagents,io.sentrius.agent.analysis.model,AgentStatus.AgentStatusBuilder,36,0,0,0,1,0,6,0,6,0
+analyagents,io.sentrius.agent.analysis.model,AgentStatus,168,0,30,0,17,0,27,0,12,0
+analyagents,io.sentrius.agent.analysis.agents.sessions,SessionAnalyticsAgent,166,0,6,0,31,0,9,0,6,0
+analyagents,io.sentrius.agent.analysis.api,AgentController,17,0,0,0,3,0,3,0,3,0
 analyagents,io.sentrius.agent.analysis,Agent,8,0,0,0,3,0,2,0,2,0

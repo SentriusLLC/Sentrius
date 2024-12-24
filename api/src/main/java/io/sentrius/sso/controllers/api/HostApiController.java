@@ -14,6 +14,7 @@ import io.sentrius.sso.core.model.HostSystem;
 import io.sentrius.sso.core.model.dto.HostSystemDTO;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.model.hostgroup.ProfileConfiguration;
+import io.sentrius.sso.core.model.metadata.TerminalSessionMetadata;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.security.service.CryptoService;
@@ -23,6 +24,7 @@ import io.sentrius.sso.core.services.TerminalService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.services.metadata.TerminalSessionMetadataService;
 import io.sentrius.sso.core.utils.AccessUtil;
 import io.sentrius.sso.core.utils.JsonUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -48,6 +50,7 @@ public class HostApiController extends BaseController {
     final TerminalService terminalService;
     final SessionService sessionService;
     final CryptoService cryptoService;
+    final TerminalSessionMetadataService terminalSessionMetadataService;
 
     protected HostApiController(
         UserService userService,
@@ -56,12 +59,14 @@ public class HostApiController extends BaseController {
         HostGroupService hostGroupService,
         TerminalService terminalService,
         SessionService sessionService,
-        CryptoService cryptoService) {
+        CryptoService cryptoService,
+        TerminalSessionMetadataService terminalSessionMetadataService) {
         super(userService, systemOptions, errorOutputService);
         this.hostGroupService =     hostGroupService;
         this.terminalService = terminalService;
         this.sessionService = sessionService;
         this.cryptoService = cryptoService;
+        this.terminalSessionMetadataService = terminalSessionMetadataService;
     }
 
     @GetMapping("/shutdown")
@@ -223,6 +228,16 @@ public class HostApiController extends BaseController {
             hostSystem.get(),
             sessionRules);
 
+        /*
+        TerminalSessionMetadata sessionMetadata = TerminalSessionMetadata.builder().sessionStatus("ACTIVE")
+            .hostSystem(hostSystem.get())
+            .user(user)
+            .startTime(new java.sql.Timestamp(System.currentTimeMillis()))
+            .sessionLog(sessionLog)
+            .build();
+
+        sessionMetadata = terminalSessionMetadataService.createSession(sessionMetadata);
+*/
         var encryptedSessionId = cryptoService.encrypt(connectedSystem.getSession().getId().toString());
 
         log.info("returning " + encryptedSessionId);

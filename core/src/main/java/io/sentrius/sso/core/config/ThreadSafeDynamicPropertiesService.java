@@ -5,10 +5,7 @@ import io.sentrius.sso.core.repository.ConfigurationOptionRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
-import java.io.FileOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -63,7 +60,7 @@ public class ThreadSafeDynamicPropertiesService {
                 path = Paths.get(configLocation).toString();
             }
         }catch(Exception e){
-            log.error("Error getting dynamic properties path", e);
+            log.error("Error getting dynamic properties path This may be an ignorable error during dev/test.", e);
             return;
         }
 
@@ -71,16 +68,11 @@ public class ThreadSafeDynamicPropertiesService {
         try (FileInputStream in = new FileInputStream(path)) {
             properties.load(in);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error loading dynamic properties. This may be an ignorable error during dev/test.", e);
         }
-
-
-
         } finally {
             lock.writeLock().unlock();
         }
-
-
     }
 
     // Updates a property if it's in the allowed list

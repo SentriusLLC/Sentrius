@@ -1,6 +1,7 @@
 package io.sentrius.agent.analysis.agents.sessions;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import io.sentrius.sso.core.model.metadata.AnalyticsTracking;
 import io.sentrius.sso.core.model.metadata.TerminalBehaviorMetrics;
@@ -14,6 +15,7 @@ import io.sentrius.sso.core.services.metadata.TerminalCommandService;
 import io.sentrius.sso.core.services.metadata.TerminalRiskIndicatorService;
 import io.sentrius.sso.core.services.metadata.TerminalSessionMetadataService;
 import io.sentrius.sso.core.services.metadata.UserExperienceMetricsService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -33,12 +35,15 @@ public class SessionAnalyticsAgent {
     private final UserExperienceMetricsService experienceMetricsService;
     private final AnalyticsTrackingRepository trackingRepository;
 
-
-    @Scheduled(fixedRate = 60000) // Runs every 60 seconds
+    @Scheduled(fixedDelay = 60000) // Waits 60 seconds after the previous run completes
+    @Transactional
     public void processSessions() {
         log.info("Processing unprocessed sessions...");
+
+        // Fetch already processed session IDs in bulk
+        Set<Long> processedSessionIds = trackingRepository.findAllSessionIds();
         List<TerminalSessionMetadata> unprocessedSessions = sessionService.getAllSessions().stream()
-            .filter(session -> !trackingRepository.existsBySessionId(session.getId()))
+            .filter(session -> !processedSessionIds.contains(session.getId()))
             .collect(Collectors.toList());
 
         for (TerminalSessionMetadata session : unprocessedSessions) {
@@ -46,31 +51,26 @@ public class SessionAnalyticsAgent {
                 processSession(session);
                 saveToTracking(session.getId(), "PROCESSED");
             } catch (Exception e) {
+                log.error("Error processing session {}: {}", session.getId(), e.getMessage(), e);
                 saveToTracking(session.getId(), "ERROR");
-                e.printStackTrace();
             }
         }
     }
 
     private void processSession(TerminalSessionMetadata session) {
         List<TerminalCommand> commands = commandService.getCommandsBySessionId(session.getId());
+        if (commands == null) {
+            commands = List.of(); // Ensure it's not null
+        }
 
-        // Compute behavioral metrics
         TerminalBehaviorMetrics behaviorMetrics = behaviorMetricsService.computeMetricsForSession(session);
-
-        // Assess risk indicators
         TerminalRiskIndicator riskIndicators = riskIndicatorService.computeRiskIndicators(session, commands);
-
-        // Evaluate user experience metrics
         UserExperienceMetrics experienceMetrics = experienceMetricsService.calculateExperienceMetrics(
             session.getUser(), session, commands
         );
 
-        // Optionally log or store results
-        System.out.println("Processed session " + session.getId() + ":");
-        System.out.println("Behavior Metrics: " + behaviorMetrics);
-        System.out.println("Risk Indicators: " + riskIndicators);
-        System.out.println("Experience Metrics: " + experienceMetrics);
+        log.info("Processed session {}: Behavior Metrics: {}, Risk Indicators: {}, Experience Metrics: {}",
+            session.getId(), behaviorMetrics, riskIndicators, experienceMetrics);
     }
 
     private void saveToTracking(Long sessionId, String status) {

@@ -1,3 +1,4 @@
+/mnt/ExtraDrive/repos/Sentrius/analyagents/src/main/java/io/sentrius/agent/analysis/model/AgentStatus.java
 /mnt/ExtraDrive/repos/Sentrius/analyagents/src/main/java/io/sentrius/agent/analysis/Agent.java
 /mnt/ExtraDrive/repos/Sentrius/analyagents/src/main/java/io/sentrius/agent/analysis/agents/sessions/SessionAnalyticsAgent.java
 /mnt/ExtraDrive/repos/Sentrius/analyagents/src/main/java/io/sentrius/agent/analysis/api/AgentController.java

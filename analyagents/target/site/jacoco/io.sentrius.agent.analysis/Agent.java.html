@@ -4,18 +4,16 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 
 @SpringBootApplication(scanBasePackages = {&quot;io.sentrius.agent&quot;, &quot;io.sentrius.sso&quot;})
-//@ComponentScan(basePackages = {&quot;io.sentrius.sso&quot;})
 @EnableJpaRepositories(basePackages = {&quot;io.sentrius.sso.core.data&quot;, &quot;io.sentrius.sso.core.repository&quot;})
-@EntityScan(basePackages = {&quot;io.sentrius.sso.core.model&quot;, &quot;io.sentrius.sentrius.ai.model&quot;}) // Replace with
-// your
-// actual entity package
-<span class="nc" id="L15">public class Agent {</span>
+@EntityScan(basePackages = {&quot;io.sentrius.sso.core.model&quot;, &quot;io.sentrius.sentrius.ai.model&quot;})
+@EnableScheduling
+<span class="nc" id="L14">public class Agent {</span>
     public static void main(String[] args) {
-<span class="nc" id="L17">                SpringApplication.run(Agent.class, args);</span>
-<span class="nc" id="L18">        }</span>
-
-    }
+<span class="nc" id="L16">        SpringApplication.run(Agent.class, args);</span>
+<span class="nc" id="L17">    }</span>
+}
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

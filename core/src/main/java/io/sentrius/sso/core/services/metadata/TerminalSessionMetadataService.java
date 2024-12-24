@@ -7,6 +7,7 @@ import io.sentrius.sso.core.model.metadata.TerminalSessionMetadata;
 import io.sentrius.sso.core.repository.TerminalSessionMetadataRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TerminalSessionMetadataService {
@@ -17,6 +18,7 @@ public class TerminalSessionMetadataService {
         this.metadataRepository = metadataRepository;
     }
 
+    @Transactional
     public TerminalSessionMetadata createSession(TerminalSessionMetadata sessionMetadata) {
         return metadataRepository.save(sessionMetadata);
     }
