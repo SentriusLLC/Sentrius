@@ -56,7 +56,7 @@ public class AccessControlAspect {
             }
 
             if (!canAccess) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied to ");
             }
         }
     }

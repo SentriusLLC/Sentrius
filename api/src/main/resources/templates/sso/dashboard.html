@@ -293,10 +293,13 @@
         let maxConnections = 10;
         let currentConnections = 0;
 
-        let tachometerChart; // Chart variable for tachometer
+        let tachometerChart = null; // Chart variable for tachometer
         let outputSizeChart; // Chart variable for output size chart
 
         function createTachometerChart() {
+            if (null == document.getElementById('tachometerChart')){
+                return;
+            }
             const ctx = document.getElementById('tachometerChart').getContext('2d');
             if (tachometerChart){
                 tachometerChart.destroy();
@@ -344,7 +347,7 @@
         }
 
         function updateTachometer(newConnections) {
-            if (newConnections <= maxConnections) {
+            if (newConnections <= maxConnections && null != tachometerChart) {
                 tachometerChart.data.datasets[0].data[0] = newConnections;
                 tachometerChart.data.datasets[0].data[1] = maxConnections - newConnections;
                 tachometerChart.update();
@@ -484,6 +487,7 @@
             });
 
             // Render heatmap with Chart.js
+            if (document.getElementById('heatmap-container')) {
             const ctx = document.getElementById('heatmap-container').getContext('2d');
             new Chart(ctx, {
                 type: 'bar', // Use bar chart to display the heatmap
@@ -517,6 +521,7 @@
                     }
                 }
             });
+            }
         });
     });
 

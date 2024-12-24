@@ -90,12 +90,14 @@ public class TerminalApiController extends BaseController {
     public ResponseEntity<List<TerminalLogOutputDTO>> getOutputSize(
         HttpServletRequest request, HttpServletResponse response) {
         // Check if the current user is a system admin
+        log.info("getOutputSize");
         var currentUser = getOperatingUser(request, response);
         List<TerminalLogOutputDTO> outputData = new ArrayList<>();
         if (AccessUtil.canAccess(currentUser, ApplicationAccessEnum.CAN_MANAGE_APPLICATION)){
             outputData = sessionService.getLogOutputSummary(null);
         } else {
             outputData = sessionService.getLogOutputSummary(currentUser.getUsername());
+            log.info("*** User {} requested terminal log output size", currentUser.getUsername());
         }
 
         return ResponseEntity.ok(outputData);
