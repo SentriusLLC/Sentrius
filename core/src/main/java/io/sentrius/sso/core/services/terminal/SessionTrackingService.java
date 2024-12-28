@@ -148,11 +148,6 @@ public class SessionTrackingService implements PluggableServices {
           }
           if (systemOptions.enableInternalAudit) {
             sessionAuditService.audit(connectedSystem, serverResponse);
-            // SessionAuditDB.getInstance().audit(SessionIdentifier.from(schSession.getUser(),
-            // schSession, sessionId, Long.valueOf(instanceId)), serverResponse);
-            // systemAuditLogger.info(gson.toJson(new AuditWrapper(schSession.getUser(),
-            // serverResponse)));
-            // SessionAuditDB.insertTerminalLog(con, serverResponse);
           }
         }
         else {
@@ -231,7 +226,9 @@ public class SessionTrackingService implements PluggableServices {
 
           if (systemOptions.enableInternalAudit) {
             if (output.getOutputMessage() != null) {
-              sessionAuditService.audit(connectedSystem, output.getOutputMessage().getCommand());
+              // this should already be audited when client types
+              // fix for issue GH-8, where we saw duplicate messages.
+             // sessionAuditService.audit(connectedSystem, output.getOutputMessage().getCommand());
             }
           }
           if (output.getOutputMessage() != null) {

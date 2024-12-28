@@ -33,6 +33,7 @@ public class SecureShellTask {
 
             while (!Thread.currentThread().isInterrupted() && !sessionOutput.getConnectedSystem().getSession().getClosed()) {
                 if (br.ready() && (read = br.read(buff)) != -1) {
+                    log.info("Read {} bytes from channel {}", read, new String(buff,0,read));
                     sessionOutputService.addToOutput(
                         sessionOutput.getConnectedSystem(), buff, 0, read);
                 }

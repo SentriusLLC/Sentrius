@@ -103,7 +103,7 @@ public class SessionAnalyticsAgent {
         TerminalLogs terminalLog,
         TerminalSessionMetadata sessionMetadata) {
         // Split output into individual commands (Assume each command ends with a newline or specific delimiter)
-        String[] commands = terminalLog.getOutput().split("\n");
+        String[] commands = terminalLog.getOutput().split("\r\n|\r|\n");
 
         // Parse each command
         List<TerminalCommand> terminalCommands = Arrays.stream(commands)

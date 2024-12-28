@@ -64,10 +64,8 @@ public class SshListenerService {
 
         var connectedSystem = sessionTrackingService.getConnectedSession(sessionIdLong);
 
-        for(var trigger : connectedSystem.getSessionStartupActions()){
-
-        }
         log.info("Starting to listen to SSH server for session: {}", terminalSessionId);
+
         activeSessions.putIfAbsent(terminalSessionId, session);
 
         connectedSystem.setWebsocketSessionId(session.getId());

@@ -144,9 +144,11 @@ public class AccessTokenAuditor extends BaseAccessTokenAuditor {
           }
       }
     }
+    // async runner as user types
     runner = new AsyncAccessTokenAuditor(ztatService, asyncRules, connectedSystem, sessionTrackingService);
     executorService.submit(runner);
 
+    // async runner as user types, only to evaluate full commands
     fullRunner = new AsyncAccessTokenAuditor(ztatService, asyncFullRules, connectedSystem, sessionTrackingService);
     executorService.submit(fullRunner);
   }
