@@ -274,9 +274,6 @@ public class SessionTrackingService implements PluggableServices {
     }
   }
 
-  public void addToOutput(ConnectedSystem connectedSystem, String output) {
-    addToOutput(connectedSystem, output.toCharArray(), 0, output.length());
-  }
 
   public ConnectedSystem getConnectedSession(Long sessionId) {
     return userConnectionMap.get(sessionId);
