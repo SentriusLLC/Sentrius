@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-keycloak
+  labels:
+    app: keycloak
+    release: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.keycloak.replicas }}
+  selector:
+    matchLabels:
+      app: keycloak
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: keycloak
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: keycloak
+          image: "{{ .Values.keycloak.image.repository }}:{{ .Values.keycloak.image.tag }}"
+          imagePullPolicy: "{{ .Values.keycloak.image.pullPolicy }}"
+          ports:
+            - containerPort: 30081
+          env:
+            - name: KC_HTTP_PORT
+              value: "30081"
+            - name: KEYCLOAK_ADMIN
+              value: {{ .Values.keycloak.adminUser }}
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              value: {{ .Values.keycloak.adminPassword }}
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL_HOST
+              value: keycloak-db
+            - name: KC_DB_DATABASE
+              value: {{ .Values.keycloak.db.database }}
+            - name: KC_DB_USERNAME
+              value: {{ .Values.keycloak.db.user }}
+            - name: KC_DB_PASSWORD
+              value: {{ .Values.keycloak.db.password }}
+            - name: KC_HOSTNAME
+              value: {{ .Values.keycloak.hostname }}:30081
+            - name: KC_HOSTNAME_STRICT
+              value: "false"
+            - name: KEYCLOAK_LOGLEVEL
+              value: DEBUG
+            - name: ROOT_LOGLEVEL
+              value: DEBUG
+          command: [ "/opt/keycloak/bin/kc.sh" ]
+          args: [ "start-dev", "--proxy=edge", "--import-realm"]

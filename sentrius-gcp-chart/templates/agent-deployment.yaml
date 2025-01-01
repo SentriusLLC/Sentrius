@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-sentriusagent
+  labels:
+    {{- include "sentriusagent.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: sentriusagent
+  template:
+    metadata:
+      labels:
+        app: sentriusagent
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: [ 'sh', '-c', 'until nc -z {{ .Release.Name }}-postgres.{{ .Release.Namespace }}.svc.cluster.local 5432; do echo waiting for postgres; sleep 2; done;' ]
+        - name: wait-for-keycloak
+          image: busybox
+          command: [ 'sh', '-c', 'until nc -z {{ .Release.Name }}-keycloak.{{ .Release.Namespace }}.svc.cluster.local
+           30081; do echo waiting for postgres; sleep 2; done;' ]
+      containers:
+        - name: sentrius-agent
+          image: "{{ .Values.sentriusagent.image.repository }}:{{ .Values.sentriusagent.image.tag }}"
+          imagePullPolicy: {{ .Values.sentriusagent.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.sentriusagent.port }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+          env:
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: db-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: db-password
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: keystore-password
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ .Release.Name }}-sentriusagent-config

@@ -104,7 +104,7 @@ public class SessionAnalyticsAgent {
         trackingRepository.save(tracking);
     }
 
-    public List<TerminalCommand> parseAndSaveCommands( 
+    public List<TerminalCommand> parseAndSaveCommands(
         TerminalLogs previousLog,
         TerminalLogs terminalLog, TerminalSessionMetadata sessionMetadata) {
         SessionAnalyticsAgent.log.info("Parsing and saving commands from terminal log: {}", terminalLog.getOutput());

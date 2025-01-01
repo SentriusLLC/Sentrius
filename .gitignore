@@ -50,3 +50,4 @@ api/node_modules/*
 
 .settings/*
 .env.bak
+.gcp.env.bak
