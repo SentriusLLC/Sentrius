@@ -6,13 +6,11 @@ metadata:
     app: keycloak
     release: {{ .Release.Name }}
 spec:
-  type: NodePort
+  type: LoadBalancer
   ports:
     - name: http
-      port: 30081
-      targetPort: 30081
-      nodePort: 30081 # NodePort range: 30000-32767
+      port: 80
+      targetPort: {{ .Values.keycloak.port }} # Replace with the internal port Keycloak listens to
   selector:
     app: keycloak
     release: {{ .Release.Name }}
-

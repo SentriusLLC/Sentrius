@@ -2,12 +2,13 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Release.Name }}-sentrius
+  labels:
+    app: sentrius
 spec:
-  type: NodePort
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 80
+      targetPort: {{ .Values.sentrius.port }} # Port used inside the container
   selector:
     app: sentrius
-  ports:
-    - protocol: TCP
-      port: 80        # Port exposed to the outside world
-      targetPort: {{ .Values.sentrius.port }} # Port used inside the container
-      nodePort: {{ .Values.service.nodePort | default 30080 }} # NodePort range: 30000-32767

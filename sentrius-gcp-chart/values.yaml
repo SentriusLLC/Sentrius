@@ -206,6 +206,7 @@ keycloak:
   host: keycloak.default.svc.cluster.local
   adminUser: admin
   adminPassword: admin
+  port: 8080
   db:
     image: postgres:15
     user: keycloak
