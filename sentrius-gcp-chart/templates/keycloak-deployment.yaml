@@ -22,10 +22,10 @@ spec:
           image: "{{ .Values.keycloak.image.repository }}:{{ .Values.keycloak.image.tag }}"
           imagePullPolicy: "{{ .Values.keycloak.image.pullPolicy }}"
           ports:
-            - containerPort: 30081
+            - containerPort: 8081
           env:
             - name: KC_HTTP_PORT
-              value: "30081"
+              value: "8081"
             - name: KEYCLOAK_ADMIN
               value: {{ .Values.keycloak.adminUser }}
             - name: KEYCLOAK_ADMIN_PASSWORD

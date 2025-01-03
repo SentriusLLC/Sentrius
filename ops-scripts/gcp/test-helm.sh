@@ -22,7 +22,7 @@ fi
 
 
 
-helm upgrade --install sentrius ./sentrius-gcp-chart --namespace ${TENANT} \
+helm template ${TENANT} ./sentrius-gcp-chart/ --values sentrius-gcp-chart/values.yaml \
     --set tenant=${TENANT} \
     --set subdomain=${TENANT}.sentrius.cloud \
     --set sentrius.image.repository=us-central1-docker.pkg.dev/sentrius-project/sentrius-repo/sentrius \
@@ -33,31 +33,3 @@ helm upgrade --install sentrius ./sentrius-gcp-chart --namespace ${TENANT} \
     --set keycloak.image.tag=${SENTRIUS_KEYCLOAK_VERSION} \
     --set sentriusagent.image.repository=us-central1-docker.pkg.dev/sentrius-project/sentrius-repo/sentrius-agent \
     --set sentriusagent.image.tag=${SENTRIUS_AGENT_VERSION} || { echo "Failed to deploy Sentrius with Helm"; exit 1; }
-
-
-KEYCLOAK_IP=$(kubectl get svc sentrius-keycloak -n ${TENANT} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-SENTRIUS_IP=$(kubectl get svc sentrius-sentrius -n ${TENANT} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-echo $KEYCLOAK_IP
-# 35.229.32.6
-echo $SENTRIUS_IP
-
-# Check if subdomain exists
-if gcloud dns record-sets list --zone=${ZONE} --name=${TENANT}.sentrius.cloud. | grep -q ${TENANT}.sentrius.cloud.; then
-    echo "Subdomain ${TENANT}.sentrius.cloud already exists. Skipping creation."
-else
-    echo "Creating subdomain ${TENANT}.sentrius.cloud..."
-    gcloud dns record-sets transaction start --zone=${ZONE}
-
-    gcloud dns record-sets transaction add --zone=${ZONE} \
-          --name=${TENANT}.sentrius.cloud. \
-          --type=A \
-          --ttl=300 \
-          $SENTRIUS_IP &&
-
-    gcloud dns record-sets transaction add --zone=${ZONE} \
-      --name=keycloak.${TENANT}.sentrius.cloud. \
-      --type=A \
-      --ttl=300 \
-      $KEYCLOAK_IP &&
-    gcloud dns record-sets transaction execute --zone=${ZONE}
-fi
