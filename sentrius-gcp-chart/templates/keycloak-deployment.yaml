@@ -41,12 +41,22 @@ spec:
             - name: KC_DB_PASSWORD
               value: {{ .Values.keycloak.db.password }}
             - name: KC_HOSTNAME
-              value: {{ .Values.keycloak.hostname }}:30081
+              value: keycloak.{{ .Values.subdomain }}
             - name: KC_HOSTNAME_STRICT
               value: "false"
             - name: KEYCLOAK_LOGLEVEL
               value: DEBUG
             - name: ROOT_LOGLEVEL
               value: DEBUG
+            - name: ROOT_URL
+              value: http://{{ .Values.subdomain }}/
+            - name: REDIRECT_URIS
+              value: http://{{ .Values.subdomain }}
+            - name: PROXY_ADDRESS_FORWARDING
+              value: "true"
+            - name: KC_HOSTNAME_STRICT_HTTPS
+              value: "false"
+            - name: KC_HTTP_ENABLED
+              value: "true"
           command: [ "/opt/keycloak/bin/kc.sh" ]
           args: [ "start-dev", "--proxy=edge", "--import-realm"]

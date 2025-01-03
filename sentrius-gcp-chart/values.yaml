@@ -96,5 +96,6 @@ keycloak:
     password: password
     database: keycloak
   replicas: 1
-  hostname: sentrius-keycloak
+  #hostname: sentrius-keycloak
+
 

@@ -18,12 +18,6 @@ spec:
         - name: wait-for-postgres
           image: busybox
           command: [ 'sh', '-c', 'until nc -z {{ .Release.Name }}-postgres 5432; do echo waiting for postgres; sleep 2; done;' ]
-        - name: init-config
-          image: busybox
-          command: [ 'sh', '-c', 'cp /configmap/agent-application.properties /config/application.properties' ]
-          volumeMounts:
-            - name: config-volume
-              mountPath: /config
       containers:
         - name: sentrius-agent
           image: "{{ .Values.sentriusagent.image.repository }}:{{ .Values.sentriusagent.image.tag }}"
