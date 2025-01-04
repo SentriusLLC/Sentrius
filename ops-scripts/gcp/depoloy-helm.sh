@@ -35,11 +35,29 @@ helm upgrade --install sentrius ./sentrius-gcp-chart --namespace ${TENANT} \
     --set sentriusagent.image.tag=${SENTRIUS_AGENT_VERSION} || { echo "Failed to deploy Sentrius with Helm"; exit 1; }
 
 
-KEYCLOAK_IP=$(kubectl get svc sentrius-keycloak -n ${TENANT} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-SENTRIUS_IP=$(kubectl get svc sentrius-sentrius -n ${TENANT} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-echo $KEYCLOAK_IP
-# 35.229.32.6
-echo $SENTRIUS_IP
+# Wait for LoadBalancer IPs to be ready
+echo "Waiting for LoadBalancer IPs to be assigned..."
+RETRIES=30
+SLEEP_INTERVAL=10
+
+for ((i=1; i<=RETRIES; i++)); do
+    KEYCLOAK_IP=$(kubectl get svc sentrius-keycloak -n ${TENANT} -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+    SENTRIUS_IP=$(kubectl get svc sentrius-sentrius -n ${TENANT} -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+
+    if [[ -n "$KEYCLOAK_IP" && -n "$SENTRIUS_IP" ]]; then
+        echo "Keycloak IP: $KEYCLOAK_IP"
+        echo "Sentrius IP: $SENTRIUS_IP"
+        break
+    fi
+
+    echo "Attempt $i: Waiting for IPs to be assigned..."
+    sleep $SLEEP_INTERVAL
+done
+
+if [[ -z "$KEYCLOAK_IP" || -z "$SENTRIUS_IP" ]]; then
+    echo "Failed to retrieve LoadBalancer IPs after $((RETRIES * SLEEP_INTERVAL)) seconds."
+    exit 1
+fi
 
 # Check if subdomain exists
 if gcloud dns record-sets list --zone=${ZONE} --name=${TENANT}.sentrius.cloud. | grep -q ${TENANT}.sentrius.cloud.; then
@@ -52,12 +70,13 @@ else
           --name=${TENANT}.sentrius.cloud. \
           --type=A \
           --ttl=300 \
-          $SENTRIUS_IP &&
+          $SENTRIUS_IP
 
     gcloud dns record-sets transaction add --zone=${ZONE} \
       --name=keycloak.${TENANT}.sentrius.cloud. \
       --type=A \
       --ttl=300 \
-      $KEYCLOAK_IP &&
+      $KEYCLOAK_IP
+
     gcloud dns record-sets transaction execute --zone=${ZONE}
 fi
