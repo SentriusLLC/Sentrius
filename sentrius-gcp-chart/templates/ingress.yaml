@@ -6,6 +6,11 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: "gce"
 spec:
+  tls:
+    - hosts:
+        - {{ .Values.tenant }}.sentrius.cloud
+        - keycloak.{{ .Values.tenant }}.sentrius.cloud
+      secretName: {{ .Values.tenant }}-tls
   rules:
     - host: keycloak.{{ .Values.tenant }}.sentrius.cloud
       http:
@@ -14,7 +19,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: keycloak
+                name: sentrius-keycloak
                 port:
                   number: 8081
     - host: {{ .Values.tenant }}.sentrius.cloud

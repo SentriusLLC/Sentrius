@@ -1,0 +1,9 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: keycloak-cert
+  namespace: {{ .Values.tenant }}
+spec:
+  domains:
+    - {{ .Values.subdomain }}
+    - keycloak.{{ .Values.subdomain }}
