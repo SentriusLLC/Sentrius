@@ -59,4 +59,4 @@ spec:
             - name: KC_HTTP_ENABLED
               value: "true"
           command: [ "/opt/keycloak/bin/kc.sh" ]
-          args: [ "start-dev", "--proxy=edge", "--import-realm"]
+          args: [ "start-dev", "--proxy=edge", "--import-realm", "--health-enabled=true"]
