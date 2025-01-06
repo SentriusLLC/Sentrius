@@ -41,12 +41,13 @@ RETRIES=30
 SLEEP_INTERVAL=10
 
 for ((i=1; i<=RETRIES; i++)); do
-    KEYCLOAK_IP=$(kubectl get svc sentrius-keycloak -n ${TENANT} -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
-    SENTRIUS_IP=$(kubectl get svc sentrius-sentrius -n ${TENANT} -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+    # Retrieve LoadBalancer IP
+    # Retrieve LoadBalancer IP
+    INGRESS_IP=$(kubectl get ingress managed-cert-ingress-${TENANT} -n ${TENANT} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 
-    if [[ -n "$KEYCLOAK_IP" && -n "$SENTRIUS_IP" ]]; then
-        echo "Keycloak IP: $KEYCLOAK_IP"
-        echo "Sentrius IP: $SENTRIUS_IP"
+
+    if [[ -n "INGRESS_IP" ]]; then
+        echo "INGRESS_IP IP: $INGRESS_IP"
         break
     fi
 
@@ -54,7 +55,7 @@ for ((i=1; i<=RETRIES; i++)); do
     sleep $SLEEP_INTERVAL
 done
 
-if [[ -z "$KEYCLOAK_IP" || -z "$SENTRIUS_IP" ]]; then
+if [[ -z "INGRESS_IP" ]]; then
     echo "Failed to retrieve LoadBalancer IPs after $((RETRIES * SLEEP_INTERVAL)) seconds."
     exit 1
 fi
@@ -70,13 +71,13 @@ else
           --name=${TENANT}.sentrius.cloud. \
           --type=A \
           --ttl=300 \
-          $SENTRIUS_IP
+          $NGRESS_IP
 
     gcloud dns record-sets transaction add --zone=${ZONE} \
       --name=keycloak.${TENANT}.sentrius.cloud. \
       --type=A \
       --ttl=300 \
-      $KEYCLOAK_IP
+      $INGRESS_IP
 
     gcloud dns record-sets transaction execute --zone=${ZONE}
 fi

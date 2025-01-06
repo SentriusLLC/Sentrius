@@ -1,0 +1,8 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: wildcard-cert
+spec:
+  domains:
+    - "{{ .Values.tenant }}.sentrius.cloud"
+    - "keycloak.{{ .Values.tenant }}.sentrius.cloud"

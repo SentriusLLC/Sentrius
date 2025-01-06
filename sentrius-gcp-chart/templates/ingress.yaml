@@ -1,16 +1,13 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: ingress-{{ .Values.tenant }}
-  namespace: {{ .Release.Namespace }}
+  name: managed-cert-ingress-canary
+  namespace: canary
   annotations:
-    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.class: gce
+    kubernetes.io/ingress.allow-http: "false"
+    networking.gke.io/managed-certificates: wildcard-cert
 spec:
-  tls:
-    - hosts:
-        - {{ .Values.tenant }}.sentrius.cloud
-        - keycloak.{{ .Values.tenant }}.sentrius.cloud
-      secretName: {{ .Values.tenant }}-tls
   rules:
     - host: keycloak.{{ .Values.tenant }}.sentrius.cloud
       http:
@@ -19,7 +16,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: sentrius-keycloak
+                name: {{ .Release.Name }}-keycloak
                 port:
                   number: 8081
     - host: {{ .Values.tenant }}.sentrius.cloud
@@ -29,6 +26,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: sentrius
+                name: {{ .Release.Name }}-sentrius
                 port:
                   number: 8080
