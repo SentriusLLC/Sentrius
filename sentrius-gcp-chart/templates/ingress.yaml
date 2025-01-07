@@ -6,6 +6,8 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: gce
     kubernetes.io/ingress.allow-http: "false"
+    ingress.kubernetes.io/force-ssl-redirect: "true"
+    ingress.kubernetes.io/redirect-http-to-https: "true"
     networking.gke.io/managed-certificates: wildcard-cert
 spec:
   rules:
