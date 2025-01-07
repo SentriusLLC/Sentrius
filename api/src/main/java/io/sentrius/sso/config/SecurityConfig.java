@@ -42,56 +42,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-       /* http
-            .authorizeRequests(authorize -> authorize
-                .requestMatchers("/sso/v1/**", "/api/v1/**").authenticated() // Pages that need authentication
-                .requestMatchers("/node/**", "/js/**", "/css/**", "/images/**", "/error", "/sso/login", "/api/v1/login/authenticate").permitAll() // Public endpoints
-                .anyRequest().authenticated() // Other pages need authentication
-            )
-            .logout(logout -> logout
-                .logoutSuccessUrl("/sso/login?logout") // Redirect after logout
-            )
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            .oauth2Login(oauth2 -> oauth2             // Enable OAuth2 login
-                .loginPage("/oauth2/authorization/keycloak") // Redirect to Keycloak
-            )
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverterForKeycloak()))
-            )
-            .csrf(csrf -> csrf
-                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-            )
-
-            .cors(Customizer.withDefaults())
-            .exceptionHandling(exception -> exception
-                .accessDeniedPage("/error") // Handle access denied with error page
-            );*/
-        /*
         http
-            .authorizeRequests(authorize -> authorize
-                .requestMatchers("/sso/v1/**", "/api/v1/**").authenticated()
-                .requestMatchers("/node/**", "/js/**", "/css/**", "/images/**", "/error", "/sso/login", "/api/v1/login/authenticate").permitAll()
-                .anyRequest().authenticated()
-            )
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            .oauth2Login(oauth2 -> oauth2
-                .loginPage("/oauth2/authorization/keycloak")
-            )
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverterForKeycloak()))
-            )
-            .csrf(csrf -> csrf
-                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-            )
-            .cors(Customizer.withDefaults())
-            .exceptionHandling(exception -> exception
-                .accessDeniedPage("/error")
-            );*/
-        http.authorizeHttpRequests(auth -> auth.requestMatchers("/**").fullyAuthenticated())
+            .authorizeHttpRequests(auth -> auth.
+                requestMatchers("/actuator/**").permitAll() // Public endpoints
+                .requestMatchers("/**").fullyAuthenticated())
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverterForKeycloak()))
             )
@@ -104,12 +58,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /*
-    @Bean
-    public JwtDecoder jwtDecoder(OAuth2ResourceServerProperties properties) {
-        return JwtDecoders.fromIssuerLocation("http://localhost:8180/realms/sentrius");
-    }
-*/
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverterForKeycloak() {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();

@@ -29,6 +29,7 @@ import io.sentrius.sso.core.model.dto.HostSystemDTO;
 import io.sentrius.sso.core.model.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.model.security.UserType;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.AutomationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.RuleAccessEnum;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
@@ -335,6 +336,10 @@ public class ConfigurationApplicationTask {
                 }
                 if (null != type.getZtAccessTokenAccess()){
                     builder.ztAccessTokenAccess(ZeroTrustAccessTokenEnum.of(List.of(type.getZtAccessTokenAccess())));
+                }
+
+                if (null != type.getApplicationAccess()){
+                    builder.applicationAccess(ApplicationAccessEnum.of(List.of(type.getApplicationAccess())));
                 }
 
                 UserType newType = builder.userTypeName(type.getUserTypeName()).build();

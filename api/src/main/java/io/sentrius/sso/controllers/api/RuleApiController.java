@@ -77,7 +77,7 @@ public class RuleApiController extends BaseController {
         boolean canEditRules = AccessUtil.canAccess(user, RuleAccessEnum.CAN_EDIT_RULES);
         boolean canDeleteRules = AccessUtil.canAccess(user, RuleAccessEnum.CAN_MANAGE_RULES);
         if (AccessUtil.canAccess(user, ApplicationAccessEnum.CAN_MANAGE_APPLICATION)) {
-
+            log.info("User can manage rules {}", user.getAuthorizationType());
             for(ProfileRule rule: ruleService.getAllRules()) {
                 var dto = new ProfileRuleDTO(rule, rule.getHostGroups().stream().toList(), canViewRules, canEditRules,
                     canDeleteRules);
@@ -85,6 +85,7 @@ public class RuleApiController extends BaseController {
                 log.info("Adding {}", dto);
             }
         } else {
+            log.info("User can manage own rules");
             var groups = hostGroupService.getAllHostGroups(user);
             for (HostGroup group : groups) {
                 for(ProfileRule rule : group.getRules()) {

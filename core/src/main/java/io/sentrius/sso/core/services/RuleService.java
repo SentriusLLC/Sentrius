@@ -32,7 +32,9 @@ public class RuleService {
     public ProfileRule saveRule(ProfileRule rule) {
         try {
             log.info("Saving rule with id: {}", rule.getId());
-            return ruleRepository.save(rule);
+            var newRule = ruleRepository.save(rule);
+            log.info("Saving rule with id: {}", newRule.getId());
+            return newRule;
         } catch (Exception e) {
             log.error("Error while saving Rule", e);
             throw new RuntimeException("Failed to save Rule", e);

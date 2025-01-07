@@ -6,7 +6,25 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source ${SCRIPT_DIR}/base.sh
 source ${SCRIPT_DIR}/../../.gcp.env
 
-helm upgrade --install sentrius ./sentrius-gcp-chart --namespace ${NAMESPACE} \
+TENANT=$1
+
+if [[ -z "$TENANT" ]]; then
+    echo "Must provide single argument for tenant name" 1>&2
+    exit 1
+fi
+
+# Check if namespace exists
+kubectl get namespace ${TENANT} >/dev/null 2>&1
+if [[ $? -ne 0 ]]; then
+    echo "Namespace ${TENANT} does not exist. Creating..."
+    kubectl create namespace ${TENANT} || { echo "Failed to create namespace ${TENANT}"; exit 1; }
+fi
+
+
+
+helm template ${TENANT} ./sentrius-gcp-chart/ --values sentrius-gcp-chart/values.yaml \
+    --set tenant=${TENANT} \
+    --set subdomain=${TENANT}.sentrius.cloud \
     --set sentrius.image.repository=us-central1-docker.pkg.dev/sentrius-project/sentrius-repo/sentrius \
     --set sentrius.image.tag=${SENTRIUS_VERSION} \
     --set ssh.image.repository=us-central1-docker.pkg.dev/sentrius-project/sentrius-repo/sentrius-ssh \

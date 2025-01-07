@@ -2,6 +2,10 @@
 replicaCount: 1
 namespace: default
 
+
+tenant: sentrius-demo
+subdomain: "{{ .Values.tenant }}.sentrius.cloud"
+
 # Sentrius configuration
 sentrius:
   image:
@@ -16,80 +20,13 @@ sentrius:
     SPRING_DATASOURCE_PASSWORD: password
     KEYSTORE_PASSWORD: sentrius
   resources: {}
-  config:
-    application: |
-      keystore.file=sso.jceks
-      keystore.password=${KEYSTORE_PASSWORD}
-      keystore.alias=KEYBOX-ENCRYPTION_KEY
-      keystore.algorithm=AES
-      spring.main.web-application-type=servlet
-      spring.thymeleaf.enabled=true
-      spring.freemarker.enabled=false
-      #flyway configuration
-      spring.flyway.enabled=true
-      spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
-      spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
-      spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
-      spring.datasource.driver-class-name=org.postgresql.Driver
-      # Connection pool settings
-      spring.datasource.hikari.maximum-pool-size=10
-      spring.datasource.hikari.minimum-idle=5
-      spring.datasource.hikari.idle-timeout=30000
-      spring.datasource.hikari.max-lifetime=1800000
-      # Hibernate settings (optional, for JPA)
-      spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
-       # Disable automatic schema generation in production
-      spring.jpa.hibernate.ddl-auto=none
-      # Ensure this path matches your project structure
-      #spring.flyway.locations=classpath:db/migration/
-      spring.flyway.baseline-on-migrate=true
-      # Thymeleaf settings
-      spring.thymeleaf.prefix=classpath:/templates/
-      spring.thymeleaf.suffix=.html
-      #spring.datasource.url=jdbc:h2:mem:testdb
-      logging.level.org.springframework.web=INFO
-      logging.level.org.springframework.security=INFO
-      logging.level.io.sentrius=DEBUG
-      logging.level.org.thymeleaf=INFO
-      spring.thymeleaf.servlet.produce-partial-output-while-processing=false
-      spring.servlet.multipart.enabled=true
-      spring.servlet.multipart.max-file-size=10MB
-      spring.servlet.multipart.max-request-size=10MB
-      server.error.whitelabel.enabled=false
-      dynamic.properties.path=/config/dynamic.properties
-      keycloak.realm=sentrius
-      # keycloak configuration
-      spring.security.oauth2.client.registration.keycloak.client-id=sentrius-api
-      spring.security.oauth2.client.registration.keycloak.client-secret=nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0
-      spring.security.oauth2.client.registration.keycloak.authorization-grant-type=authorization_code
-      spring.security.oauth2.client.registration.keycloak.redirect-uri=http://sentrius-keycloak:30080/login/oauth2/code/keycloak
-      spring.security.oauth2.client.registration.keycloak.scope=openid,profile,email
-      spring.security.oauth2.resourceserver.jwt.issuer-uri=http://sentrius-keycloak:30081/realms/sentrius
-      spring.security.oauth2.client.provider.keycloak.issuer-uri=http://sentrius-keycloak:30081/realms/sentrius
-    dynamic: |
-      auditorClass=io.sentrius.sso.automation.auditing.AccessTokenAuditor
-      twopartyapproval.option.LOCKING_SYSTEMS=true
-      requireProfileForLogin=true
-      maxJitDurationMs=1440000
-      sshEnabled=true
-      systemLogoName=Sentrius
-      AccessTokenAuditor.rule.4=io.sentrius.sso.automation.auditing.rules.OpenAISessionRule;Malicious AI Monitoring
-      AccessTokenAuditor.rule.5=io.sentrius.sso.automation.auditing.rules.TwoPartyAIMonitor;AI Second Party Monitor
-      allowProxies=true
-      AccessTokenAuditor.rule.2=io.sentrius.sso.automation.auditing.rules.DeletePrevention;Delete Prevention
-      AccessTokenAuditor.rule.3=io.sentrius.sso.automation.auditing.rules.TwoPartySessionRule;Require Second Party Monitoring
-      AccessTokenAuditor.rule.0=io.sentrius.sso.automation.auditing.rules.CommandEvaluator;Restricted Commands
-      terminalsInNewTab=false
-      auditFlushIntervalMs=5000
-      AccessTokenAuditor.rule.1=io.sentrius.sso.automation.auditing.rules.AllowedCommandsRule;Approved Commands
-      knownHostsPath=/home/marc/.ssh/known_hosts
-      systemLogoPathLarge=/images/sentrius_large.jpg
-      maxJitUses=1
-      systemLogoPathSmall=/images/sentrius_small.png
-      enableInternalAudit=true
-      twopartyapproval.require.explanation.LOCKING_SYSTEMS=false
-      canApproveOwnJITs=false
-      yamlConfiguration=/app/exampleInstallWithTypes.yml
+  oauth2:
+    client_id: sentrius-api
+    client_secret: nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0
+    authorization_grant_type: authorization_code
+    redirect_uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
+    scope: openid,profile,email
+    issuer_uri: http://keycloak.{{ .Values.subdomain }}/realms/sentrius
 
 sentriusagent:
   service:
@@ -99,6 +36,13 @@ sentriusagent:
     repository: sentrius-agent
     pullPolicy: IfNotPresent
   port: 8080
+  oauth2:
+    client_id: sentrius-api
+    client_secret: nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0
+    authorization_grant_type: authorization_code
+    redirect-uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
+    scope: openid,profile,email
+    issuer-uri: http://keycloak.{{ .Values.subdomain }}/realms/sentrius
   ssh:
     port: 22
   env:
@@ -108,55 +52,7 @@ sentriusagent:
   resources: {}
   config:
     application: |
-      keystore.file=sso.jceks
-      keystore.password=${KEYSTORE_PASSWORD}
-      keystore.alias=KEYBOX-ENCRYPTION_KEY
-      keystore.algorithm=AES
-      spring.main.web-application-type=servlet
-      spring.thymeleaf.enabled=true
-      spring.freemarker.enabled=false
-      #flyway configuration
-      spring.flyway.enabled=true
-      spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
-      spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
-      spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
-      spring.datasource.driver-class-name=org.postgresql.Driver
-      # Connection pool settings
-      spring.datasource.hikari.maximum-pool-size=10
-      spring.datasource.hikari.minimum-idle=5
-      spring.datasource.hikari.idle-timeout=30000
-      spring.datasource.hikari.max-lifetime=1800000
-      # Hibernate settings (optional, for JPA)
-      spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
-       # Disable automatic schema generation in production
-      spring.jpa.hibernate.ddl-auto=none
-      # Ensure this path matches your project structure
-      #spring.flyway.locations=classpath:db/migration/
-      spring.flyway.baseline-on-migrate=true
-      # Thymeleaf settings
-      spring.thymeleaf.prefix=classpath:/templates/
-      spring.thymeleaf.suffix=.html
-      #spring.datasource.url=jdbc:h2:mem:testdb
-      logging.level.org.springframework.web=INFO
-      logging.level.org.springframework.security=INFO
-      logging.level.io.sentrius=DEBUG
-      logging.level.org.thymeleaf=INFO
-      spring.thymeleaf.servlet.produce-partial-output-while-processing=false
-      spring.servlet.multipart.enabled=true
-      spring.servlet.multipart.max-file-size=10MB
-      spring.servlet.multipart.max-request-size=10MB
-      server.error.whitelabel.enabled=false
-      dynamic.properties.path=/config/dynamic.properties
-      keycloak.realm=sentrius
-      # keycloak configuration
-      spring.security.oauth2.client.registration.keycloak.client-id=sentrius-api
-      spring.security.oauth2.client.registration.keycloak.client-secret=nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0
-      spring.security.oauth2.client.registration.keycloak.authorization-grant-type=authorization_code
-      spring.security.oauth2.client.registration.keycloak.redirect-uri=http://sentrius-keycloak:30080/login/oauth2/code/keycloak
-      spring.security.oauth2.client.registration.keycloak.scope=openid,profile,email
-      spring.security.oauth2.resourceserver.jwt.issuer-uri=http://sentrius-keycloak:30081/realms/sentrius
-      spring.security.oauth2.client.provider.keycloak.issuer-uri=http://sentrius-keycloak:30081/realms/sentrius
-      agents.session-analytics.enabled=true
+      
 
 # PostgreSQL configuration
 postgres:
@@ -186,19 +82,6 @@ secrets:
     password: cGFzc3dvcmQ=   # password
     keystorePassword: c2VudHJpdXM= # sentrius
 
-# Service settings
-service:
-  type: NodePort
-  nodePort: 30080
-
-
-
-# MetalLB (optional)
-metallb:
-  enabled: true
-  addressPool:
-    - 192.168.122.100-192.168.122.110
-
 keycloak:
   image:
     repository: sentrius-keycloak
@@ -206,12 +89,13 @@ keycloak:
   host: keycloak.default.svc.cluster.local
   adminUser: admin
   adminPassword: admin
-  port: 8080
+  port: 8081
   db:
     image: postgres:15
     user: keycloak
     password: password
     database: keycloak
   replicas: 1
-  hostname: sentrius-keycloak
+  #hostname: sentrius-keycloak
+
 

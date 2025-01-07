@@ -2,14 +2,18 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Release.Name }}-keycloak
+  namespace: {{ .Values.tenant }}
+  annotations:
+    cloud.google.com/backend-config: '{"default": "keycloak-backend-config"}'
   labels:
     app: keycloak
     release: {{ .Release.Name }}
+
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
     - name: http
-      port: 80
+      port: {{ .Values.keycloak.port }}
       targetPort: {{ .Values.keycloak.port }} # Replace with the internal port Keycloak listens to
   selector:
     app: keycloak
