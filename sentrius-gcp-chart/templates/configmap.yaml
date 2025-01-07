@@ -106,7 +106,7 @@ data:
     spring.security.oauth2.client.registration.keycloak.scope={{ .Values.sentrius.oauth2.scope }}
     spring.security.oauth2.resourceserver.jwt.issuer-uri=https://keycloak.{{ .Values.subdomain }}/realms/sentrius
     spring.security.oauth2.client.provider.keycloak.issuer-uri=https://keycloak.{{ .Values.tenant }}.sentrius.cloud/realms/sentrius
-    server.forward-headers-strategy=native
+    server.forward-headers-strategy=framework
     https.redirect.enabled=true
     https.required=true
   dynamic.properties: |

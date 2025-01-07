@@ -39,7 +39,7 @@ public class SecurityConfig {
     private final CustomAuthenticationSuccessHandler successHandler;
     final UserService userService;
 
-    @Value("${https.required:true}") // Default is true
+    @Value("${https.required:false}") // Default is false
     private boolean httpsRequired;
 
 
