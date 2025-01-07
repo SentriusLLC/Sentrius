@@ -46,7 +46,7 @@ for ((i=1; i<=RETRIES; i++)); do
     INGRESS_IP=$(kubectl get ingress managed-cert-ingress-${TENANT} -n ${TENANT} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 
 
-    if [[ -n "INGRESS_IP" ]]; then
+    if [[ -n "$INGRESS_IP" ]]; then
         echo "INGRESS_IP IP: $INGRESS_IP"
         break
     fi
@@ -55,7 +55,7 @@ for ((i=1; i<=RETRIES; i++)); do
     sleep $SLEEP_INTERVAL
 done
 
-if [[ -z "INGRESS_IP" ]]; then
+if [[ -z "$INGRESS_IP" ]]; then
     echo "Failed to retrieve LoadBalancer IPs after $((RETRIES * SLEEP_INTERVAL)) seconds."
     exit 1
 fi
@@ -71,7 +71,7 @@ else
           --name=${TENANT}.sentrius.cloud. \
           --type=A \
           --ttl=300 \
-          $NGRESS_IP
+          $INGRESS_IP
 
     gcloud dns record-sets transaction add --zone=${ZONE} \
       --name=keycloak.${TENANT}.sentrius.cloud. \

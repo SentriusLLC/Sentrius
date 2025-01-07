@@ -1,8 +1,8 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: managed-cert-ingress-canary
-  namespace: canary
+  name: managed-cert-ingress-{{ .Values.tenant }}
+  namespace: {{ .Values.tenant }}
   annotations:
     kubernetes.io/ingress.class: gce
     kubernetes.io/ingress.allow-http: "false"

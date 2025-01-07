@@ -50,10 +50,10 @@ data:
     spring.security.oauth2.client.registration.keycloak.client-id="{{ .Values.sentrius.oauth2.client_id }}"
     spring.security.oauth2.client.registration.keycloak.client-secret="{{ .Values.sentrius.oauth2.client_secret }}"
     spring.security.oauth2.client.registration.keycloak.authorization-grant-type="{{ .Values.sentrius.oauth2.authorization_grant_type }}"
-    spring.security.oauth2.client.registration.keycloak.redirect-uri=http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
+    spring.security.oauth2.client.registration.keycloak.redirect-uri=https://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     spring.security.oauth2.client.registration.keycloak.scope="{{ .Values.sentrius.oauth2.scope }}"
-    spring.security.oauth2.resourceserver.jwt.issuer-uri=http://keycloak.{{ .Values.subdomain }}/realms/sentrius
-    spring.security.oauth2.client.provider.keycloak.issuer-uri=http://keycloak.{{ .Values.tenant }}.sentrius.cloud/realms/sentrius
+    spring.security.oauth2.resourceserver.jwt.issuer-uri=https://keycloak.{{ .Values.subdomain }}/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri=https://keycloak.{{ .Values.tenant }}.sentrius.cloud/realms/sentrius
     agents.session-analytics.enabled=true
   api-application.properties: |
     keystore.file=sso.jceks
@@ -102,10 +102,10 @@ data:
     spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.sentrius.oauth2.client_id }}
     spring.security.oauth2.client.registration.keycloak.client-secret={{ .Values.sentrius.oauth2.client_secret }}
     spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.sentrius.oauth2.authorization_grant_type }}
-    spring.security.oauth2.client.registration.keycloak.redirect-uri=http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
+    spring.security.oauth2.client.registration.keycloak.redirect-uri=https://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     spring.security.oauth2.client.registration.keycloak.scope={{ .Values.sentrius.oauth2.scope }}
-    spring.security.oauth2.resourceserver.jwt.issuer-uri=http://keycloak.{{ .Values.subdomain }}/realms/sentrius
-    spring.security.oauth2.client.provider.keycloak.issuer-uri=http://keycloak.{{ .Values.tenant }}.sentrius.cloud/realms/sentrius
+    spring.security.oauth2.resourceserver.jwt.issuer-uri=https://keycloak.{{ .Values.subdomain }}/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri=https://keycloak.{{ .Values.tenant }}.sentrius.cloud/realms/sentrius
   dynamic.properties: |
     auditorClass=io.sentrius.sso.automation.auditing.AccessTokenAuditor
     twopartyapproval.option.LOCKING_SYSTEMS=true
