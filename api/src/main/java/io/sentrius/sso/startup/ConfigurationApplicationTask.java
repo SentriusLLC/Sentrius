@@ -89,7 +89,7 @@ public class ConfigurationApplicationTask {
             var hash = new String(digest.digest());
 
             AtomicBoolean recreate = new AtomicBoolean(false);
-            configurationOptionRepository.findByConfigurationName("yamlConfigurationFileHash")
+            configurationOptionRepository.findLatestByConfigurationName("yamlConfigurationFileHash")
                 .ifPresentOrElse(
                     configurationOption -> {
                         if (!hash.equals(configurationOption.getConfigurationValue())) {
