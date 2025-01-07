@@ -95,10 +95,6 @@
         <optional>true</optional>
       </dependency>
       <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-actuator</artifactId>
-      </dependency>
-      <dependency>
         <groupId>io.hypersistence</groupId>
         <artifactId>hypersistence-utils-hibernate-60</artifactId>
         <version>${hypersistence-utils-hibernate-60.version}</version>

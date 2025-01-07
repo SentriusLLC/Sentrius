@@ -91,7 +91,10 @@ public class SecurityConfig {
             .exceptionHandling(exception -> exception
                 .accessDeniedPage("/error")
             );*/
-        http.authorizeHttpRequests(auth -> auth.requestMatchers("/**").fullyAuthenticated())
+        http
+            .authorizeHttpRequests(auth -> auth.
+                requestMatchers("/actuator/**").permitAll() // Public endpoints
+                .requestMatchers("/**").fullyAuthenticated())
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverterForKeycloak()))
             )
