@@ -111,7 +111,7 @@
                         </div>
                     </div>
                     <div th:replace="~{fragments/alerts}"></div>
-                    <div  th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_USERS')}">
+                    <div  th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
 
     <h3>Errors</h3>
     <table id="error-table" class="display" style="width:100%">

@@ -8,7 +8,7 @@
       "clientAuthenticatorType": "client-secret",
       "secret": "nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0",
       "rootUrl": "${ROOT_URL}",
-      "baseUrl": "/",
+      "baseUrl": "${ROOT_URL}",
       "redirectUris": ["${REDIRECT_URIS}/*"],
       "protocol": "openid-connect"
     }

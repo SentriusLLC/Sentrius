@@ -49,9 +49,9 @@ spec:
             - name: ROOT_LOGLEVEL
               value: DEBUG
             - name: ROOT_URL
-              value: http://{{ .Values.subdomain }}/
+              value: https://{{ .Values.subdomain }}/
             - name: REDIRECT_URIS
-              value: http://{{ .Values.subdomain }}
+              value: https://{{ .Values.subdomain }}
             - name: PROXY_ADDRESS_FORWARDING
               value: "true"
             - name: KC_HOSTNAME_STRICT_HTTPS
