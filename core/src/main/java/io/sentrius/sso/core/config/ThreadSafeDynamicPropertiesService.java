@@ -79,7 +79,7 @@ public class ThreadSafeDynamicPropertiesService {
     public void updateProperty(String key, String value) throws IOException {
         lock.writeLock().lock();
         try{
-            configurationOptionRepository.save(ConfigurationOption.builder().build());
+            configurationOptionRepository.save(ConfigurationOption.builder().configurationName(key).configurationValue(null == value ? "" : value).build());
         } finally {
             lock.writeLock().unlock();
         }
@@ -89,7 +89,7 @@ public class ThreadSafeDynamicPropertiesService {
     public String getProperty(String key, String defaultValue) {
         lock.readLock().lock();
         try {
-            var dbOption = configurationOptionRepository.findByConfigurationName(key);
+            var dbOption = configurationOptionRepository.findLatestByConfigurationName(key);
             if (dbOption.isEmpty()) {
                 return properties.getProperty(key, defaultValue);
             }
