@@ -12,6 +12,7 @@ import io.sentrius.sso.core.services.CustomUserDetailsService;
 import io.sentrius.sso.core.services.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -38,6 +39,9 @@ public class SecurityConfig {
     private final CustomAuthenticationSuccessHandler successHandler;
     final UserService userService;
 
+    @Value("${https.required:true}") // Default is true
+    private boolean httpsRequired;
+
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -53,6 +57,13 @@ public class SecurityConfig {
                 .loginPage("/oauth2/authorization/keycloak")
             )
             .cors(Customizer.withDefaults());
+
+        if (httpsRequired) {
+            http.requiresChannel(channel -> channel
+                .requestMatchers("/actuator/**").requiresInsecure() // Allow HTTP for Actuator
+                .anyRequest().requiresSecure() // Force HTTPS for all other requests
+            );
+        }
 
 
         return http.build();

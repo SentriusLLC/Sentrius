@@ -65,6 +65,7 @@ sentrius:
       spring.security.oauth2.client.registration.keycloak.scope=openid,profile,email
       spring.security.oauth2.resourceserver.jwt.issuer-uri=http://sentrius-keycloak:30081/realms/sentrius
       spring.security.oauth2.client.provider.keycloak.issuer-uri=http://sentrius-keycloak:30081/realms/sentrius
+      https.required=false
     dynamic: |
       auditorClass=io.sentrius.sso.automation.auditing.AccessTokenAuditor
       twopartyapproval.option.LOCKING_SYSTEMS=true
