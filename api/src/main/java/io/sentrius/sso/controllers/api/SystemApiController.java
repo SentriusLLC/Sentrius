@@ -149,7 +149,7 @@ public class SystemApiController extends BaseController {
         } else if (someFailed) {
             updateOption = MessagingUtil.SOME_SETTINGS_FAIL;
         }
-        return "redirect:/sso/v1/settings?message=" + MessagingUtil.getMessageId(updateOption);
+        return "redirect:/sso/v1/system/settings?message=" + MessagingUtil.getMessageId(updateOption);
 
     }
 

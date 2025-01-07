@@ -79,7 +79,7 @@ class PostStartupTaskTest {
         mockConfigOption.setConfigurationName("yamlConfigurationFileHash");
         mockConfigOption.setConfigurationValue("oldHash");
 
-        Mockito.when(configurationOptionRepository.findByConfigurationName("yamlConfigurationFileHash"))
+        Mockito.when(configurationOptionRepository.findLatestByConfigurationName("yamlConfigurationFileHash"))
             .thenReturn(Optional.of(mockConfigOption));
 
         Mockito.when(userService.addUscer(ArgumentMatchers.any(User.class))).thenReturn(User.builder().id(1L).name("name").build());
@@ -87,7 +87,7 @@ class PostStartupTaskTest {
         postStartupTask.afterStartup();
 
         // Verify interactions
-        Mockito.verify(configurationOptionRepository).findByConfigurationName("yamlConfigurationFileHash");
+        Mockito.verify(configurationOptionRepository).findLatestByConfigurationName("yamlConfigurationFileHash");
         Mockito.verify(configurationOptionRepository).save(mockConfigOption);
 
         // Assertions
@@ -103,7 +103,7 @@ class PostStartupTaskTest {
         postStartupTask.afterStartup();
 
         // Verify no interactions with repositories
-        Mockito.verify(configurationOptionRepository, Mockito.never()).findByConfigurationName(
+        Mockito.verify(configurationOptionRepository, Mockito.never()).findLatestByConfigurationName(
             ArgumentMatchers.anyString());
     }
 }
