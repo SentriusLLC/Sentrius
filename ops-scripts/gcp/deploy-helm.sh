@@ -37,11 +37,10 @@ helm upgrade --install sentrius ./sentrius-gcp-chart --namespace ${TENANT} \
 
 # Wait for LoadBalancer IPs to be ready
 echo "Waiting for LoadBalancer IPs to be assigned..."
-RETRIES=30
+RETRIES=60
 SLEEP_INTERVAL=10
 
 for ((i=1; i<=RETRIES; i++)); do
-    # Retrieve LoadBalancer IP
     # Retrieve LoadBalancer IP
     INGRESS_IP=$(kubectl get ingress managed-cert-ingress-${TENANT} -n ${TENANT} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 
