@@ -7,6 +7,7 @@ import io.sentrius.sso.core.model.ConnectedSystem;
 import io.sentrius.sso.core.model.auditing.Rule;
 import io.sentrius.sso.core.services.PluggableServices;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
+import io.sentrius.sso.install.configuration.dtos.RuleDTO;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -41,4 +42,5 @@ public class RuleFactory {
             }
         }
     }
+
 }

@@ -19,6 +19,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import com.jcraft.jsch.JSchException;
+import io.sentrius.sso.automation.auditing.RuleFactory;
 import io.sentrius.sso.automation.sideeffects.SideEffect;
 import io.sentrius.sso.automation.sideeffects.SideEffectType;
 import io.sentrius.sso.core.config.SystemOptions;
@@ -28,6 +29,7 @@ import io.sentrius.sso.core.model.dto.HostGroupDTO;
 import io.sentrius.sso.core.model.dto.HostSystemDTO;
 import io.sentrius.sso.core.model.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
+import io.sentrius.sso.core.model.hostgroup.ProfileRule;
 import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.AutomationAccessEnum;
@@ -43,9 +45,12 @@ import io.sentrius.sso.core.repository.UserRepository;
 import io.sentrius.sso.core.repository.UserTypeRepository;
 import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.services.HostGroupService;
+import io.sentrius.sso.core.services.RuleService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.install.configuration.InstallConfiguration;
 import io.sentrius.sso.install.configuration.dtos.HostGroupConfigurationDTO;
+import io.sentrius.sso.install.configuration.dtos.RuleDTO;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -70,12 +75,15 @@ public class ConfigurationApplicationTask {
 
     final UserTypeRepository  userTypeRepository;
 
+    final RuleService ruleService;
+
     final UserService userService;
     private final HostGroupService hostGroupService;
 
     final CryptoService cryptoService;
 
     @EventListener(ApplicationReadyEvent.class)
+    @Transactional
     public void afterStartup() throws IOException, GeneralSecurityException, JSchException, SQLException {
         // Your logic here
 
@@ -131,7 +139,7 @@ public class ConfigurationApplicationTask {
             log.info("No configuration file found");
         }
     }
-
+    @Transactional
     public List<SideEffect> createStaticType(UserType type, boolean action) throws SQLException,
         GeneralSecurityException {
 
@@ -160,7 +168,7 @@ public class ConfigurationApplicationTask {
         return sideEffects;
     }
 
-
+    @Transactional
     public List<SideEffect> initialize(InstallConfiguration installConfiguration, boolean action)
         throws SQLException,
         GeneralSecurityException,
@@ -188,19 +196,38 @@ public class ConfigurationApplicationTask {
 
         // create profiles and assign systems
 
-        var profiles = createHostGroups(sideEffects, installConfiguration, action);
+        var rules = createRules(sideEffects, installConfiguration, action);
+
+        var profiles = createHostGroups(sideEffects, rules, installConfiguration, action);
 
         createUsers(sideEffects, installConfiguration, userTypes, profiles, action);
-        
+
+
+
         // create automation assignments
 
         //AppConfig.encryptProperty("initialized", Instant.now().toString());
 
         return sideEffects;
     }
+    @Transactional
+    protected Map<String,ProfileRule> createRules(
+        List<SideEffect> sideEffects, InstallConfiguration installConfiguration,
+        boolean action
+    ) {
+        Map<String,ProfileRule> rules = new HashMap<>();
+        var configuredRules = installConfiguration.getRules();
+        for(RuleDTO rule : configuredRules) {
+            ProfileRule newRule =
+                ProfileRule.builder().ruleClass(rule.getRuleClass()).ruleName(rule.getDisplayName()).ruleConfig(rule.getConfiguration()).build();
+            newRule = ruleService.saveRule(newRule);
+            rules.put(rule.getDisplayName(), newRule);
+        }
+        return rules;
+    }
 
-
-    private List<HostGroup> createHostGroups(List<SideEffect> sideEffects, InstallConfiguration installConfiguration,
+    @Transactional
+    protected List<HostGroup> createHostGroups(List<SideEffect> sideEffects, Map<String,ProfileRule> rules, InstallConfiguration installConfiguration,
                                              boolean action)
         throws JSchException, GeneralSecurityException, IOException {
         List<HostGroup> profiles = new ArrayList<>();
@@ -235,12 +262,21 @@ public class ConfigurationApplicationTask {
                     if (!systems.isEmpty()) {
                         hostGroup.setHostSystems(systems);
                     }
+
+                    for( var assignedRule : hostGroupDto.getAssignedRules() ) {
+                        if (rules.containsKey(assignedRule)) {
+                            var rule = rules.get(assignedRule);
+                            hostGroup.getRules().add(rule);
+                            rule.getHostGroups().add(hostGroup);
+                        }
+                    };
                 }
                 var hostGroups = hostGroupService.getHostGroupsByName(hostGroup.getName());
                 if (hostGroups.isEmpty()) {
                     if (action) {
 
                         hostGroup = hostGroupRepository.save(hostGroup);
+                        log.info("Creating Host Group {} with {}", hostGroup.getId(), hostGroupDto.getDisplayName());
                         profiles.add(hostGroup);
                         for(var hs : hostGroup.getHostSystems()) {
                             if (null == hs.getHostGroups()){
@@ -284,7 +320,8 @@ public class ConfigurationApplicationTask {
         return profiles;
     }
 
-    private List<SideEffect> createSystems(InstallConfiguration installConfiguration, boolean action) throws SQLException,
+    @Transactional
+    protected List<SideEffect> createSystems(InstallConfiguration installConfiguration, boolean action) throws SQLException,
         GeneralSecurityException {
         List<SideEffect> sideEffects = new ArrayList<>();
         if (null != installConfiguration.getSystems()) {
@@ -303,7 +340,8 @@ public class ConfigurationApplicationTask {
         return sideEffects;
     }
 
-    private boolean shouldInsertSystem(HostSystem systemObj) {
+    @Transactional
+    protected boolean shouldInsertSystem(HostSystem systemObj) {
         var systems = systemRepository.findByDisplayName(systemObj.getDisplayName());
         if (systems.isEmpty()) {
             return true;
@@ -316,6 +354,7 @@ public class ConfigurationApplicationTask {
         return true;
     }
 
+    @Transactional
     protected List<UserType> createUserTypes(List<SideEffect> sideEffects, InstallConfiguration installConfiguration,
                                              boolean action) throws SQLException, GeneralSecurityException {
         List<UserType> types = new ArrayList<>();
@@ -365,6 +404,7 @@ public class ConfigurationApplicationTask {
         return types;
     }
 
+    @Transactional
     protected List<User> createUsers(
         List<SideEffect> sideEffects, InstallConfiguration installConfiguration, List<UserType> userTypes,
         List<HostGroup> profiles, boolean action)
@@ -466,6 +506,8 @@ public class ConfigurationApplicationTask {
         set.add(userId);
     }
 
+
+    @Transactional
     protected List<SideEffect> createAdminUser(InstallConfiguration installConfiguration, boolean action) throws NoSuchAlgorithmException {
 
         var user = installConfiguration.getAdminUser();
@@ -501,6 +543,7 @@ public class ConfigurationApplicationTask {
         return sideEffects;
     }
 
+    @Transactional
     protected void createSystemUser(InstallConfiguration connection) throws NoSuchAlgorithmException {
 
         User user = User.builder()

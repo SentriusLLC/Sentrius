@@ -7,6 +7,7 @@ package io.sentrius.sso.core.model.hostgroup;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
@@ -89,9 +90,10 @@ public class HostGroup {
       joinColumns = @JoinColumn(name = "system_id"),
       inverseJoinColumns = @JoinColumn(name = "rule_id")
   )
-  private Set<ProfileRule> rules;
+  @Builder.Default
+  private Set<ProfileRule> rules = new HashSet<>();
 
-  @OneToOne(cascade = CascadeType.ALL)
+  @OneToOne(cascade = {CascadeType.MERGE, CascadeType.REMOVE})
   @JoinColumn(name = "application_key_id", referencedColumnName = "id", unique = true)
   private ApplicationKey applicationKey;
 

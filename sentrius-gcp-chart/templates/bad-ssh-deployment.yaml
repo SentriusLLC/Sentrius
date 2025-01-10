@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-bad-ssh
+  labels:
+    app: sentrius-bad-ssh
+    release: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: sentrius-bad-ssh
+  template:
+    metadata:
+      labels:
+        app: sentrius-bad-ssh
+    spec:
+      containers:
+        - name: sentrius-bad-ssh
+          image: "{{ .Values.ssh.image.repository }}:{{ .Values.ssh.image.tag }}"
+          imagePullPolicy: {{ .Values.sentrius.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.ssh.port }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+          env:
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: db-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: db-password
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: keystore-password
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ .Release.Name }}-config
