@@ -132,4 +132,4 @@ data:
     enableInternalAudit=true
     twopartyapproval.require.explanation.LOCKING_SYSTEMS=false
     canApproveOwnJITs=false
-    yamlConfiguration=/app/exampleInstallWithTypes.yml
+    yamlConfiguration=/app/demoInstaller.yml

@@ -7,6 +7,7 @@ WORKDIR /app
 # Copy the pre-built API JAR into the container
 COPY api/target/sentrius-api-1.0.0-SNAPSHOT.jar /app/sentrius.jar
 COPY docker/sentrius/exampleInstallWithTypes.yml /app/exampleInstallWithTypes.yml
+COPY docker/sentrius/demoInstaller.yml /app/demoInstaller.yml
 
 # Expose the port the app runs on
 EXPOSE 8080

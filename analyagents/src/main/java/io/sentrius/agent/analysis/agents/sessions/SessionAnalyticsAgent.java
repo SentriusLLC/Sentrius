@@ -4,28 +4,37 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import io.sentrius.sso.core.model.metadata.AnalyticsTracking;
 import io.sentrius.sso.core.model.metadata.TerminalBehaviorMetrics;
 import io.sentrius.sso.core.model.metadata.TerminalCommand;
 import io.sentrius.sso.core.model.metadata.TerminalRiskIndicator;
 import io.sentrius.sso.core.model.metadata.TerminalSessionMetadata;
 import io.sentrius.sso.core.model.metadata.UserExperienceMetrics;
+import io.sentrius.sso.core.model.security.IntegrationSecurityToken;
 import io.sentrius.sso.core.model.sessions.TerminalLogs;
 import io.sentrius.sso.core.repository.AnalyticsTrackingRepository;
+import io.sentrius.sso.core.services.IntegrationSecurityTokenService;
+import io.sentrius.sso.core.services.PluggableServices;
 import io.sentrius.sso.core.services.SessionService;
 import io.sentrius.sso.core.services.metadata.TerminalBehaviorMetricsService;
 import io.sentrius.sso.core.services.metadata.TerminalCommandService;
 import io.sentrius.sso.core.services.metadata.TerminalRiskIndicatorService;
 import io.sentrius.sso.core.services.metadata.TerminalSessionMetadataService;
 import io.sentrius.sso.core.services.metadata.UserExperienceMetricsService;
+import io.sentrius.sso.core.utils.JsonUtil;
+import io.sentrius.sso.integrations.external.ExternalIntegrationDTO;
+import io.sentrius.sso.security.ApiKey;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -42,6 +51,8 @@ public class SessionAnalyticsAgent {
     private final UserExperienceMetricsService experienceMetricsService;
     private final AnalyticsTrackingRepository trackingRepository;
     private final SessionService sessionService;
+    final IntegrationSecurityTokenService integrationSecurityTokenService;
+
 
     @Scheduled(fixedDelay = 60000) // Waits 60 seconds after the previous run completes
     @Transactional
@@ -66,7 +77,35 @@ public class SessionAnalyticsAgent {
           //  session.setSessionStatus("PROCESSED");
         //    sessionMetadataService.saveSession(session);
         }
+
+        log.info("Finished processing sessions");
     }
+/* TODO - Implement this
+    @Scheduled(fixedDelay = 60000) // Waits 60 seconds after the previous run completes
+    @Transactional
+    public void processTerminalCommands() {
+        log.info("Processing terminal commands...");
+
+        var openaiService = integrationSecurityTokenService.findByConnectionType("openai").stream().findFirst().orElse(null);
+
+        if (null != openaiService){
+            log.info("OpenAI service is available");
+            ExternalIntegrationDTO externalIntegrationDTO = null;
+            try {
+                externalIntegrationDTO = JsonUtil.MAPPER.readValue(openAiToken.getConnectionInfo(),
+                    ExternalIntegrationDTO.class);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+            ApiKey key =
+                ApiKey.builder().apiKey(externalIntegrationDTO.getApiToken()).principal(externalIntegrationDTO.getUsername()).build();
+
+        } else {
+            log.info("OpenAI service is not enabled");
+        }
+
+        log.info("Finished processing terminal commands");
+    }*/
 
     private void processSession(TerminalSessionMetadata session) {
 

@@ -25,14 +25,12 @@ users:
       userTypeName: jitType
     hostGroups:
       - displayName: testGroup
-  - username: admin
-    name: firstname lastname
-    password: admin
-    authorizationType:
-      userTypeName: adminType
-    hostGroups:
-      - displayName: testGroup
 
+rules:
+  - displayName: deleteRule
+    ruleClass: io.sentrius.sso.automation.auditing.rules.DeletePrevention
+    description: Don't allow deletion of files
+    configuration: EOL
 
 systems:
   - displayName: SSH-HOST
@@ -59,7 +57,16 @@ managementGroups:
       configurationName: testConfig
       terminalsLocked: false
       allowSudo: false
-
+    assignedRules:
+      - deleteRule
+  - displayName: unfetteredGroup
+    description: Unfettered test group
+    systems:
+      - UNFETTERED-SSH-HOST
+    configuration:
+      configurationName: testConfig
+      terminalsLocked: false
+      allowSudo: true
 systemKeyConfigurations:
   - keyConfigurationName: testConfig
     #can also include paths. Note that this private key should not be used

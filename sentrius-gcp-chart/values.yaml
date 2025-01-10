@@ -60,6 +60,7 @@ postgres:
     repository: postgres
     tag: 15
   port: 5432
+  storageSize: 10Gi
   env:
     POSTGRES_USER: admin
     POSTGRES_PASSWORD: password
@@ -95,6 +96,7 @@ keycloak:
     user: keycloak
     password: password
     database: keycloak
+    storageSize: 10Gi
   replicas: 1
   #hostname: sentrius-keycloak
 

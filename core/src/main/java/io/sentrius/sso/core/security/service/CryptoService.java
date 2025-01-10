@@ -15,6 +15,7 @@ import com.jcraft.jsch.KeyPair;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.ApplicationKey;
 import io.sentrius.sso.core.repository.ApplicationKeyRepository;
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -92,6 +93,7 @@ public class CryptoService {
      *
      * @return passphrase for system generated key
      */
+    @Transactional
     public ApplicationKey generateKeyPair(String passphrase) throws JSchException, IOException,
         GeneralSecurityException {
 

@@ -1,5 +1,6 @@
 package io.sentrius.sso.core.model.hostgroup;
 
+import java.util.HashSet;
 import java.util.Set;
 import io.sentrius.sso.core.model.auditing.Rule;
 import jakarta.persistence.Column;
@@ -11,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -41,6 +43,7 @@ public class ProfileRule extends Rule {
   private String ruleConfig;
 
   @ManyToMany(mappedBy = "rules", fetch = FetchType.EAGER)
-  private Set<HostGroup> hostGroups;
+  @Builder.Default
+  private Set<HostGroup> hostGroups = new HashSet<>();
 
 }
