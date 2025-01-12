@@ -118,6 +118,7 @@ data:
     systemLogoName={{ .Values.tenant }}
     AccessTokenAuditor.rule.4=io.sentrius.sso.automation.auditing.rules.OpenAISessionRule;Malicious AI Monitoring
     AccessTokenAuditor.rule.5=io.sentrius.sso.automation.auditing.rules.TwoPartyAIMonitor;AI Second Party Monitor
+    AccessTokenAuditor.rule.6=io.sentrius.sso.automation.auditing.rules.SudoApproval;Root JIT Approval
     allowProxies=true
     AccessTokenAuditor.rule.2=io.sentrius.sso.automation.auditing.rules.DeletePrevention;Delete Prevention
     AccessTokenAuditor.rule.3=io.sentrius.sso.automation.auditing.rules.TwoPartySessionRule;Require Second Party Monitoring

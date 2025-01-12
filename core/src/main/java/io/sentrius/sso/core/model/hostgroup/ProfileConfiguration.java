@@ -62,6 +62,9 @@ public class ProfileConfiguration {
   private Boolean approveViaTicket = true;
 
   @Builder.Default
+  private Boolean autoApproveChangingHostKey = false;
+
+  @Builder.Default
   private List<SessionRule> sessionRules = new ArrayList<>();
 
   @Builder.Default

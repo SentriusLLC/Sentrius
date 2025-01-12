@@ -154,6 +154,8 @@ public class EnclaveApiController extends BaseController {
         String maxConcurrentSessions = request.getParameter("maxConcurrentSessions");
         String allowSudoStr = request.getParameter("allowSudo");
         String approveViaTicketStr = request.getParameter("approveViaTicket");
+
+        String autoApproveChangingHostKey = request.getParameter("autoApproveChangingHostKey");
         log.info("allowSudoStr: {}", allowSudoStr);
 
         var hostGroup = hg.get();
@@ -174,6 +176,15 @@ public class EnclaveApiController extends BaseController {
         else {
             log.info("Setting approveViaTicket to false {}", approveViaTicketStr);
             configuration.setApproveViaTicket(false);
+        }
+
+        if (null != autoApproveChangingHostKey && !autoApproveChangingHostKey.isEmpty()) {
+            log.info("Setting autoApproveChangingHostKey to true {}", autoApproveChangingHostKey);
+            configuration.setAutoApproveChangingHostKey(true);
+        }
+        else {
+            log.info("Setting autoApproveChangingHostKey to false {}", autoApproveChangingHostKey);
+            configuration.setAutoApproveChangingHostKey(false);
         }
 
         hostGroup.setName(displayName);

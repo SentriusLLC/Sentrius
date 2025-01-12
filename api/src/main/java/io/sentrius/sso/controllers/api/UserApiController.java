@@ -22,6 +22,7 @@ import io.sentrius.sso.core.model.users.UserConfig;
 import io.sentrius.sso.core.model.users.UserSettings;
 import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.services.ErrorOutputService;
+import io.sentrius.sso.core.services.SessionService;
 import io.sentrius.sso.core.services.UserCustomizationService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.HostGroupService;
@@ -58,17 +59,21 @@ public class UserApiController extends BaseController {
         }
     }
 
+    private final SessionService sessionService;
+
     protected UserApiController(UserService userService, SystemOptions systemOptions,
                                 ErrorOutputService errorOutputService,
                                 HostGroupService hostGroupService, CryptoService  cryptoService,
                                 MessagingUtil messagingUtil,
-                                UserCustomizationService userThemeService
+                                UserCustomizationService userThemeService,
+                                SessionService sessionService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.hostGroupService =     hostGroupService;
         this.cryptoService = cryptoService;
         this.messagingUtil = messagingUtil;
         this.userThemeService = userThemeService;
+        this.sessionService = sessionService;
     }
 
     @GetMapping("list")
@@ -206,6 +211,15 @@ public class UserApiController extends BaseController {
         }
         userService.deleteUserType(id);
         return "redirect:/sso/v1/users/list?message=" + MessagingUtil.getMessageId(MessagingUtil.USER_DELETE_SUCCESS);
+    }
+
+    @GetMapping("/sessions/graph")
+    public ResponseEntity<Map<String, Integer>> getGraphData(HttpServletRequest request,
+                                                              HttpServletResponse response) {
+        var username = userService.getOperatingUser(request,response, null).getUsername();
+        var ret= sessionService.getGraphData(username);
+
+        return ResponseEntity.ok(ret);
     }
 
 }

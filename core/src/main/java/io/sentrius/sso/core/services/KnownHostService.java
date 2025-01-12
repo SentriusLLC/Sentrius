@@ -32,10 +32,17 @@ public class KnownHostService {
 
     @Transactional
     public void saveHostKey(String hostname, String keyType, String keyValue) {
-        if (knownHostRepository.findByHostnameAndKeyType(hostname, keyType) == null) {
-            KnownHost knownHost = new KnownHost();
+        KnownHost knownHost = knownHostRepository.findByHostnameAndKeyType(hostname, keyType);
+        if (knownHost== null) {
+            knownHost = new KnownHost();
             knownHost.setHostname(hostname);
             knownHost.setKeyType(keyType);
+            knownHost.setKeyValue(keyValue);
+            knownHostRepository.save(knownHost);
+
+            // Rebuild the file after adding a new host key
+            rebuildKnownHostsFile();
+        } else {
             knownHost.setKeyValue(keyValue);
             knownHostRepository.save(knownHost);
 

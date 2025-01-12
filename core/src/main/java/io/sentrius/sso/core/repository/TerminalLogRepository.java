@@ -19,4 +19,7 @@ public interface TerminalLogRepository extends JpaRepository<TerminalLogs, Long>
         "WHERE (:username IS NULL OR t.username = :username)")
     List<TerminalLogOutputDTO> findOutputSizeByUserOrAll(@Param("username") String username);
 
+    @Query("SELECT MIN(t.logTm), MAX(t.logTm) FROM TerminalLogs t WHERE t.session.id = :sessionLogId")
+    List<Object[]> findMinAndMaxLogTmBySessionLogId(@Param("sessionLogId") Long sessionLogId);
+
 }

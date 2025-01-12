@@ -439,7 +439,6 @@
 
             ws_uri += "//" + loc.host + "/api/v1/ssh/terminal/subscribe?sessionId="  + encodedSessionId;
 
-            connection = new SockJS(ws_uri);
 
 
             function heartbeat() {
@@ -456,165 +455,168 @@
                 const binaryData = auditLog.serializeBinary();
                 const base64Message = btoa(String.fromCharCode(...binaryData));
                 connection.send(base64Message);
-                //connection.send(binaryData);
-                //connection.send("heartbeat");
 
                 // Set heartbeat interval 10,000 ms
-                setTimeout(heartbeat, 10000);
+                setTimeout(heartbeat, 5000);
             };
 
-            // Register websocket heartbeat
-            connection.onopen = function (e) {
-                heartbeat();
-            };
+            function connect() {
+                connection = new SockJS(ws_uri);
+                // Register websocket heartbeat
+                connection.onopen = function (e) {
+                    heartbeat();
+                };
 
-            connection.onclose = function (e) {
-                console.trace();
-            };
+                connection.onclose = function (e) {
+                    console.trace();
+                    console.log("Repopening");
+                    connect();
+                };
 
-            // Log errors
-            connection.onerror = function (error) {
-            };
+                // Log errors
+                connection.onerror = function (error) {
+                    console.trace();
+                };
 
 
-
-            connection.onmessage = function (e) {
-                try {
-                    const binaryMessage = Uint8Array.from(atob(e.data), c => c.charCodeAt(0));
+                connection.onmessage = function (e) {
                     try {
-                        const deserializedAuditLog = proto.io.sentrius.protobuf.TerminalMessage.deserializeBinary(binaryMessage);
-                        if (!deserializedAuditLog ) {
-                            console.warn("Malformed message received");
-                            return;
-                        }
-                        if (deserializedAuditLog.getType() == proto.io.sentrius.protobuf.MessageType.USER_DATA) {
+                        const binaryMessage = Uint8Array.from(atob(e.data), c => c.charCodeAt(0));
+                        try {
+                            const deserializedAuditLog = proto.io.sentrius.protobuf.TerminalMessage.deserializeBinary(binaryMessage);
+                            if (!deserializedAuditLog) {
+                                console.warn("Malformed message received");
+                                return;
+                            }
+                            if (deserializedAuditLog.getType() == proto.io.sentrius.protobuf.MessageType.USER_DATA) {
 
-                            const alertWarn = document.getElementById("alertWarn");
-                            if (!deserializedAuditLog.getTrigger() || deserializedAuditLog.getTrigger() == proto.io.sentrius.protobuf.TriggerAction.NO_ACTION) {
-                                console.log("only command");
-                                if (!deserializedAuditLog.getCommand()) {
-                                    console.warn("No content message     ");
-                                    return;
-                                }
-                                if (!term) {
+                                const alertWarn = document.getElementById("alertWarn");
+                                if (!deserializedAuditLog.getTrigger() || deserializedAuditLog.getTrigger() == proto.io.sentrius.protobuf.TriggerAction.NO_ACTION) {
+                                    console.log("only command");
+                                    if (!deserializedAuditLog.getCommand()) {
+                                        console.warn("No content message     ");
+                                        return;
+                                    }
+                                    if (!term) {
 
-                                    createTermMap(0, deserializedAuditLog.getCommand());
+                                        createTermMap(0, deserializedAuditLog.getCommand());
+                                    } else {
+
+                                        term.write(deserializedAuditLog.getCommand());
+                                    }
+
                                 } else {
 
-                                    term.write(deserializedAuditLog.getCommand());
+                                    if (alertWarn) {
+                                        const triggerAction = deserializedAuditLog.getTrigger();
+                                        const description = triggerAction.getDescription();
+                                        if (deserializedAuditLog.getType() ==
+                                            proto.io.sentrius.protobuf.MessageType.PERSISTENT_MESSAGE ||
+                                            triggerAction.getAction() ==
+                                            proto.io.sentrius.protobuf.TriggerAction.PERSISTENT_MESSAGE) {
+                                            console.log("persistent message");
+                                            persistentMessage = description;
+                                            showWarningStatus(description);
+                                        } else if (deserializedAuditLog.getType() ==
+                                            proto.io.sentrius.protobuf.MessageType.PROMPT_DATA) {
+                                            console.log("question is" + deserializedAuditLog.getPrompt());
+                                            persistentMessage = description;
+                                            showWarningStatus(description);
+                                            promptQuestion(deserializedAuditLog.getPrompt());
+
+                                        } else {
+                                            console.log("non-persistent message " + description + " " + triggerAction.getAction());
+                                            console.log("is no action " + (triggerAction.getAction() ==
+                                                proto.io.sentrius.protobuf.TriggerAction.NO_ACTION));
+                                            //alertWarn.textContent = description || persistentMessage || "";
+                                            if (description) {
+                                                if (triggerAction.getAction() == proto.io.sentrius.protobuf.TriggerAction.WARN_ACTION) {
+                                                    showWarningStatus(description);
+                                                } else {
+                                                    showStatusBar(description);
+                                                }
+                                            }
+                                        }
+                                        // Use textContent instead of innerHTML
+                                    }
+                                    /* if (json.hasOwnProperty("action")){
+                                     document.getElementById("alertWarn").innerHTML = json.description;
+                                 }
+                                 else if (json.hasOwnProperty("persistentMessage")){
+                                     persistentMessage = json.description;
+                                     document.getElementById("alertWarn").innerHTML = json.description;
+                                 }*
+
+                                 */
                                 }
-
-                            } else {
-
-                                if (alertWarn) {
+                            } else if (deserializedAuditLog.getType() == proto.io.sentrius.protobuf.MessageType.SESSION_DATA) {
+                                if (deserializedAuditLog.getTrigger()) {
                                     const triggerAction = deserializedAuditLog.getTrigger();
                                     const description = triggerAction.getDescription();
-                                    if (deserializedAuditLog.getType() ==
-                                        proto.io.sentrius.protobuf.MessageType.PERSISTENT_MESSAGE ||
-                                        triggerAction.getAction() ==
-                                        proto.io.sentrius.protobuf.TriggerAction.PERSISTENT_MESSAGE) {
-                                        console.log("persistent message");
-                                        persistentMessage = description;
-                                        showWarningStatus(description);
-                                    } else  if (deserializedAuditLog.getType() ==
-                                        proto.io.sentrius.protobuf.MessageType.PROMPT_DATA) {
-                                        console.log("question is" + deserializedAuditLog.getPrompt());
-                                        persistentMessage = description;
-                                        showWarningStatus(description);
-                                        promptQuestion(deserializedAuditLog.getPrompt());
+                                    const overlay = document.getElementById("overlay");
 
+                                    // Function to show the spinner
+                                    function showSpinner() {
+                                        overlay.classList.remove("hidden");
+                                    }
+
+                                    // Function to hide the spinner
+                                    function hideSpinner() {
+                                        overlay.classList.add("hidden");
+                                    }
+
+                                    overlay.innerText = description;
+
+
+                                    if (triggerAction.getAction() == proto.io.sentrius.protobuf.TriggerAction.JIT_ACTION) {
+                                        showSpinner();
                                     } else {
-                                        console.log("non-persistent message " + description + " " + triggerAction.getAction());
-                                        console.log("is no action "  + (triggerAction.getAction() ==
-                                            proto.io.sentrius.protobuf.TriggerAction.NO_ACTION));
-                                        //alertWarn.textContent = description || persistentMessage || "";
-                                        if (description) {
-                                            if (triggerAction.getAction() == proto.io.sentrius.protobuf.TriggerAction.WARN_ACTION) {
+                                        hideSpinner();
+                                        if (triggerAction.getAction() == proto.io.sentrius.protobuf.TriggerAction.WARN_ACTION) {
+                                            console.log("WARN_ACTION");
+                                            if (description) {
+                                                console.log("WARN_ACTION " + description);
                                                 showWarningStatus(description);
                                             }
-                                            else {
-                                                showStatusBar(description);
-                                            }
                                         }
                                     }
-                                    // Use textContent instead of innerHTML
-                                }
-                                /* if (json.hasOwnProperty("action")){
-                                 document.getElementById("alertWarn").innerHTML = json.description;
-                             }
-                             else if (json.hasOwnProperty("persistentMessage")){
-                                 persistentMessage = json.description;
-                                 document.getElementById("alertWarn").innerHTML = json.description;
-                             }*
 
-                             */
-                            }
-                        } else if (deserializedAuditLog.getType() == proto.io.sentrius.protobuf.MessageType.SESSION_DATA) {
-                            if (deserializedAuditLog.getTrigger()) {
+                                }
+                            } else if (deserializedAuditLog.getType() ==
+                                proto.io.sentrius.protobuf.MessageType.PROMPT_DATA) {
+                                console.log("question");
                                 const triggerAction = deserializedAuditLog.getTrigger();
                                 const description = triggerAction.getDescription();
-                                const overlay = document.getElementById("overlay");
+                                console.log("question is" + deserializedAuditLog.getPrompt());
+                                persistentMessage = description;
+                                showWarningStatus(description);
+                                promptQuestion(deserializedAuditLog.getPrompt());
 
-                                // Function to show the spinner
-                                function showSpinner() {
-                                    overlay.classList.remove("hidden");
-                                }
-
-                                // Function to hide the spinner
-                                function hideSpinner() {
-                                    overlay.classList.add("hidden");
-                                }
-
-                                overlay.innerText = description;
-
-
-                                if (triggerAction.getAction() == proto.io.sentrius.protobuf.TriggerAction.JIT_ACTION) {
-                                    showSpinner();
-                                } else {
-                                    hideSpinner();
-                                    if (triggerAction.getAction() == proto.io.sentrius.protobuf.TriggerAction.WARN_ACTION) {
-                                        console.log("WARN_ACTION");
-                                        if (description) {
-                                            console.log("WARN_ACTION " + description);
-                                            showWarningStatus(description);
-                                        }
-                                    }
-                                }
-
+                            } else {
+                                console.warn("Unknown message type received:", deserializedAuditLog.getType());
                             }
-                        } else if (deserializedAuditLog.getType() ==
-                            proto.io.sentrius.protobuf.MessageType.PROMPT_DATA) {
-                            console.log("question");
-                            const triggerAction = deserializedAuditLog.getTrigger();
-                            const description = triggerAction.getDescription();
-                            console.log("question is" + deserializedAuditLog.getPrompt());
-                            persistentMessage = description;
-                            showWarningStatus(description);
-                            promptQuestion(deserializedAuditLog.getPrompt());
-
-                        } else {
-                            console.warn("Unknown message type received:", deserializedAuditLog.getType());
+                            // Proceed with normal processing...
+                        } catch (error) {
+                            console.error("Failed to deserialize message:", error);
                         }
-                        // Proceed with normal processing...
+
+
                     } catch (error) {
-                        console.error("Failed to deserialize message:", error);
+                        console.error("Failed to deserialize Protocol Buffer message:", error);
+                        console.error("Error details:", {
+                            message: error.message,
+                            stack: error.stack,
+                            name: error.name,
+                            binaryMessage: binaryMessage, // Log the problematic Uint8Array
+                            base64Data: e.data            // Log the original base64 data
+                        });
+                        return; // Exit if decoding failed
                     }
+                };
 
+            }
 
-
-
-                } catch (error) {
-                    console.error("Failed to deserialize Protocol Buffer message:", error);
-                    console.error("Error details:", {
-                        message: error.message,
-                        stack: error.stack,
-                        name: error.name,
-                        binaryMessage: binaryMessage, // Log the problematic Uint8Array
-                        base64Data: e.data            // Log the original base64 data
-                    });
-                    return; // Exit if decoding failed
-                }
-            };
+            connect();
 
             function createTermMap(id, output) {
 

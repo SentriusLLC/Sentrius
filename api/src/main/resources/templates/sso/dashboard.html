@@ -4,6 +4,162 @@
     <meta th:replace="~{fragments/header}">
     <title>[[${systemOptions.systemLogoName}]] - Dashboard</title>
     <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            /*
+            const ctx = document.getElementById("elevatedCommandsChart").getContext("2d");
+
+            // Example data: Replace with real data from your backend
+            const totalCommands = 100;
+            const sudoUsageCount = 30; // Commands run with 'sudo'
+            const nonSudoCount = totalCommands - sudoUsageCount; // Remaining commands
+
+            new Chart(ctx, {
+                type: "pie",
+                data: {
+                    labels: ["Sudo Commands", "Non-Sudo Commands"],
+                    datasets: [
+                        {
+                            data: [sudoUsageCount, nonSudoCount],
+                            backgroundColor: ["#FF6384", "#36A2EB"], // Customize colors as needed
+                            borderWidth: 1,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: {
+                                font: {
+                                    size: 12,
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+
+             */
+        });
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const ctx = document.getElementById("mostUsedCommandsChart").getContext("2d");
+
+            // Sample data for the chart
+            const data = [
+                { command: "ls", count: 50 },
+                { command: "cd", count: 40 },
+                { command: "sudo", count: 30 },
+                { command: "cat", count: 20 },
+                { command: "vim", count: 10 },
+            ];
+
+            // Extract labels and values for the chart
+            const labels = data.map((item) => item.command);
+            const values = data.map((item) => item.count);
+
+            new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: "Usage Count",
+                            data: values,
+                            backgroundColor: "#8884d8",
+                            borderRadius: 4,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 12,
+                                },
+                            },
+                        },
+                        y: {
+                            ticks: {
+                                font: {
+                                    size: 12,
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+        });
+        document.addEventListener("DOMContentLoaded", function () {
+            const ctx = document.getElementById("sessionDurationChart").getContext("2d");
+
+// Define a function to fetch data from the API
+            async function fetchSessionData() {
+                try {
+                    const response = await fetch("/api/v1/users/sessions/graph");
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const apiData = await response.json();
+
+                    console.log("Got " + apiData);
+
+                    // Transform the API data to match the chart's expected format
+                    const data = Object.keys(apiData).map((key) => ({
+                        label: key,
+                        value: apiData[key],
+                    }));
+
+                    // Extract labels and values for the chart
+                    const labels = data.map((item) => item.label);
+                    const values = data.map((item) => item.value);
+                    const COLORS = ["#8884d8", "#83a6ed", "#8dd1e1", "#82ca9d"];
+
+                    // Create the chart with the fetched data
+                    new Chart(ctx, {
+                        type: "pie",
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                {
+                                    data: values,
+                                    backgroundColor: COLORS,
+                                    borderWidth: 1,
+                                },
+                            ],
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: "bottom",
+                                    labels: {
+                                        font: {
+                                            size: 12,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    });
+                } catch (error) {
+                    console.error("Failed to fetch session data:", error);
+                }
+            }
+
+// Call the function to fetch data and render the chart
+            fetchSessionData();
+        });
+    </script>
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
             const gridElementConfigure = document.querySelector('#grid_stack_stats');
             if (!gridElementConfigure) {
@@ -40,7 +196,6 @@
                 }
             }
 
-            // Example: Add cards
             addCardFromHiddenElement('active-servers-card');
             addCardFromHiddenElement('active-user-card');
             addCardFromHiddenElement('total-systems-card');
@@ -57,6 +212,7 @@
                 contentDiv.classList.add('custom-dark-card');
                 contentDiv.classList.add('shadow-sm');
                 contentDiv.classList.add('p-3');
+                contentDiv.classList.add('justify-content-center');
                 contentDiv.innerHTML = itemsConfigure[index]?.content || '';
                 gridItem.appendChild(contentDiv);
             });
@@ -173,6 +329,33 @@
 
     </script>
     <style>
+        small-card {
+            max-width: 300px;
+            padding: 10px;
+            margin: 10px;
+            background-color: #2d2d2d;
+            color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            margin-bottom: 5px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .card-content {
+            padding: 5px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 200px;
+        }
 
     </style>
 </head>
@@ -191,24 +374,17 @@
                     <br><br>
                     <div class="grid-stack" id="grid_stack_stats"></div>
                     <hr class="my-4">
-                    <div id="network-visualizer-section" class="d-flex justify-content-between gap-3 flex-wrap">
+                    <div id="network-visualizer-section" class="d-flex justify-content-center gap-lg-5 flex-wrap">
                         <div id="network-visualizer-card" class="card custom-dark-card shadow-sm p-3" style="max-width: 800px; flex: 1;">
                             <div class="card-header">
                                 <h5 class="card-title">Enclave Operations</h5>
                             </div>
                             <div class="card-body">
                                 <!-- Buttons -->
-                                <div class="mb-4 d-flex justify-content-start gap-2">
-                                    <a href="/api/v1/ssh/servers/shutdown" class="btn btn-danger">Shutdown Connections</a>
+                                <div class="mb-4 d-flex justify-content-center gap-2">
+                                    <a href="/api/v1/ssh/servers/shutdown" class="btn btn-danger">Kill Sessions</a>
                                     <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#hostFormModal">Add Hosts</a>
-                                    <a href="/sso/v1/ssh/servers/list" class="btn btn-primary">Open Connection</a>
-                                </div>
-
-                                <!-- Visualization Area -->
-                                <div class="relative bg-gray-100 dark:bg-gray-800 rounded-lg" style="width: 100%; height: 400px;">
-                                    <canvas id="outputSizeChart" width="200" height="100" style="width: 100%; height:
-                                     auto;"></canvas>
-
+                                    <a href="/sso/v1/ssh/servers/list" class="btn btn-primary">Open Session</a>
                                 </div>
                             </div>
                         </div>
@@ -220,19 +396,31 @@
                             </div>
                             <div class="card-body">
                                 <!-- Buttons -->
-                                <div class="mb-4 d-flex justify-content-start gap-2">
+                                <div class="mb-4 d-flex justify-content-center gap-2">
                                     <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
                                     <a href="#" id="disable-ssh-button" class="btn btn-danger">Lock Down SSH</a>
-                                    <a href="/sso/v1/settings" class="btn btn-primary">Update Settings</a>
+                                    <a href="/sso/v1/system/settings" class="btn btn-primary">Update Settings</a>
                                     <a href="/sso/v1/sessions/audit/list" class="btn btn-primary"
                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">Audit User</a>
                                 </div>
 
-                                <!-- Visualization Area -->
-                                <div class="relative bg-gray-100 dark:bg-gray-800 rounded-lg" style="width: 100%; height: 400px;">
-                                    <h3>Open Sessions</h3>
-                                    <canvas id="tachometerChart" width="200" height="100" style="width: 100%; height:
-                                     auto;"></canvas>
+                            </div>
+                        </div>
+                        <div id="rule-card" class="card custom-dark-card shadow-sm p-3"
+                             style="max-width: 800px; flex: 1;" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
+                            <div class="card-header">
+                                <h5 class="card-title">User Operations</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Buttons -->
+                                <div class="mb-4 d-flex justify-content-center gap-2">
+                                    <a href="/api/v1/users/list" class="btn btn-danger">Delete Users</a>
+                                    <a href="#" class="btn btn-primary" data-bs-toggle="modal"
+                                       data-bs-target="#userFormModal">Add User</a>
+                                    <a href="/sso/v1/users/settings" class="btn btn-primary"
+                                       th:if="${!#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_ZTATS')}">Your Settings</a>
+                                    <a href="/sso/v1/zerotrust/accesstoken/list" class="btn btn-primary"
+                                       th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_ZTATS')}">View JITs</a>
                                 </div>
                             </div>
                         </div>
@@ -244,7 +432,7 @@
                             </div>
                             <div class="card-body">
                                 <!-- Buttons -->
-                                <div class="mb-4 d-flex justify-content-start gap-2">
+                                <div class="mb-4 d-flex justify-content-center gap-2">
                                     <a href="/api/v1/users/list" class="btn btn-danger">Delete Users</a>
                                     <a href="#" class="btn btn-primary" data-bs-toggle="modal"
                                        data-bs-target="#userFormModal">Add User</a>
@@ -253,16 +441,55 @@
                                     <a href="/sso/v1/zerotrust/accesstoken/list" class="btn btn-primary"
                                        th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_ZTATS')}">View JITs</a>
                                 </div>
-
-                                <!-- Visualization Area -->
-                                <div class="relative bg-gray-100 dark:bg-gray-800 rounded-lg" style="width: 100%; height: 400px;">
-                                    <h3>User Activity</h3>
-                                        <canvas id="heatmap-container" style="width:100%; height:300px;"></canvas>
-
-                                </div>
                             </div>
                         </div>
                     </div>
+                    <hr class="my-4">
+                    <h3>Terminal Stats</h3>
+                    <div id="suggestion-section" class="d-flex flex-column gap-4">
+                        <!-- First Row -->
+                        <div class="d-flex justify-content-between gap-4 flex-wrap">
+                            <div class="card small-card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Most Used Commands</h5>
+                                </div>
+                                <div class="card-content">
+                                    <canvas id="mostUsedCommandsChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="card small-card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Open Sessions</h5>
+                                </div>
+                                <div class="card-content">
+                                    <canvas id="heatmap-container" style="width:100%; height:300px;"></canvas>
+                                </div>
+                            </div>
+                            <div class="card small-card" style="max-width: 400px;">
+                                <div class="card-header">
+                                    <h5 class="card-title">Session Duration Distribution</h5>
+                                </div>
+                                <div class="card-content">
+                                    <canvas id="sessionDurationChart" width="300" height="200" style="width: 100%;
+                                    height:
+                                     auto;"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="card small-card" style="max-width: 400px;">
+                                <div class="card-header">
+                                    <h5 class="card-title">Terminal Activity</h5>
+                                </div>
+                                <div class="card-content">
+                                    <canvas id="outputSizeChart" width="400" height="200" style="width: 100%; height:
+                                     auto;"></canvas>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+
 
                     <hr class="my-4">
                     <div class="grid-stack" id="grid_stack_configure"></div>
@@ -300,10 +527,14 @@
             if (null == document.getElementById('tachometerChart')){
                 return;
             }
-            const ctx = document.getElementById('tachometerChart').getContext('2d');
+            var dnt = document.getElementById('tachometerChart');
+            dnt.style.width = '250px';
+            dnt.style.height = '100px';
+            const ctx = dnt.getContext('2d');
             if (tachometerChart){
                 tachometerChart.destroy();
             }
+
             tachometerChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
