@@ -272,7 +272,7 @@ public class TerminalService {
                 ex.printStackTrace();
                 schSession.getHostSystem().setStatusCd(HostSystem.AUTH_FAIL_STATUS);
             } else if (ex.getMessage().toLowerCase().contains("reject hostkey")) {
-                // we need to add the host key to known hosts
+                // host key has been changed.
                 if (!fetchedHostKey) {
                     schSession.getHostSystem().setStatusCd(HostSystem.PUBLIC_KEY_FAIL_STATUS);
                     systemRepository.save(schSession.getHostSystem());
@@ -296,8 +296,37 @@ public class TerminalService {
                 } else {
                     schSession.getHostSystem().setStatusCd(HostSystem.PUBLIC_KEY_FAIL_STATUS);
                 }
+            } else if (ex.getMessage().toLowerCase().contains("hostkey has been changed")) {
+                if (enclave.getConfiguration().getAutoApproveChangingHostKey()) {
+                    // we need to add the host key to known hosts
+                    if (!fetchedHostKey) {
+                        schSession.getHostSystem().setStatusCd(HostSystem.PUBLIC_KEY_FAIL_STATUS);
+                        systemRepository.save(schSession.getHostSystem());
+                        log.info("Failed to connect to system: " + schSession.getHostSystem().getDisplayName());
+                        // remove the tracking
+                        sessionOutputService.removeOutput(schSession);
+                        //sessionService.closeSession(sessionLog);
+                        ApplicationKey appKey = null;
+                        try {
+                            appKey = keyStoreService.getGlobalKey();
+                        } catch (JSchException e) {
+                            throw new RuntimeException(e);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                        fetchHostKey(selectedSystem, appKey, passphrase, password);
 
-
+                        return openTerminal(user, sessionLog, enclave, passphrase, password, selectedSystem,
+                            sessionRules, true
+                        );
+                    } else {
+                        log.info("Host key has changed and auto approve is not enabled 2");
+                        schSession.getHostSystem().setStatusCd(HostSystem.PUBLIC_KEY_FAIL_STATUS);
+                    }
+                } else {
+                    log.info("Host key has changed and auto approve is not enabled");
+                    schSession.getHostSystem().setStatusCd(HostSystem.PUBLIC_KEY_FAIL_STATUS);
+                }
             } else if (ex.getMessage().toLowerCase().contains("unknownhostexception")) {
                 schSession.getHostSystem().setErrorMsg("DNS Lookup Failed");
                 schSession.getHostSystem().setStatusCd(HostSystem.HOST_FAIL_STATUS);

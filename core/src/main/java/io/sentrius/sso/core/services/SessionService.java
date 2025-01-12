@@ -14,6 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -102,6 +106,57 @@ public class SessionService {
     @Transactional
     public List<TerminalLogOutputDTO> getLogOutputSummary(String username) {
         return terminalLogRepository.findOutputSizeByUserOrAll(username);
+    }
+
+    public List<Map<String, Object>> getSessionDurationData(String username) {
+        List<SessionLog> sessionLogs = sessionLogRepository.findByUsername(username);
+        List<Map<String, Object>> sessionDurations = new ArrayList<>();
+
+        for (SessionLog sessionLog : sessionLogs) {
+            List<Object[]> minMaxLogTm = terminalLogRepository.findMinAndMaxLogTmBySessionLogId(sessionLog.getId());
+
+            if (!minMaxLogTm.isEmpty() && minMaxLogTm.get(0)[0] != null && minMaxLogTm.get(0)[1] != null) {
+                Timestamp minTimestamp = (Timestamp) minMaxLogTm.get(0)[0];
+                Timestamp maxTimestamp = (Timestamp) minMaxLogTm.get(0)[1];
+
+                LocalDateTime minLogTm = minTimestamp.toLocalDateTime();
+                LocalDateTime maxLogTm = maxTimestamp.toLocalDateTime();
+                long durationMinutes = ChronoUnit.MINUTES.between(minLogTm, maxLogTm);
+
+                sessionDurations.add(Map.of(
+                    "sessionId", sessionLog.getId(),
+                    "durationMinutes", durationMinutes
+                ));
+            }
+        }
+
+        return sessionDurations;
+    }
+
+    public Map<String, Integer> getGraphData(String username) {
+        List<Map<String, Object>> sessionDurations = getSessionDurationData(username);
+
+        Map<String, Integer> graphData = new HashMap<>();
+        graphData.put("0-5 min", 0);
+        graphData.put("5-15 min", 0);
+        graphData.put("15-30 min", 0);
+        graphData.put("30+ min", 0);
+
+        for (Map<String, Object> session : sessionDurations) {
+            long durationMinutes = (long) session.get("durationMinutes");
+
+            if (durationMinutes <= 5) {
+                graphData.put("0-5 min", graphData.get("0-5 min") + 1);
+            } else if (durationMinutes <= 15) {
+                graphData.put("5-15 min", graphData.get("5-15 min") + 1);
+            } else if (durationMinutes <= 30) {
+                graphData.put("15-30 min", graphData.get("15-30 min") + 1);
+            } else {
+                graphData.put("30+ min", graphData.get("30+ min") + 1);
+            }
+        }
+
+        return graphData;
     }
 
 }

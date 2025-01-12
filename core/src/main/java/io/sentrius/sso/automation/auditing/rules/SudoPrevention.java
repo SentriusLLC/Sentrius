@@ -14,6 +14,7 @@ public class SudoPrevention extends CommandEvaluator {
   // Updated pattern to match both 'sudo' and 'su' as standalone commands (case-insensitive)
   private static final Pattern SUDO_SU_PATTERN = Pattern.compile("\\b(sudo|su)\\b", Pattern.CASE_INSENSITIVE);
 
+  protected String message = "SUDO and SU are not allowed";
   public SudoPrevention() {
     action = TriggerAction.DENY_ACTION;
     isSanitized = true;
@@ -29,7 +30,7 @@ public class SudoPrevention extends CommandEvaluator {
     if (SUDO_SU_PATTERN.matcher(text).find()) {
       // Log the blocked attempt
       log.info("Blocked SUDO/SU attempt: {}",  text);
-      return Optional.of(new Trigger(action, "SUDO and SU are not allowed"));
+      return Optional.of(new Trigger(action, message));
     }
 
     return Optional.empty();

@@ -153,6 +153,12 @@
                    th:checked="${hostGroup.configuration.approveViaTicket}" />
         </div>
 
+        <div class="form-group">
+            <label for="autoApproveChangingHostKey">Auto Approve adding host keys.</label>
+            <input type="checkbox" id="autoApproveChangingHostKey" name="autoApproveChangingHostKey" class="form-check-input"
+                   th:checked="${hostGroup.configuration.autoApproveChangingHostKey}" />
+        </div>
+
         <button type="submit" class="btn btn-primary submit-btn">Save</button>
     </form>
 </div>
