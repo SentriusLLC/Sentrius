@@ -12,10 +12,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /** Purpose: Centralizes a POJO for options with sensible defaults. */
+@Slf4j
 @Builder
 @Getter
 @NoArgsConstructor
@@ -113,8 +115,21 @@ public class SystemOptions {
 
   public Boolean allowUploadSystemConfiguration = false;
 
+  @Updatable(description = "Allows LLM to ask questions of the user")
+  public Boolean enableLLMQuestions = false;
+
 
   public Boolean sshEnabled = true;
+
+  @Updatable(description = "AI risk score before user sessions are halted. Changes won't apply to currently running " +
+      "sessions")
+  public Double aiRiskThreshold = 0.8;
+
+  @Updatable(description = "This is the number of commands to buffer for AI monitoring.")
+  public Integer commandsToBuffer = 10;
+
+    @Updatable(description = "This is the number of commands to evaluate for AI monitoring.")
+  public Integer commandsToEvaluate = 5;
 
   /**
    * Purely for testing mode
@@ -171,16 +186,19 @@ public class SystemOptions {
     Field[] fields = this.getClass().getDeclaredFields();
     for (var field : fields) {
       if (field.getName().equalsIgnoreCase(fieldName)) {
+        log.info("Setting field {} to {}", fieldName, fieldValue);
         try {
           field.set(this, fieldValue);
 
           // Update the AppConfig with the new field value
           dynamicPropertiesService.updateProperty(fieldName, fieldValue.toString());
-
+          log.info("Set field {} to {}", fieldName, fieldValue);
           return true;
         } catch (IllegalAccessException e) {
+          log.error("Failed to update field {}", fieldName);
           return false;
         } catch (IOException e) {
+          log.error("Failed to update field {}", fieldName);
             throw new RuntimeException(e);
         }
       }
@@ -217,6 +235,8 @@ public class SystemOptions {
 
         String fieldName = field.getName();
         Object fieldValue = field.get(this);
+
+        log.info("Field: {} Value: {}", fieldName, fieldValue);
 
         // Create a SystemOption object with the field details
         var sysOpt = SystemOption.builder()

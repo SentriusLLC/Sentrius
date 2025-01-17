@@ -9,6 +9,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import io.sentrius.sso.automation.auditing.SessionTokenEvaluator;
 import io.sentrius.sso.automation.auditing.Trigger;
 import io.sentrius.sso.automation.auditing.TriggerAction;
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.model.dto.SystemOption;
 import io.sentrius.sso.protobuf.Session;
 import io.sentrius.sso.core.model.ConnectedSystem;
 import io.sentrius.sso.core.services.openai.OpenAITwoPartyMonitorService;
@@ -25,6 +27,10 @@ public class TwoPartyAIMonitor extends SessionTokenEvaluator {
     private ConnectedSystem connectedSystem;
     private SessionTrackingService sessionTrackingService;
 
+    private long buffer = 10;
+    private long commandsToEvaluate = 5;
+    private double aiRiskThreshold = 0.8;
+    private boolean enableLLMQuestions = false;
 
     // Rolling list of last 10 commands
     private final Queue<String> recentCommands = new LinkedList<>();
@@ -47,7 +53,6 @@ public class TwoPartyAIMonitor extends SessionTokenEvaluator {
 
     @Override
     public Optional<Trigger> trigger(String cmd) {
-        log.info("Received command: {}", cmd);
         var command = cmd.trim();
         if (command.isEmpty()) {
             log.info("Empty command No analysis");
@@ -61,13 +66,13 @@ public class TwoPartyAIMonitor extends SessionTokenEvaluator {
             return Optional.of(trg);
         }
         // Add command to the rolling list
-        if (recentCommands.size() >= 10) {
+        if (recentCommands.size() >= buffer) {
             recentCommands.poll(); // Remove the oldest command
         }
         recentCommands.offer(command);
 
 
-        if (recentCommands.size() < 5) {
+        if (recentCommands.size() < commandsToEvaluate) {
             log.info("Insufficient commands for analysis");
             Trigger trg = new Trigger(TriggerAction.PERSISTENT_MESSAGE, llmResponse.get() != null ? llmResponse.get() : "");
             return Optional.of(trg);
@@ -86,13 +91,13 @@ public class TwoPartyAIMonitor extends SessionTokenEvaluator {
 
         // Merge recent commands into a single payload
         String mergedCommands = String.join("\n", recentCommands);
-        log.info("merged commands: {}", mergedCommands);
+        log.debug("merged commands: {}", mergedCommands);
         // Submit merged commands for asynchronous analysis
         CompletableFuture<Void> analysis =
             ((OpenAITwoPartyMonitorService)openAi).analyzeTerminalLogs(TwoPartyRequest.builder().userInput(mergedCommands).build()).thenAccept(response -> {
                 log.info("OpenAI analysis completed. Malicious: {}", response);
                 if (response != null) {
-                    flaggedAsMalicious = response.getScore()>0.8;
+                    flaggedAsMalicious = response.getScore()> aiRiskThreshold;
                     llmResponse.set(response.getResponse());
                     if (response.getQuestion() != null && !flaggedAsMalicious && response.getScore()>=0.75){
                         llmQuestion.set(response.getQuestion());
@@ -126,8 +131,13 @@ public class TwoPartyAIMonitor extends SessionTokenEvaluator {
     }
 
     @Override
-    public boolean configure(String configuration) {
-        return false;
+    public boolean configure(SystemOptions systemOptions, String configuration) {
+        commandsToEvaluate = systemOptions.getCommandsToEvaluate();
+        buffer = systemOptions.getCommandsToBuffer();
+        aiRiskThreshold = systemOptions.getAiRiskThreshold();
+        enableLLMQuestions = systemOptions.getEnableLLMQuestions();
+        return true;
+
     }
 
     @Override
@@ -160,7 +170,7 @@ public class TwoPartyAIMonitor extends SessionTokenEvaluator {
                     if (response != null) {
                         flaggedAsMalicious = response.getScore()>0.8;
                         llmResponse.set(response.getResponse());
-                        if (response.getQuestion() != null && !flaggedAsMalicious && response.getScore()>=0.75){
+                        if (response.getQuestion() != null && !flaggedAsMalicious && response.getScore()>=0.75 && enableLLMQuestions) {
                             llmQuestion.set(response.getQuestion());
                         }
                         else {

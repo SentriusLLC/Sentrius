@@ -3,6 +3,7 @@ package io.sentrius.sso.automation.auditing;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.ConnectedSystem;
 import io.sentrius.sso.core.model.auditing.Rule;
 import io.sentrius.sso.core.services.PluggableServices;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 public class RuleFactory {
 
     public static void createRules(
+        SystemOptions systemOptions,
         ConnectedSystem connectedSystem,
         SessionTrackingService sessionTrackingService,
         List<Rule> initialRules, List<AccessTokenEvaluator> synchronousRules, List<SessionTokenEvaluator> beforeAndAfterRules,
@@ -24,7 +26,7 @@ public class RuleFactory {
             Class<? extends AccessTokenEvaluator> newRuleClass =
                 Class.forName(rule.getRuleClass()).asSubclass(AccessTokenEvaluator.class);
             AccessTokenEvaluator newRule = newRuleClass.getConstructor().newInstance();
-            newRule.configure(rule.getRuleConfig());
+            newRule.configure(systemOptions, rule.getRuleConfig());
             newRule.setConnectedSystem(connectedSystem);
             newRule.setTrackingService(sessionTrackingService);
             if (newRule instanceof SessionTokenEvaluator) {

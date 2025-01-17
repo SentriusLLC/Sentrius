@@ -117,6 +117,7 @@ public class SystemApiController extends BaseController {
                     results.add(systemOptions.setValue(option.getName(), entry.getValue()[0], false));
                     break;
                 case "java.lang.Boolean":
+                    log.info("Setting boolean value: {}", entry.getValue()[0]);
                     results.add(systemOptions.setValue(option.getName(), Boolean.valueOf(entry.getValue()[0]), false));
                     break;
                 case "java.lang.Integer":

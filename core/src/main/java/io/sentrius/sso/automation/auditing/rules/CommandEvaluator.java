@@ -4,6 +4,7 @@ import java.util.Optional;
 import io.sentrius.sso.automation.auditing.AccessTokenEvaluator;
 import io.sentrius.sso.automation.auditing.Trigger;
 import io.sentrius.sso.automation.auditing.TriggerAction;
+import io.sentrius.sso.core.config.SystemOptions;
 
 public class CommandEvaluator extends AccessTokenEvaluator {
 
@@ -43,7 +44,7 @@ public class CommandEvaluator extends AccessTokenEvaluator {
   }
 
   @Override
-  public boolean configure(String configuration) {
+  public boolean configure(SystemOptions systemOptions, String configuration) {
 
     String[] commandSplit = configuration.split(":");
 

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import io.sentrius.sso.core.annotations.LimitAccess;
@@ -181,7 +182,12 @@ public class RuleApiController extends BaseController {
 
         Set<HostGroup> selectedHostGroups = new HashSet<>();
         for(var groupId : (List<String>)hostGroups){
+
             var group = hostGroupService.getHostGroupWithHostSystems(user, Long.parseLong(groupId));
+            // for application managers they should have the ability to assign groups
+            if (!group.isPresent() && AccessUtil.canAccess(user, ApplicationAccessEnum.CAN_MANAGE_APPLICATION)) {
+                group = Optional.of( hostGroupService.getHostGroup(Long.parseLong(groupId)) );
+            }
             if (group.isPresent()) {
                 log.info("Assigning group {}", group.get().getName());
                 selectedHostGroups.add(group.get());

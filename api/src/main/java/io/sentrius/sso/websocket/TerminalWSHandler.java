@@ -87,7 +87,6 @@ public class TerminalWSHandler extends TextWebSocketHandler {
                     byte[] messageBytes = Base64.getDecoder().decode(message.getPayload());
                     Session.TerminalMessage auditLog =
                         Session.TerminalMessage.parseFrom(messageBytes);
-                    log.info("got message {}; {}; {}", uri,sessionId, auditLog.getCommand());
                     // Decrypt the session ID
 //                    var sessionIdStr = cryptoService.decrypt(sessionId);
   //                  var sessionIdLong = Long.parseLong(sessionIdStr);
@@ -96,7 +95,7 @@ public class TerminalWSHandler extends TextWebSocketHandler {
                     var sys = sessionTrackingService.getEncryptedConnectedSession(lookupId);
                     if (null != sys ) {
                         boolean allNoAction = true;
-                        log.info("**** Processing message for session ID: {} with {} actions", sessionId,
+                        log.debug("**** Processing message for session ID: {} with {} actions", sessionId,
                             sys.getSessionStartupActions().size());
                         for (var action : sys.getSessionStartupActions()) {
                             var trigger = action.onMessage(auditLog);
@@ -104,13 +103,13 @@ public class TerminalWSHandler extends TextWebSocketHandler {
                                 allNoAction = false;
                                 // drop the message
                                 sys.getTerminalAuditor().setSessionTrigger(trigger.get());
-                                log.info("**** Setting JIT Trigger: {}", trigger.get());
+                                log.debug("**** Setting JIT Trigger: {}", trigger.get());
                                 sessionTrackingService.addSystemTrigger(sys, trigger.get());
                                 return;
                             } else if (trigger.get().getAction() == TriggerAction.WARN_ACTION) {
                                 allNoAction = false;
                                 // send the message
-                                log.info("**** Setting WARN Trigger: {}", trigger.get());
+                                log.debug("**** Setting WARN Trigger: {}", trigger.get());
                                 sys.getTerminalAuditor().setSessionTrigger(trigger.get());
                                 sessionTrackingService.addSystemTrigger(sys, trigger.get());
                             } else if (trigger.get().getAction() == TriggerAction.PROMPT_ACTION) {

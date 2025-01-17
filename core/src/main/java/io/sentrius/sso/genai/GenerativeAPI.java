@@ -74,7 +74,7 @@ public class GenerativeAPI {
         RequestBody body = RequestBody.create(buildRequestBody(apiRequest), MediaType.get("application/json; charset=utf-8"));
         Request
             request = new Request.Builder().url(apiRequest.getEndpoint()).header("Authorization", "Bearer " + authToken.getToken()).post(body).build();
-        log.info("making request to {}", apiRequest.getEndpoint());
+
         try (Response response = client.newCall(request).execute()) {
             if (!response.isSuccessful()) {
                 if (response.body() == null) {

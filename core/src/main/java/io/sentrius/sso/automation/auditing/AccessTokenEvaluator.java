@@ -1,6 +1,7 @@
 package io.sentrius.sso.automation.auditing;
 
 import java.util.Optional;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.ConnectedSystem;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 
@@ -12,7 +13,7 @@ public abstract class AccessTokenEvaluator {
 
   public abstract Optional<Trigger> trigger(String text);
 
-  public abstract boolean configure(String configuration);
+  public abstract boolean configure(SystemOptions systemOptions, String configuration);
 
   public abstract TriggerAction describeAction();
 
@@ -29,5 +30,7 @@ public abstract class AccessTokenEvaluator {
   public void setTrackingService(SessionTrackingService sessionTrackingService){
     this.sessionTrackingService = sessionTrackingService;
   }
+
+
 }
 //
