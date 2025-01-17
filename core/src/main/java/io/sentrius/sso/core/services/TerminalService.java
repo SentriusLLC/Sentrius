@@ -168,7 +168,8 @@ public class TerminalService {
             // rules that are ONLY before a session begins.
             List<SessionTokenEvaluator> definedSessionRules = new ArrayList<>();
 
-            RuleFactory.createRules(schSession, sessionTrackingService, rules.stream().collect(Collectors.toList()),
+            RuleFactory.createRules(systemOptions, schSession, sessionTrackingService,
+                rules.stream().collect(Collectors.toList()),
                 synchronousRules, definedSessionRules, services);
 
 

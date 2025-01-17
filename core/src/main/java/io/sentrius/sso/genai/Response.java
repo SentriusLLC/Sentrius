@@ -38,6 +38,9 @@ public class Response {
     @JsonProperty(value = "usage")
     public Usage usage;
 
+    @JsonProperty(value = "service_tier", required = false)
+    public String serviceTier;
+
     /**
      * Response class is responsible for collecting and storing user responses. It provides a string
      * concatenation method to combine all responses. Use the 'addResponse' method to collect user

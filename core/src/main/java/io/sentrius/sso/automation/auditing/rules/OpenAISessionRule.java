@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutionException;
 import io.sentrius.sso.automation.auditing.SessionTokenEvaluator;
 import io.sentrius.sso.automation.auditing.Trigger;
 import io.sentrius.sso.automation.auditing.TriggerAction;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.protobuf.Session;
 import io.sentrius.sso.core.model.ConnectedSystem;
 import io.sentrius.sso.core.services.openai.OpenAITerminalService;
@@ -22,6 +23,9 @@ public class OpenAISessionRule extends SessionTokenEvaluator {
     private static final String CLASS_NAME = OpenAISessionRule.class.getName();
     private ConnectedSystem connectedSystem;
     private SessionTrackingService sessionTrackingService;
+
+    private long buffer = 10;
+    private long commandsToEvaluate = 5;
 
 
     // Rolling list of last 10 commands
@@ -49,13 +53,13 @@ public class OpenAISessionRule extends SessionTokenEvaluator {
             return Optional.of(trg);
         }
         // Add command to the rolling list
-        if (recentCommands.size() >= 10) {
+        if (recentCommands.size() >= buffer) {
             recentCommands.poll(); // Remove the oldest command
         }
         recentCommands.offer(command);
 
 
-        if (recentCommands.size() < 5) {
+        if (recentCommands.size() < commandsToEvaluate) {
             log.info("Insufficient commands for analysis");
             Trigger trg = new Trigger(TriggerAction.NO_ACTION, "");
             return Optional.of(trg);
@@ -89,7 +93,7 @@ public class OpenAISessionRule extends SessionTokenEvaluator {
     }
 
     @Override
-    public boolean configure(String configuration) {
+    public boolean configure(SystemOptions systemOptions, String configuration) {
         return false;
     }
 

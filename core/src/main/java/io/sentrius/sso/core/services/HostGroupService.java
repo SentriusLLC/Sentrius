@@ -57,16 +57,6 @@ public class HostGroupService {
         return Optional.of(hostGroup);
     }
 
-    @Transactional
-    public List<HostGroup> getHostGroupWithHostSystems(User user) {
-        List<HostGroup> hostGroups = hostGroupRepository.findAllByUserId(user.getId());
-
-        for(HostGroup hostGroup : hostGroups) {
-            hostGroup.getHostSystemList().size(); // Forces initialization of the hostSystemList
-        }
-
-        return hostGroups;
-    }
 
     @Transactional
     public Optional<HostSystem> getHostSystem(Long hostId) {

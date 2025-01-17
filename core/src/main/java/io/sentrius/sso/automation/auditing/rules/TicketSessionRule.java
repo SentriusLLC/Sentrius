@@ -4,6 +4,7 @@ import java.util.Optional;
 import io.sentrius.sso.automation.auditing.SessionTokenEvaluator;
 import io.sentrius.sso.automation.auditing.Trigger;
 import io.sentrius.sso.automation.auditing.TriggerAction;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.protobuf.Session;
 import io.sentrius.sso.core.model.ConnectedSystem;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
@@ -43,7 +44,7 @@ public class TicketSessionRule extends SessionTokenEvaluator {
     }
 
     @Override
-    public boolean configure(String configuration) {
+    public boolean configure(SystemOptions systemOptions, String configuration) {
         return false;
     }
 

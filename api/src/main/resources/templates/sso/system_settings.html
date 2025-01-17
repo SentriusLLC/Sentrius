@@ -136,7 +136,16 @@
                                 </span>
                         </td>
                         <td>
-                            <input type="text" th:name="${s.name}" th:value="${s.value}" class="form-control"/>
+                            <!-- Conditionally render input or select based on closestType -->
+                            <div th:if="${s.closestType == 'java.lang.Boolean'}">
+                                <select th:name="${s.name}" class="form-control">
+                                    <option th:value="true" th:selected="${s.value.equals('true')}">True</option>
+                                    <option th:value="false" th:selected="${s.value.equals('false')}">False</option>
+                                </select>
+                            </div>
+                            <div th:unless="${s.closestType == 'java.lang.Boolean'}">
+                                <input type="text" th:name="${s.name}" th:value="${s.value}" class="form-control" />
+                            </div>
                         </td>
                     </tr>
                 </template>

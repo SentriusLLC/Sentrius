@@ -4,6 +4,7 @@ import java.util.Optional;
 import io.sentrius.sso.automation.auditing.AccessTokenEvaluator;
 import io.sentrius.sso.automation.auditing.Trigger;
 import io.sentrius.sso.automation.auditing.TriggerAction;
+import io.sentrius.sso.core.config.SystemOptions;
 import org.apache.commons.collections4.trie.PatriciaTrie;
 
 public class AllowedCommandsRule extends AccessTokenEvaluator {
@@ -29,7 +30,7 @@ public class AllowedCommandsRule extends AccessTokenEvaluator {
   }
 
   @Override
-  public boolean configure(String configuration) {
+  public boolean configure(SystemOptions systemOptions, String configuration) {
 
     String[] commandGroup = configuration.split("<EOL>");
 
