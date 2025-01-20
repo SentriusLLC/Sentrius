@@ -7,9 +7,21 @@ source ${SCRIPT_DIR}/base.sh
 source ${SCRIPT_DIR}/../../.gcp.env
 
 TENANT=$1
+KEYCLOAK_CLIENT_ID=$2
+KEYCLOAK_CLIENT_SECRET=$3
 
 if [[ -z "$TENANT" ]]; then
-    echo "Must provide single argument for tenant name" 1>&2
+    echo "Must provide first argument for tenant name" 1>&2
+    exit 1
+fi
+
+if [[ -z "$KEYCLOAK_CLIENT_ID" ]]; then
+    echo "Must provide second argument for tenant name" 1>&2
+    exit 1
+fi
+
+if [[ -z "$KEYCLOAK_CLIENT_SECRET" ]]; then
+    echo "Must provide second argument for tenant name" 1>&2
     exit 1
 fi
 
@@ -21,7 +33,6 @@ if [[ $? -ne 0 ]]; then
 fi
 
 
-
 helm upgrade --install sentrius ./sentrius-gcp-chart --namespace ${TENANT} \
     --set tenant=${TENANT} \
     --set subdomain=${TENANT}.sentrius.cloud \
@@ -31,6 +42,8 @@ helm upgrade --install sentrius ./sentrius-gcp-chart --namespace ${TENANT} \
     --set ssh.image.tag=${SENTRIUS_SSH_VERSION} \
     --set keycloak.image.repository=us-central1-docker.pkg.dev/sentrius-project/sentrius-repo/sentrius-keycloak \
     --set keycloak.image.tag=${SENTRIUS_KEYCLOAK_VERSION} \
+    --set keycloak.clientId=${KEYCLOAK_CLIENT_ID} \
+    --set keycloak.clientSecret=${KEYCLOAK_CLIENT_SECRET} \
     --set sentriusagent.image.repository=us-central1-docker.pkg.dev/sentrius-project/sentrius-repo/sentrius-agent \
     --set sentriusagent.image.tag=${SENTRIUS_AGENT_VERSION} || { echo "Failed to deploy Sentrius with Helm"; exit 1; }
 

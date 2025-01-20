@@ -91,6 +91,8 @@ keycloak:
   adminUser: admin
   adminPassword: admin
   port: 8081
+  clientId: sentrius-api
+  clientSecret: nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0
   db:
     image: postgres:15
     user: keycloak
