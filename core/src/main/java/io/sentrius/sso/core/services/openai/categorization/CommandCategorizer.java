@@ -1,8 +1,10 @@
 package io.sentrius.sso.core.services.openai.categorization;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -33,42 +35,44 @@ public class CommandCategorizer {
     private final CommandCategoryRepository commandCategoryRepository;
 
 
-    private final CommandTrie commandTrie = new CommandTrie();
-
     private final Cache<String, CommandCategory> commandCache = Caffeine.newBuilder()
-        .maximumSize(10000)
-        .expireAfterWrite(24, TimeUnit.HOURS)
+        .maximumSize(1000)
+        .expireAfterWrite(1, TimeUnit.HOURS)
         .build();
 
-    @PostConstruct
-    public void initializeTrie() {
-        List<CommandCategory> categories = commandCategoryRepository.findAll();
-        for (CommandCategory category : categories) {
-            log.info("Adding command category {} to trie", category);
-            commandTrie.insert(category.getPattern(), category);
-        }
+
+
+    private CommandCategory fetchFromDatabase(String command) {
+        List<CommandCategory> matchingCategories = commandCategoryRepository.findMatchingCategories(command);
+        return matchingCategories.stream()
+            .min(Comparator.comparingInt(CommandCategory::getPriority))
+            .orElse(null);
     }
+
 
     @Transactional
     public CommandCategory categorizeCommand(String command) {
         return commandCache.get(command, this::categorizeWithRulesOrML);
     }
 
-
     protected List<CommandCategory> getDBCommandCategory(String command){
         return commandCategoryRepository.findByPattern(command);
     }
 
-    @Transactional
-    protected void addCommandCategory(String command, CommandCategory category) {
-        commandTrie.insert(command, category);
-        commandCategoryRepository.save(category);
+
+    public boolean isValidRegex(String regex) {
+        try {
+            Pattern.compile(regex);
+            return true; // Valid regex
+        } catch (PatternSyntaxException e) {
+            return false; // Invalid regex
+        }
     }
 
 
     @Transactional
     protected CommandCategory categorizeWithRulesOrML(String command) {
-        CommandCategory category = commandTrie.searchByPrefix(command);
+        CommandCategory category = fetchFromDatabase(command);
         if (category != null) {
             log.info("Found command category {} for {} ", category, command);
             return category;
@@ -93,8 +97,9 @@ public class CommandCategorizer {
             try {
                 category = commandCategorizer.generate(command);
 
-                addCommandCategory(category.getPattern(), category);
-                
+                if (isValidRegex(category.getPattern())) {
+                    addCommandCategory(category.getPattern(), category);
+                }
                 log.info("Categorized command: {}", category);
                 return category;
             } catch (Exception e) {
@@ -109,5 +114,10 @@ public class CommandCategorizer {
         log.info("Finished processing terminal commands");
 
         return CommandCategory.builder().build();
+    }
+
+    private void addCommandCategory(String pattern, CommandCategory category) {
+        commandCategoryRepository.save(category);
+        commandCache.put(pattern, category);
     }
 }

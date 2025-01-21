@@ -58,28 +58,28 @@ public class LLMCommandCategorizer extends DataGenerator<String, CommandCategory
     public String generateInput(String on) {
         return """
         Categorize the following command with a generalized pattern, defined as a **regex**, that captures the intent and considers risk factors. Include specific arguments or paths in the regex only if they significantly impact the risk level. If no regex is predefined for the command, generate one that appropriately generalizes the command's behavior while retaining any risk-relevant components.
-                
-                For example:
-                - 'cat /etc/passwd' is risky due to sensitive user data, so it should be included as-is with the regex '^cat /etc/passwd$'.
-                - 'cat /etc/hosts' has low risk, so it should be generalized to '^cat /etc/.*$' to cover all files in the `/etc` directory.
-                - 'sudo rm -rf /important_dir' should include '/important_dir' if it's sensitive, but otherwise generalized to '^sudo rm -rf .*'.
-                
-                Command: "%s"
-                
-                **Categories to choose from:**
-                - PRIVILEGED: Commands that require elevated permissions or pose a risk if misused.
-                - DESTRUCTIVE: Commands that can delete or alter critical files or system configurations.
-                - INFORMATIONAL: Commands that retrieve information without altering the system state.
-                - GENERAL: Commands that do not fit into the above categories.
-                
-                Respond in **JSON format** as follows:
-                {
-                    "category": "<Category Name>",
-                    "priority": <Numerical Priority>,
-                    "pattern": "<Generalized regex Pattern>",
-                    "rationale": "<Explain why this category and regex were chosen>"
-                }
-                
+         
+         For example:
+         - 'cat /etc/passwd' is risky due to sensitive user data, so it should be included as-is with the regex '^cat /etc/passwd$'.
+         - 'cat /etc/hosts' has low risk, so it should be generalized to '^cat /etc/.*$' to cover all files in the `/etc` directory.
+         - 'sudo rm -rf /important_dir' should include '/important_dir' if it's sensitive, but otherwise generalized to '^sudo rm -rf .*'.
+         
+         Command: "%s"
+         
+         **Categories to choose from:**
+         - PRIVILEGED: Commands that require elevated permissions or pose a risk if misused.
+         - DESTRUCTIVE: Commands that can delete or alter critical files or system configurations.
+         - INFORMATIONAL: Commands that retrieve information without altering the system state.
+         - GENERAL: Commands that do not fit into the above categories.
+         
+         Respond in **JSON format** as follows:
+         {
+             "category": "<Category Name>",
+             "priority": <Numerical Priority>,
+             "pattern": "<Generalized regex Pattern>",
+             "rationale": "<Explain why this category and regex were chosen>"
+         }
+            
     """.formatted(on);
     }
 
