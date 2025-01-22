@@ -428,18 +428,14 @@
                         <div id="system-visualizer-card2" class="card custom-dark-card shadow-sm p-3"
                              style="max-width: 800px; flex: 1;" th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
                             <div class="card-header">
-                                <h5 class="card-title">User Operations</h5>
+                                <h5 class="card-title">AI Admin Operations</h5>
                             </div>
                             <div class="card-body">
                                 <!-- Buttons -->
                                 <div class="mb-4 d-flex justify-content-center gap-2">
-                                    <a href="/api/v1/users/list" class="btn btn-danger">Delete Users</a>
+                                    <a href="/api/v1/users/list" class="btn btn-danger">Build Automation</a>
                                     <a href="#" class="btn btn-primary" data-bs-toggle="modal"
-                                       data-bs-target="#userFormModal">Add User</a>
-                                    <a href="/sso/v1/users/settings" class="btn btn-primary"
-                                       th:if="${!#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_ZTATS')}">Your Settings</a>
-                                    <a href="/sso/v1/zerotrust/accesstoken/list" class="btn btn-primary"
-                                       th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_ZTATS')}">View JITs</a>
+                                       data-bs-target="#userFormModal">Usage Patterns</a>
                                 </div>
                             </div>
                         </div>
