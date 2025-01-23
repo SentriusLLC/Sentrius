@@ -276,7 +276,7 @@ public class ConfigurationApplicationTask {
                     if (action) {
 
                         hostGroup = hostGroupRepository.save(hostGroup);
-                        log.info("Creating Host Group {} with {}", hostGroup.getId(), hostGroupDto.getDisplayName());
+                        log.info("Creating Host Enclave {} with {}", hostGroup.getId(), hostGroupDto.getDisplayName());
                         profiles.add(hostGroup);
                         for(var hs : hostGroup.getHostSystems()) {
                             if (null == hs.getHostGroups()){
@@ -287,7 +287,7 @@ public class ConfigurationApplicationTask {
                             systemRepository.save(hs);
                         }
                     }
-                    sideEffects.add(SideEffect.builder().sideEffectDescription("Creating Host Group " + hostGroupDto.getDisplayName()).type(
+                    sideEffects.add(SideEffect.builder().sideEffectDescription("Creating Host Enclave " + hostGroupDto.getDisplayName()).type(
                         SideEffectType.UPDATE_DATABASE).asset("HostGroups").build());
                 }else {
 
@@ -295,7 +295,7 @@ public class ConfigurationApplicationTask {
 
 
                             for(HostGroup hg : hostGroups) {
-                                log.info("Updating Host Group {} with {}", hg.getId(), hg.getId());
+                                log.info("Updating Host Enclave {} with {}", hg.getId(), hg.getId());
                                 profiles.add(hg);
 
                                 for(var hs : hostGroup.getHostSystems()) {
@@ -303,11 +303,11 @@ public class ConfigurationApplicationTask {
                                         if (action) {
                                         hs.getHostGroups().add(hg);
                                         systemRepository.save(hs);
-                                        log.info("Updating Host Group {} with {}", hg.getId(), hs.getId());
+                                        log.info("Updating Host Enclave {} with {}", hg.getId(), hs.getId());
                                     }
 
                                         sideEffects.add(SideEffect.builder()
-                                            .sideEffectDescription("Updating Host Group " + hostGroupDto.getDisplayName()).type(
+                                            .sideEffectDescription("Updating Host Enclave " + hostGroupDto.getDisplayName()).type(
                                                 SideEffectType.UPDATE_DATABASE).asset("HostGroups").build());
                                 }
                             }
@@ -453,10 +453,10 @@ public class ConfigurationApplicationTask {
 
 
                                     sideEffects.add(SideEffect.builder().sideEffectDescription(
-                                        "Assigning user " + userDTO.getUsername() + " to Host Group " +
+                                        "Assigning user " + userDTO.getUsername() + " to Host Enclave " +
                                             hostGroup.getName()).type(
                                         SideEffectType.UPDATE_DATABASE).asset("Users").build());
-                                        log.info("Assigning user {} to Host Group {}", userDTO.getUsername(),
+                                        log.info("Assigning user {} to Host Enclave {}", userDTO.getUsername(),
                                         hostGroup.getId());
                                         user.getHostGroups().add(hostGroup);
                                     }
@@ -473,15 +473,15 @@ public class ConfigurationApplicationTask {
                         for (var profile : userDTO.getHostGroups()) {
                             for (HostGroup hostGroup : profiles) {
                                 if (hostGroup.getName().equals(profile.getDisplayName())) {
-                                    log.info("Assigning user {} to Host Group {}", userDTO.getUsername(),
+                                    log.info("Assigning user {} to Host Enclave {}", userDTO.getUsername(),
                                         hostGroup.getId());
                                     if (null == hostGroup.getId() || !userRepository.isAssignedToHostGroups(user.getId(),
                                         List.of(hostGroup.getId()))) {
                                         sideEffects.add(SideEffect.builder().sideEffectDescription(
-                                            "Assigning user " + userDTO.getUsername() + " to Host Group " +
+                                            "Assigning user " + userDTO.getUsername() + " to Host Enclave " +
                                                 hostGroup.getName()).type(
                                             SideEffectType.UPDATE_DATABASE).asset("Users").build());
-                                        log.info("Assigning user {} to Host Group {}", userDTO.getUsername(),
+                                        log.info("Assigning user {} to Host Enclave {}", userDTO.getUsername(),
                                             hostGroup.getId()
                                         );
                                     }

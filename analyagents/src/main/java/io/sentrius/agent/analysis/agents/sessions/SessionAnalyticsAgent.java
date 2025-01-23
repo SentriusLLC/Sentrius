@@ -1,40 +1,35 @@
 package io.sentrius.agent.analysis.agents.sessions;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import io.sentrius.sso.core.model.categorization.CommandCategory;
 import io.sentrius.sso.core.model.metadata.AnalyticsTracking;
 import io.sentrius.sso.core.model.metadata.TerminalBehaviorMetrics;
 import io.sentrius.sso.core.model.metadata.TerminalCommand;
 import io.sentrius.sso.core.model.metadata.TerminalRiskIndicator;
 import io.sentrius.sso.core.model.metadata.TerminalSessionMetadata;
 import io.sentrius.sso.core.model.metadata.UserExperienceMetrics;
-import io.sentrius.sso.core.model.security.IntegrationSecurityToken;
 import io.sentrius.sso.core.model.sessions.TerminalLogs;
 import io.sentrius.sso.core.repository.AnalyticsTrackingRepository;
 import io.sentrius.sso.core.services.IntegrationSecurityTokenService;
-import io.sentrius.sso.core.services.PluggableServices;
 import io.sentrius.sso.core.services.SessionService;
 import io.sentrius.sso.core.services.metadata.TerminalBehaviorMetricsService;
 import io.sentrius.sso.core.services.metadata.TerminalCommandService;
 import io.sentrius.sso.core.services.metadata.TerminalRiskIndicatorService;
 import io.sentrius.sso.core.services.metadata.TerminalSessionMetadataService;
 import io.sentrius.sso.core.services.metadata.UserExperienceMetricsService;
-import io.sentrius.sso.core.utils.JsonUtil;
-import io.sentrius.sso.integrations.external.ExternalIntegrationDTO;
-import io.sentrius.sso.security.ApiKey;
+import io.sentrius.sso.core.services.openai.categorization.CommandCategorizer;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -51,6 +46,7 @@ public class SessionAnalyticsAgent {
     private final UserExperienceMetricsService experienceMetricsService;
     private final AnalyticsTrackingRepository trackingRepository;
     private final SessionService sessionService;
+    private final CommandCategorizer commandCategorizer;
     final IntegrationSecurityTokenService integrationSecurityTokenService;
 
 
@@ -61,6 +57,7 @@ public class SessionAnalyticsAgent {
 
         // Fetch already processed session IDs in bulk
         Set<Long> processedSessionIds = trackingRepository.findAllSessionIds();
+        log.info("Found {} processed sessions", processedSessionIds.size());
         List<TerminalSessionMetadata> unprocessedSessions = sessionMetadataService.getSessionsByState("CLOSED").stream()
             .filter(session -> !processedSessionIds.contains(session.getId()))
             .collect(Collectors.toList());
@@ -69,13 +66,13 @@ public class SessionAnalyticsAgent {
             try {
                 processSession(session);
                 // ACTIVE -> INACTIVE -> CLOSED -> PROCESSED
-            //    saveToTracking(session.getId(), "PROCESSED");
+                saveToTracking(session.getId(), "PROCESSED");
             } catch (Exception e) {
                 log.error("Error processing session {}: {}", session.getId(), e.getMessage(), e);
                 saveToTracking(session.getId(), "ERROR");
             }
-          //  session.setSessionStatus("PROCESSED");
-        //    sessionMetadataService.saveSession(session);
+            session.setSessionStatus("PROCESSED");
+            sessionMetadataService.saveSession(session);
         }
 
         log.info("Finished processing sessions");
@@ -185,7 +182,6 @@ public class SessionAnalyticsAgent {
             return matcher.group(1).trim();
         } else {
             if (null != previousLog) {
-                log.info("Previous log: {}", previousLog.getOutput());
                 // it could be that we are at the beginning of the log set.
                 String lastLogLine = getLastLogLine(previousLog);
                 if (!lastLogLine.isEmpty()) {
@@ -215,26 +211,20 @@ public class SessionAnalyticsAgent {
     }
 
     private TerminalCommand createTerminalCommand(String command, TerminalLogs terminalLog, TerminalSessionMetadata sessionMetadata) {
+        String encodedString = Base64.getEncoder().encodeToString(command.trim().getBytes(StandardCharsets.UTF_8));
+
         TerminalCommand terminalCommand = new TerminalCommand();
-        terminalCommand.setCommand(command.trim());
+        terminalCommand.setCommand(encodedString);
         terminalCommand.setSession(sessionMetadata);
         terminalCommand.setExecutionTime(new Timestamp(System.currentTimeMillis()));
         terminalCommand.setExecutionStatus("SUCCESS");
         terminalCommand.setOutput(""); // Assume no output initially
-        terminalCommand.setCommandCategory(categorizeCommand(command));
+        terminalCommand.setCommandCategory(categorizeCommand(command).getCategoryName());
 
         return terminalCommand;
     }
 
-    private String categorizeCommand(String command) {
-        // probably need to define externally
-        if (command.startsWith("sudo")) {
-            return "PRIVILEGED";
-        } else if (command.contains("rm")) {
-            return "DESTRUCTIVE";
-        } else if (command.contains("ls") || command.contains("cat")) {
-            return "INFORMATIONAL";
-        }
-        return "GENERAL";
+    private CommandCategory categorizeCommand(String command) {
+        return commandCategorizer.categorizeCommand(command);
     }
 }

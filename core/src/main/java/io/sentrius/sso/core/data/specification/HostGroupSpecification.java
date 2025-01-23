@@ -18,7 +18,7 @@ public class HostGroupSpecification {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Join the users to filter host groups by user ID
+            // Join the users to filter host enclaves by user ID
             Join<HostGroup, User> userJoin = root.join("users", JoinType.INNER);
             predicates.add(criteriaBuilder.equal(userJoin.get("id"), userId));
 

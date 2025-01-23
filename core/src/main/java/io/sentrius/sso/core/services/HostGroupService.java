@@ -43,7 +43,7 @@ public class HostGroupService {
     @Transactional
     public Optional<HostGroup> getHostGroupWithHostSystems(User user, Long hostGroupId) {
         HostGroup hostGroup = hostGroupRepository.findByIdWithUsers(hostGroupId)
-            .orElseThrow(() -> new EntityNotFoundException("Host Group not found"));
+            .orElseThrow(() -> new EntityNotFoundException("Host Enclave not found"));
 
 
         boolean userIsMember = hostGroup.getUsers().stream()
@@ -69,7 +69,7 @@ public class HostGroupService {
 
         userRepository.findHostGroupsByUserId(user.getId()).forEach(hostGroup -> {
             HostGroup sys = hostGroupRepository.findById(hostGroup.getId())
-                .orElseThrow(() -> new EntityNotFoundException("Host Group not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Host Enclave not found"));
             log.info("HostGroup: {}", sys.getId());
             if (null != sys && null != sys.getHostSystemList()) {
                 Hibernate.initialize(sys.getHostSystemList());
@@ -93,7 +93,7 @@ public class HostGroupService {
             return hostGroup.getId().equals(groupId);
     }).forEach(hostGroup -> {
             HostGroup sys = hostGroupRepository.findById(hostGroup.getId())
-                .orElseThrow(() -> new EntityNotFoundException("Host Group not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Host Enclave not found"));
             log.info("HostGroup: {}", sys.getId());
             if (null != sys && null != sys.getHostSystemList()) {
                 Hibernate.initialize(sys.getHostSystemList());
