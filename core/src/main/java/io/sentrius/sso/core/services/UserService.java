@@ -95,8 +95,8 @@ public class UserService {
                     log.info("Creating new user: {}", operatingUser);
                     save(operatingUser);
                     HostGroup newHg =
-                        HostGroup.builder().name("Host Group for " + operatingUser.getUsername()).description(
-                            operatingUser.getUsername() + "'s Host Group").build();
+                        HostGroup.builder().name("Host Enclave for " + operatingUser.getUsername()).description(
+                            operatingUser.getUsername() + "'s Host Enclave").build();
                     ProfileDB.save(newHg);
 
                     operatingUser.getHostGroups().add(newHg);

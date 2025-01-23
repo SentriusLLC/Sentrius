@@ -23,7 +23,7 @@
                 <li class="nav-item" th:if="${enclaveList != null && !enclaveList.empty}">
                     <select th:name="enclaveList" th:onchange="'javascript:changeProfile(this.value)'"
                             class="form-select view_frm_select" title="Enclave">
-                        <option value="">- Select Host Group -</option>
+                        <option value="">- Select Host Enclave -</option>
                         <option th:each="p : ${enclaveList}" th:value="${p.id}" th:text="${p.nm}" th:if="${p.selected == true}" selected></option>
                         <option th:each="p : ${enclaveList}" th:value="${p.id}" th:text="${p.nm}" th:if="${p.selected != true}"></option>
                     </select>

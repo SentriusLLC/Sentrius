@@ -110,7 +110,7 @@ $(document).ready(function () {
 
                     if (row.canEdit) {
                         buttons +=
-                            `<button class="btn btn-secondary spacer spacer-middle" data-bs-toggle="modal" data-bs-target="#edit_dialog_${data}" onclick="editRule(${data})">Edit</button><button id="role_btn_${data}" onclick="assignRule(${data})" class="btn btn-secondary assign_btn spacer spacer-right">Assign Host Groups</button>
+                            `<button class="btn btn-secondary spacer spacer-middle" data-bs-toggle="modal" data-bs-target="#edit_dialog_${data}" onclick="editRule(${data})">Edit</button><button id="role_btn_${data}" onclick="assignRule(${data})" class="btn btn-secondary assign_btn spacer spacer-right">Assign Host Enclaves</button>
          `;
                     }
 
@@ -165,7 +165,7 @@ $(document).ready(function () {
                 if (response.ok) {
                     $('#rule-table').DataTable().ajax.reload(null, false);
                 } else {
-                    alert("Failed to assign host groups.");
+                    alert("Failed to assign host enclaves.");
                 }
                 const modal = bootstrap.Modal.getInstance(document.getElementById("assignHostGroupsModal"));
                 modal.hide();
