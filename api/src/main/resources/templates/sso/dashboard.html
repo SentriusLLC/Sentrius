@@ -420,7 +420,7 @@
                                     <a href="/sso/v1/users/settings" class="btn btn-primary"
                                        th:if="${!#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_ZTATS')}">Your Settings</a>
                                     <a href="/sso/v1/zerotrust/accesstoken/list" class="btn btn-primary"
-                                       th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_ZTATS')}">View JITs</a>
+                                       th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_ZTATS')}">View Trust ATs</a>
                                 </div>
                             </div>
                         </div>

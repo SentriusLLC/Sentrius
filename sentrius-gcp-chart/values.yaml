@@ -89,7 +89,7 @@ keycloak:
     pullPolicy: IfNotPresent
   host: keycloak.default.svc.cluster.local
   adminUser: admin
-  adminPassword: admin
+  adminPassword: nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0@1
   port: 8081
   clientId: sentrius-api
   clientSecret: nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0

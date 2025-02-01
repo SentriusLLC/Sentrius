@@ -4,12 +4,16 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.model.WorkHours;
+import io.sentrius.sso.core.model.dto.DayOfWeekDTO;
 import io.sentrius.sso.core.model.dto.SystemOption;
 import io.sentrius.sso.core.model.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.security.UserType;
@@ -21,6 +25,7 @@ import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserCustomizationService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.services.WorkHoursService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -37,10 +42,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 public class UserController extends BaseController {
 
     final UserCustomizationService userThemeService;
+    final WorkHoursService  workHoursService;
 
-    protected UserController(UserService userService, SystemOptions systemOptions, ErrorOutputService errorOutputService, UserCustomizationService userThemeService) {
+    protected UserController(UserService userService, SystemOptions systemOptions,
+                             ErrorOutputService errorOutputService, UserCustomizationService userThemeService, WorkHoursService  workHoursService) {
         super(userService, systemOptions, errorOutputService);
         this.userThemeService = userThemeService;
+        this.workHoursService = workHoursService;
     }
 
     @ModelAttribute("userSettings")
@@ -149,7 +157,28 @@ public class UserController extends BaseController {
 
     @GetMapping("/settings")
     @LimitAccess(userAccess = {UserAccessEnum.CAN_VIEW_USERS})
-    public String getUserSettings(HttpServletRequest request, HttpServletResponse response) {
+    public String getUserSettings(Model model, HttpServletRequest request, HttpServletResponse response) {
+
+        var user = userService.getOperatingUser(request,response, null);
+
+        List<WorkHours> workHoursList = workHoursService.getWorkHoursForUser(user.getId());
+
+        // Convert the list into a Map where the key is the day of the week (0-6)
+        Map<Integer, WorkHours> userWorkHours = workHoursList.stream()
+            .collect(Collectors.toMap(WorkHours::getDayOfWeek, wh -> wh));
+
+        // Pass data to Thymeleaf
+        model.addAttribute("userWorkHours", userWorkHours);
+        model.addAttribute("daysOfWeek", List.of(
+            new DayOfWeekDTO(0, "Sunday"),
+            new DayOfWeekDTO(1, "Monday"),
+            new DayOfWeekDTO(2, "Tuesday"),
+            new DayOfWeekDTO(3, "Wednesday"),
+            new DayOfWeekDTO(4, "Thursday"),
+            new DayOfWeekDTO(5, "Friday"),
+            new DayOfWeekDTO(6, "Saturday")
+        ));
+
         return "sso/users/user_settings";
     }
 
