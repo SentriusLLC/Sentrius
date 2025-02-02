@@ -38,6 +38,9 @@ public class OpsZeroTrustAcessTokenRequest {
     @Column(name = "command", nullable = false)
     private String command;
 
+    @Column(name = "summary", columnDefinition = "TEXT")
+    private String summary;
+
     @Column(name = "command_hash", nullable = false)
     private String commandHash;
 

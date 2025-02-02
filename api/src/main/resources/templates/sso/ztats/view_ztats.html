@@ -108,7 +108,7 @@
                                         </thead>
                                         <tbody>
                                         <tr th:each="s : ${openOpsTats}">
-                                            <td th:text="${s.command}"></td>
+                                            <td th:text="${s.summary}"></td>
                                             <td th:text="${s.userName}"></td>
                                             <td>
                                                 <button th:id="'ops_app_btn_' + ${s.id}" class="icon-btn ops_app_btn" th:if="${canApprove}">✅</button>
