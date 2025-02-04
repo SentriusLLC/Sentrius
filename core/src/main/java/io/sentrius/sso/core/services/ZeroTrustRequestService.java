@@ -64,7 +64,19 @@ public class ZeroTrustRequestService {
     }
 
     @Transactional
-    public ZeroTrustAccessTokenRequest createJITRequest(ZeroTrustAccessTokenRequest ztatRequest) {
+    public OpsZeroTrustAcessTokenRequest createOpsTATRequest(OpsZeroTrustAcessTokenRequest ztatRequest) {
+        try {
+            OpsZeroTrustAcessTokenRequest savedRequest = opsJITRequestRepository.save(ztatRequest);
+            log.info("JITRequest created: {}", savedRequest);
+            return savedRequest;
+        } catch (Exception e) {
+            log.error("Error while creating JITRequest", e);
+            throw new RuntimeException("Failed to create JITRequest", e);
+        }
+    }
+
+    @Transactional
+    public ZeroTrustAccessTokenRequest createTATRequest(ZeroTrustAccessTokenRequest ztatRequest) {
         try {
             ZeroTrustAccessTokenRequest savedRequest = ztatRequestRepository.save(ztatRequest);
             log.info("JITRequest created: {}", savedRequest);
@@ -308,6 +320,7 @@ public class ZeroTrustRequestService {
     private JITTrackerDTO convertToDTO(OpsZeroTrustAcessTokenRequest request) {
         return JITTrackerDTO.builder()
             .id(request.getId())
+            .summary(request.getSummary())
             .command(request.getCommand())
             .commandHash(request.getCommandHash())
             .userName(request.getUser().getUsername())

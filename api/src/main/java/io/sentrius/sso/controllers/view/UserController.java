@@ -1,26 +1,35 @@
 package io.sentrius.sso.controllers.view;
 
 import java.lang.reflect.Field;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.model.WorkHours;
+import io.sentrius.sso.core.model.dto.DayOfWeekDTO;
 import io.sentrius.sso.core.model.dto.SystemOption;
+import io.sentrius.sso.core.model.dto.UserDTO;
 import io.sentrius.sso.core.model.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.model.users.UserConfig;
 import io.sentrius.sso.core.model.users.UserSettings;
+import io.sentrius.sso.core.repository.UserTypeRepository;
+import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserCustomizationService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.services.WorkHoursService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,7 +38,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Slf4j
 @Controller
@@ -37,10 +48,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 public class UserController extends BaseController {
 
     final UserCustomizationService userThemeService;
+    final WorkHoursService  workHoursService;
+    final CryptoService cryptoService;
 
-    protected UserController(UserService userService, SystemOptions systemOptions, ErrorOutputService errorOutputService, UserCustomizationService userThemeService) {
+    protected UserController(UserService userService, SystemOptions systemOptions,
+                             ErrorOutputService errorOutputService, UserCustomizationService userThemeService, WorkHoursService  workHoursService,
+                             CryptoService cryptoService
+    ) {
         super(userService, systemOptions, errorOutputService);
         this.userThemeService = userThemeService;
+        this.workHoursService = workHoursService;
+        this.cryptoService = cryptoService;
     }
 
     @ModelAttribute("userSettings")
@@ -147,9 +165,45 @@ public class UserController extends BaseController {
         return "sso/users/list_users";
     }
 
+
+    @GetMapping("/edit")
+    @LimitAccess(userAccess = {UserAccessEnum.CAN_EDIT_USERS})
+    public String editUser(Model model, HttpServletRequest request, HttpServletResponse response,
+                           @RequestParam("userId") String userId) throws GeneralSecurityException {
+        model.addAttribute("globalAccessSet", UserType.createSuperUser().getAccessSet());
+        Long id = Long.parseLong(cryptoService.decrypt(userId));
+        User user = userService.getUserById(id);
+        UserDTO userDTO = new UserDTO(user);
+        var types = userService.getUserTypeList();
+        model.addAttribute("userTypes",types);
+        model.addAttribute("user", userDTO);
+        return "sso/users/edit_user";
+    }
+
     @GetMapping("/settings")
     @LimitAccess(userAccess = {UserAccessEnum.CAN_VIEW_USERS})
-    public String getUserSettings(HttpServletRequest request, HttpServletResponse response) {
+    public String getUserSettings(Model model, HttpServletRequest request, HttpServletResponse response) {
+
+        var user = userService.getOperatingUser(request,response, null);
+
+        List<WorkHours> workHoursList = workHoursService.getWorkHoursForUser(user.getId());
+
+        // Convert the list into a Map where the key is the day of the week (0-6)
+        Map<Integer, WorkHours> userWorkHours = workHoursList.stream()
+            .collect(Collectors.toMap(WorkHours::getDayOfWeek, wh -> wh));
+
+        // Pass data to Thymeleaf
+        model.addAttribute("userWorkHours", userWorkHours);
+        model.addAttribute("daysOfWeek", List.of(
+            new DayOfWeekDTO(0, "Sunday"),
+            new DayOfWeekDTO(1, "Monday"),
+            new DayOfWeekDTO(2, "Tuesday"),
+            new DayOfWeekDTO(3, "Wednesday"),
+            new DayOfWeekDTO(4, "Thursday"),
+            new DayOfWeekDTO(5, "Friday"),
+            new DayOfWeekDTO(6, "Saturday")
+        ));
+
         return "sso/users/user_settings";
     }
 

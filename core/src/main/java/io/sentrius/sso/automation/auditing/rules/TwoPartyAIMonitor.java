@@ -183,7 +183,8 @@ public class TwoPartyAIMonitor extends SessionTokenEvaluator {
                 analysis.get();
 
                 if (llmResponse.get() != null && llmQuestion.get() != null) {
-                    Trigger trg = llmQuestion.get() != null ? new Trigger(TriggerAction.PROMPT_ACTION, llmResponse.get(),
+                    Trigger trg = llmQuestion.get() != null && enableLLMQuestions ? new Trigger(TriggerAction.PROMPT_ACTION,
+                        llmResponse.get(),
                         llmQuestion.get()) :
                         new Trigger(TriggerAction.PERSISTENT_MESSAGE, llmResponse.get());
                     return Optional.of(trg);

@@ -55,8 +55,39 @@
             font-size: 1.25rem;
             color: #888;
         }
-
     </style>
+
+    <script>
+        async function submitIntegration(event) {
+            event.preventDefault();
+
+            const form = event.target;
+            const formData = new FormData(form);
+            const jsonData = Object.fromEntries(formData.entries());
+            var csrf = "[[${_csrf.token}]]"
+            try {
+                const response = await fetch(form.action, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": csrf
+                    },
+                    body: JSON.stringify(jsonData)
+                });
+
+                if (response.ok) {
+                    const redirectUrl = "/sso/v1/integrations"; // Modify as needed
+                    window.location.href = redirectUrl;
+                } else {
+                    const errorText = await response.text();
+                    alert("Error: " + errorText);
+                }
+            } catch (error) {
+                console.error("Request failed", error);
+                alert("Failed to save integration.");
+            }
+        }
+    </script>
 </head>
 <body>
 
@@ -68,7 +99,7 @@
                 <div th:replace="~{fragments/alerts}"></div>
                 <div class="container">
                     <h1>Set Up OpenAI Integration</h1>
-                    <form th:action="@{/api/v1/integrations/openai/add}" th:object="${openaiIntegration}" method="post">
+                    <form th:action="@{/api/v1/integrations/openai/add}" th:object="${openaiIntegration}" method="post" onsubmit="submitIntegration(event)">
 
                         <div class="form-group">
                             <label for="name">Integration Name</label>
@@ -88,7 +119,6 @@
                                    th:field="*{apiToken}" placeholder="Enter your Jira API token" required>
                         </div>
 
-
                         <div class="form-actions">
                             <button type="submit" class="btn btn-primary">Save Integration</button>
                         </div>
@@ -101,4 +131,3 @@
 
 </body>
 </html>
-

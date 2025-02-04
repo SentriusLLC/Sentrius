@@ -3,16 +3,24 @@
 
 <head>
     <meta th:replace="~{fragments/header}">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <!--<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    -->
     <style>
         /* Centering the form container */
         .center-container {
             display: flex;
-            justify-content: center;
+            flex-direction: column; /* Stack elements vertically */
             align-items: center;
-            height: calc(100vh - 80px); /* Full viewport height minus space for navbar */
+            width: 100%; /* Ensure full width usage */
             padding: 20px;
         }
+
+        .form-section {
+            width: 100%; /* Prevent side-by-side layout */
+            max-width: 600px; /* Optional: Match the width of the form */
+            margin-bottom: 20px; /* Space between form and table */
+        }
+
 
         /* Limit form width for better UX */
         .settings-form {
@@ -48,6 +56,11 @@
         .submit_btn {
             width: 100%; /* Full-width button */
         }
+
+        .settings-form table,
+        .table {
+            margin-bottom: 10px; /* Reduce spacing between tables */
+        }
     </style>
     <title>[[${systemOptions.systemLogoName}]] - User Settings</title>
 </head>
@@ -65,6 +78,7 @@
 
                 <!-- Centered form container -->
                 <div class="center-container">
+                    <h2>Your Settings</h2>
                     <form th:action="@{/api/v1/users/settings}" method="post" class="settings-form" autocomplete="off">
                         <input type="hidden" name="_csrf" th:value="${_csrf.token}" />
 
@@ -85,14 +99,81 @@
                             </template>
                         </table>
 
+
                         <br />
                         <button type="submit" class="btn btn-primary submit_btn">Save</button>
                     </form>
+
+                <div class="form-section">
+                    <br />
+                    <h2>Work Hours</h2>
+                    <table class="table table-dark table-striped">
+                        <thead>
+                        <tr>
+                            <th>Day</th>
+                            <th>Enable</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="day, iter : ${daysOfWeek}">
+                            <td th:text="${day.name}"></td>
+                            <td>
+                                <input type="checkbox" th:id="'enable_' + ${iter.index}" th:checked="${userWorkHours.containsKey(day.id)}">
+                            </td>
+                            <td>
+                                <input type="time" class="form-control" th:id="'start_' + ${iter.index}"
+                                       th:value="${userWorkHours.containsKey(day.id) ? userWorkHours.get(day.id).startTime : ''}"
+                                       th:disabled="${!userWorkHours.containsKey(day.id)}">
+                            </td>
+                            <td>
+                                <input type="time" class="form-control" th:id="'end_' + ${iter.index}"
+                                       th:value="${userWorkHours.containsKey(day.id) ? userWorkHours.get(day.id).endTime : ''}"
+                                       th:disabled="${!userWorkHours.containsKey(day.id)}">
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+
+                    <br />
+                    <button class="btn btn-primary mt-3" id="saveWorkHours">Save Work Hours</button>
                 </div>
             </div>
         </div>
     </div>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[id^="enable_"]').forEach((checkbox) => {
+            checkbox.addEventListener('change', function () {
+                let index = this.id.split("_")[1];
+                document.getElementById('start_' + index).disabled = !this.checked;
+                document.getElementById('end_' + index).disabled = !this.checked;
+            });
+        });
+
+        document.getElementById('saveWorkHours').addEventListener('click', function () {
+            let workHours = [];
+            document.querySelectorAll('[id^="enable_"]').forEach((checkbox) => {
+                let index = checkbox.id.split("_")[1];
+                if (checkbox.checked) {
+                    workHours.push({
+                        dayOfWeek: index,
+                        startTime: document.getElementById('start_' + index).value,
+                        endTime: document.getElementById('end_' + index).value
+                    });
+                }
+            });
+
+            fetch('/api/v1/users/settings/workhours', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(workHours)
+            }).then(response => location.reload());
+        });
+    });
+</script>
 </body>
 
 </html>

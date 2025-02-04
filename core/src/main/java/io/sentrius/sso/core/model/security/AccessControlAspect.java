@@ -12,6 +12,7 @@ import io.sentrius.sso.core.utils.AccessUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.springframework.stereotype.Component;
@@ -25,6 +26,7 @@ import java.sql.SQLException;
 
 @Aspect
 @Component
+@Slf4j
 @RequiredArgsConstructor
 public class AccessControlAspect {
 
@@ -44,18 +46,21 @@ public class AccessControlAspect {
             // Get the required roles from the annotation
             for (var userAccess : accessAnnotation.userAccess()) {
                 if (!canAccess(operatingUser, userAccess)) {
+                    log.info("Access Denied to {} at {}", operatingUser, userAccess);
                     canAccess = false;
                     break;
                 }
             }
             for (var appAccess : accessAnnotation.applicationAccess()) {
                 if (!canAccess(operatingUser, appAccess)) {
+                    log.info("Access Denied to {} at {}", operatingUser, appAccess);
                     canAccess = false;
                     break;
                 }
             }
 
             if (!canAccess) {
+
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied to ");
             }
         }

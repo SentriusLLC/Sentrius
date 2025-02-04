@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.BooleanNode;
 import com.fasterxml.jackson.databind.node.IntNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -13,6 +14,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.annotations.Model;
 import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.model.HostSystem;
 import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.model.dto.UserDTO;
@@ -20,6 +22,8 @@ import io.sentrius.sso.core.model.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
 import io.sentrius.sso.core.model.users.UserConfig;
 import io.sentrius.sso.core.model.users.UserSettings;
+import io.sentrius.sso.core.model.zt.OpsZeroTrustAcessTokenRequest;
+import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenRequest;
 import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.SessionService;
@@ -27,6 +31,8 @@ import io.sentrius.sso.core.services.UserCustomizationService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.services.ZeroTrustAccessTokenService;
+import io.sentrius.sso.core.services.ZeroTrustRequestService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.core.utils.MessagingUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,6 +43,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -51,6 +58,8 @@ public class UserApiController extends BaseController {
     final CryptoService  cryptoService;
     private final MessagingUtil messagingUtil;
     final UserCustomizationService userThemeService;
+    final ZeroTrustRequestService ztatRequestService;
+    final ZeroTrustAccessTokenService ztatService;
 
     static Map<String, Field> fields = new HashMap<>();
     static {
@@ -66,7 +75,9 @@ public class UserApiController extends BaseController {
                                 HostGroupService hostGroupService, CryptoService  cryptoService,
                                 MessagingUtil messagingUtil,
                                 UserCustomizationService userThemeService,
-                                SessionService sessionService
+                                SessionService sessionService,
+                                ZeroTrustRequestService ztatRequestService,
+                                ZeroTrustAccessTokenService ztatService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.hostGroupService =     hostGroupService;
@@ -74,6 +85,8 @@ public class UserApiController extends BaseController {
         this.messagingUtil = messagingUtil;
         this.userThemeService = userThemeService;
         this.sessionService = sessionService;
+        this.ztatRequestService = ztatRequestService;
+        this.ztatService = ztatService;
     }
 
     @GetMapping("list")
@@ -117,7 +130,6 @@ public class UserApiController extends BaseController {
     }
 
     @PostMapping("/settings")
-    @LimitAccess(userAccess = {UserAccessEnum.CAN_EDIT_USERS})
     public String updateUser(HttpServletRequest request, HttpServletResponse response ) throws JsonProcessingException {
         var user = userService.getOperatingUser(request,response, null);
 
@@ -161,6 +173,18 @@ public class UserApiController extends BaseController {
         userSetting = userThemeService.saveUserTheme(userSetting);
 
         return "redirect:/sso/v1/users/settings?message=" + MessagingUtil.getMessageId(MessagingUtil.SETTINGS_UPDATED);
+    }
+
+    @PostMapping("/settings/workhours")
+    public String updateWorkhours(HttpServletRequest request, HttpServletResponse response,
+                                  @RequestBody JsonNode body) throws JsonProcessingException {
+        log.info("Updating work hours: {}", body);
+        /*
+        var reason = ztatService.createReason("Updating work hours", "Updating work hours", "");
+        var ztatRequest = ztatService.createOpsRequest("Updating work hours", "Updating work hours",
+         reason,   userService.getOperatingUser(request,response, null));
+        ztatRequestService.createOpsTATRequest(ztatRequest);*/
+        return "";
     }
 
     @GetMapping("/types/list")

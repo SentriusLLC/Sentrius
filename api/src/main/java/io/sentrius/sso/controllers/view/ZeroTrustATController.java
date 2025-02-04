@@ -30,7 +30,7 @@ public class ZeroTrustATController extends BaseController {
     }
 
     @GetMapping("/my/current")
-    public ResponseEntity<String> getCurrentJit() {
+    public ResponseEntity<String> getCurrentTat() {
 
         return ResponseEntity.ok().build();
     }
@@ -38,28 +38,28 @@ public class ZeroTrustATController extends BaseController {
 
     @GetMapping("/list")
     @LimitAccess(ztatAccess= {ZeroTrustAccessTokenEnum.CAN_VIEW_ZTATS})
-    public String viewJitRequests(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public String viewTatRequests(HttpServletRequest request, HttpServletResponse response, Model model) {
         var operatingUser = getOperatingUser(request, response);
-        modelJITs(model, operatingUser);
+        modelTATs(model, operatingUser);
         return "sso/ztats/view_ztats";
     }
 
     @GetMapping("/my")
     @LimitAccess(ztatAccess= {ZeroTrustAccessTokenEnum.CAN_VIEW_ZTATS})
-    public String viewMyJits(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public String viewMyTats(HttpServletRequest request, HttpServletResponse response, Model model) {
         var operatingUser = getOperatingUser(request, response);
-        modelJITs(model, operatingUser);
+        modelTATs(model, operatingUser);
 
         return "sso/ztats/view_my_ztats";
     }
 
-    private void modelJITs(Model model, User operatingUser){
-        model.addAttribute("openTerminalJits", ztatRequestService.getOpenAccessTokenRequests(operatingUser));
-        model.addAttribute("openOpsJits", ztatRequestService.getOpenOpsRequests(operatingUser));
-        model.addAttribute("approvedTerminalJits", ztatRequestService.getApprovedTerminalAccessTokenRequests(operatingUser));
-        model.addAttribute("approvedOpsJits", ztatRequestService.getApprovedOpsAccessTokenRequests(operatingUser));
-        model.addAttribute("deniedOpsJits", ztatRequestService.getDeniedOpsAccessTokenRequests(operatingUser));
-        model.addAttribute("deniedTerminalJits", ztatRequestService.getDeniedTerminalAccessTokenRequests(operatingUser));
+    private void modelTATs(Model model, User operatingUser){
+        model.addAttribute("openTerminalTats", ztatRequestService.getOpenAccessTokenRequests(operatingUser));
+        model.addAttribute("openOpsTats", ztatRequestService.getOpenOpsRequests(operatingUser));
+        model.addAttribute("approvedTerminalTats", ztatRequestService.getApprovedTerminalAccessTokenRequests(operatingUser));
+        model.addAttribute("approvedOpsTats", ztatRequestService.getApprovedOpsAccessTokenRequests(operatingUser));
+        model.addAttribute("deniedOpsTats", ztatRequestService.getDeniedOpsAccessTokenRequests(operatingUser));
+        model.addAttribute("deniedTerminalTats", ztatRequestService.getDeniedTerminalAccessTokenRequests(operatingUser));
     }
 
 }

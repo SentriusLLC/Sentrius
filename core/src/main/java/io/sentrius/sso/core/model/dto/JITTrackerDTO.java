@@ -12,6 +12,7 @@ public class JITTrackerDTO {
     private Long id;
     @Builder.Default
     private String status = "Open";
+    private String summary;
     private String command;
     private String commandHash;
     private String userName;

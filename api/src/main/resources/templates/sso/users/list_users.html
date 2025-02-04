@@ -47,6 +47,7 @@
                         var actions = "";
                         if (cmu){
                             actions = `<a href="/sso/v1/users/lock/${myId}" class="btn btn-primary" >Lock</a> &nbsp; | &nbsp;`;
+                            actions += `<a href="/sso/v1/users/edit?userId=${myId}" class="btn btn-primary" >Edit</a> &nbsp; | &nbsp;`;
                             actions += `<a href="/api/v1/users/delete?userId=${myId}" class="btn btn-primary" >Delete</a>`;
                         }
                         return actions;
