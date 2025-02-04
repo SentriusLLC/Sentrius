@@ -67,6 +67,11 @@
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
     </dependency>
+    <dependency>
+      <groupId>net.snowflake</groupId>
+      <artifactId>snowflake-ingest-sdk</artifactId>
+      <version>${snowflake-ingest-version}</version>
+    </dependency>
   </dependencies>
 
   <build>

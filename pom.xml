@@ -36,6 +36,7 @@
     <mockito.version>5.10.0</mockito.version>
     <keycloak-version>25.0.3</keycloak-version>
     <caffeine-version>3.2.0</caffeine-version>
+    <snowflake-ingest-version>3.0.1</snowflake-ingest-version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -289,6 +290,13 @@
         <artifactId>keycloak-spring-boot-starter</artifactId>
         <version>${keycloak-version}</version>
       </dependency>
+      <!-- https://mvnrepository.com/artifact/net.snowflake/snowflake-ingest-sdk -->
+      <dependency>
+        <groupId>net.snowflake</groupId>
+        <artifactId>snowflake-ingest-sdk</artifactId>
+        <version>${snowflake-ingest-version}</version>
+      </dependency>
+
     </dependencies>
   </dependencyManagement>
   <build>

@@ -236,7 +236,7 @@ public class SystemOptions {
         String fieldName = field.getName();
         Object fieldValue = field.get(this);
 
-        log.debug("Field: {} Value: {}", fieldName, fieldValue);
+        log.trace("Field: {} Value: {}", fieldName, fieldValue);
 
         // Create a SystemOption object with the field details
         var sysOpt = SystemOption.builder()

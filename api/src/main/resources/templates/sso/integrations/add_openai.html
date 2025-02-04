@@ -64,12 +64,13 @@
             const form = event.target;
             const formData = new FormData(form);
             const jsonData = Object.fromEntries(formData.entries());
-
+            var csrf = "[[${_csrf.token}]]"
             try {
                 const response = await fetch(form.action, {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": csrf
                     },
                     body: JSON.stringify(jsonData)
                 });

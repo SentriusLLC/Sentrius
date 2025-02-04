@@ -34,8 +34,8 @@ public class CustomErrorHandler implements ErrorController {
     @RequestMapping("/error")
     public String handleError(HttpServletRequest request, Model model) {
         // Retrieve error details
-        Integer statusCode = (Integer) request.getAttribute("javax.servlet.error.status_code");
-        Throwable ex = (Throwable) request.getAttribute("javax.servlet.error.exception");
+        Integer statusCode = (Integer) request.getAttribute("jakarta.servlet.error.status_code");
+        Throwable ex = (Throwable) request.getAttribute("jakarta.servlet.error.exception");
 
         // Log error details (optional)
         if (ex != null) {

@@ -61,8 +61,9 @@ public class SessionAnalyticsAgent {
         List<TerminalSessionMetadata> unprocessedSessions = sessionMetadataService.getSessionsByState("CLOSED").stream()
             .filter(session -> !processedSessionIds.contains(session.getId()))
             .collect(Collectors.toList());
-
+        long count = 0;
         for (TerminalSessionMetadata session : unprocessedSessions) {
+            count++;
             try {
                 processSession(session);
                 // ACTIVE -> INACTIVE -> CLOSED -> PROCESSED
@@ -75,7 +76,7 @@ public class SessionAnalyticsAgent {
             sessionMetadataService.saveSession(session);
         }
 
-        log.info("Finished processing sessions");
+        log.info("Finished processing {} sessions ", count);
     }
 /* TODO - Implement this
     @Scheduled(fixedDelay = 60000) // Waits 60 seconds after the previous run completes

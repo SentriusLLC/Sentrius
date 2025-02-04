@@ -72,8 +72,7 @@ public class JwtUtil {
     }
 
     public static Optional<String> getUserTypeName(ObjectNode jwt) {
-
-        log.info(" ** JwtUtil.getUserTypeName: {}", jwt);
+        
         var claims = jwt.get("claims");
         if (claims != null) {
             var userId = claims.get("userType"); // change to sub for a user id
