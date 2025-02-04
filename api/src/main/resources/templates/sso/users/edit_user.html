@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>Edit User</title>
+</head>
+
+<body>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <h3>Edit User</h3>
+                <form th:action="@{/api/v1/users/update}" method="post">
+                    <input type="hidden" name="userId" th:value="${user.userId}"/>
+
+                    <table class="table table-striped table-dark">
+                        <thead>
+                        <tr>
+                            <th>Setting</th>
+                            <th>Value</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td><label for="name">Name</label></td>
+                            <td><input type="text" id="name" name="name" class="form-control" th:value="${user.name}"
+                                       readonly></td>
+                        </tr>
+                        <tr>
+                            <td><label for="username">Username</label></td>
+                            <td><input type="text" id="username" name="username" class="form-control" th:value="${user.username}" readonly></td>
+                        </tr>
+                        <tr>
+                            <td><label for="email">Email Address</label></td>
+                            <td><input type="email" id="email" name="emailAddress" class="form-control" th:value="${user.emailAddress}" readonly></td>
+                        </tr>
+                        <tr>
+                            <td><label for="userType">User Type</label></td>
+                            <td>
+                                <select id="userType" name="userType" class="form-control">
+                                    <option th:each="type : ${userTypes}" th:value="${type.id}"
+                                            th:text="${type.userTypeName}"
+                                            th:selected="${type.id == user.authorizationType.id}"></option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><label for="status">Status</label></td>
+                            <td>
+                                <select id="status" name="status" class="form-control">
+                                    <option value="ACTIVE" th:selected="${user.status == 'ACTIVE'}">Active</option>
+                                    <option value="LOCKED" th:selected="${user.status == 'LOCKED'}">Locked</option>
+                                </select>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+
+                    <button type="submit" class="btn btn-success">Save Changes</button>
+                    <a href="/sso/v1/users/list" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

@@ -6,10 +6,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.sentrius.sso.core.model.dto.UserTypeDTO;
 import io.sentrius.sso.core.repository.ProfileRepository;
 import io.sentrius.sso.core.repository.UserRepository;
@@ -23,21 +19,14 @@ import io.sentrius.sso.core.security.service.AuthService;
 import io.sentrius.sso.core.security.service.CookieService;
 import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.utils.ByteUtils;
-import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.core.utils.UIMessaging;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.minidev.json.JSONObject;
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -76,21 +65,30 @@ public class UserService {
                                  HttpServletResponse response,
                                  UIMessaging userMessage
                                  ) {
-        var jwt = getJWT();
-        Optional<String> userIdStr = getUserId(jwt);
-        Optional<String> usernameStr = getUsername(jwt);
-        Optional<String> email = getEmail(jwt);
+        var jwt = JwtUtil.getJWT();
+        Optional<String> userIdStr = JwtUtil.getUserId(jwt);
+        Optional<String> usernameStr = JwtUtil.getUsername(jwt);
+        Optional<String> email = JwtUtil.getEmail(jwt);
         if (userIdStr.isPresent() && usernameStr.isPresent()) {
             try {
                 //Long userId = ByteUtils.convertToLong(userIdStr);
                 User operatingUser = UserDB.getByUsername(usernameStr.get());
                 if (operatingUser == null) {
+                    var userUserType = UserType.createSystemAdmin();
+                    Optional<String> userType = JwtUtil.getUserTypeName(jwt);
+                    if (!userType.isEmpty()) {
+                        String keycloakUserType = userType.get();
+                        Optional<UserType> newType = userTypeRepository.findByUserTypeName(keycloakUserType);
+                        if (newType.isPresent()) {
+                            userUserType = newType.get();
+                        }
+                    }
                     operatingUser = User.builder()
                         .username(usernameStr.get())
                         .emailAddress(email.get())
                         .password(UUID.randomUUID().toString())
                         .userId(userIdStr.get())
-                        .authorizationType(UserType.createSystemAdmin())
+                        .authorizationType(userUserType)
                         .build();
                     log.info("Creating new user: {}", operatingUser);
                     save(operatingUser);
@@ -182,78 +180,7 @@ public class UserService {
         }
     }
 
-    private Optional<String> getEmail(ObjectNode jwt) {
-        var claims = jwt.get("claims");
-        if (claims != null) {
-            var email = claims.get("email");
-            if (null != email){
-                return Optional.of(email.asText());
-            }
-        }
-        return Optional.of("");
-    }
 
-    private ObjectNode getJWT() {
-        /*
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated()) {
-            if (null != session.getAttribute(USER_ID_CLAIM) ) {
-                return session.getAttribute(USER_ID_CLAIM).toString();
-            }
-        }
-        return null;*/
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication != null && authentication.isAuthenticated()) {
-            if (authentication.getPrincipal() instanceof Jwt) {
-                Jwt jwt = (Jwt) authentication.getPrincipal();
-                ObjectNode node = JsonUtil.MAPPER.createObjectNode();
-                node.put("sub",jwt.getClaimAsString("sub"));
-                return node; // Keycloak's default user ID claim
-            } else {
-                try {
-                    String jwt = JsonUtil.MAPPER
-                        .registerModule(new JavaTimeModule())
-                        .writeValueAsString(authentication.getPrincipal());
-                    ObjectNode node = (ObjectNode) JsonUtil.MAPPER.readTree(jwt);
-                   return node;
-
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-            }
-
-        }
-        return JsonUtil.MAPPER.createObjectNode();
-    }
-
-    private Optional<String> getUserId(ObjectNode jwt) {
-
-            var claims = jwt.get("claims");
-            if (claims != null) {
-                var userId = claims.get("sub"); // change to sub for a user id
-                if (null != userId){
-                    return Optional.of(userId.asText());
-                }
-        }
-            return Optional.empty();
-
-    }
-
-    private Optional<String> getUsername(ObjectNode jwt) {
-
-        var claims = jwt.get("claims");
-        if (claims != null) {
-            var userId = claims.get("preferred_username"); // change to sub for a user id
-            if (null != userId){
-                return Optional.of(userId.asText());
-            }
-        }
-        return Optional.empty();
-
-    }
 
     private User createUnknownUser() {
         User user = new User();
@@ -321,5 +248,9 @@ public class UserService {
 
     public User save(User user) {
         return UserDB.save(user);
+    }
+
+    public User getUserById(Long id) {
+        return UserDB.getById(id);
     }
 }

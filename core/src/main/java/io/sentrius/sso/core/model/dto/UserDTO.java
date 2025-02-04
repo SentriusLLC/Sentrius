@@ -24,6 +24,9 @@ public class UserDTO {
     public String password;
 
     @Builder.Default
+    public String status = "ACTIVE";
+
+    @Builder.Default
     public List<HostGroupDTO> hostGroups = new ArrayList<>();
 
 

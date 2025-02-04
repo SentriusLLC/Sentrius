@@ -37,6 +37,7 @@ public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
     private final CustomAuthenticationSuccessHandler successHandler;
+    private final KeycloakAuthSuccessHandler keycloakAuthSuccessHandler;
     final UserService userService;
 
     @Value("${https.required:false}") // Default is false
@@ -55,6 +56,7 @@ public class SecurityConfig {
             )
             .oauth2Login(oauth2 -> oauth2
                 .loginPage("/oauth2/authorization/keycloak")
+                .successHandler(keycloakAuthSuccessHandler)
             )
             .cors(Customizer.withDefaults());
 

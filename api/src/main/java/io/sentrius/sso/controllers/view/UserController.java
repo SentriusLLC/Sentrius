@@ -1,6 +1,7 @@
 package io.sentrius.sso.controllers.view;
 
 import java.lang.reflect.Field;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -15,12 +16,15 @@ import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.model.WorkHours;
 import io.sentrius.sso.core.model.dto.DayOfWeekDTO;
 import io.sentrius.sso.core.model.dto.SystemOption;
+import io.sentrius.sso.core.model.dto.UserDTO;
 import io.sentrius.sso.core.model.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.model.users.UserConfig;
 import io.sentrius.sso.core.model.users.UserSettings;
+import io.sentrius.sso.core.repository.UserTypeRepository;
+import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserCustomizationService;
 import io.sentrius.sso.core.services.UserService;
@@ -34,7 +38,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Slf4j
 @Controller
@@ -43,12 +49,16 @@ public class UserController extends BaseController {
 
     final UserCustomizationService userThemeService;
     final WorkHoursService  workHoursService;
+    final CryptoService cryptoService;
 
     protected UserController(UserService userService, SystemOptions systemOptions,
-                             ErrorOutputService errorOutputService, UserCustomizationService userThemeService, WorkHoursService  workHoursService) {
+                             ErrorOutputService errorOutputService, UserCustomizationService userThemeService, WorkHoursService  workHoursService,
+                             CryptoService cryptoService
+    ) {
         super(userService, systemOptions, errorOutputService);
         this.userThemeService = userThemeService;
         this.workHoursService = workHoursService;
+        this.cryptoService = cryptoService;
     }
 
     @ModelAttribute("userSettings")
@@ -153,6 +163,21 @@ public class UserController extends BaseController {
         model.addAttribute("globalAccessSet", UserType.createSuperUser().getAccessSet());
 
         return "sso/users/list_users";
+    }
+
+
+    @GetMapping("/edit")
+    @LimitAccess(userAccess = {UserAccessEnum.CAN_EDIT_USERS})
+    public String editUser(Model model, HttpServletRequest request, HttpServletResponse response,
+                           @RequestParam("userId") String userId) throws GeneralSecurityException {
+        model.addAttribute("globalAccessSet", UserType.createSuperUser().getAccessSet());
+        Long id = Long.parseLong(cryptoService.decrypt(userId));
+        User user = userService.getUserById(id);
+        UserDTO userDTO = new UserDTO(user);
+        var types = userService.getUserTypeList();
+        model.addAttribute("userTypes",types);
+        model.addAttribute("user", userDTO);
+        return "sso/users/edit_user";
     }
 
     @GetMapping("/settings")

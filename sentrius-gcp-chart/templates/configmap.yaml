@@ -46,6 +46,8 @@ data:
     server.error.whitelabel.enabled=false
     dynamic.properties.path=/config/dynamic.properties
     keycloak.realm=sentrius
+    keycloak.base-url=https://keycloak.{{ .Values.subdomain }}
+
     # Keycloak configuration
     spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.sentrius.oauth2.client_id }}
     spring.security.oauth2.client.registration.keycloak.client-secret={{ .Values.sentrius.oauth2.client_secret }}
@@ -96,6 +98,7 @@ data:
     server.error.whitelabel.enabled=false
     dynamic.properties.path=/config/dynamic.properties
     keycloak.realm=sentrius
+    keycloak.base-url=https://keycloak.{{ .Values.subdomain }}
     management.endpoints.web.exposure.include=health
     management.endpoint.health.show-details=always
     # Keycloak configuration
