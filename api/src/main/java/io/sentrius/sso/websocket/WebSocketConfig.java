@@ -13,12 +13,16 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     private final TerminalWSHandler customWebSocketHandler;
     private final AuditSocketHandler auditSocketHandler;
+    private final ChatWSHandler chatWSHandler;
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(customWebSocketHandler, "/api/v1/ssh/terminal/subscribe")
             .setAllowedOriginPatterns("*")
             .withSockJS();  // SockJS fallback if needed
         registry.addHandler(auditSocketHandler, "/api/v1/audit/attach/subscribe")
+            .setAllowedOriginPatterns("*")
+            .withSockJS();  // SockJS fallback if needed
+        registry.addHandler(chatWSHandler, "/api/v1/chat/attach/subscribe")
             .setAllowedOriginPatterns("*")
             .withSockJS();  // SockJS fallback if needed
 

@@ -15,7 +15,7 @@ public final class Session {
         (com.google.protobuf.ExtensionRegistryLite) registry);
   }
   /**
-   * Protobuf enum {@code io.sentrius.protobuf.TriggerAction}
+   * Protobuf enum {@code io.sentrius.sso.protobuf.TriggerAction}
    */
   public enum TriggerAction
       implements com.google.protobuf.ProtocolMessageEnum {
@@ -152,19 +152,19 @@ public final class Session {
     }
 
     public static com.google.protobuf.Internal.EnumLiteMap<TriggerAction>
-        internalGetValueMap() {
+    internalGetValueMap() {
       return internalValueMap;
     }
     private static final com.google.protobuf.Internal.EnumLiteMap<
         TriggerAction> internalValueMap =
-          new com.google.protobuf.Internal.EnumLiteMap<TriggerAction>() {
-            public TriggerAction findValueByNumber(int number) {
-              return TriggerAction.forNumber(number);
-            }
-          };
+        new com.google.protobuf.Internal.EnumLiteMap<TriggerAction>() {
+          public TriggerAction findValueByNumber(int number) {
+            return TriggerAction.forNumber(number);
+          }
+        };
 
     public final com.google.protobuf.Descriptors.EnumValueDescriptor
-        getValueDescriptor() {
+    getValueDescriptor() {
       if (this == UNRECOGNIZED) {
         throw new java.lang.IllegalStateException(
             "Can't get the descriptor of an unrecognized enum value.");
@@ -172,12 +172,12 @@ public final class Session {
       return getDescriptor().getValues().get(ordinal());
     }
     public final com.google.protobuf.Descriptors.EnumDescriptor
-        getDescriptorForType() {
+    getDescriptorForType() {
       return getDescriptor();
     }
     public static final com.google.protobuf.Descriptors.EnumDescriptor
-        getDescriptor() {
-      return Session.getDescriptor().getEnumTypes().get(0);
+    getDescriptor() {
+      return io.sentrius.sso.protobuf.Session.getDescriptor().getEnumTypes().get(0);
     }
 
     private static final TriggerAction[] VALUES = values();
@@ -186,7 +186,7 @@ public final class Session {
         com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
       if (desc.getType() != getDescriptor()) {
         throw new java.lang.IllegalArgumentException(
-          "EnumValueDescriptor is not for this type.");
+            "EnumValueDescriptor is not for this type.");
       }
       if (desc.getIndex() == -1) {
         return UNRECOGNIZED;
@@ -200,11 +200,11 @@ public final class Session {
       this.value = value;
     }
 
-    // @@protoc_insertion_point(enum_scope:io.sentrius.protobuf.TriggerAction)
+    // @@protoc_insertion_point(enum_scope:io.sentrius.sso.protobuf.TriggerAction)
   }
 
   /**
-   * Protobuf enum {@code io.sentrius.protobuf.MessageType}
+   * Protobuf enum {@code io.sentrius.sso.protobuf.MessageType}
    */
   public enum MessageType
       implements com.google.protobuf.ProtocolMessageEnum {
@@ -287,19 +287,19 @@ public final class Session {
     }
 
     public static com.google.protobuf.Internal.EnumLiteMap<MessageType>
-        internalGetValueMap() {
+    internalGetValueMap() {
       return internalValueMap;
     }
     private static final com.google.protobuf.Internal.EnumLiteMap<
         MessageType> internalValueMap =
-          new com.google.protobuf.Internal.EnumLiteMap<MessageType>() {
-            public MessageType findValueByNumber(int number) {
-              return MessageType.forNumber(number);
-            }
-          };
+        new com.google.protobuf.Internal.EnumLiteMap<MessageType>() {
+          public MessageType findValueByNumber(int number) {
+            return MessageType.forNumber(number);
+          }
+        };
 
     public final com.google.protobuf.Descriptors.EnumValueDescriptor
-        getValueDescriptor() {
+    getValueDescriptor() {
       if (this == UNRECOGNIZED) {
         throw new java.lang.IllegalStateException(
             "Can't get the descriptor of an unrecognized enum value.");
@@ -307,12 +307,12 @@ public final class Session {
       return getDescriptor().getValues().get(ordinal());
     }
     public final com.google.protobuf.Descriptors.EnumDescriptor
-        getDescriptorForType() {
+    getDescriptorForType() {
       return getDescriptor();
     }
     public static final com.google.protobuf.Descriptors.EnumDescriptor
-        getDescriptor() {
-      return Session.getDescriptor().getEnumTypes().get(1);
+    getDescriptor() {
+      return io.sentrius.sso.protobuf.Session.getDescriptor().getEnumTypes().get(1);
     }
 
     private static final MessageType[] VALUES = values();
@@ -321,7 +321,7 @@ public final class Session {
         com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
       if (desc.getType() != getDescriptor()) {
         throw new java.lang.IllegalArgumentException(
-          "EnumValueDescriptor is not for this type.");
+            "EnumValueDescriptor is not for this type.");
       }
       if (desc.getIndex() == -1) {
         return UNRECOGNIZED;
@@ -335,23 +335,23 @@ public final class Session {
       this.value = value;
     }
 
-    // @@protoc_insertion_point(enum_scope:io.sentrius.protobuf.MessageType)
+    // @@protoc_insertion_point(enum_scope:io.sentrius.sso.protobuf.MessageType)
   }
 
   public interface TriggerOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:io.sentrius.protobuf.Trigger)
+      // @@protoc_insertion_point(interface_extends:io.sentrius.sso.protobuf.Trigger)
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>.io.sentrius.protobuf.TriggerAction action = 1;</code>
+     * <code>.io.sentrius.sso.protobuf.TriggerAction action = 1;</code>
      * @return The enum numeric value on the wire for action.
      */
     int getActionValue();
     /**
-     * <code>.io.sentrius.protobuf.TriggerAction action = 1;</code>
+     * <code>.io.sentrius.sso.protobuf.TriggerAction action = 1;</code>
      * @return The action.
      */
-    Session.TriggerAction getAction();
+    io.sentrius.sso.protobuf.Session.TriggerAction getAction();
 
     /**
      * <code>string description = 2;</code>
@@ -363,16 +363,16 @@ public final class Session {
      * @return The bytes for description.
      */
     com.google.protobuf.ByteString
-        getDescriptionBytes();
+    getDescriptionBytes();
   }
   /**
-   * Protobuf type {@code io.sentrius.protobuf.Trigger}
+   * Protobuf type {@code io.sentrius.sso.protobuf.Trigger}
    */
   public static final class Trigger extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:io.sentrius.protobuf.Trigger)
+      // @@protoc_insertion_point(message_implements:io.sentrius.sso.protobuf.Trigger)
       TriggerOrBuilder {
-  private static final long serialVersionUID = 0L;
+    private static final long serialVersionUID = 0L;
     // Use Trigger.newBuilder() to construct.
     private Trigger(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -444,35 +444,35 @@ public final class Session {
       }
     }
     public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return Session.internal_static_io_dataguardians_protobuf_Trigger_descriptor;
+    getDescriptor() {
+      return io.sentrius.sso.protobuf.Session.internal_static_io_sentrius_protobuf_Trigger_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return Session.internal_static_io_dataguardians_protobuf_Trigger_fieldAccessorTable
+    internalGetFieldAccessorTable() {
+      return io.sentrius.sso.protobuf.Session.internal_static_io_sentrius_protobuf_Trigger_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              Session.Trigger.class, Session.Trigger.Builder.class);
+              io.sentrius.sso.protobuf.Session.Trigger.class, io.sentrius.sso.protobuf.Session.Trigger.Builder.class);
     }
 
     public static final int ACTION_FIELD_NUMBER = 1;
     private int action_;
     /**
-     * <code>.io.sentrius.protobuf.TriggerAction action = 1;</code>
+     * <code>.io.sentrius.sso.protobuf.TriggerAction action = 1;</code>
      * @return The enum numeric value on the wire for action.
      */
     @java.lang.Override public int getActionValue() {
       return action_;
     }
     /**
-     * <code>.io.sentrius.protobuf.TriggerAction action = 1;</code>
+     * <code>.io.sentrius.sso.protobuf.TriggerAction action = 1;</code>
      * @return The action.
      */
-    @java.lang.Override public Session.TriggerAction getAction() {
+    @java.lang.Override public io.sentrius.sso.protobuf.Session.TriggerAction getAction() {
       @SuppressWarnings("deprecation")
-      Session.TriggerAction result = Session.TriggerAction.valueOf(action_);
-      return result == null ? Session.TriggerAction.UNRECOGNIZED : result;
+      io.sentrius.sso.protobuf.Session.TriggerAction result = io.sentrius.sso.protobuf.Session.TriggerAction.valueOf(action_);
+      return result == null ? io.sentrius.sso.protobuf.Session.TriggerAction.UNRECOGNIZED : result;
     }
 
     public static final int DESCRIPTION_FIELD_NUMBER = 2;
@@ -487,7 +487,7 @@ public final class Session {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         description_ = s;
@@ -500,10 +500,10 @@ public final class Session {
      */
     @java.lang.Override
     public com.google.protobuf.ByteString
-        getDescriptionBytes() {
+    getDescriptionBytes() {
       java.lang.Object ref = description_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         description_ = b;
@@ -526,8 +526,8 @@ public final class Session {
 
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      if (action_ != Session.TriggerAction.NO_ACTION.getNumber()) {
+        throws java.io.IOException {
+      if (action_ != io.sentrius.sso.protobuf.Session.TriggerAction.NO_ACTION.getNumber()) {
         output.writeEnum(1, action_);
       }
       if (!getDescriptionBytes().isEmpty()) {
@@ -542,9 +542,9 @@ public final class Session {
       if (size != -1) return size;
 
       size = 0;
-      if (action_ != Session.TriggerAction.NO_ACTION.getNumber()) {
+      if (action_ != io.sentrius.sso.protobuf.Session.TriggerAction.NO_ACTION.getNumber()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeEnumSize(1, action_);
+            .computeEnumSize(1, action_);
       }
       if (!getDescriptionBytes().isEmpty()) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, description_);
@@ -557,12 +557,12 @@ public final class Session {
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
-       return true;
+        return true;
       }
-      if (!(obj instanceof Session.Trigger)) {
+      if (!(obj instanceof io.sentrius.sso.protobuf.Session.Trigger)) {
         return super.equals(obj);
       }
-      Session.Trigger other = (Session.Trigger) obj;
+      io.sentrius.sso.protobuf.Session.Trigger other = (io.sentrius.sso.protobuf.Session.Trigger) obj;
 
       if (action_ != other.action_) return false;
       if (!getDescription()
@@ -587,69 +587,69 @@ public final class Session {
       return hash;
     }
 
-    public static Session.Trigger parseFrom(
+    public static io.sentrius.sso.protobuf.Session.Trigger parseFrom(
         java.nio.ByteBuffer data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static Session.Trigger parseFrom(
+    public static io.sentrius.sso.protobuf.Session.Trigger parseFrom(
         java.nio.ByteBuffer data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static Session.Trigger parseFrom(
+    public static io.sentrius.sso.protobuf.Session.Trigger parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static Session.Trigger parseFrom(
+    public static io.sentrius.sso.protobuf.Session.Trigger parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static Session.Trigger parseFrom(byte[] data)
+    public static io.sentrius.sso.protobuf.Session.Trigger parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static Session.Trigger parseFrom(
+    public static io.sentrius.sso.protobuf.Session.Trigger parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static Session.Trigger parseFrom(java.io.InputStream input)
+    public static io.sentrius.sso.protobuf.Session.Trigger parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input);
     }
-    public static Session.Trigger parseFrom(
+    public static io.sentrius.sso.protobuf.Session.Trigger parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
-    public static Session.Trigger parseDelimitedFrom(java.io.InputStream input)
+    public static io.sentrius.sso.protobuf.Session.Trigger parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseDelimitedWithIOException(PARSER, input);
     }
-    public static Session.Trigger parseDelimitedFrom(
+    public static io.sentrius.sso.protobuf.Session.Trigger parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
     }
-    public static Session.Trigger parseFrom(
+    public static io.sentrius.sso.protobuf.Session.Trigger parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input);
     }
-    public static Session.Trigger parseFrom(
+    public static io.sentrius.sso.protobuf.Session.Trigger parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -662,7 +662,7 @@ public final class Session {
     public static Builder newBuilder() {
       return DEFAULT_INSTANCE.toBuilder();
     }
-    public static Builder newBuilder(Session.Trigger prototype) {
+    public static Builder newBuilder(io.sentrius.sso.protobuf.Session.Trigger prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
     @java.lang.Override
@@ -678,26 +678,26 @@ public final class Session {
       return builder;
     }
     /**
-     * Protobuf type {@code io.sentrius.protobuf.Trigger}
+     * Protobuf type {@code io.sentrius.sso.protobuf.Trigger}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:io.sentrius.protobuf.Trigger)
-        Session.TriggerOrBuilder {
+        // @@protoc_insertion_point(builder_implements:io.sentrius.sso.protobuf.Trigger)
+        io.sentrius.sso.protobuf.Session.TriggerOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return Session.internal_static_io_dataguardians_protobuf_Trigger_descriptor;
+      getDescriptor() {
+        return io.sentrius.sso.protobuf.Session.internal_static_io_sentrius_protobuf_Trigger_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return Session.internal_static_io_dataguardians_protobuf_Trigger_fieldAccessorTable
+      internalGetFieldAccessorTable() {
+        return io.sentrius.sso.protobuf.Session.internal_static_io_sentrius_protobuf_Trigger_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                Session.Trigger.class, Session.Trigger.Builder.class);
+                io.sentrius.sso.protobuf.Session.Trigger.class, io.sentrius.sso.protobuf.Session.Trigger.Builder.class);
       }
 
-      // Construct using io.sentrius.protobuf.Session.Trigger.newBuilder()
+      // Construct using io.sentrius.sso.protobuf.Session.Trigger.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -709,7 +709,7 @@ public final class Session {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
+            .alwaysUseFieldBuilders) {
         }
       }
       @java.lang.Override
@@ -724,18 +724,18 @@ public final class Session {
 
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return Session.internal_static_io_dataguardians_protobuf_Trigger_descriptor;
+      getDescriptorForType() {
+        return io.sentrius.sso.protobuf.Session.internal_static_io_sentrius_protobuf_Trigger_descriptor;
       }
 
       @java.lang.Override
-      public Session.Trigger getDefaultInstanceForType() {
-        return Session.Trigger.getDefaultInstance();
+      public io.sentrius.sso.protobuf.Session.Trigger getDefaultInstanceForType() {
+        return io.sentrius.sso.protobuf.Session.Trigger.getDefaultInstance();
       }
 
       @java.lang.Override
-      public Session.Trigger build() {
-        Session.Trigger result = buildPartial();
+      public io.sentrius.sso.protobuf.Session.Trigger build() {
+        io.sentrius.sso.protobuf.Session.Trigger result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
@@ -743,8 +743,8 @@ public final class Session {
       }
 
       @java.lang.Override
-      public Session.Trigger buildPartial() {
-        Session.Trigger result = new Session.Trigger(this);
+      public io.sentrius.sso.protobuf.Session.Trigger buildPartial() {
+        io.sentrius.sso.protobuf.Session.Trigger result = new io.sentrius.sso.protobuf.Session.Trigger(this);
         result.action_ = action_;
         result.description_ = description_;
         onBuilt();
@@ -785,16 +785,16 @@ public final class Session {
       }
       @java.lang.Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof Session.Trigger) {
-          return mergeFrom((Session.Trigger)other);
+        if (other instanceof io.sentrius.sso.protobuf.Session.Trigger) {
+          return mergeFrom((io.sentrius.sso.protobuf.Session.Trigger)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(Session.Trigger other) {
-        if (other == Session.Trigger.getDefaultInstance()) return this;
+      public Builder mergeFrom(io.sentrius.sso.protobuf.Session.Trigger other) {
+        if (other == io.sentrius.sso.protobuf.Session.Trigger.getDefaultInstance()) return this;
         if (other.action_ != 0) {
           setActionValue(other.getActionValue());
         }
@@ -817,11 +817,11 @@ public final class Session {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        Session.Trigger parsedMessage = null;
+        io.sentrius.sso.protobuf.Session.Trigger parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (Session.Trigger) e.getUnfinishedMessage();
+          parsedMessage = (io.sentrius.sso.protobuf.Session.Trigger) e.getUnfinishedMessage();
           throw e.unwrapIOException();
         } finally {
           if (parsedMessage != null) {
@@ -833,53 +833,53 @@ public final class Session {
 
       private int action_ = 0;
       /**
-       * <code>.io.sentrius.protobuf.TriggerAction action = 1;</code>
+       * <code>.io.sentrius.sso.protobuf.TriggerAction action = 1;</code>
        * @return The enum numeric value on the wire for action.
        */
       @java.lang.Override public int getActionValue() {
         return action_;
       }
       /**
-       * <code>.io.sentrius.protobuf.TriggerAction action = 1;</code>
+       * <code>.io.sentrius.sso.protobuf.TriggerAction action = 1;</code>
        * @param value The enum numeric value on the wire for action to set.
        * @return This builder for chaining.
        */
       public Builder setActionValue(int value) {
-        
+
         action_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>.io.sentrius.protobuf.TriggerAction action = 1;</code>
+       * <code>.io.sentrius.sso.protobuf.TriggerAction action = 1;</code>
        * @return The action.
        */
       @java.lang.Override
-      public Session.TriggerAction getAction() {
+      public io.sentrius.sso.protobuf.Session.TriggerAction getAction() {
         @SuppressWarnings("deprecation")
-        Session.TriggerAction result = Session.TriggerAction.valueOf(action_);
-        return result == null ? Session.TriggerAction.UNRECOGNIZED : result;
+        io.sentrius.sso.protobuf.Session.TriggerAction result = io.sentrius.sso.protobuf.Session.TriggerAction.valueOf(action_);
+        return result == null ? io.sentrius.sso.protobuf.Session.TriggerAction.UNRECOGNIZED : result;
       }
       /**
-       * <code>.io.sentrius.protobuf.TriggerAction action = 1;</code>
+       * <code>.io.sentrius.sso.protobuf.TriggerAction action = 1;</code>
        * @param value The action to set.
        * @return This builder for chaining.
        */
-      public Builder setAction(Session.TriggerAction value) {
+      public Builder setAction(io.sentrius.sso.protobuf.Session.TriggerAction value) {
         if (value == null) {
           throw new NullPointerException();
         }
-        
+
         action_ = value.getNumber();
         onChanged();
         return this;
       }
       /**
-       * <code>.io.sentrius.protobuf.TriggerAction action = 1;</code>
+       * <code>.io.sentrius.sso.protobuf.TriggerAction action = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearAction() {
-        
+
         action_ = 0;
         onChanged();
         return this;
@@ -907,10 +907,10 @@ public final class Session {
        * @return The bytes for description.
        */
       public com.google.protobuf.ByteString
-          getDescriptionBytes() {
+      getDescriptionBytes() {
         java.lang.Object ref = description_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           description_ = b;
@@ -927,9 +927,9 @@ public final class Session {
       public Builder setDescription(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  
+          throw new NullPointerException();
+        }
+
         description_ = value;
         onChanged();
         return this;
@@ -939,7 +939,7 @@ public final class Session {
        * @return This builder for chaining.
        */
       public Builder clearDescription() {
-        
+
         description_ = getDefaultInstance().getDescription();
         onChanged();
         return this;
@@ -952,10 +952,10 @@ public final class Session {
       public Builder setDescriptionBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-        
+          throw new NullPointerException();
+        }
+        checkByteStringIsUtf8(value);
+
         description_ = value;
         onChanged();
         return this;
@@ -973,16 +973,16 @@ public final class Session {
       }
 
 
-      // @@protoc_insertion_point(builder_scope:io.sentrius.protobuf.Trigger)
+      // @@protoc_insertion_point(builder_scope:io.sentrius.sso.protobuf.Trigger)
     }
 
-    // @@protoc_insertion_point(class_scope:io.sentrius.protobuf.Trigger)
-    private static final Session.Trigger DEFAULT_INSTANCE;
+    // @@protoc_insertion_point(class_scope:io.sentrius.sso.protobuf.Trigger)
+    private static final io.sentrius.sso.protobuf.Session.Trigger DEFAULT_INSTANCE;
     static {
-      DEFAULT_INSTANCE = new Session.Trigger();
+      DEFAULT_INSTANCE = new io.sentrius.sso.protobuf.Session.Trigger();
     }
 
-    public static Session.Trigger getDefaultInstance() {
+    public static io.sentrius.sso.protobuf.Session.Trigger getDefaultInstance() {
       return DEFAULT_INSTANCE;
     }
 
@@ -1007,14 +1007,14 @@ public final class Session {
     }
 
     @java.lang.Override
-    public Session.Trigger getDefaultInstanceForType() {
+    public io.sentrius.sso.protobuf.Session.Trigger getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
 
   }
 
   public interface TerminalMessageOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:io.sentrius.protobuf.TerminalMessage)
+      // @@protoc_insertion_point(interface_extends:io.sentrius.sso.protobuf.TerminalMessage)
       com.google.protobuf.MessageOrBuilder {
 
     /**
@@ -1027,33 +1027,33 @@ public final class Session {
      * @return The bytes for sessionId.
      */
     com.google.protobuf.ByteString
-        getSessionIdBytes();
+    getSessionIdBytes();
 
     /**
-     * <code>.io.sentrius.protobuf.MessageType type = 2;</code>
+     * <code>.io.sentrius.sso.protobuf.MessageType type = 2;</code>
      * @return The enum numeric value on the wire for type.
      */
     int getTypeValue();
     /**
-     * <code>.io.sentrius.protobuf.MessageType type = 2;</code>
+     * <code>.io.sentrius.sso.protobuf.MessageType type = 2;</code>
      * @return The type.
      */
-    Session.MessageType getType();
+    io.sentrius.sso.protobuf.Session.MessageType getType();
 
     /**
-     * <code>.io.sentrius.protobuf.Trigger trigger = 3;</code>
+     * <code>.io.sentrius.sso.protobuf.Trigger trigger = 3;</code>
      * @return Whether the trigger field is set.
      */
     boolean hasTrigger();
     /**
-     * <code>.io.sentrius.protobuf.Trigger trigger = 3;</code>
+     * <code>.io.sentrius.sso.protobuf.Trigger trigger = 3;</code>
      * @return The trigger.
      */
-    Session.Trigger getTrigger();
+    io.sentrius.sso.protobuf.Session.Trigger getTrigger();
     /**
-     * <code>.io.sentrius.protobuf.Trigger trigger = 3;</code>
+     * <code>.io.sentrius.sso.protobuf.Trigger trigger = 3;</code>
      */
-    Session.TriggerOrBuilder getTriggerOrBuilder();
+    io.sentrius.sso.protobuf.Session.TriggerOrBuilder getTriggerOrBuilder();
 
     /**
      * <code>double keycode = 4;</code>
@@ -1071,7 +1071,7 @@ public final class Session {
      * @return The bytes for command.
      */
     com.google.protobuf.ByteString
-        getCommandBytes();
+    getCommandBytes();
 
     /**
      * <code>string prompt = 6;</code>
@@ -1083,16 +1083,16 @@ public final class Session {
      * @return The bytes for prompt.
      */
     com.google.protobuf.ByteString
-        getPromptBytes();
+    getPromptBytes();
   }
   /**
-   * Protobuf type {@code io.sentrius.protobuf.TerminalMessage}
+   * Protobuf type {@code io.sentrius.sso.protobuf.TerminalMessage}
    */
   public static final class TerminalMessage extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:io.sentrius.protobuf.TerminalMessage)
+      // @@protoc_insertion_point(message_implements:io.sentrius.sso.protobuf.TerminalMessage)
       TerminalMessageOrBuilder {
-  private static final long serialVersionUID = 0L;
+    private static final long serialVersionUID = 0L;
     // Use TerminalMessage.newBuilder() to construct.
     private TerminalMessage(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -1147,11 +1147,11 @@ public final class Session {
               break;
             }
             case 26: {
-              Session.Trigger.Builder subBuilder = null;
+              io.sentrius.sso.protobuf.Session.Trigger.Builder subBuilder = null;
               if (trigger_ != null) {
                 subBuilder = trigger_.toBuilder();
               }
-              trigger_ = input.readMessage(Session.Trigger.parser(), extensionRegistry);
+              trigger_ = input.readMessage(io.sentrius.sso.protobuf.Session.Trigger.parser(), extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(trigger_);
                 trigger_ = subBuilder.buildPartial();
@@ -1196,16 +1196,16 @@ public final class Session {
       }
     }
     public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return Session.internal_static_io_dataguardians_protobuf_TerminalMessage_descriptor;
+    getDescriptor() {
+      return io.sentrius.sso.protobuf.Session.internal_static_io_sentrius_protobuf_TerminalMessage_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return Session.internal_static_io_dataguardians_protobuf_TerminalMessage_fieldAccessorTable
+    internalGetFieldAccessorTable() {
+      return io.sentrius.sso.protobuf.Session.internal_static_io_sentrius_protobuf_TerminalMessage_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              Session.TerminalMessage.class, Session.TerminalMessage.Builder.class);
+              io.sentrius.sso.protobuf.Session.TerminalMessage.class, io.sentrius.sso.protobuf.Session.TerminalMessage.Builder.class);
     }
 
     public static final int SESSIONID_FIELD_NUMBER = 1;
@@ -1220,7 +1220,7 @@ public final class Session {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         sessionId_ = s;
@@ -1233,10 +1233,10 @@ public final class Session {
      */
     @java.lang.Override
     public com.google.protobuf.ByteString
-        getSessionIdBytes() {
+    getSessionIdBytes() {
       java.lang.Object ref = sessionId_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         sessionId_ = b;
@@ -1249,26 +1249,26 @@ public final class Session {
     public static final int TYPE_FIELD_NUMBER = 2;
     private int type_;
     /**
-     * <code>.io.sentrius.protobuf.MessageType type = 2;</code>
+     * <code>.io.sentrius.sso.protobuf.MessageType type = 2;</code>
      * @return The enum numeric value on the wire for type.
      */
     @java.lang.Override public int getTypeValue() {
       return type_;
     }
     /**
-     * <code>.io.sentrius.protobuf.MessageType type = 2;</code>
+     * <code>.io.sentrius.sso.protobuf.MessageType type = 2;</code>
      * @return The type.
      */
-    @java.lang.Override public Session.MessageType getType() {
+    @java.lang.Override public io.sentrius.sso.protobuf.Session.MessageType getType() {
       @SuppressWarnings("deprecation")
-      Session.MessageType result = Session.MessageType.valueOf(type_);
-      return result == null ? Session.MessageType.UNRECOGNIZED : result;
+      io.sentrius.sso.protobuf.Session.MessageType result = io.sentrius.sso.protobuf.Session.MessageType.valueOf(type_);
+      return result == null ? io.sentrius.sso.protobuf.Session.MessageType.UNRECOGNIZED : result;
     }
 
     public static final int TRIGGER_FIELD_NUMBER = 3;
-    private Session.Trigger trigger_;
+    private io.sentrius.sso.protobuf.Session.Trigger trigger_;
     /**
-     * <code>.io.sentrius.protobuf.Trigger trigger = 3;</code>
+     * <code>.io.sentrius.sso.protobuf.Trigger trigger = 3;</code>
      * @return Whether the trigger field is set.
      */
     @java.lang.Override
@@ -1276,18 +1276,18 @@ public final class Session {
       return trigger_ != null;
     }
     /**
-     * <code>.io.sentrius.protobuf.Trigger trigger = 3;</code>
+     * <code>.io.sentrius.sso.protobuf.Trigger trigger = 3;</code>
      * @return The trigger.
      */
     @java.lang.Override
-    public Session.Trigger getTrigger() {
-      return trigger_ == null ? Session.Trigger.getDefaultInstance() : trigger_;
+    public io.sentrius.sso.protobuf.Session.Trigger getTrigger() {
+      return trigger_ == null ? io.sentrius.sso.protobuf.Session.Trigger.getDefaultInstance() : trigger_;
     }
     /**
-     * <code>.io.sentrius.protobuf.Trigger trigger = 3;</code>
+     * <code>.io.sentrius.sso.protobuf.Trigger trigger = 3;</code>
      */
     @java.lang.Override
-    public Session.TriggerOrBuilder getTriggerOrBuilder() {
+    public io.sentrius.sso.protobuf.Session.TriggerOrBuilder getTriggerOrBuilder() {
       return getTrigger();
     }
 
@@ -1314,7 +1314,7 @@ public final class Session {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         command_ = s;
@@ -1327,10 +1327,10 @@ public final class Session {
      */
     @java.lang.Override
     public com.google.protobuf.ByteString
-        getCommandBytes() {
+    getCommandBytes() {
       java.lang.Object ref = command_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         command_ = b;
@@ -1352,7 +1352,7 @@ public final class Session {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         prompt_ = s;
@@ -1365,10 +1365,10 @@ public final class Session {
      */
     @java.lang.Override
     public com.google.protobuf.ByteString
-        getPromptBytes() {
+    getPromptBytes() {
       java.lang.Object ref = prompt_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         prompt_ = b;
@@ -1391,11 +1391,11 @@ public final class Session {
 
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
+        throws java.io.IOException {
       if (!getSessionIdBytes().isEmpty()) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 1, sessionId_);
       }
-      if (type_ != Session.MessageType.HEARTBEAT.getNumber()) {
+      if (type_ != io.sentrius.sso.protobuf.Session.MessageType.HEARTBEAT.getNumber()) {
         output.writeEnum(2, type_);
       }
       if (trigger_ != null) {
@@ -1422,17 +1422,17 @@ public final class Session {
       if (!getSessionIdBytes().isEmpty()) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, sessionId_);
       }
-      if (type_ != Session.MessageType.HEARTBEAT.getNumber()) {
+      if (type_ != io.sentrius.sso.protobuf.Session.MessageType.HEARTBEAT.getNumber()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeEnumSize(2, type_);
+            .computeEnumSize(2, type_);
       }
       if (trigger_ != null) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(3, getTrigger());
+            .computeMessageSize(3, getTrigger());
       }
       if (keycode_ != 0D) {
         size += com.google.protobuf.CodedOutputStream
-          .computeDoubleSize(4, keycode_);
+            .computeDoubleSize(4, keycode_);
       }
       if (!getCommandBytes().isEmpty()) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, command_);
@@ -1448,12 +1448,12 @@ public final class Session {
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
-       return true;
+        return true;
       }
-      if (!(obj instanceof Session.TerminalMessage)) {
+      if (!(obj instanceof io.sentrius.sso.protobuf.Session.TerminalMessage)) {
         return super.equals(obj);
       }
-      Session.TerminalMessage other = (Session.TerminalMessage) obj;
+      io.sentrius.sso.protobuf.Session.TerminalMessage other = (io.sentrius.sso.protobuf.Session.TerminalMessage) obj;
 
       if (!getSessionId()
           .equals(other.getSessionId())) return false;
@@ -1465,7 +1465,7 @@ public final class Session {
       }
       if (java.lang.Double.doubleToLongBits(getKeycode())
           != java.lang.Double.doubleToLongBits(
-              other.getKeycode())) return false;
+          other.getKeycode())) return false;
       if (!getCommand()
           .equals(other.getCommand())) return false;
       if (!getPrompt()
@@ -1501,69 +1501,69 @@ public final class Session {
       return hash;
     }
 
-    public static Session.TerminalMessage parseFrom(
+    public static io.sentrius.sso.protobuf.Session.TerminalMessage parseFrom(
         java.nio.ByteBuffer data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static Session.TerminalMessage parseFrom(
+    public static io.sentrius.sso.protobuf.Session.TerminalMessage parseFrom(
         java.nio.ByteBuffer data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static Session.TerminalMessage parseFrom(
+    public static io.sentrius.sso.protobuf.Session.TerminalMessage parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static Session.TerminalMessage parseFrom(
+    public static io.sentrius.sso.protobuf.Session.TerminalMessage parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static Session.TerminalMessage parseFrom(byte[] data)
+    public static io.sentrius.sso.protobuf.Session.TerminalMessage parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static Session.TerminalMessage parseFrom(
+    public static io.sentrius.sso.protobuf.Session.TerminalMessage parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static Session.TerminalMessage parseFrom(java.io.InputStream input)
+    public static io.sentrius.sso.protobuf.Session.TerminalMessage parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input);
     }
-    public static Session.TerminalMessage parseFrom(
+    public static io.sentrius.sso.protobuf.Session.TerminalMessage parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
-    public static Session.TerminalMessage parseDelimitedFrom(java.io.InputStream input)
+    public static io.sentrius.sso.protobuf.Session.TerminalMessage parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseDelimitedWithIOException(PARSER, input);
     }
-    public static Session.TerminalMessage parseDelimitedFrom(
+    public static io.sentrius.sso.protobuf.Session.TerminalMessage parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
     }
-    public static Session.TerminalMessage parseFrom(
+    public static io.sentrius.sso.protobuf.Session.TerminalMessage parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input);
     }
-    public static Session.TerminalMessage parseFrom(
+    public static io.sentrius.sso.protobuf.Session.TerminalMessage parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -1576,7 +1576,7 @@ public final class Session {
     public static Builder newBuilder() {
       return DEFAULT_INSTANCE.toBuilder();
     }
-    public static Builder newBuilder(Session.TerminalMessage prototype) {
+    public static Builder newBuilder(io.sentrius.sso.protobuf.Session.TerminalMessage prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
     @java.lang.Override
@@ -1592,26 +1592,26 @@ public final class Session {
       return builder;
     }
     /**
-     * Protobuf type {@code io.sentrius.protobuf.TerminalMessage}
+     * Protobuf type {@code io.sentrius.sso.protobuf.TerminalMessage}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:io.sentrius.protobuf.TerminalMessage)
-        Session.TerminalMessageOrBuilder {
+        // @@protoc_insertion_point(builder_implements:io.sentrius.sso.protobuf.TerminalMessage)
+        io.sentrius.sso.protobuf.Session.TerminalMessageOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return Session.internal_static_io_dataguardians_protobuf_TerminalMessage_descriptor;
+      getDescriptor() {
+        return io.sentrius.sso.protobuf.Session.internal_static_io_sentrius_protobuf_TerminalMessage_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return Session.internal_static_io_dataguardians_protobuf_TerminalMessage_fieldAccessorTable
+      internalGetFieldAccessorTable() {
+        return io.sentrius.sso.protobuf.Session.internal_static_io_sentrius_protobuf_TerminalMessage_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                Session.TerminalMessage.class, Session.TerminalMessage.Builder.class);
+                io.sentrius.sso.protobuf.Session.TerminalMessage.class, io.sentrius.sso.protobuf.Session.TerminalMessage.Builder.class);
       }
 
-      // Construct using io.sentrius.protobuf.Session.TerminalMessage.newBuilder()
+      // Construct using io.sentrius.sso.protobuf.Session.TerminalMessage.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -1623,7 +1623,7 @@ public final class Session {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
+            .alwaysUseFieldBuilders) {
         }
       }
       @java.lang.Override
@@ -1650,18 +1650,18 @@ public final class Session {
 
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return Session.internal_static_io_dataguardians_protobuf_TerminalMessage_descriptor;
+      getDescriptorForType() {
+        return io.sentrius.sso.protobuf.Session.internal_static_io_sentrius_protobuf_TerminalMessage_descriptor;
       }
 
       @java.lang.Override
-      public Session.TerminalMessage getDefaultInstanceForType() {
-        return Session.TerminalMessage.getDefaultInstance();
+      public io.sentrius.sso.protobuf.Session.TerminalMessage getDefaultInstanceForType() {
+        return io.sentrius.sso.protobuf.Session.TerminalMessage.getDefaultInstance();
       }
 
       @java.lang.Override
-      public Session.TerminalMessage build() {
-        Session.TerminalMessage result = buildPartial();
+      public io.sentrius.sso.protobuf.Session.TerminalMessage build() {
+        io.sentrius.sso.protobuf.Session.TerminalMessage result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
@@ -1669,8 +1669,8 @@ public final class Session {
       }
 
       @java.lang.Override
-      public Session.TerminalMessage buildPartial() {
-        Session.TerminalMessage result = new Session.TerminalMessage(this);
+      public io.sentrius.sso.protobuf.Session.TerminalMessage buildPartial() {
+        io.sentrius.sso.protobuf.Session.TerminalMessage result = new io.sentrius.sso.protobuf.Session.TerminalMessage(this);
         result.sessionId_ = sessionId_;
         result.type_ = type_;
         if (triggerBuilder_ == null) {
@@ -1719,16 +1719,16 @@ public final class Session {
       }
       @java.lang.Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof Session.TerminalMessage) {
-          return mergeFrom((Session.TerminalMessage)other);
+        if (other instanceof io.sentrius.sso.protobuf.Session.TerminalMessage) {
+          return mergeFrom((io.sentrius.sso.protobuf.Session.TerminalMessage)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(Session.TerminalMessage other) {
-        if (other == Session.TerminalMessage.getDefaultInstance()) return this;
+      public Builder mergeFrom(io.sentrius.sso.protobuf.Session.TerminalMessage other) {
+        if (other == io.sentrius.sso.protobuf.Session.TerminalMessage.getDefaultInstance()) return this;
         if (!other.getSessionId().isEmpty()) {
           sessionId_ = other.sessionId_;
           onChanged();
@@ -1765,11 +1765,11 @@ public final class Session {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        Session.TerminalMessage parsedMessage = null;
+        io.sentrius.sso.protobuf.Session.TerminalMessage parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (Session.TerminalMessage) e.getUnfinishedMessage();
+          parsedMessage = (io.sentrius.sso.protobuf.Session.TerminalMessage) e.getUnfinishedMessage();
           throw e.unwrapIOException();
         } finally {
           if (parsedMessage != null) {
@@ -1801,10 +1801,10 @@ public final class Session {
        * @return The bytes for sessionId.
        */
       public com.google.protobuf.ByteString
-          getSessionIdBytes() {
+      getSessionIdBytes() {
         java.lang.Object ref = sessionId_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           sessionId_ = b;
@@ -1821,9 +1821,9 @@ public final class Session {
       public Builder setSessionId(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  
+          throw new NullPointerException();
+        }
+
         sessionId_ = value;
         onChanged();
         return this;
@@ -1833,7 +1833,7 @@ public final class Session {
        * @return This builder for chaining.
        */
       public Builder clearSessionId() {
-        
+
         sessionId_ = getDefaultInstance().getSessionId();
         onChanged();
         return this;
@@ -1846,10 +1846,10 @@ public final class Session {
       public Builder setSessionIdBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-        
+          throw new NullPointerException();
+        }
+        checkByteStringIsUtf8(value);
+
         sessionId_ = value;
         onChanged();
         return this;
@@ -1857,83 +1857,83 @@ public final class Session {
 
       private int type_ = 0;
       /**
-       * <code>.io.sentrius.protobuf.MessageType type = 2;</code>
+       * <code>.io.sentrius.sso.protobuf.MessageType type = 2;</code>
        * @return The enum numeric value on the wire for type.
        */
       @java.lang.Override public int getTypeValue() {
         return type_;
       }
       /**
-       * <code>.io.sentrius.protobuf.MessageType type = 2;</code>
+       * <code>.io.sentrius.sso.protobuf.MessageType type = 2;</code>
        * @param value The enum numeric value on the wire for type to set.
        * @return This builder for chaining.
        */
       public Builder setTypeValue(int value) {
-        
+
         type_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>.io.sentrius.protobuf.MessageType type = 2;</code>
+       * <code>.io.sentrius.sso.protobuf.MessageType type = 2;</code>
        * @return The type.
        */
       @java.lang.Override
-      public Session.MessageType getType() {
+      public io.sentrius.sso.protobuf.Session.MessageType getType() {
         @SuppressWarnings("deprecation")
-        Session.MessageType result = Session.MessageType.valueOf(type_);
-        return result == null ? Session.MessageType.UNRECOGNIZED : result;
+        io.sentrius.sso.protobuf.Session.MessageType result = io.sentrius.sso.protobuf.Session.MessageType.valueOf(type_);
+        return result == null ? io.sentrius.sso.protobuf.Session.MessageType.UNRECOGNIZED : result;
       }
       /**
-       * <code>.io.sentrius.protobuf.MessageType type = 2;</code>
+       * <code>.io.sentrius.sso.protobuf.MessageType type = 2;</code>
        * @param value The type to set.
        * @return This builder for chaining.
        */
-      public Builder setType(Session.MessageType value) {
+      public Builder setType(io.sentrius.sso.protobuf.Session.MessageType value) {
         if (value == null) {
           throw new NullPointerException();
         }
-        
+
         type_ = value.getNumber();
         onChanged();
         return this;
       }
       /**
-       * <code>.io.sentrius.protobuf.MessageType type = 2;</code>
+       * <code>.io.sentrius.sso.protobuf.MessageType type = 2;</code>
        * @return This builder for chaining.
        */
       public Builder clearType() {
-        
+
         type_ = 0;
         onChanged();
         return this;
       }
 
-      private Session.Trigger trigger_;
+      private io.sentrius.sso.protobuf.Session.Trigger trigger_;
       private com.google.protobuf.SingleFieldBuilderV3<
-          Session.Trigger, Session.Trigger.Builder, Session.TriggerOrBuilder> triggerBuilder_;
+          io.sentrius.sso.protobuf.Session.Trigger, io.sentrius.sso.protobuf.Session.Trigger.Builder, io.sentrius.sso.protobuf.Session.TriggerOrBuilder> triggerBuilder_;
       /**
-       * <code>.io.sentrius.protobuf.Trigger trigger = 3;</code>
+       * <code>.io.sentrius.sso.protobuf.Trigger trigger = 3;</code>
        * @return Whether the trigger field is set.
        */
       public boolean hasTrigger() {
         return triggerBuilder_ != null || trigger_ != null;
       }
       /**
-       * <code>.io.sentrius.protobuf.Trigger trigger = 3;</code>
+       * <code>.io.sentrius.sso.protobuf.Trigger trigger = 3;</code>
        * @return The trigger.
        */
-      public Session.Trigger getTrigger() {
+      public io.sentrius.sso.protobuf.Session.Trigger getTrigger() {
         if (triggerBuilder_ == null) {
-          return trigger_ == null ? Session.Trigger.getDefaultInstance() : trigger_;
+          return trigger_ == null ? io.sentrius.sso.protobuf.Session.Trigger.getDefaultInstance() : trigger_;
         } else {
           return triggerBuilder_.getMessage();
         }
       }
       /**
-       * <code>.io.sentrius.protobuf.Trigger trigger = 3;</code>
+       * <code>.io.sentrius.sso.protobuf.Trigger trigger = 3;</code>
        */
-      public Builder setTrigger(Session.Trigger value) {
+      public Builder setTrigger(io.sentrius.sso.protobuf.Session.Trigger value) {
         if (triggerBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -1947,10 +1947,10 @@ public final class Session {
         return this;
       }
       /**
-       * <code>.io.sentrius.protobuf.Trigger trigger = 3;</code>
+       * <code>.io.sentrius.sso.protobuf.Trigger trigger = 3;</code>
        */
       public Builder setTrigger(
-          Session.Trigger.Builder builderForValue) {
+          io.sentrius.sso.protobuf.Session.Trigger.Builder builderForValue) {
         if (triggerBuilder_ == null) {
           trigger_ = builderForValue.build();
           onChanged();
@@ -1961,13 +1961,13 @@ public final class Session {
         return this;
       }
       /**
-       * <code>.io.sentrius.protobuf.Trigger trigger = 3;</code>
+       * <code>.io.sentrius.sso.protobuf.Trigger trigger = 3;</code>
        */
-      public Builder mergeTrigger(Session.Trigger value) {
+      public Builder mergeTrigger(io.sentrius.sso.protobuf.Session.Trigger value) {
         if (triggerBuilder_ == null) {
           if (trigger_ != null) {
             trigger_ =
-              Session.Trigger.newBuilder(trigger_).mergeFrom(value).buildPartial();
+                io.sentrius.sso.protobuf.Session.Trigger.newBuilder(trigger_).mergeFrom(value).buildPartial();
           } else {
             trigger_ = value;
           }
@@ -1979,7 +1979,7 @@ public final class Session {
         return this;
       }
       /**
-       * <code>.io.sentrius.protobuf.Trigger trigger = 3;</code>
+       * <code>.io.sentrius.sso.protobuf.Trigger trigger = 3;</code>
        */
       public Builder clearTrigger() {
         if (triggerBuilder_ == null) {
@@ -1993,36 +1993,36 @@ public final class Session {
         return this;
       }
       /**
-       * <code>.io.sentrius.protobuf.Trigger trigger = 3;</code>
+       * <code>.io.sentrius.sso.protobuf.Trigger trigger = 3;</code>
        */
-      public Session.Trigger.Builder getTriggerBuilder() {
-        
+      public io.sentrius.sso.protobuf.Session.Trigger.Builder getTriggerBuilder() {
+
         onChanged();
         return getTriggerFieldBuilder().getBuilder();
       }
       /**
-       * <code>.io.sentrius.protobuf.Trigger trigger = 3;</code>
+       * <code>.io.sentrius.sso.protobuf.Trigger trigger = 3;</code>
        */
-      public Session.TriggerOrBuilder getTriggerOrBuilder() {
+      public io.sentrius.sso.protobuf.Session.TriggerOrBuilder getTriggerOrBuilder() {
         if (triggerBuilder_ != null) {
           return triggerBuilder_.getMessageOrBuilder();
         } else {
           return trigger_ == null ?
-              Session.Trigger.getDefaultInstance() : trigger_;
+              io.sentrius.sso.protobuf.Session.Trigger.getDefaultInstance() : trigger_;
         }
       }
       /**
-       * <code>.io.sentrius.protobuf.Trigger trigger = 3;</code>
+       * <code>.io.sentrius.sso.protobuf.Trigger trigger = 3;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
-          Session.Trigger, Session.Trigger.Builder, Session.TriggerOrBuilder>
-          getTriggerFieldBuilder() {
+          io.sentrius.sso.protobuf.Session.Trigger, io.sentrius.sso.protobuf.Session.Trigger.Builder, io.sentrius.sso.protobuf.Session.TriggerOrBuilder>
+      getTriggerFieldBuilder() {
         if (triggerBuilder_ == null) {
           triggerBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
-              Session.Trigger, Session.Trigger.Builder, Session.TriggerOrBuilder>(
-                  getTrigger(),
-                  getParentForChildren(),
-                  isClean());
+              io.sentrius.sso.protobuf.Session.Trigger, io.sentrius.sso.protobuf.Session.Trigger.Builder, io.sentrius.sso.protobuf.Session.TriggerOrBuilder>(
+              getTrigger(),
+              getParentForChildren(),
+              isClean());
           trigger_ = null;
         }
         return triggerBuilder_;
@@ -2043,7 +2043,7 @@ public final class Session {
        * @return This builder for chaining.
        */
       public Builder setKeycode(double value) {
-        
+
         keycode_ = value;
         onChanged();
         return this;
@@ -2053,7 +2053,7 @@ public final class Session {
        * @return This builder for chaining.
        */
       public Builder clearKeycode() {
-        
+
         keycode_ = 0D;
         onChanged();
         return this;
@@ -2081,10 +2081,10 @@ public final class Session {
        * @return The bytes for command.
        */
       public com.google.protobuf.ByteString
-          getCommandBytes() {
+      getCommandBytes() {
         java.lang.Object ref = command_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           command_ = b;
@@ -2101,9 +2101,9 @@ public final class Session {
       public Builder setCommand(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  
+          throw new NullPointerException();
+        }
+
         command_ = value;
         onChanged();
         return this;
@@ -2113,7 +2113,7 @@ public final class Session {
        * @return This builder for chaining.
        */
       public Builder clearCommand() {
-        
+
         command_ = getDefaultInstance().getCommand();
         onChanged();
         return this;
@@ -2126,10 +2126,10 @@ public final class Session {
       public Builder setCommandBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-        
+          throw new NullPointerException();
+        }
+        checkByteStringIsUtf8(value);
+
         command_ = value;
         onChanged();
         return this;
@@ -2157,10 +2157,10 @@ public final class Session {
        * @return The bytes for prompt.
        */
       public com.google.protobuf.ByteString
-          getPromptBytes() {
+      getPromptBytes() {
         java.lang.Object ref = prompt_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           prompt_ = b;
@@ -2177,9 +2177,9 @@ public final class Session {
       public Builder setPrompt(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  
+          throw new NullPointerException();
+        }
+
         prompt_ = value;
         onChanged();
         return this;
@@ -2189,7 +2189,7 @@ public final class Session {
        * @return This builder for chaining.
        */
       public Builder clearPrompt() {
-        
+
         prompt_ = getDefaultInstance().getPrompt();
         onChanged();
         return this;
@@ -2202,10 +2202,10 @@ public final class Session {
       public Builder setPromptBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-        
+          throw new NullPointerException();
+        }
+        checkByteStringIsUtf8(value);
+
         prompt_ = value;
         onChanged();
         return this;
@@ -2223,16 +2223,16 @@ public final class Session {
       }
 
 
-      // @@protoc_insertion_point(builder_scope:io.sentrius.protobuf.TerminalMessage)
+      // @@protoc_insertion_point(builder_scope:io.sentrius.sso.protobuf.TerminalMessage)
     }
 
-    // @@protoc_insertion_point(class_scope:io.sentrius.protobuf.TerminalMessage)
-    private static final Session.TerminalMessage DEFAULT_INSTANCE;
+    // @@protoc_insertion_point(class_scope:io.sentrius.sso.protobuf.TerminalMessage)
+    private static final io.sentrius.sso.protobuf.Session.TerminalMessage DEFAULT_INSTANCE;
     static {
-      DEFAULT_INSTANCE = new Session.TerminalMessage();
+      DEFAULT_INSTANCE = new io.sentrius.sso.protobuf.Session.TerminalMessage();
     }
 
-    public static Session.TerminalMessage getDefaultInstance() {
+    public static io.sentrius.sso.protobuf.Session.TerminalMessage getDefaultInstance() {
       return DEFAULT_INSTANCE;
     }
 
@@ -2257,65 +2257,1144 @@ public final class Session {
     }
 
     @java.lang.Override
-    public Session.TerminalMessage getDefaultInstanceForType() {
+    public io.sentrius.sso.protobuf.Session.TerminalMessage getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface ChatMessageOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:io.sentrius.sso.protobuf.ChatMessage)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>int64 session_id = 1;</code>
+     * @return The sessionId.
+     */
+    long getSessionId();
+
+    /**
+     * <pre>
+     * Separate chat groups for a session
+     * </pre>
+     *
+     * <code>string chat_group_id = 2;</code>
+     * @return The chatGroupId.
+     */
+    java.lang.String getChatGroupId();
+    /**
+     * <pre>
+     * Separate chat groups for a session
+     * </pre>
+     *
+     * <code>string chat_group_id = 2;</code>
+     * @return The bytes for chatGroupId.
+     */
+    com.google.protobuf.ByteString
+    getChatGroupIdBytes();
+
+    /**
+     * <code>string sender = 3;</code>
+     * @return The sender.
+     */
+    java.lang.String getSender();
+    /**
+     * <code>string sender = 3;</code>
+     * @return The bytes for sender.
+     */
+    com.google.protobuf.ByteString
+    getSenderBytes();
+
+    /**
+     * <code>string message = 4;</code>
+     * @return The message.
+     */
+    java.lang.String getMessage();
+    /**
+     * <code>string message = 4;</code>
+     * @return The bytes for message.
+     */
+    com.google.protobuf.ByteString
+    getMessageBytes();
+
+    /**
+     * <pre>
+     * Store as epoch time (milliseconds)
+     * </pre>
+     *
+     * <code>int64 timestamp = 5;</code>
+     * @return The timestamp.
+     */
+    long getTimestamp();
+  }
+  /**
+   * Protobuf type {@code io.sentrius.sso.protobuf.ChatMessage}
+   */
+  public static final class ChatMessage extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:io.sentrius.sso.protobuf.ChatMessage)
+      ChatMessageOrBuilder {
+    private static final long serialVersionUID = 0L;
+    // Use ChatMessage.newBuilder() to construct.
+    private ChatMessage(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private ChatMessage() {
+      chatGroupId_ = "";
+      sender_ = "";
+      message_ = "";
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new ChatMessage();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ChatMessage(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 8: {
+
+              sessionId_ = input.readInt64();
+              break;
+            }
+            case 18: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              chatGroupId_ = s;
+              break;
+            }
+            case 26: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              sender_ = s;
+              break;
+            }
+            case 34: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              message_ = s;
+              break;
+            }
+            case 40: {
+
+              timestamp_ = input.readInt64();
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+    getDescriptor() {
+      return io.sentrius.sso.protobuf.Session.internal_static_io_sentrius_protobuf_ChatMessage_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+    internalGetFieldAccessorTable() {
+      return io.sentrius.sso.protobuf.Session.internal_static_io_sentrius_protobuf_ChatMessage_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              io.sentrius.sso.protobuf.Session.ChatMessage.class, io.sentrius.sso.protobuf.Session.ChatMessage.Builder.class);
+    }
+
+    public static final int SESSION_ID_FIELD_NUMBER = 1;
+    private long sessionId_;
+    /**
+     * <code>int64 session_id = 1;</code>
+     * @return The sessionId.
+     */
+    @java.lang.Override
+    public long getSessionId() {
+      return sessionId_;
+    }
+
+    public static final int CHAT_GROUP_ID_FIELD_NUMBER = 2;
+    private volatile java.lang.Object chatGroupId_;
+    /**
+     * <pre>
+     * Separate chat groups for a session
+     * </pre>
+     *
+     * <code>string chat_group_id = 2;</code>
+     * @return The chatGroupId.
+     */
+    @java.lang.Override
+    public java.lang.String getChatGroupId() {
+      java.lang.Object ref = chatGroupId_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        chatGroupId_ = s;
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * Separate chat groups for a session
+     * </pre>
+     *
+     * <code>string chat_group_id = 2;</code>
+     * @return The bytes for chatGroupId.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+    getChatGroupIdBytes() {
+      java.lang.Object ref = chatGroupId_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        chatGroupId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int SENDER_FIELD_NUMBER = 3;
+    private volatile java.lang.Object sender_;
+    /**
+     * <code>string sender = 3;</code>
+     * @return The sender.
+     */
+    @java.lang.Override
+    public java.lang.String getSender() {
+      java.lang.Object ref = sender_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        sender_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string sender = 3;</code>
+     * @return The bytes for sender.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+    getSenderBytes() {
+      java.lang.Object ref = sender_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        sender_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int MESSAGE_FIELD_NUMBER = 4;
+    private volatile java.lang.Object message_;
+    /**
+     * <code>string message = 4;</code>
+     * @return The message.
+     */
+    @java.lang.Override
+    public java.lang.String getMessage() {
+      java.lang.Object ref = message_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        message_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string message = 4;</code>
+     * @return The bytes for message.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+    getMessageBytes() {
+      java.lang.Object ref = message_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        message_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int TIMESTAMP_FIELD_NUMBER = 5;
+    private long timestamp_;
+    /**
+     * <pre>
+     * Store as epoch time (milliseconds)
+     * </pre>
+     *
+     * <code>int64 timestamp = 5;</code>
+     * @return The timestamp.
+     */
+    @java.lang.Override
+    public long getTimestamp() {
+      return timestamp_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+        throws java.io.IOException {
+      if (sessionId_ != 0L) {
+        output.writeInt64(1, sessionId_);
+      }
+      if (!getChatGroupIdBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, chatGroupId_);
+      }
+      if (!getSenderBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, sender_);
+      }
+      if (!getMessageBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 4, message_);
+      }
+      if (timestamp_ != 0L) {
+        output.writeInt64(5, timestamp_);
+      }
+      unknownFields.writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (sessionId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+            .computeInt64Size(1, sessionId_);
+      }
+      if (!getChatGroupIdBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, chatGroupId_);
+      }
+      if (!getSenderBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, sender_);
+      }
+      if (!getMessageBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, message_);
+      }
+      if (timestamp_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+            .computeInt64Size(5, timestamp_);
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+        return true;
+      }
+      if (!(obj instanceof io.sentrius.sso.protobuf.Session.ChatMessage)) {
+        return super.equals(obj);
+      }
+      io.sentrius.sso.protobuf.Session.ChatMessage other = (io.sentrius.sso.protobuf.Session.ChatMessage) obj;
+
+      if (getSessionId()
+          != other.getSessionId()) return false;
+      if (!getChatGroupId()
+          .equals(other.getChatGroupId())) return false;
+      if (!getSender()
+          .equals(other.getSender())) return false;
+      if (!getMessage()
+          .equals(other.getMessage())) return false;
+      if (getTimestamp()
+          != other.getTimestamp()) return false;
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (37 * hash) + SESSION_ID_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getSessionId());
+      hash = (37 * hash) + CHAT_GROUP_ID_FIELD_NUMBER;
+      hash = (53 * hash) + getChatGroupId().hashCode();
+      hash = (37 * hash) + SENDER_FIELD_NUMBER;
+      hash = (53 * hash) + getSender().hashCode();
+      hash = (37 * hash) + MESSAGE_FIELD_NUMBER;
+      hash = (53 * hash) + getMessage().hashCode();
+      hash = (37 * hash) + TIMESTAMP_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getTimestamp());
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static io.sentrius.sso.protobuf.Session.ChatMessage parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static io.sentrius.sso.protobuf.Session.ChatMessage parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static io.sentrius.sso.protobuf.Session.ChatMessage parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static io.sentrius.sso.protobuf.Session.ChatMessage parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static io.sentrius.sso.protobuf.Session.ChatMessage parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static io.sentrius.sso.protobuf.Session.ChatMessage parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static io.sentrius.sso.protobuf.Session.ChatMessage parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static io.sentrius.sso.protobuf.Session.ChatMessage parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static io.sentrius.sso.protobuf.Session.ChatMessage parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static io.sentrius.sso.protobuf.Session.ChatMessage parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static io.sentrius.sso.protobuf.Session.ChatMessage parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static io.sentrius.sso.protobuf.Session.ChatMessage parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(io.sentrius.sso.protobuf.Session.ChatMessage prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code io.sentrius.sso.protobuf.ChatMessage}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:io.sentrius.sso.protobuf.ChatMessage)
+        io.sentrius.sso.protobuf.Session.ChatMessageOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+      getDescriptor() {
+        return io.sentrius.sso.protobuf.Session.internal_static_io_sentrius_protobuf_ChatMessage_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internalGetFieldAccessorTable() {
+        return io.sentrius.sso.protobuf.Session.internal_static_io_sentrius_protobuf_ChatMessage_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                io.sentrius.sso.protobuf.Session.ChatMessage.class, io.sentrius.sso.protobuf.Session.ChatMessage.Builder.class);
+      }
+
+      // Construct using io.sentrius.sso.protobuf.Session.ChatMessage.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+            .alwaysUseFieldBuilders) {
+        }
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        sessionId_ = 0L;
+
+        chatGroupId_ = "";
+
+        sender_ = "";
+
+        message_ = "";
+
+        timestamp_ = 0L;
+
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+      getDescriptorForType() {
+        return io.sentrius.sso.protobuf.Session.internal_static_io_sentrius_protobuf_ChatMessage_descriptor;
+      }
+
+      @java.lang.Override
+      public io.sentrius.sso.protobuf.Session.ChatMessage getDefaultInstanceForType() {
+        return io.sentrius.sso.protobuf.Session.ChatMessage.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public io.sentrius.sso.protobuf.Session.ChatMessage build() {
+        io.sentrius.sso.protobuf.Session.ChatMessage result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public io.sentrius.sso.protobuf.Session.ChatMessage buildPartial() {
+        io.sentrius.sso.protobuf.Session.ChatMessage result = new io.sentrius.sso.protobuf.Session.ChatMessage(this);
+        result.sessionId_ = sessionId_;
+        result.chatGroupId_ = chatGroupId_;
+        result.sender_ = sender_;
+        result.message_ = message_;
+        result.timestamp_ = timestamp_;
+        onBuilt();
+        return result;
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.setField(field, value);
+      }
+      @java.lang.Override
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+      @java.lang.Override
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof io.sentrius.sso.protobuf.Session.ChatMessage) {
+          return mergeFrom((io.sentrius.sso.protobuf.Session.ChatMessage)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(io.sentrius.sso.protobuf.Session.ChatMessage other) {
+        if (other == io.sentrius.sso.protobuf.Session.ChatMessage.getDefaultInstance()) return this;
+        if (other.getSessionId() != 0L) {
+          setSessionId(other.getSessionId());
+        }
+        if (!other.getChatGroupId().isEmpty()) {
+          chatGroupId_ = other.chatGroupId_;
+          onChanged();
+        }
+        if (!other.getSender().isEmpty()) {
+          sender_ = other.sender_;
+          onChanged();
+        }
+        if (!other.getMessage().isEmpty()) {
+          message_ = other.message_;
+          onChanged();
+        }
+        if (other.getTimestamp() != 0L) {
+          setTimestamp(other.getTimestamp());
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        io.sentrius.sso.protobuf.Session.ChatMessage parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (io.sentrius.sso.protobuf.Session.ChatMessage) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      private long sessionId_ ;
+      /**
+       * <code>int64 session_id = 1;</code>
+       * @return The sessionId.
+       */
+      @java.lang.Override
+      public long getSessionId() {
+        return sessionId_;
+      }
+      /**
+       * <code>int64 session_id = 1;</code>
+       * @param value The sessionId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setSessionId(long value) {
+
+        sessionId_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>int64 session_id = 1;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearSessionId() {
+
+        sessionId_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object chatGroupId_ = "";
+      /**
+       * <pre>
+       * Separate chat groups for a session
+       * </pre>
+       *
+       * <code>string chat_group_id = 2;</code>
+       * @return The chatGroupId.
+       */
+      public java.lang.String getChatGroupId() {
+        java.lang.Object ref = chatGroupId_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          chatGroupId_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * Separate chat groups for a session
+       * </pre>
+       *
+       * <code>string chat_group_id = 2;</code>
+       * @return The bytes for chatGroupId.
+       */
+      public com.google.protobuf.ByteString
+      getChatGroupIdBytes() {
+        java.lang.Object ref = chatGroupId_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b =
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          chatGroupId_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * Separate chat groups for a session
+       * </pre>
+       *
+       * <code>string chat_group_id = 2;</code>
+       * @param value The chatGroupId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setChatGroupId(
+          java.lang.String value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+
+        chatGroupId_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * Separate chat groups for a session
+       * </pre>
+       *
+       * <code>string chat_group_id = 2;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearChatGroupId() {
+
+        chatGroupId_ = getDefaultInstance().getChatGroupId();
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * Separate chat groups for a session
+       * </pre>
+       *
+       * <code>string chat_group_id = 2;</code>
+       * @param value The bytes for chatGroupId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setChatGroupIdBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        checkByteStringIsUtf8(value);
+
+        chatGroupId_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object sender_ = "";
+      /**
+       * <code>string sender = 3;</code>
+       * @return The sender.
+       */
+      public java.lang.String getSender() {
+        java.lang.Object ref = sender_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          sender_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string sender = 3;</code>
+       * @return The bytes for sender.
+       */
+      public com.google.protobuf.ByteString
+      getSenderBytes() {
+        java.lang.Object ref = sender_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b =
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          sender_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string sender = 3;</code>
+       * @param value The sender to set.
+       * @return This builder for chaining.
+       */
+      public Builder setSender(
+          java.lang.String value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+
+        sender_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string sender = 3;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearSender() {
+
+        sender_ = getDefaultInstance().getSender();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string sender = 3;</code>
+       * @param value The bytes for sender to set.
+       * @return This builder for chaining.
+       */
+      public Builder setSenderBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        checkByteStringIsUtf8(value);
+
+        sender_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object message_ = "";
+      /**
+       * <code>string message = 4;</code>
+       * @return The message.
+       */
+      public java.lang.String getMessage() {
+        java.lang.Object ref = message_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          message_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string message = 4;</code>
+       * @return The bytes for message.
+       */
+      public com.google.protobuf.ByteString
+      getMessageBytes() {
+        java.lang.Object ref = message_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b =
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          message_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string message = 4;</code>
+       * @param value The message to set.
+       * @return This builder for chaining.
+       */
+      public Builder setMessage(
+          java.lang.String value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+
+        message_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string message = 4;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearMessage() {
+
+        message_ = getDefaultInstance().getMessage();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string message = 4;</code>
+       * @param value The bytes for message to set.
+       * @return This builder for chaining.
+       */
+      public Builder setMessageBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        checkByteStringIsUtf8(value);
+
+        message_ = value;
+        onChanged();
+        return this;
+      }
+
+      private long timestamp_ ;
+      /**
+       * <pre>
+       * Store as epoch time (milliseconds)
+       * </pre>
+       *
+       * <code>int64 timestamp = 5;</code>
+       * @return The timestamp.
+       */
+      @java.lang.Override
+      public long getTimestamp() {
+        return timestamp_;
+      }
+      /**
+       * <pre>
+       * Store as epoch time (milliseconds)
+       * </pre>
+       *
+       * <code>int64 timestamp = 5;</code>
+       * @param value The timestamp to set.
+       * @return This builder for chaining.
+       */
+      public Builder setTimestamp(long value) {
+
+        timestamp_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * Store as epoch time (milliseconds)
+       * </pre>
+       *
+       * <code>int64 timestamp = 5;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearTimestamp() {
+
+        timestamp_ = 0L;
+        onChanged();
+        return this;
+      }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:io.sentrius.sso.protobuf.ChatMessage)
+    }
+
+    // @@protoc_insertion_point(class_scope:io.sentrius.sso.protobuf.ChatMessage)
+    private static final io.sentrius.sso.protobuf.Session.ChatMessage DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new io.sentrius.sso.protobuf.Session.ChatMessage();
+    }
+
+    public static io.sentrius.sso.protobuf.Session.ChatMessage getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<ChatMessage>
+        PARSER = new com.google.protobuf.AbstractParser<ChatMessage>() {
+      @java.lang.Override
+      public ChatMessage parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ChatMessage(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<ChatMessage> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ChatMessage> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public io.sentrius.sso.protobuf.Session.ChatMessage getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
 
   }
 
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_io_dataguardians_protobuf_Trigger_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_io_dataguardians_protobuf_Trigger_fieldAccessorTable;
+      internal_static_io_sentrius_protobuf_Trigger_descriptor;
+  private static final
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_io_sentrius_protobuf_Trigger_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_io_dataguardians_protobuf_TerminalMessage_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_io_dataguardians_protobuf_TerminalMessage_fieldAccessorTable;
+      internal_static_io_sentrius_protobuf_TerminalMessage_descriptor;
+  private static final
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_io_sentrius_protobuf_TerminalMessage_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+      internal_static_io_sentrius_protobuf_ChatMessage_descriptor;
+  private static final
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_io_sentrius_protobuf_ChatMessage_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
-      getDescriptor() {
+  getDescriptor() {
     return descriptor;
   }
   private static  com.google.protobuf.Descriptors.FileDescriptor
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\034src/main/proto/session.proto\022\031io.datag" +
-      "uardians.protobuf\"X\n\007Trigger\0228\n\006action\030\001" +
-      " \001(\0162(.io.sentrius.protobuf.Trigger" +
-      "Action\022\023\n\013description\030\002 \001(\t\"\301\001\n\017Terminal" +
-      "Message\022\021\n\tsessionId\030\001 \001(\t\0224\n\004type\030\002 \001(\016" +
-      "2&.io.sentrius.protobuf.MessageType" +
-      "\0223\n\007trigger\030\003 \001(\0132\".io.sentrius.pro" +
-      "tobuf.Trigger\022\017\n\007keycode\030\004 \001(\001\022\017\n\007comman" +
-      "d\030\005 \001(\t\022\016\n\006prompt\030\006 \001(\t*\330\001\n\rTriggerActio" +
-      "n\022\r\n\tNO_ACTION\020\000\022\016\n\nLOG_ACTION\020\001\022\020\n\014ALER" +
-      "T_ACTION\020\002\022\017\n\013WARN_ACTION\020\003\022\017\n\013DENY_ACTI" +
-      "ON\020\004\022\016\n\nJIT_ACTION\020\005\022\021\n\rRECORD_ACTION\020\006\022" +
-      "\022\n\016APPROVE_ACTION\020\007\022\026\n\022PERSISTENT_MESSAG" +
-      "E\020\010\022\022\n\016CONVERT_ACTION\020\t\022\021\n\rPROMPT_ACTION" +
-      "\020\n*_\n\013MessageType\022\r\n\tHEARTBEAT\020\000\022\r\n\tUSER" +
-      "_DATA\020\001\022\020\n\014SESSION_DATA\020\003\022\017\n\013PROMPT_DATA" +
-      "\020\004\022\017\n\013USER_PROMPT\020\005b\006proto3"
+        "\n\034src/main/proto/session.proto\022\024io.sentr" +
+            "ius.protobuf\"S\n\007Trigger\0223\n\006action\030\001 \001(\0162" +
+            "#.io.sentrius.sso.protobuf.TriggerAction\022\023\n\013" +
+            "description\030\002 \001(\t\"\267\001\n\017TerminalMessage\022\021\n" +
+            "\tsessionId\030\001 \001(\t\022/\n\004type\030\002 \001(\0162!.io.sent" +
+            "rius.protobuf.MessageType\022.\n\007trigger\030\003 \001" +
+            "(\0132\035.io.sentrius.sso.protobuf.Trigger\022\017\n\007key" +
+            "code\030\004 \001(\001\022\017\n\007command\030\005 \001(\t\022\016\n\006prompt\030\006 " +
+            "\001(\t\"l\n\013ChatMessage\022\022\n\nsession_id\030\001 \001(\003\022\025" +
+            "\n\rchat_group_id\030\002 \001(\t\022\016\n\006sender\030\003 \001(\t\022\017\n" +
+            "\007message\030\004 \001(\t\022\021\n\ttimestamp\030\005 \001(\003*\330\001\n\rTr" +
+            "iggerAction\022\r\n\tNO_ACTION\020\000\022\016\n\nLOG_ACTION" +
+            "\020\001\022\020\n\014ALERT_ACTION\020\002\022\017\n\013WARN_ACTION\020\003\022\017\n" +
+            "\013DENY_ACTION\020\004\022\016\n\nJIT_ACTION\020\005\022\021\n\rRECORD" +
+            "_ACTION\020\006\022\022\n\016APPROVE_ACTION\020\007\022\026\n\022PERSIST" +
+            "ENT_MESSAGE\020\010\022\022\n\016CONVERT_ACTION\020\t\022\021\n\rPRO" +
+            "MPT_ACTION\020\n*_\n\013MessageType\022\r\n\tHEARTBEAT" +
+            "\020\000\022\r\n\tUSER_DATA\020\001\022\020\n\014SESSION_DATA\020\003\022\017\n\013P" +
+            "ROMPT_DATA\020\004\022\017\n\013USER_PROMPT\020\005b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
-      .internalBuildGeneratedFileFrom(descriptorData,
-        new com.google.protobuf.Descriptors.FileDescriptor[] {
-        });
-    internal_static_io_dataguardians_protobuf_Trigger_descriptor =
-      getDescriptor().getMessageTypes().get(0);
-    internal_static_io_dataguardians_protobuf_Trigger_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_io_dataguardians_protobuf_Trigger_descriptor,
+        .internalBuildGeneratedFileFrom(descriptorData,
+            new com.google.protobuf.Descriptors.FileDescriptor[] {
+            });
+    internal_static_io_sentrius_protobuf_Trigger_descriptor =
+        getDescriptor().getMessageTypes().get(0);
+    internal_static_io_sentrius_protobuf_Trigger_fieldAccessorTable = new
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_io_sentrius_protobuf_Trigger_descriptor,
         new java.lang.String[] { "Action", "Description", });
-    internal_static_io_dataguardians_protobuf_TerminalMessage_descriptor =
-      getDescriptor().getMessageTypes().get(1);
-    internal_static_io_dataguardians_protobuf_TerminalMessage_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_io_dataguardians_protobuf_TerminalMessage_descriptor,
+    internal_static_io_sentrius_protobuf_TerminalMessage_descriptor =
+        getDescriptor().getMessageTypes().get(1);
+    internal_static_io_sentrius_protobuf_TerminalMessage_fieldAccessorTable = new
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_io_sentrius_protobuf_TerminalMessage_descriptor,
         new java.lang.String[] { "SessionId", "Type", "Trigger", "Keycode", "Command", "Prompt", });
+    internal_static_io_sentrius_protobuf_ChatMessage_descriptor =
+        getDescriptor().getMessageTypes().get(2);
+    internal_static_io_sentrius_protobuf_ChatMessage_fieldAccessorTable = new
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_io_sentrius_protobuf_ChatMessage_descriptor,
+        new java.lang.String[] { "SessionId", "ChatGroupId", "Sender", "Message", "Timestamp", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

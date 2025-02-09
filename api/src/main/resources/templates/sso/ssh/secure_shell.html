@@ -3,12 +3,80 @@
 
 <head>
     <meta th:replace="~{fragments/header}">
+    <style>
+        /* Chat Button */
+        #chat-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Chat Container */
+        #chat-container {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 300px;
+            height: 350px;
+            background: #222;
+            color: white;
+            border-radius: 10px;
+            display: none;
+            flex-direction: column;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Chat Header */
+        #chat-header {
+            background: #444;
+            padding: 10px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: bold;
+            position: relative;
+        }
+
+        #close-chat {
+            position: absolute;
+            right: 10px;
+            cursor: pointer;
+        }
+
+        /* Chat Messages */
+        #chat-messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            max-height: 250px;
+            font-size: 14px;
+        }
+
+        /* Chat Input */
+        #chat-input {
+            width: 100%;
+            padding: 8px;
+            border: none;
+            background: #333;
+            color: white;
+            font-size: 14px;
+            border-top: 1px solid #666;
+        }
+    </style>
     <script th:src="@{/node/js/google-protobuf/google-protobuf.js}"></script>
     <script th:src="@{/node/js/sockjs-client/sockjs.js}"></script>
     <script th:src="@{/js/bundled_session_pb.js}"></script>
 
     <script th:inline="javascript">
         let persistentMessage = "";
+        let termFocus = true;
+        let chatFocus = false;
 
         function showStatusBar(message) {
             const notification = document.getElementById('notification');
@@ -144,7 +212,7 @@
 
             var keys = {};
 
-            var termFocus = true;
+
             $(document).keypress(function (e) {
                 const isModalVisible = $('#assignIncidentModal').is(':visible');
                 if (isModalVisible) {
@@ -170,6 +238,9 @@
                         connection.send(base64Message);
                     }
 
+                }
+                else if (chatFocus) {
+                    console.log("Chat going to focus");
                 }
             });
 
@@ -280,13 +351,23 @@
             });
 
             $(document).click(function (e) {
-                if (termFocus && !$('body').hasClass('modal-open')) {
-                    //$("#sentrius_term_0").focus();
-                    console.log("click");
-                    document.activeElement.blur(); // Remove focus from terminal
-                    document.body.focus();
-                    //$('#dummy').focus();
-                    // $("#sentrius_term_0").focus();
+                console.log("click");
+
+                // Check if the clicked element is inside chat container, chat input, or chat messages
+                if ($(e.target).closest("#chat-container, #chat-input, #chat-messages").length > 0) {
+                    console.log("Chat going to focus");
+                    chatFocus = true;
+                    termFocus = false;
+                    return; // Stop further execution to keep chat focused
+                } else {
+                    termFocus = true;
+                    chatFocus = false;
+                    // Clicked outside chat → focus terminal
+                    if (termFocus && !$('body').hasClass('modal-open')) {
+                        console.log("clicking outside chat, focusing terminal");
+                        document.activeElement.blur(); // Remove focus from other elements
+                        document.getElementById("sentrius_term_0").focus(); // Ensure terminal gets focus
+                    }
                 }
             });
 
@@ -902,6 +983,11 @@
                     <span id="badge_ztats" class="badge text-bg-dark">0 Pending Access Tokens</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#sessionChatModal" onclick="toggleChat()">
+                        <span id="session_chat" class="badge text-bg-dark">Session Chat</span>
+                    </a>
+                </li>
 
             </ul>
 
@@ -928,12 +1014,18 @@
 
 <div class="termwrapper">
 </div>
+<!-- Chat Container -->
+<div id="chat-container">
+    <div id="chat-header" onclick="toggleChat()">Chat <span id="close-chat">✖</span></div>
+    <div id="chat-messages"></div>
+    <input type="text" id="chat-input" placeholder="Type a message..." onkeypress="sendMessage(event)">
+</div>
 <div id="csrf-token" style="display: none;" th:text="${_csrf.token}"></div>
 <div class="modal fade" id="ztatModal" tabindex="-1" aria-labelledby="ztatModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="ztatModalLabel">My JIT Requests</h5>
+                <h5 class="modal-title" id="ztatModalLabel">My Access Requests</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -1106,6 +1198,22 @@
         // Show the modal
         const assignIncidentModal = new bootstrap.Modal(document.getElementById('assignIncidentModal'));
         assignIncidentModal.show();
+    }
+    function enableSessionChat() {
+
+
+    }
+    function toggleChat() {
+        let chatContainer = document.getElementById("chat-container");
+        if (chatContainer.style.display === "none" || chatContainer.style.display === "") {
+            chatContainer.style.display = "flex";
+            document.getElementById("chat-input").focus();
+            termFocus = false;
+            chatFocus = true;
+        } else {
+
+        }
+        //chatContainer.style.display = (chatContainer.style.display === "none" || chatContainer.style.display === "") ? "flex" : "none";
     }
     function refreshAccessTokenTable() {
         const ztatTable = $('#ztat-table').DataTable();

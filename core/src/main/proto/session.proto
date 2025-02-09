@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package io.sentrius.protobuf;
+package io.sentrius.sso.protobuf;
 
 enum TriggerAction {
   NO_ACTION = 0;
@@ -36,4 +36,12 @@ message TerminalMessage {
   double keycode = 4;
   string command = 5;
   string prompt = 6;
+}
+
+message ChatMessage {
+  int64 session_id = 1;
+  string chat_group_id = 2; // Separate chat groups for a session
+  string sender = 3;
+  string message = 4;
+  int64 timestamp = 5; // Store as epoch time (milliseconds)
 }
