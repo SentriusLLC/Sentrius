@@ -76,7 +76,7 @@ public class SshListenerService {
             while (!Thread.currentThread().isInterrupted() && activeSessions.get(terminalSessionId) != null &&
                 !connectedSystem.getSession().getClosed()) {
                 try {
-                    // Mock logic for receiving data from SSH server
+                    // logic for receiving data from SSH server
                     var sshData = sessionTrackingService.getOutput(connectedSystem, 1L, TimeUnit.SECONDS,
                         output -> (!connectedSystem.getSession().getClosed() && (null != activeSessions.get(terminalSessionId) && activeSessions.get(terminalSessionId).isOpen())));
 
@@ -174,7 +174,7 @@ public class SshListenerService {
             try {
                 String command = terminalMessage.getCommand();
 
-                log.trace("Got " + command);
+                log.info("Got " + command);
 
                 Integer keyCode = null;
                 Double keyCodeDbl = terminalMessage.getKeycode();
@@ -196,7 +196,7 @@ public class SshListenerService {
                         sessionTrackingService.addTrigger(terminalSessionId, terminalSessionId.getTerminalAuditor().getCurrentTrigger());
                     }
                     if (keyCode != null && keyCode != -1) {
-                        log.trace("key code isn't null " + keyCode );
+                        log.info("key code isn't null " + keyCode );
                         if (keyMap.containsKey(keyCode)) {
 
                             if (keyCode == 13
@@ -230,7 +230,7 @@ public class SshListenerService {
                         }
 
                     } else {
-                        log.trace("Appending");
+                        log.info("Appending");
 
                             terminalSessionId.getTerminalAuditor().append(command);
                             terminalSessionId.getCommander().print(command);

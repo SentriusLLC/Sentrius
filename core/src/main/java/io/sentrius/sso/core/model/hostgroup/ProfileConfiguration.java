@@ -68,6 +68,12 @@ public class ProfileConfiguration {
   private List<SessionRule> sessionRules = new ArrayList<>();
 
   @Builder.Default
+  private Boolean allowAiChat = true;
+
+  @Builder.Default
+  private Boolean allowAiApproveZtat = false;
+
+  @Builder.Default
   private Map<Long, Long> userOverrideTypeMap = new HashMap<>();
 
   public static String toJson(ProfileConfiguration config) throws IOException {

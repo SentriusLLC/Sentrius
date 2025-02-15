@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface ChatLogRepository extends JpaRepository<ChatLog, Long> {
     List<ChatLog> findBySessionIdAndChatGroupId(Long sessionId, String chatGroupId);
+
+    List<ChatLog> findBySessionId(Long sessionId);
 }

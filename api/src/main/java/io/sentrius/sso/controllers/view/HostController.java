@@ -202,7 +202,7 @@ public class HostController extends BaseController {
 
         model.addAttribute("enclaveConfiguration", config);
 
-        return "sso/ssh/secure_shell";
+        return "sso/ssh/sso";
 
     }
 
@@ -243,7 +243,7 @@ public class HostController extends BaseController {
 
         model.addAttribute("enclaveConfiguration", config);
 
-        return "sso/ssh/secure_shell";
+        return "sso/ssh/sso";
 
     }
 

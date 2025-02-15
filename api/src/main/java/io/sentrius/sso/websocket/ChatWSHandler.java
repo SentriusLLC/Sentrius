@@ -4,14 +4,11 @@ package io.sentrius.sso.websocket;
 import java.io.IOException;
 import java.net.URI;
 import java.security.GeneralSecurityException;
-import java.sql.Timestamp;
 import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import io.sentrius.sso.automation.auditing.Trigger;
-import io.sentrius.sso.automation.auditing.TriggerAction;
 import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.services.metadata.TerminalSessionMetadataService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
@@ -30,9 +27,10 @@ public class ChatWSHandler extends TextWebSocketHandler {
 
 
     final SessionTrackingService sessionTrackingService;
-    final SshListenerService sshListenerService;
+    final ChatListenerService chatListenerService;
     final CryptoService cryptoService;
     final TerminalSessionMetadataService terminalSessionMetadataService;
+
 
 
     // Store active sessions, using session ID or a custom identifier
@@ -45,7 +43,6 @@ public class ChatWSHandler extends TextWebSocketHandler {
         if (uri != null) {
             Map<String, String> queryParams = parseQueryParams(uri.getQuery());
             String sessionId = queryParams.get("sessionId");
-            String chatGropuId = queryParams.get("chatGroupId");
 
 
 
@@ -53,13 +50,15 @@ public class ChatWSHandler extends TextWebSocketHandler {
                 // Store the WebSocket session using the session ID from the query parameter
                 sessions.put(sessionId, session);
                 log.info("New connection established, session ID: " + sessionId);
-                sshListenerService.startListeningToSshServer(sessionId, session);
+                // until we have another human on the other side we don't need a thread for this.
+                //chatListenerService.startChatListener(sessionId, session);
+
             } else {
-                log.trace("Session ID not found in query parameters.");
+                log.info("Session ID not found in query parameters.");
                 session.close(); // Close the session if no valid session ID is provided
             }
         } else {
-            log.trace("No URI available for this session.");
+            log.info("No URI available for this session.");
             session.close(); // Close the session if URI is unavailable
         }
     }
@@ -70,21 +69,25 @@ public class ChatWSHandler extends TextWebSocketHandler {
 
         // Extract query parameters from the URI again if needed
         URI uri = session.getUri();
-        log.trace("got message {}", uri);
+        log.info("got message {}", uri);
         try {
             if (uri != null) {
                 Map<String, String> queryParams = parseQueryParams(uri.getQuery());
                 String sessionId = queryParams.get("sessionId");
 
                 if (sessionId != null) {
-                    log.trace("Received message from session ID: " + sessionId);
+                    log.info("Received message from session ID: " + sessionId);
                     // Handle the message (e.g., process or respond)
 
 
                     // Deserialize the protobuf message
                     byte[] messageBytes = Base64.getDecoder().decode(message.getPayload());
-                    Session.TerminalMessage auditLog =
-                        Session.TerminalMessage.parseFrom(messageBytes);
+                    Session.ChatMessage auditLog =
+                        Session.ChatMessage.parseFrom(messageBytes);
+                    if (auditLog.getMessage().equals("heartbeat")){
+                        log.info("heartbeat");
+                        return;
+                    }
                     // Decrypt the session ID
 //                    var sessionIdStr = cryptoService.decrypt(sessionId);
   //                  var sessionIdLong = Long.parseLong(sessionIdStr);
@@ -92,41 +95,12 @@ public class ChatWSHandler extends TextWebSocketHandler {
                     // Retrieve ConnectedSystem from your persistent map using the session ID
                     var sys = sessionTrackingService.getEncryptedConnectedSession(lookupId);
                     if (null != sys ) {
-                        boolean allNoAction = true;
-                        log.debug("**** Processing message for session ID: {} with {} actions", sessionId,
-                            sys.getSessionStartupActions().size());
-                        for (var action : sys.getSessionStartupActions()) {
-                            var trigger = action.onMessage(auditLog);
-                            if (trigger.get().getAction() == TriggerAction.JIT_ACTION) {
-                                allNoAction = false;
-                                // drop the message
-                                sys.getTerminalAuditor().setSessionTrigger(trigger.get());
-                                log.debug("**** Setting JIT Trigger: {}", trigger.get());
-                                sessionTrackingService.addSystemTrigger(sys, trigger.get());
-                                return;
-                            } else if (trigger.get().getAction() == TriggerAction.WARN_ACTION) {
-                                allNoAction = false;
-                                // send the message
-                                log.debug("**** Setting WARN Trigger: {}", trigger.get());
-                                sys.getTerminalAuditor().setSessionTrigger(trigger.get());
-                                sessionTrackingService.addSystemTrigger(sys, trigger.get());
-                            } else if (trigger.get().getAction() == TriggerAction.PROMPT_ACTION) {
-                                sessionTrackingService.addTrigger(sys, trigger.get());
-                                return;
-                            }
-                        }
-                        if (allNoAction && sys.getSessionStartupActions().size() > 0) {
-                            log.info("**** Setting NO_ACTION Trigger");
-                            var noActionTrigger = new Trigger(TriggerAction.NO_ACTION, "");
-                            sessionTrackingService.addSystemTrigger(sys, noActionTrigger);
-                            sys.getTerminalAuditor().setSessionTrigger(noActionTrigger);
-                        }
-
+                        log.info("oh");
                         // Get the user's session and handle trigger if present
-                        sshListenerService.processTerminalMessage(sys, auditLog);
+                        chatListenerService.processMessage(sessionId, session, sys, auditLog);
                     }
                 } else {
-                    log.trace("Session ID not found in query parameters for message handling.");
+                    log.info("Session ID not found in query parameters for message handling.");
                 }
             }
         }catch (Exception e ){
@@ -145,18 +119,10 @@ public class ChatWSHandler extends TextWebSocketHandler {
             if (sessionId != null) {
                 // Remove the session when connection is closed
                 var lookupId = sessionId + "==";
-                var sys = sessionTrackingService.getEncryptedConnectedSession(lookupId);
-                if (null != sys){
-                    log.info("**** Closing session for {}", sys.getSession());
-                    terminalSessionMetadataService.getSessionBySessionLog(sys.getSession()).ifPresent(sessionMetadata -> {
-                        sessionMetadata.setEndTime(new Timestamp(System.currentTimeMillis()));
-                        sessionMetadata.setSessionStatus("CLOSED");
-                        terminalSessionMetadataService.saveSession(sessionMetadata);
-                    });
-                }
+
 
                 sessions.remove(sessionId);
-                sshListenerService.removeSession(sessionId);
+                chatListenerService.removeSession(sessionId);
 
                 log.info("Connection closed, session ID: " + sessionId);
             }

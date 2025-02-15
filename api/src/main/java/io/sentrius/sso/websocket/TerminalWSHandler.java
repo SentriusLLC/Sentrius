@@ -3,8 +3,11 @@ package io.sentrius.sso.websocket;
 
 import io.sentrius.sso.automation.auditing.Trigger;
 import io.sentrius.sso.automation.auditing.TriggerAction;
+import io.sentrius.sso.core.model.chat.ChatLog;
 import io.sentrius.sso.core.model.metadata.TerminalSessionMetadata;
+import io.sentrius.sso.core.services.ChatService;
 import io.sentrius.sso.core.services.metadata.TerminalSessionMetadataService;
+import io.sentrius.sso.core.utils.StringUtils;
 import io.sentrius.sso.protobuf.Session;
 import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
@@ -36,7 +39,7 @@ public class TerminalWSHandler extends TextWebSocketHandler {
     final SshListenerService sshListenerService;
     final CryptoService cryptoService;
     final TerminalSessionMetadataService terminalSessionMetadataService;
-
+    private final ChatService chatService;
 
     // Store active sessions, using session ID or a custom identifier
     private final ConcurrentHashMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
@@ -113,6 +116,10 @@ public class TerminalWSHandler extends TextWebSocketHandler {
                                 sys.getTerminalAuditor().setSessionTrigger(trigger.get());
                                 sessionTrackingService.addSystemTrigger(sys, trigger.get());
                             } else if (trigger.get().getAction() == TriggerAction.PROMPT_ACTION) {
+                                if (!StringUtils.isBlank( trigger.get().getAsk())){
+                                    // send the question into the log
+                                    chatService.save(ChatLog.builder().sender("agent").message(trigger.get().getAsk()).build());
+                                }
                                 sessionTrackingService.addTrigger(sys, trigger.get());
                                 return;
                             }

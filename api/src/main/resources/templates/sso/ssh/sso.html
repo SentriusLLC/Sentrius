@@ -21,7 +21,7 @@
         /* Chat Container */
         #chat-container {
             position: fixed;
-            bottom: 80px;
+            bottom: 10px;
             right: 20px;
             width: 300px;
             height: 350px;
@@ -77,6 +77,21 @@
         let persistentMessage = "";
         let termFocus = true;
         let chatFocus = false;
+        let chatConnection = null;
+
+        function toggleChat() {
+            let chatContainer = document.getElementById("chat-container");
+            if (chatContainer.style.display === "none" || chatContainer.style.display === "") {
+                chatContainer.style.display = "flex";
+                document.getElementById("chat-input").focus();
+                termFocus = false;
+                chatFocus = true;
+                enableSessionChat();
+            } else {
+
+            }
+            //chatContainer.style.display = (chatContainer.style.display === "none" || chatContainer.style.display === "") ? "flex" : "none";
+        }
 
         function showStatusBar(message) {
             const notification = document.getElementById('notification');
@@ -241,6 +256,7 @@
                 }
                 else if (chatFocus) {
                     console.log("Chat going to focus");
+                    $("#chat-input").focus();
                 }
             });
 
@@ -337,8 +353,25 @@
                         e.stopImmediatePropagation();
                     }
 
-                }
+                } else {
+                    if (chatFocus){
+                        var keyCode = (e.keyCode) ? e.keyCode : e.charCode;
+                        keys[keyCode] = true;
+                        if (keyCode === 13) {
+                            var cmdStr = $('#chat-input').val();
 
+
+                            const message = new proto.io.sentrius.protobuf.ChatMessage();
+                            message.setMessage(cmdStr);
+                            message.setSender("User");
+                            const base64Message = btoa(String.fromCharCode(...message.serializeBinary()));
+                            chatConnection.send(base64Message);
+                            $('#chat-input').val('');
+                            appendToChatWindow("user", cmdStr);
+                        }
+                    }
+                }
+b
             });
 
             $(document).keyup(function (e) {
@@ -476,9 +509,11 @@
 
             // Example function to display a new question from the LLM
             function promptQuestion(question) {
-                questionText.textContent = question;
-                responseInput.value = ''; // Clear the input for a new response
-                modalInstance.show();
+                //questionText.textContent = question;
+                //responseInput.value = ''; // Clear the input for a new response
+                //modalInstance.show();
+                toggleChat();
+                appendToChatWindow("system", question);
             }
 
             function resize(element, width, height) {
@@ -1083,8 +1118,123 @@
 
 <script>
     var loaded = false;
+
+
     let timeout = null;
     const csrfToken = document.getElementById("csrf-token").textContent;
+
+    var loc = window.location, chat_ws_uri;
+    if (loc.protocol === "https:") {
+        chat_ws_uri = "https:";
+    } else {
+        chat_ws_uri = "http:";
+    }
+
+    const urlObj = new URL(window.location.href);
+
+    const params = new URLSearchParams(urlObj.search);
+
+    sessionId = params.get('sessionId');
+
+    const path = window.location.pathname;
+
+
+    let encodedSessionId = encodeURIComponent(sessionId);
+
+
+
+    // Function to append chat messages to the UI
+    function appendToChatWindow(sender, message) {
+        let chatBox = document.getElementById("chat-messages");
+
+        // Create message container
+        let messageDiv = document.createElement("div");
+        messageDiv.classList.add("chat-message");
+
+        // Format message
+        messageDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
+
+        // Append message
+        chatBox.appendChild(messageDiv);
+
+        // Auto-scroll to the latest message
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    chat_ws_uri += "//" + loc.host + "/api/v1/chat/attach/subscribe?sessionId="  + encodedSessionId + "&chatGroupId=0" ;
+
+    function heartbeatChat() {
+
+        if (!chatConnection) return;
+
+        if (chatConnection.readyState !== 1) return;
+
+
+        const auditLog = new proto.io.sentrius.protobuf.ChatMessage();
+        auditLog.setSender("system");
+        auditLog.setMessage("heartbeat");
+
+        // Serialize the message to binary
+        const binaryData = auditLog.serializeBinary();
+        const base64Message = btoa(String.fromCharCode(...binaryData));
+        connection.send(base64Message);
+
+        // Set heartbeat interval 10,000 ms
+        setTimeout(heartbeatChat, 5000);
+    };
+
+    function connectChat() {
+        if (null !== chatConnection) {
+            return;
+        }
+        chatConnection = new SockJS(chat_ws_uri);
+        // Register websocket heartbeat
+        chatConnection.onopen = function (e) {
+            heartbeatChat();
+        };
+
+        chatConnection.onclose = function (e) {
+            console.trace();
+            console.log("Repopening");
+        };
+
+        // Log errors
+        chatConnection.onerror = function (error) {
+            console.trace();
+        };
+
+
+        chatConnection.onmessage = function (e) {
+            try {
+                console.log("got message");
+                const binaryMessage = Uint8Array.from(atob(e.data), c => c.charCodeAt(0));
+                try {
+                    const deserializedAuditLog = proto.io.sentrius.protobuf.ChatMessage.deserializeBinary(binaryMessage);
+                    if (!deserializedAuditLog) {
+                        console.log("Malformed message received");
+                        return;
+                    }
+
+                    console.log("appending");
+                    appendToChatWindow(deserializedAuditLog.getSender(), deserializedAuditLog.getMessage());
+
+                    // Proceed with normal processing...
+                } catch (error) {
+                    console.log("Failed to deserialize message:", error);
+                }
+
+
+            } catch (error) {
+                console.log("Failed to deserialize Protocol Buffer message:", error);
+
+                return; // Exit if decoding failed
+            }
+        };
+
+    }
+
+    connectChat();
+
     function autocompleteIncident(query) {
 
         const suggestionsList = document.getElementById('incidentSuggestions');
@@ -1200,21 +1350,10 @@
         assignIncidentModal.show();
     }
     function enableSessionChat() {
-
+        connectChat();
 
     }
-    function toggleChat() {
-        let chatContainer = document.getElementById("chat-container");
-        if (chatContainer.style.display === "none" || chatContainer.style.display === "") {
-            chatContainer.style.display = "flex";
-            document.getElementById("chat-input").focus();
-            termFocus = false;
-            chatFocus = true;
-        } else {
 
-        }
-        //chatContainer.style.display = (chatContainer.style.display === "none" || chatContainer.style.display === "") ? "flex" : "none";
-    }
     function refreshAccessTokenTable() {
         const ztatTable = $('#ztat-table').DataTable();
         const allowTicket = `[[${enclaveConfiguration.approveViaTicket}]]`;

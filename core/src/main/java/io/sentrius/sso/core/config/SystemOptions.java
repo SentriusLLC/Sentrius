@@ -134,8 +134,8 @@ public class SystemOptions {
   /**
    * Purely for testing mode
    */
-  @Updatable(description = "Allows admins to view and approve their own JIT requests.")
-  public Boolean canApproveOwnJITs = false;
+  @Updatable(description = "Allows admins to view and approve their own ZTAT ( Zero Trust Access Token) requests.")
+  public Boolean canApproveOwnZtat = false;
 
 
   // the default path may be sufficient

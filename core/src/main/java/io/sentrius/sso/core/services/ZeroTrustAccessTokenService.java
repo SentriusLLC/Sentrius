@@ -16,6 +16,7 @@ import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenRequest;
 import io.sentrius.sso.core.model.zt.OpsZeroTrustAcessTokenRequest;
 import io.sentrius.sso.core.utils.ZTATUtils;
+import jakarta.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -191,11 +192,13 @@ public class ZeroTrustAccessTokenService {
     ztatRequestService.setOpsAccessTokenStatus(request, user, true);
   }
 
+  @Transactional
   public void denyAccessToken(@NonNull ZeroTrustAccessTokenRequest request, @NonNull User user)
       throws SQLException, GeneralSecurityException {
     ztatRequestService.getAccessTokenStatus(request, user, false);
   }
 
+  @Transactional
   public void denyOpsAccessToken(@NonNull OpsZeroTrustAcessTokenRequest request, @NonNull User user)
       throws SQLException, GeneralSecurityException {
     ztatRequestService.setOpsAccessTokenStatus(request, user, false);

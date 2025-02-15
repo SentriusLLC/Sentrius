@@ -50,6 +50,9 @@ public class ConnectedSystem {
     @Builder.Default
     private volatile String websocketSessionId = "";
 
+    @Builder.Default
+    private volatile String websocketChatSessionId = "";
+
     // websocket for a listener
     @Builder.Default
     private volatile String websocketListenerSessionId = "";

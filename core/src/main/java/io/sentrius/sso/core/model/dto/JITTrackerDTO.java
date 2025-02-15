@@ -24,4 +24,8 @@ public class JITTrackerDTO {
     private Date lastUpdated;
     @Builder.Default
     private boolean currentUser = false;
+    @Builder.Default
+    private boolean canApprove = false;
+    @Builder.Default
+    private boolean canDeny = false;
 }

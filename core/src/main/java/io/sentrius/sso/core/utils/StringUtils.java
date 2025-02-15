@@ -6,6 +6,10 @@ import java.util.List;
 public class StringUtils {
   private static final int MAX_STRING_LENGTH = 100;
 
+  public static boolean isBlank(String string) {
+    return string == null || string.trim().isEmpty();
+  }
+
   public static String truncateString(
       String originalString, String truncateBegin, String truncateEnd, int limit) {
     String leftTruncated = truncateLeft(originalString, truncateBegin, limit);

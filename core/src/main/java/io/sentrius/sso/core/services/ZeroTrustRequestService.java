@@ -168,6 +168,7 @@ public class ZeroTrustRequestService {
         return Optional.empty(); // Placeholder for actual implementation.
     }
 
+    @Transactional
     public void setOpsAccessTokenStatus(OpsZeroTrustAcessTokenRequest reqeust, User user, boolean approval) {
         opsApprovalRepository.deleteByZtatRequestId(reqeust.getId());
 
@@ -179,6 +180,7 @@ public class ZeroTrustRequestService {
         opsApprovalRepository.save(opsApproval);
     }
 
+    @Transactional
     public void getAccessTokenStatus(ZeroTrustAccessTokenRequest request, User user, boolean approval) {
         ztatApprovalRepository.deleteByztatRequestId(request.getId());
 
@@ -190,6 +192,7 @@ public class ZeroTrustRequestService {
         ztatApprovalRepository.save(ztatApproval);
     }
 
+    @Transactional
     public void incrementAccessTokenUses(ZeroTrustAccessTokenRequest request) {
         if (request.getSystem().getId().equals(-1L)) {
             log.info("Incrementing uses for JITRequest: {}", ztatApprovalRepository.findByZtatRequestId(request.getId()).isPresent());

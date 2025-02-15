@@ -142,6 +142,17 @@
         </div>
 
         <div class="form-group">
+            <label for="allowAiChat">Allow AI Chat</label>
+            <input type="checkbox" id="allowAiChat" name="allowAiChat" class="form-check-input"
+                   th:checked="${hostGroup.configuration.allowAiChat}" />
+        </div>
+
+        <div class="form-group">
+            <label for="allowAiApproveZtat">Allow AI to approve Access Requests</label>
+            <input type="checkbox" id="allowAiApproveZtat" name="allowAiApproveZtat" class="form-check-input"
+                   th:checked="${hostGroup.configuration.allowAiApproveZtat}" />
+        </div>
+        <div class="form-group">
             <label for="allowSudo">Allow sudo</label>
             <input type="checkbox" id="allowSudo" name="allowSudo" class="form-check-input"
                    th:checked="${hostGroup.configuration.allowSudo}" />
