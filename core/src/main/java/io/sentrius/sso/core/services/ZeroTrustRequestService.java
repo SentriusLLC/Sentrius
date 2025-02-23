@@ -8,11 +8,13 @@ import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenApproval;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenRequest;
 import io.sentrius.sso.core.model.zt.OpsApproval;
 import io.sentrius.sso.core.model.zt.OpsZeroTrustAcessTokenRequest;
+import io.sentrius.sso.core.model.zt.ZtatUse;
 import io.sentrius.sso.core.repository.ZeroTrustAccessTokenApprovalRepository;
 import io.sentrius.sso.core.repository.JITReasonRepository;
 import io.sentrius.sso.core.repository.ZeroTrustAccessTokenRequestRepository;
 import io.sentrius.sso.core.repository.OpsApprovalRepository;
 import io.sentrius.sso.core.repository.OpsJITRequestRepository;
+import io.sentrius.sso.core.repository.ZtatUseRepository;
 import io.sentrius.sso.core.utils.ZTATUtils;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +46,9 @@ public class ZeroTrustRequestService {
     private OpsApprovalRepository opsApprovalRepository;
     @Autowired
     private SystemOptions systemOptions;
+
+    @Autowired
+    private ZtatUseRepository ztatUseRepository;
 
 
     @Transactional(readOnly = true)
@@ -210,7 +215,8 @@ public class ZeroTrustRequestService {
                 if (approval.getUses() >= systemOptions.maxJitUses) {
                     throw new RuntimeException("JIT uses exceeded");
                 }
-                approval.setUses(approval.getUses() + 1);
+                ;
+                ztatUseRepository.save(ZtatUse.builder().ztatApproval(approval).user(request.getUser()).build());
                 log.info("Incrementing uses for JITRequest: {}", request.getId());
                 ztatApprovalRepository.save(approval);
             });
@@ -339,7 +345,8 @@ public class ZeroTrustRequestService {
              // get the latest approval
             List<ZeroTrustAccessTokenApproval> approval = request.getApprovals();
             if (!approval.isEmpty()) {
-                return systemOptions.maxJitUses - approval.get(0).getUses();
+                var uses = ztatUseRepository.getUses(approval.get(0));
+                return systemOptions.maxJitUses - uses.size();
             }
 
         return systemOptions.maxJitUses; // Update as needed based on your logic
@@ -349,6 +356,7 @@ public class ZeroTrustRequestService {
 
             List<OpsApproval> approval = request.getApprovals();
             if (!approval.isEmpty()) {
+
                 return systemOptions.maxJitUses - approval.get(0).getUses();
             }
 
