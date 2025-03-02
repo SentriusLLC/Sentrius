@@ -87,7 +87,7 @@ if $update_sentrius_keycloak; then
 fi
 
 if $update_sentrius_agent; then
-    cp analyagents/target/analyagents-*.jar docker/sentrius-agent/agent.jar
+    cp java-agents/target/java-agents-*.jar docker/sentrius-agent/agent.jar
     SENTRIUS_AGENT_VERSION=$(increment_patch_version $SENTRIUS_AGENT_VERSION)
     build_image "sentrius-agent" "$SENTRIUS_AGENT_VERSION" "./docker/sentrius-agent"
     rm docker/sentrius-agent/agent.jar

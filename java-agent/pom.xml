@@ -8,10 +8,10 @@
   </parent>
 
   <groupId>analysis</groupId>
-  <artifactId>analyagents</artifactId>
+  <artifactId>java-agent</artifactId>
   <version>1.0-SNAPSHOT</version>
 
-  <name>analyagents</name>
+  <name>java-agent</name>
   <url>http://www.sentrius.io</url>
 
   <properties>

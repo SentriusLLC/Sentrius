@@ -33,9 +33,9 @@ replay_pid*
 target/*
 api/target/**
 core/target/**
-analyagents/target/**
+java-agent/target/**
 core/target/
-analyagents/target/
+java-agent/target/
 node/*
 node_modules/*
 api/node_modules/*
