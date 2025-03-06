@@ -1,8 +1,0 @@
-CREATE TABLE configurations (
-    id BIGSERIAL PRIMARY KEY,
-    config_name VARCHAR(255) NOT NULL,
-    user_id BIGINT NOT NULL REFERENCES users(id),
-    content TEXT NOT NULL,
-    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);

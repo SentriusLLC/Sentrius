@@ -312,3 +312,181 @@ CREATE TABLE IF NOT EXISTS user_settings (
     json_config TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
+-- Insert a UserType with full access (e.g., a "System Admin")
+INSERT INTO usertypes (id, user_type_name, automation_access, system_access, rule_access, user_access, ztat_access, application_access)
+VALUES (-1, 'Application Admin', 'CAN_RUN_AUTOMATION', 'CAN_MANAGE_SYSTEMS', 'CAN_VIEW_RULES', 'CAN_MANAGE_USERS',
+        'CAN_VIEW_ZTATS',
+        'CAN_MANAGE_APPLICATION');
+
+-- Insert a test user and associate with the UserType created above
+INSERT INTO users (id, username, name, password, email_address, image_url, role_id, team)
+VALUES (-1, 'admin', 'Test User', '$2a$10$LcIvlLX3vchavg8I.VmDLeWIoVETLJM7yK0y8qwn5e0v9QwfcakK6',
+        'testuser@example.com', 'https://example.com/image.jpg', -1, 'Test Team');
+
+
+-- Insert a host group for the test user
+
+-- Insert default host group "Default Host Group" for "Test User"
+INSERT INTO host_groups (id, name, description, configuration)
+VALUES (-1, 'Default Host Group', 'Default host group for Test User', 'Default configuration');
+
+-- Assign "Test User" to "Default Host Group"
+INSERT INTO user_hostgroups (user_id, hostgroup_id)
+VALUES (-1, -1);
+create table if not exists "configuration_options" (
+   id BIGSERIAL PRIMARY KEY,
+   "configuration_name" character varying(250) NOT NULL,
+    "configuration_value" text NOT NULL
+    );-- Add a column for application_key reference to host_groups
+ALTER TABLE host_groups
+    ADD COLUMN application_key_id BIGINT UNIQUE,
+ADD CONSTRAINT fk_application_key FOREIGN KEY (application_key_id) REFERENCES application_key(id) ON DELETE CASCADE;
+CREATE TABLE configurations (
+    id BIGSERIAL PRIMARY KEY,
+    config_name VARCHAR(255) NOT NULL,
+    user_id BIGINT NOT NULL REFERENCES users(id),
+    content TEXT NOT NULL,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+ALTER TABLE application_key ADD COLUMN is_file BOOLEAN DEFAULT false;
+CREATE TABLE known_hosts (
+         id SERIAL PRIMARY KEY,
+         hostname VARCHAR(255) NOT NULL,
+         key_type VARCHAR(50) NOT NULL,
+         key_value TEXT NOT NULL,
+         UNIQUE (hostname, key_type)
+);
+ALTER TABLE users RENAME COLUMN image_url TO user_id;
+ALTER TABLE users ADD CONSTRAINT unique_user_id UNIQUE (user_id);
+ALTER TABLE users ADD COLUMN status VARCHAR(20) DEFAULT 'ACTIVE';
+
+INSERT INTO usertypes (id, user_type_name, automation_access, system_access, rule_access, user_access, ztat_access,
+                       application_access) VALUES (-2, 'System Admin', 'CAN_RUN_AUTOMATION', 'CAN_MANAGE_SYSTEMS', 'CAN_VIEW_RULES', 'CAN_MANAGE_USERS',
+        'CAN_VIEW_ZTATS',
+        'CAN_MANAGE_APPLICATION');
+
+INSERT INTO usertypes (id, user_type_name, automation_access, system_access, rule_access, user_access, ztat_access,
+                       application_access) VALUES (-4, 'Base User', 'CAN_RUN_AUTOMATION', 'CAN_MANAGE_SYSTEMS', 'CAN_VIEW_RULES', 'CAN_MANAGE_USERS',
+        'CAN_VIEW_ZTATS',
+        'CAN_MANAGE_APPLICATION');CREATE TABLE terminal_session_metadata (
+                                           id BIGSERIAL PRIMARY KEY,
+                                           session_id BIGINT NOT NULL REFERENCES session_log(id) ON DELETE CASCADE,
+                                           user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                           host_system_id BIGINT NOT NULL REFERENCES host_systems(host_system_id),
+                                           start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                           end_time TIMESTAMP,
+                                           ip_address VARCHAR(45),
+                                           session_status VARCHAR(50) DEFAULT 'ACTIVE', -- e.g., ACTIVE, CLOSED, INTERRUPTED
+                                           is_suspicious BOOLEAN DEFAULT FALSE
+);
+
+
+CREATE TABLE user_experience_metrics (
+                                         id BIGSERIAL PRIMARY KEY,
+                                         user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                         session_id BIGINT NOT NULL REFERENCES terminal_session_metadata(id) ON DELETE CASCADE,
+                                         command_diversity INTEGER DEFAULT 0, -- Number of unique command categories used
+                                         advanced_tool_usage BOOLEAN DEFAULT FALSE, -- Use of tools like awk, sed, grep
+                                         error_resolution_count INTEGER DEFAULT 0, -- Number of successfully resolved errors
+                                         manual_pages_usage_count INTEGER DEFAULT 0, -- Number of times man/help was used
+                                         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE terminal_risk_indicators (
+                                          id BIGSERIAL PRIMARY KEY,
+                                          session_id BIGINT NOT NULL REFERENCES terminal_session_metadata(id) ON DELETE CASCADE,
+                                          dangerous_commands_count INTEGER DEFAULT 0, -- e.g., "rm -rf"
+                                          unauthorized_access_attempts INTEGER DEFAULT 0, -- Access to restricted files/directories
+                                          geo_anomaly BOOLEAN DEFAULT FALSE, -- Access from unusual locations
+                                          out_of_hours BOOLEAN DEFAULT FALSE -- Sessions outside expected working hours
+);
+CREATE TABLE terminal_behavior_metrics (
+                                           id BIGSERIAL PRIMARY KEY,
+                                           session_id BIGINT NOT NULL REFERENCES terminal_session_metadata(id) ON DELETE CASCADE,
+                                           total_commands INTEGER DEFAULT 0, -- Total number of commands issued
+                                           unique_commands INTEGER DEFAULT 0, -- Number of unique commands
+                                           avg_command_length FLOAT, -- Average command length in characters
+                                           sudo_usage_count INTEGER DEFAULT 0, -- Number of privileged commands used
+                                           max_idle_time INTERVAL, -- Longest idle period between commands
+                                           FOREIGN KEY (session_id) REFERENCES terminal_session_metadata(id) ON DELETE CASCADE
+);
+
+CREATE TABLE terminal_commands (
+                                   id BIGSERIAL PRIMARY KEY,
+                                   session_id BIGINT NOT NULL REFERENCES terminal_session_metadata(id) ON DELETE CASCADE,
+                                   command TEXT NOT NULL, -- Full command issued
+                                   command_category VARCHAR(255), -- e.g., file_management, networking
+                                   execution_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- When the command was issued
+                                   execution_status VARCHAR(50) DEFAULT 'SUCCESS', -- e.g., SUCCESS, FAILED
+                                   output TEXT, -- Optional: store command output
+                                   FOREIGN KEY (session_id) REFERENCES terminal_session_metadata(id) ON DELETE CASCADE
+);
+
+
+
+CREATE TABLE analytics_tracking (
+                                    id BIGSERIAL PRIMARY KEY,
+                                    session_id BIGINT NOT NULL UNIQUE,
+                                    processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                    status VARCHAR(50) DEFAULT 'PROCESSED' -- Options: 'PENDING', 'PROCESSING', 'PROCESSED'
+);
+ALTER TABLE terminal_behavior_metrics
+ALTER COLUMN max_idle_time
+TYPE NUMERIC(21,0)
+USING EXTRACT(EPOCH FROM max_idle_time)::NUMERIC(21,0);
+CREATE TABLE command_categories (
+    id SERIAL PRIMARY KEY,
+    category_name VARCHAR(50) NOT NULL,
+    pattern TEXT NOT NULL, -- Store regex patterns
+    priority INT NOT NULL DEFAULT 0 -- Optional: for matching precedence
+);
+
+
+CREATE INDEX idx_pattern ON command_categories (pattern);CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+CREATE INDEX idx_command_pattern_trgm ON command_categories USING gin (pattern gin_trgm_ops);
+CREATE TABLE work_hours (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    day_of_week SMALLINT CHECK (day_of_week BETWEEN 0 AND 6), -- 0 = Sunday, 6 = Saturday
+    start_time TIME NOT NULL,  -- Example: '09:00:00'
+    end_time TIME NOT NULL  -- Example: '17:00:00'
+);
+
+-- Ensure fast lookups for checking dem hours
+CREATE INDEX idx_work_hours ON work_hours (user_id, day_of_week);
+
+ALTER TABLE operations_request
+    ADD COLUMN summary TEXT;
+CREATE TABLE IF NOT EXISTS chat_log (
+        id BIGSERIAL PRIMARY KEY,
+        session_id BIGINT NOT NULL,
+        chat_group_id VARCHAR NOT NULL, -- Unique identifier for different chat dialogs within the session
+        instance_id INTEGER,
+        sender VARCHAR NOT NULL, -- username or system (e.g., AI agent)
+        message TEXT NOT NULL,
+        message_tm TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (session_id) REFERENCES session_log(id) ON DELETE CASCADE
+    );
+ALTER TABLE ztat_approvals ADD COLUMN rationale TEXT;
+ALTER TABLE ops_approvals ADD COLUMN rationale TEXT;
+
+CREATE TABLE IF NOT EXISTS ztat_uses (
+                                         id BIGSERIAL PRIMARY KEY,
+                                         ztat_approval_id BIGINT NOT NULL,
+                                         user_id BIGINT NOT NULL,
+                                         used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                         FOREIGN KEY (ztat_approval_id) REFERENCES ztat_approvals(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+
+
+CREATE TABLE IF NOT EXISTS ops_uses (
+                                         id BIGSERIAL PRIMARY KEY,
+                                         ops_approval_id BIGINT NOT NULL,
+                                         user_id BIGINT NOT NULL,
+                                         used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                         FOREIGN KEY (ops_approval_id) REFERENCES ops_approvals(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    );
