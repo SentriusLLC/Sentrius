@@ -1,6 +1,7 @@
 package io.sentrius.sso.core.security.service;
 
 import javax.crypto.Cipher;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -30,7 +31,7 @@ public class CryptoService {
     final ApplicationKeyRepository applicationKeyRepository;
     private final byte[] key;
 
-    private static final String CIPHER_INSTANCE = "AES/ECB/PKCS5Padding";
+    private static final String CIPHER_INSTANCE = "AES/GCM/NoPadding";
     private static final String CRYPT_ALGORITHM = "AES";
     private static final String HASH_ALGORITHM = "SHA-256";
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
@@ -65,16 +66,28 @@ public class CryptoService {
 
     public String encrypt(String str) throws GeneralSecurityException {
         Cipher cipher = Cipher.getInstance(CIPHER_INSTANCE);
-        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, CRYPT_ALGORITHM));
+        byte[] iv = new byte[12];
+        new SecureRandom().nextBytes(iv);
+        GCMParameterSpec gcmSpec = new GCMParameterSpec(128, iv);
+        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, CRYPT_ALGORITHM), gcmSpec);
         byte[] encVal = cipher.doFinal(str.getBytes(StandardCharsets.UTF_8));
-        return Base64.getEncoder().encodeToString(encVal);
+        byte[] encryptedIvAndText = new byte[iv.length + encVal.length];
+        System.arraycopy(iv, 0, encryptedIvAndText, 0, iv.length);
+        System.arraycopy(encVal, 0, encryptedIvAndText, iv.length, encVal.length);
+        return Base64.getEncoder().encodeToString(encryptedIvAndText);
     }
 
     public String encrypt(byte [] bytes) throws GeneralSecurityException {
         Cipher cipher = Cipher.getInstance(CIPHER_INSTANCE);
-        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, CRYPT_ALGORITHM));
+        byte[] iv = new byte[12];
+        new SecureRandom().nextBytes(iv);
+        GCMParameterSpec gcmSpec = new GCMParameterSpec(128, iv);
+        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, CRYPT_ALGORITHM), gcmSpec);
         byte[] encVal = cipher.doFinal(bytes);
-        return Base64.getEncoder().encodeToString(encVal);
+        byte[] encryptedIvAndText = new byte[iv.length + encVal.length];
+        System.arraycopy(iv, 0, encryptedIvAndText, 0, iv.length);
+        System.arraycopy(encVal, 0, encryptedIvAndText, iv.length, encVal.length);
+        return Base64.getEncoder().encodeToString(encryptedIvAndText);
     }
 
     public String decrypt(String encryptedStr) throws GeneralSecurityException {
