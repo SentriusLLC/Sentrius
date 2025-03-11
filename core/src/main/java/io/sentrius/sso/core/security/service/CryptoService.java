@@ -9,6 +9,7 @@ import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Base64;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
@@ -91,11 +92,27 @@ public class CryptoService {
     }
 
     public String decrypt(String encryptedStr) throws GeneralSecurityException {
-        Cipher cipher = Cipher.getInstance(CIPHER_INSTANCE);
-        cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, CRYPT_ALGORITHM));
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+
+        // Decode Base64
         byte[] decodedVal = Base64.getDecoder().decode(encryptedStr);
-        return new String(cipher.doFinal(decodedVal), StandardCharsets.UTF_8);
+
+        // Extract IV (first 12 bytes)
+        byte[] iv = Arrays.copyOfRange(decodedVal, 0, 12);
+
+        // Extract actual ciphertext (rest of the bytes)
+        byte[] cipherText = Arrays.copyOfRange(decodedVal, 12, decodedVal.length);
+
+        // Ensure we use the same IV for decryption
+        GCMParameterSpec gcmSpec = new GCMParameterSpec(128, iv);
+        cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, CRYPT_ALGORITHM), gcmSpec);
+
+        // Decrypt the text
+        byte[] decryptedBytes = cipher.doFinal(cipherText);
+
+        return new String(decryptedBytes, StandardCharsets.UTF_8);
     }
+
 
     public String encodePassword(String password) throws NoSuchAlgorithmException {
         return encoder.encode(password);
