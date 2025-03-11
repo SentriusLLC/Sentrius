@@ -57,7 +57,7 @@ public class TerminalWSHandler extends TextWebSocketHandler {
             if (sessionId != null) {
                 // Store the WebSocket session using the session ID from the query parameter
                 sessions.put(sessionId, session);
-                log.info("New connection established, session ID: " + sessionId);
+                log.debug("New connection established, session ID: " + sessionId);
                 sshListenerService.startListeningToSshServer(sessionId, session);
             } else {
                 log.trace("Session ID not found in query parameters.");
@@ -75,14 +75,14 @@ public class TerminalWSHandler extends TextWebSocketHandler {
 
         // Extract query parameters from the URI again if needed
         URI uri = session.getUri();
-        log.trace("got message {}", uri);
+        log.debug("got message {}", uri);
         try {
             if (uri != null) {
                 Map<String, String> queryParams = parseQueryParams(uri.getQuery());
                 String sessionId = queryParams.get("sessionId");
 
                 if (sessionId != null) {
-                    log.trace("Received message from session ID: " + sessionId);
+                    log.debug("Received message from session ID: " + sessionId);
                     // Handle the message (e.g., process or respond)
 
 
@@ -91,11 +91,10 @@ public class TerminalWSHandler extends TextWebSocketHandler {
                     Session.TerminalMessage auditLog =
                         Session.TerminalMessage.parseFrom(messageBytes);
                     // Decrypt the session ID
-//                    var sessionIdStr = cryptoService.decrypt(sessionId);
-  //                  var sessionIdLong = Long.parseLong(sessionIdStr);
-                    var lookupId = sessionId + "==";
+                    var sessionIdStr = cryptoService.decrypt(sessionId);
+                    var lookupId = sessionId; // + "==";
                     // Retrieve ConnectedSystem from your persistent map using the session ID
-                    var sys = sessionTrackingService.getEncryptedConnectedSession(lookupId);
+                    var sys = sessionTrackingService.getEncryptedConnectedSession(sessionIdStr);
                     if (null != sys ) {
                         boolean allNoAction = true;
                         log.debug("**** Processing message for session ID: {} with {} actions", sessionId,
@@ -125,7 +124,7 @@ public class TerminalWSHandler extends TextWebSocketHandler {
                             }
                         }
                         if (allNoAction && sys.getSessionStartupActions().size() > 0) {
-                            log.info("**** Setting NO_ACTION Trigger");
+                            log.debug("**** Setting NO_ACTION Trigger");
                             var noActionTrigger = new Trigger(TriggerAction.NO_ACTION, "");
                             sessionTrackingService.addSystemTrigger(sys, noActionTrigger);
                             sys.getTerminalAuditor().setSessionTrigger(noActionTrigger);
@@ -133,6 +132,8 @@ public class TerminalWSHandler extends TextWebSocketHandler {
 
                         // Get the user's session and handle trigger if present
                         sshListenerService.processTerminalMessage(sys, auditLog);
+                    } else {
+                        log.debug("No session found for session ID: {}", sessionId);
                     }
                 } else {
                     log.trace("Session ID not found in query parameters for message handling.");
@@ -153,10 +154,10 @@ public class TerminalWSHandler extends TextWebSocketHandler {
 
             if (sessionId != null) {
                 // Remove the session when connection is closed
-                var lookupId = sessionId + "==";
-                var sys = sessionTrackingService.getEncryptedConnectedSession(lookupId);
+                var sessionIdStr = cryptoService.decrypt(sessionId);
+                var sys = sessionTrackingService.getEncryptedConnectedSession(sessionIdStr);
                 if (null != sys){
-                    log.info("**** Closing session for {}", sys.getSession());
+                    log.debug("**** Closing session for {}", sys.getSession());
                     terminalSessionMetadataService.getSessionBySessionLog(sys.getSession()).ifPresent(sessionMetadata -> {
                         sessionMetadata.setEndTime(new Timestamp(System.currentTimeMillis()));
                         sessionMetadata.setSessionStatus("CLOSED");
@@ -167,7 +168,7 @@ public class TerminalWSHandler extends TextWebSocketHandler {
                 sessions.remove(sessionId);
                 sshListenerService.removeSession(sessionId);
 
-                log.info("Connection closed, session ID: " + sessionId);
+                log.debug("Connection closed, session ID: {}", sessionId);
             }
         }
     }

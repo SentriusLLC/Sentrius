@@ -89,11 +89,9 @@ public class ChatWSHandler extends TextWebSocketHandler {
                         return;
                     }
                     // Decrypt the session ID
-//                    var sessionIdStr = cryptoService.decrypt(sessionId);
-  //                  var sessionIdLong = Long.parseLong(sessionIdStr);
-                    var lookupId = sessionId + "==";
+                    var sessionIdStr = cryptoService.decrypt(sessionId);
                     // Retrieve ConnectedSystem from your persistent map using the session ID
-                    var sys = sessionTrackingService.getEncryptedConnectedSession(lookupId);
+                    var sys = sessionTrackingService.getEncryptedConnectedSession(sessionIdStr);
                     if (null != sys ) {
                         log.info("oh");
                         // Get the user's session and handle trigger if present

@@ -5227,6 +5227,3 @@ module.exports = Url;
 
 },{"querystringify":58,"requires-port":59}]},{},[1])(1)
 });
-
-
-//# sourceMappingURL=sockjs.js.map

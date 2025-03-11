@@ -68,12 +68,8 @@ public class SessionTrackingService implements PluggableServices {
    */
   public void removeUserSession(ConnectedSystem connectedSystem) {
     userConnectionMap.remove(connectedSystem.getSession().getId());
-      try {
-          userConnectionMapEncrypted.remove(
-              cryptoService.encrypt(connectedSystem.getSession().getId().toString()) );
-      } catch (GeneralSecurityException e) {
-          throw new RuntimeException(e);
-      }
+      userConnectionMapEncrypted.remove(
+          connectedSystem.getSession().getId().toString());
       UserSessionsOutput userSessionsOutput = userSessionsOutputMap.get(connectedSystem.getSession().getId());
     if (userSessionsOutput != null) {
       userSessionsOutput.getSessionOutputMap().clear();
@@ -107,12 +103,8 @@ public class SessionTrackingService implements PluggableServices {
       userSessionsOutputMap.put(sessionOutput.getSessionId(), new UserSessionsOutput());
       userSessionsOutput = userSessionsOutputMap.get(sessionOutput.getSessionId());
       userConnectionMap.put(sessionOutput.getSessionId(), sessionOutput.getConnectedSystem());
-        try {
-            userConnectionMapEncrypted.put(cryptoService.encrypt(sessionOutput.getSessionId().toString()),
-                sessionOutput.getConnectedSystem());
-        } catch (GeneralSecurityException e) {
-            throw new RuntimeException(e);
-        }
+        userConnectionMapEncrypted.put(sessionOutput.getSessionId().toString().trim(),
+            sessionOutput.getConnectedSystem());
     }
     else {
       if (userSessionsOutput.getSessionOutputMap().containsKey(sessionOutput.getSessionId())) {

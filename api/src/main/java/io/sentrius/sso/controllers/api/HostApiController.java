@@ -238,9 +238,9 @@ public class HostApiController extends BaseController {
 
         sessionMetadata = terminalSessionMetadataService.createSession(sessionMetadata);
 
-        var encryptedSessionId = cryptoService.encrypt(connectedSystem.getSession().getId().toString());
+        var encryptedSessionId = cryptoService.encrypt(connectedSystem.getSession().getId().toString().trim());
 
-        log.info("returning " + encryptedSessionId);
+        log.info("returning {} from {}", encryptedSessionId, connectedSystem.getSession().getId().toString().trim());
 
         node.put("sessionId", encryptedSessionId);
 
