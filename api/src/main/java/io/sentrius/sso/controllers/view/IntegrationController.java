@@ -7,7 +7,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.services.ErrorOutputService;
-import io.sentrius.sso.core.services.IntegrationSecurityTokenService;
+import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.integrations.external.ExternalIntegrationDTO;
 import lombok.extern.slf4j.Slf4j;

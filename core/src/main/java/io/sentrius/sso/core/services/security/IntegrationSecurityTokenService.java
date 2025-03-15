@@ -1,4 +1,4 @@
-package io.sentrius.sso.core.services;
+package io.sentrius.sso.core.services.security;
 
 
 import io.sentrius.sso.core.model.security.IntegrationSecurityToken;
@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,10 +15,12 @@ import java.util.Optional;
 public class IntegrationSecurityTokenService {
 
     private final IntegrationSecurityTokenRepository repository;
+    private final CryptoService cryptoService;
 
     @Autowired
-    public IntegrationSecurityTokenService(IntegrationSecurityTokenRepository repository) {
+    public IntegrationSecurityTokenService(IntegrationSecurityTokenRepository repository, CryptoService cryptoService) {
         this.repository = repository;
+        this.cryptoService = cryptoService;
     }
 
     @Transactional(readOnly = true)
@@ -31,7 +34,8 @@ public class IntegrationSecurityTokenService {
     }
 
     @Transactional
-    public IntegrationSecurityToken save(IntegrationSecurityToken token) {
+    public IntegrationSecurityToken save(IntegrationSecurityToken token) throws GeneralSecurityException {
+        token.setConnectionInfo( cryptoService.encrypt(token.getConnectionInfo()));
         return repository.save(token);
     }
 
@@ -42,6 +46,14 @@ public class IntegrationSecurityTokenService {
 
     @Transactional(readOnly = true)
     public List<IntegrationSecurityToken> findByConnectionType(String connectionType) {
-        return repository.findByConnectionType(connectionType);
+        return repository.findByConnectionType(connectionType).stream().map(token -> {
+            try {
+                // decrypt the connecting info
+                token.setConnectionInfo(cryptoService.decrypt(token.getConnectionInfo()));
+            } catch (GeneralSecurityException e) {
+                throw new RuntimeException(e);
+            }
+            return token;
+        }).toList();
     }
 }

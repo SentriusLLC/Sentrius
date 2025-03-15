@@ -5,7 +5,7 @@ import java.util.List;
 import io.sentrius.sso.core.model.dto.TicketDTO;
 import io.sentrius.sso.core.model.security.IntegrationSecurityToken;
 import io.sentrius.sso.core.model.users.User;
-import io.sentrius.sso.core.services.IntegrationSecurityTokenService;
+import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Service;

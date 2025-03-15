@@ -8,6 +8,8 @@ import io.sentrius.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
 import io.sentrius.sso.core.model.security.enums.SystemOperationsEnum;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenRequest;
+import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
+import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.utils.MessagingUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

@@ -5,7 +5,6 @@
  */
 package io.sentrius.sso.core.services.terminal;
 
-import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,14 +23,12 @@ import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.ConnectedSystem;
 import io.sentrius.sso.core.model.sessions.SessionOutput;
 import io.sentrius.sso.core.model.users.User;
-import io.sentrius.sso.core.security.service.CryptoService;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.PluggableServices;
 import io.sentrius.sso.core.services.auditing.AuditService;
 import io.sentrius.sso.core.utils.terminal.UserSessionsOutput;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**

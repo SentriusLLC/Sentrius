@@ -12,7 +12,7 @@ import io.sentrius.sso.core.data.auditing.RecordingStudio;
 import io.sentrius.sso.core.model.ConnectedSystem;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenRequest;
-import io.sentrius.sso.core.services.ZeroTrustAccessTokenService;
+import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import lombok.extern.slf4j.Slf4j;
 

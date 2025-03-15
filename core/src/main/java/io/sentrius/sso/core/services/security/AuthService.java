@@ -1,4 +1,4 @@
-package io.sentrius.sso.core.security.service;
+package io.sentrius.sso.core.services.security;
 
 import java.security.Key;
 import java.util.Date;

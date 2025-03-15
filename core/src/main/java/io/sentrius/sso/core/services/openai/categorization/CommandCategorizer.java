@@ -10,7 +10,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.sentrius.sso.core.model.categorization.CommandCategory;
 import io.sentrius.sso.core.repository.CommandCategoryRepository;
-import io.sentrius.sso.core.services.IntegrationSecurityTokenService;
+import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.genai.GenerativeAPI;
 import io.sentrius.sso.genai.GeneratorConfiguration;

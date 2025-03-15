@@ -1,4 +1,4 @@
-package io.sentrius.sso.core.security.service;
+package io.sentrius.sso.core.services.security;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.spec.SecretKeySpec;

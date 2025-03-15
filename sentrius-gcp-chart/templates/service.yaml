@@ -4,7 +4,19 @@ metadata:
   name: {{ .Release.Name }}-sentrius
   namespace: {{ .Values.tenant }}
   annotations:
-    cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
+      {{- if eq .Values.environment "gke" }}
+      {{- range $key, $value := .Values.sentrius.annotations.gke }}
+      {{ $key }}: "{{ $value }}"
+      {{- end }}
+      {{- else if eq .Values.environment "aws" }}
+      {{- range $key, $value := .Values.sentrius.annotations.aws }}
+      {{ $key }}: "{{ $value }}"
+      {{- end }}
+      {{- else if eq .Values.environment "azure" }}
+      {{- range $key, $value := .Values.sentrius.annotations.azure }}
+      {{ $key }}: "{{ $value }}"
+      {{- end }}
+      {{- end }}
   labels:
     app: sentrius
 spec:

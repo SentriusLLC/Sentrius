@@ -18,7 +18,7 @@ import io.sentrius.sso.core.model.metadata.TerminalSessionMetadata;
 import io.sentrius.sso.core.model.metadata.UserExperienceMetrics;
 import io.sentrius.sso.core.model.sessions.TerminalLogs;
 import io.sentrius.sso.core.repository.AnalyticsTrackingRepository;
-import io.sentrius.sso.core.services.IntegrationSecurityTokenService;
+import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
 import io.sentrius.sso.core.services.SessionService;
 import io.sentrius.sso.core.services.metadata.TerminalBehaviorMetricsService;
 import io.sentrius.sso.core.services.metadata.TerminalCommandService;

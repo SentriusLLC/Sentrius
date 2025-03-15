@@ -34,7 +34,7 @@ public class AsyncConfig {
         if (executor != null) {
             executor.shutdown();
         }
-        log.info("Shuttind down executor");
+        log.info("Shutting down executor");
         // Call shutdown on SshListenerService to close streams
         terminalService.shutdown();
     }

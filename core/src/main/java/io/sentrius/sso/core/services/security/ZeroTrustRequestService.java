@@ -1,4 +1,4 @@
-package io.sentrius.sso.core.services;
+package io.sentrius.sso.core.services.security;
 
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.HostSystem;

@@ -14,7 +14,7 @@ import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.model.dto.SystemOption;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
-import io.sentrius.sso.core.security.service.CryptoService;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.ConfigurationService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.HostGroupService;

@@ -1,8 +1,7 @@
 package io.sentrius.sso.core.services;
 
 import java.security.GeneralSecurityException;
-import java.util.UUID;
-import io.sentrius.sso.core.security.service.CryptoService;
+import io.sentrius.sso.core.services.security.CryptoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

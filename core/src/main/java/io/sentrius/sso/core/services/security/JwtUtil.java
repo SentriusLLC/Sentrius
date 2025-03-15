@@ -1,8 +1,9 @@
-package io.sentrius.sso.core.services;
+package io.sentrius.sso.core.services.security;
 
 import java.util.Optional;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.jsonwebtoken.Jwts;
 import io.sentrius.sso.core.utils.JsonUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -61,6 +62,7 @@ public class JwtUtil {
     public static Optional<String> getUsername(ObjectNode jwt) {
 
         var claims = jwt.get("claims");
+        log.info("Claims: {}", claims);
         if (claims != null) {
             var userId = claims.get("preferred_username"); // change to sub for a user id
             if (null != userId){
@@ -82,5 +84,14 @@ public class JwtUtil {
         }
         return Optional.empty();
 
+    }
+
+    /**
+     * Extract the 'kid' (Key ID) from a JWT header.
+     */
+    public static String extractKid(String token) {
+        var parsedJwt = Jwts.parser().build().parse(token);
+        var header = parsedJwt.getHeader();
+        return (String) header.get("kid");
     }
 }

@@ -1,6 +1,6 @@
 package io.sentrius.sso.config.security;
 
-import io.sentrius.sso.core.services.KeycloakService;
+import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.services.UserAttributeSyncService;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.adapters.springsecurity.token.KeycloakAuthenticationToken;
@@ -13,7 +13,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import java.io.IOException;
-import java.util.Map;
 
 @Component
 @Slf4j

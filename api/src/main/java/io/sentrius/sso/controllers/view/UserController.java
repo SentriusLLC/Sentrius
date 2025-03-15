@@ -23,8 +23,7 @@ import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.model.users.UserConfig;
 import io.sentrius.sso.core.model.users.UserSettings;
-import io.sentrius.sso.core.repository.UserTypeRepository;
-import io.sentrius.sso.core.security.service.CryptoService;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserCustomizationService;
 import io.sentrius.sso.core.services.UserService;
@@ -38,7 +37,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 

@@ -35,7 +35,7 @@ public class TerminalSuggestors extends DataGenerator<TwoPartyRequest, LLMRespon
      */
     @Override
     public String generateInput(TwoPartyRequest on) {
-        String queryStr = on.getSystemInput(); //" Here is the user's objective: " + on.getUserObjective() + ".";
+        String queryStr = on.getSystemInput();
 
 
         return queryStr;
