@@ -2,9 +2,19 @@
 replicaCount: 1
 namespace: default
 
+environment: "local"  # Can be "gke", "aws", "azure", "local"
 
 tenant: sentrius-demo
 subdomain: "{{ .Values.tenant }}.sentrius.cloud"
+keycloakSubdomain: keycloak.{{ .Values.subdomain }}
+keycloakDomain: https://{{ .Values.keycloakSubdomain }}
+sentriusDomain: https://{{ .Values.subdomain }}
+
+
+certificates:
+  enabled: false  # Disable certs for local; enable for cloud
+  issuer: "letsencrypt-prod"  # Change for cloud environments
+
 
 # Sentrius configuration
 sentrius:
@@ -27,6 +37,13 @@ sentrius:
     redirect_uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     scope: openid,profile,email
     issuer_uri: http://keycloak.{{ .Values.subdomain }}/realms/sentrius
+  annotations:
+    gke:
+      cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
+    aws:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    azure:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
 sentriusagent:
   service:
@@ -52,6 +69,13 @@ sentriusagent:
   resources: {}
   config:
     application: |
+  annotations:
+    gke:
+      cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
+    aws:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    azure:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
       
 
 # PostgreSQL configuration
@@ -100,6 +124,44 @@ keycloak:
     database: keycloak
     storageSize: 10Gi
   replicas: 1
-  #hostname: sentrius-keycloak
+  annotations:
+    gke:
+      cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
+    aws:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    azure:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+
+ingress:
+  enabled: true
+  class: "nginx"  # Default for local; override for GKE/AWS
+  tlsEnabled: true  # Enable TLS when supported
+  annotations:
+    gke:  # GKE-specific annotations
+      kubernetes.io/ingress.class: gce
+      networking.gke.io/managed-certificates: wildcard-cert
+      kubernetes.io/ingress.allow-http: "false"
+      ingress.kubernetes.io/force-ssl-redirect: "true"
+    aws:  # AWS-specific annotations for ALB
+      kubernetes.io/ingress.class: alb
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/ssl-redirect: "443"
+    local:  # Local environment annotations (e.g., Minikube)
+      kubernetes.io/ingress.class: nginx
 
 
+
+healthCheck:
+  enabled: true
+  backendConfig:
+    enabled: false  # Only enable for GKE
+  readinessProbe:
+    path: "/actuator/health"
+    port: 8080
+  livenessProbe:
+    path: "/actuator/health"
+    port: 8080
+  keycloak:
+    readinessPath: "/health/ready"
+    livenessPath: "/health/live"
+    port: 8081

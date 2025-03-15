@@ -12,7 +12,7 @@ import io.sentrius.sso.core.model.dto.TerminalLogDTO;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.model.sessions.SessionLog;
 import io.sentrius.sso.core.model.sessions.TerminalLogs;
-import io.sentrius.sso.core.security.service.CryptoService;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.auditing.AuditService;

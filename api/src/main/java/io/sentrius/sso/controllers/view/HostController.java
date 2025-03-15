@@ -12,7 +12,7 @@ import io.sentrius.sso.core.model.dto.HostGroupDTO;
 import io.sentrius.sso.core.model.dto.HostSystemDTO;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.users.UserSettings;
-import io.sentrius.sso.core.security.service.CryptoService;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.UserService;

@@ -1,4 +1,4 @@
-package io.sentrius.sso.core.services;
+package io.sentrius.sso.core.services.security;
 
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;

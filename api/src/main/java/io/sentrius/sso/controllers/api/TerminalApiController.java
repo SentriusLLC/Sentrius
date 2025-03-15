@@ -8,7 +8,7 @@ import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.model.dto.HostSystemDTO;
 import io.sentrius.sso.core.model.dto.TerminalLogOutputDTO;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
-import io.sentrius.sso.core.security.service.CryptoService;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.SessionService;

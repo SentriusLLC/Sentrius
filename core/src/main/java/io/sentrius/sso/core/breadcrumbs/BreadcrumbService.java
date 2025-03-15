@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.function.Function;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import io.sentrius.sso.core.security.service.CookieService;
+import io.sentrius.sso.core.services.security.CookieService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

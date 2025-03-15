@@ -4,7 +4,19 @@ metadata:
   name: {{ .Release.Name }}-keycloak
   namespace: {{ .Values.tenant }}
   annotations:
-    cloud.google.com/backend-config: '{"default": "keycloak-backend-config"}'
+      {{- if eq .Values.environment "gke" }}
+      {{- range $key, $value := .Values.keycloak.annotations.gke }}
+      {{ $key }}: "{{ $value }}"
+      {{- end }}
+      {{- else if eq .Values.environment "aws" }}
+      {{- range $key, $value := .Values.keycloak.annotations.aws }}
+      {{ $key }}: "{{ $value }}"
+      {{- end }}
+      {{- else if eq .Values.environment "azure" }}
+      {{- range $key, $value := .Values.keycloak.annotations.azure }}
+      {{ $key }}: "{{ $value }}"
+      {{- end }}
+      {{- end }}
   labels:
     app: keycloak
     release: {{ .Release.Name }}

@@ -17,7 +17,7 @@ import io.sentrius.sso.core.model.hostgroup.ProfileConfiguration;
 import io.sentrius.sso.core.model.metadata.TerminalSessionMetadata;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
-import io.sentrius.sso.core.security.service.CryptoService;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.SessionService;
 import io.sentrius.sso.core.services.TerminalService;

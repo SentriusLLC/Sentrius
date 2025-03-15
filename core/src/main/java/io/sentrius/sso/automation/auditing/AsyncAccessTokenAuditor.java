@@ -8,7 +8,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import io.sentrius.sso.core.model.ConnectedSystem;
-import io.sentrius.sso.core.services.ZeroTrustAccessTokenService;
+import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import lombok.extern.slf4j.Slf4j;
 

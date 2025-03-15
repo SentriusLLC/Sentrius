@@ -1,3 +1,5 @@
+{{- if and .Values.healthCheck.enabled (eq .Values.environment "gke") .Values.healthCheck.backendConfig.enabled }}
+---
 apiVersion: cloud.google.com/v1
 kind: BackendConfig
 metadata:
@@ -9,5 +11,6 @@ spec:
     timeoutSec: 5
     healthyThreshold: 2
     unhealthyThreshold: 2
-    requestPath: /actuator/health
-    port: 8080
+    requestPath: {{ .Values.healthCheck.readinessProbe.path }}
+    port: {{ .Values.healthCheck.readinessProbe.port }}
+{{- end }}

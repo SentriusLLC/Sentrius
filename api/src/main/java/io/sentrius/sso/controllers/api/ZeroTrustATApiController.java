@@ -7,7 +7,7 @@ import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.model.dto.JITTrackerDTO;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.services.ErrorOutputService;
-import io.sentrius.sso.core.services.ZeroTrustAccessTokenService;
+import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.NotificationService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.config.SystemOptions;
@@ -18,6 +18,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -94,4 +96,26 @@ public class ZeroTrustATApiController extends BaseController {
         }
     }
 
+    /*
+    @PostMapping("/request")
+    public ResponseEntity<?> requestZtat(
+        @RequestHeader("Authorization") String token,
+        @RequestBody ZtatRequestDTO request) {
+
+        if (!keycloakService.validateJwt(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body("Invalid Keycloak token");
+        }
+
+        // Extract agent identity from the JWT
+        String agentId = keycloakService.extractAgentId(token);
+
+        // Store the request in the database
+        var ztatRequest = ztatService.createRequest(agentId, request.getCommand(), request.getCommandHash());
+
+        // Generate a Zero Trust Access Token (ZTAT)
+        String ztatToken = ztatService.generateZtatToken(ztatRequest);
+
+        return ResponseEntity.ok(Map.of("ztat_token", ztatToken));
+    }*/
 }

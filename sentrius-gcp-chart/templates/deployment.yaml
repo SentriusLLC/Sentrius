@@ -24,6 +24,20 @@ spec:
           imagePullPolicy: {{ .Values.sentrius.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.sentrius.port }}
+          {{- if not (eq .Values.environment "gke") }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.readinessProbe.path }}
+              port: {{ .Values.healthCheck.readinessProbe.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.livenessProbe.path }}
+              port: {{ .Values.healthCheck.livenessProbe.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          {{- end }}
           volumeMounts:
             - name: config-volume
               mountPath: /config

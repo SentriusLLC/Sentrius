@@ -7,13 +7,10 @@ import java.util.List;
 import io.sentrius.sso.core.model.dto.UserDTO;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.model.security.UserType;
-import io.sentrius.sso.core.model.actors.UserActor;
+import io.sentrius.sso.core.model.actors.PrincipalEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
@@ -25,29 +22,24 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
+@Entity
 @Getter
 @Setter
-@AllArgsConstructor
-@NoArgsConstructor
+@ToString
 @SuperBuilder
-@Entity
+@NoArgsConstructor
+@AllArgsConstructor
 @EqualsAndHashCode
 @Table(name = "users")
-public class User implements UserActor {
+public class User extends PrincipalEntity {
 
-    @Id
-    @Column(name = "id")
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+
 
     @Column(name = "username")
     private String username;
-
-
-    @Column(name = "name")
-    private String name;
 
     @Column(name = "password")
     private String password;
@@ -58,10 +50,6 @@ public class User implements UserActor {
     @Column(name = "user_id")
     private String userId;
 
-    @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "role_id", referencedColumnName = "id")
-    @Builder.Default
-    public UserType authorizationType = UserType.builder().build();
 
     @Column(name = "team")
     private String team;
@@ -75,27 +63,6 @@ public class User implements UserActor {
     @Builder.Default
     private List<HostGroup> hostGroups = new ArrayList<>();
 
-    /*
-    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinTable(
-        name = "user_profile_restrictions",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "time_config_id")
-    )
-    @MapKeyColumn(name = "hostgroup_id")
-    private Map<Long, TimeConfigs> hostGroupWindows = new HashMap<>();;
-
-    public void setManagementGroups(Collection<String> groups) {
-        hostGroups = new ArrayList<>();
-        groups.forEach(
-            group -> {
-                HostGroup profile = new HostGroup();
-                profile.setName(group);
-                hostGroups.add(profile);
-            });
-    }
-
-*/
     public boolean canAccessProfile(HostGroup profile) {
         return true;
         /*

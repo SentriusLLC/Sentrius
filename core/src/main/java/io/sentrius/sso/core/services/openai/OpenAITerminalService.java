@@ -4,7 +4,7 @@ package io.sentrius.sso.core.services.openai;
 import java.util.concurrent.CompletableFuture;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.sentrius.sso.core.model.security.IntegrationSecurityToken;
-import io.sentrius.sso.core.services.IntegrationSecurityTokenService;
+import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.integrations.external.ExternalIntegrationDTO;
 import io.sentrius.sso.genai.GenerativeAPI;

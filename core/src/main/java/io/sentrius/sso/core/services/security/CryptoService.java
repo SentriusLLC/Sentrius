@@ -1,4 +1,4 @@
-package io.sentrius.sso.core.security.service;
+package io.sentrius.sso.core.services.security;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;

@@ -3,6 +3,7 @@ import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.repository.UserRepository;
 import io.sentrius.sso.core.repository.UserTypeRepository;
+import io.sentrius.sso.core.services.security.KeycloakService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.util.List;

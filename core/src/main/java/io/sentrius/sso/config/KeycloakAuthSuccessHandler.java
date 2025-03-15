@@ -5,7 +5,7 @@ import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.repository.UserRepository;
 import io.sentrius.sso.core.repository.UserTypeRepository;
-import io.sentrius.sso.core.services.JwtUtil;
+import io.sentrius.sso.core.services.security.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
 import org.springframework.security.core.Authentication;
@@ -15,7 +15,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -26,10 +25,10 @@ public class KeycloakAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHa
     private final UserRepository userRepository;
     private final UserTypeRepository userTypeRepository;
 
-    public KeycloakAuthSuccessHandler(Keycloak keycloak, UserRepository userRepository,
+    public KeycloakAuthSuccessHandler(KeycloakManager keycloak, UserRepository userRepository,
                                       UserTypeRepository userTypeRepository
     ) {
-        this.keycloak = keycloak;
+        this.keycloak = keycloak.getKeycloak();
         this.userRepository = userRepository;
         this.userTypeRepository = userTypeRepository;
     }
