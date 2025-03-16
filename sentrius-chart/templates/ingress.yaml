@@ -5,7 +5,7 @@ metadata:
   name: managed-cert-ingress-{{ .Values.tenant }}
   namespace: {{ .Values.tenant }}
   annotations:
-    kubernetes.io/ingress.class: {{ .Values.ingress.class }}
+    #kubernetes.io/ingress.class: {{ .Values.ingress.class }}
     {{- if eq .Values.environment "gke" }}
     {{- range $key, $value := .Values.ingress.annotations.gke }}
     {{ $key }}: "{{ $value }}"

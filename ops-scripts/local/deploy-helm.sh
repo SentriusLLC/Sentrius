@@ -23,7 +23,7 @@ fi
 #    --set sentrius-bad-ssh.image.pullPolicy="Never" \
 
 
-helm upgrade --install sentrius ./sentrius-gcp-chart --namespace ${TENANT} \
+helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set tenant=${TENANT} \
     --set subdomain="localhost" \
     --set keycloakSubdomain="sentrius-keycloak:8081" \

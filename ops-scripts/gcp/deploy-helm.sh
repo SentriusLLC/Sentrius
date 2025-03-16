@@ -33,8 +33,9 @@ if [[ $? -ne 0 ]]; then
 fi
 
 
-helm upgrade --install sentrius ./sentrius-gcp-chart --namespace ${TENANT} \
+helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set tenant=${TENANT} \
+    --set environment=gke \
     --set subdomain=${TENANT}.sentrius.cloud \
     --set sentrius.image.repository=us-central1-docker.pkg.dev/sentrius-project/sentrius-repo/sentrius \
     --set sentrius.image.tag=${SENTRIUS_VERSION} \
