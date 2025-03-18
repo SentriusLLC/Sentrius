@@ -45,6 +45,8 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set keycloak.image.tag=${SENTRIUS_KEYCLOAK_VERSION} \
     --set keycloak.clientId=${KEYCLOAK_CLIENT_ID} \
     --set keycloak.clientSecret=${KEYCLOAK_CLIENT_SECRET} \
+    --set sentriusaiagent.image.repository=us-central1-docker.pkg.dev/sentrius-project/sentrius-repo/sentrius-ai-agent \
+    --set sentriusaiagent.image.tag=${SENTRIUS_AI_AGENT_VERSION} \
     --set sentriusagent.image.repository=us-central1-docker.pkg.dev/sentrius-project/sentrius-repo/sentrius-agent \
     --set sentriusagent.image.tag=${SENTRIUS_AGENT_VERSION} || { echo "Failed to deploy Sentrius with Helm"; exit 1; }
 

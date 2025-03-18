@@ -35,5 +35,6 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set sentrius.image.tag=${SENTRIUS_VERSION} \
     --set ssh.image.tag=${SENTRIUS_SSH_VERSION} \
     --set keycloak.image.tag=${SENTRIUS_KEYCLOAK_VERSION} \
+    --set sentriusaiagent.image.tag=${SENTRIUS_AI_AGENT_VERSION} \
     --set sentriusagent.image.tag=${SENTRIUS_AGENT_VERSION} || { echo "Failed to deploy Sentrius with Helm"; exit 1; }
 

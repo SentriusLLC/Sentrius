@@ -2,18 +2,11 @@ package io.sentrius.sso.core.services.security;
 import io.jsonwebtoken.Jwts;
 import io.sentrius.sso.config.KeycloakManager;
 import io.sentrius.sso.core.model.security.UserType;
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import java.security.KeyFactory;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -33,6 +26,11 @@ public class KeycloakService {
 
     public KeycloakService(KeycloakManager keycloak) {
         this.keycloak = keycloak;
+    }
+
+
+    public String getKeycloakToken() {
+        return keycloak.getKeycloak().tokenManager().getAccessTokenString();
     }
 
     public Map<String, List<String>> getUserAttributes(String userId) {

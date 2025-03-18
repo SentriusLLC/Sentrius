@@ -14,4 +14,4 @@ RUN apt-get update && apt-get install -y curl
 
 
 # Command to run the app
-CMD ["java", "-jar", "/app/agent.jar", "--spring.config.location=/config/analysis-agent-application.properties"]
+CMD ["java", "-jar", "/app/agent.jar", "--spring.config.location=/config/ai-agent-application.properties"]

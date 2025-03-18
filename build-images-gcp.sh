@@ -50,6 +50,7 @@ update_sentrius=false
 update_sentrius_ssh=false
 update_sentrius_keycloak=false
 update_sentrius_agent=false
+update_sentrius_ai_agent=false
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -57,7 +58,8 @@ while [[ "$#" -gt 0 ]]; do
         --sentrius-ssh) update_sentrius_ssh=true ;;
         --sentrius-keycloak) update_sentrius_keycloak=true ;;
         --sentrius-agent) update_sentrius_agent=true ;;
-        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true ;;
+        --sentrius-ai-agent) update_sentrius_ai_agent=true ;;
+        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true ;;
         *) echo "Unknown flag: $1"; exit 1 ;;
     esac
     shift
@@ -92,4 +94,17 @@ if $update_sentrius_agent; then
     build_and_push_image "sentrius-agent" "$SENTRIUS_AGENT_VERSION" "./docker/sentrius-agent"
     rm docker/sentrius-agent/agent.jar
     update_env_var "SENTRIUS_AGENT_VERSION" "$SENTRIUS_AGENT_VERSION"
+fi
+
+if $update_sentrius_ai_agent; then
+    cp ai-agent/target/ai-agent-*.jar docker/sentrius-ai-agent/agent.jar
+    $SENTRIUS_AI_AGENT_VERSION=$(increment_patch_version $SENTRIUS_AI_AGENT_VERSION)
+    build_image "sentrius-ai-agent" "$SENTRIUS_AI_AGENT_VERSION" "./docker/sentrius-ai-agent"
+    rm docker/sentrius-ai-agent/agent.jar
+    update_env_var "SENTRIUS_AI_AGENT_VERSION" "$SENTRIUS_AI_AGENT_VERSION"
+    ## for local, replace minikube with docker
+    docker tag sentrius-ai-agent:$SENTRIUS_AI_AGENT_VERSION sentrius-ai-agent:latest
+    echo "Loading image into minikube"
+   # minikube image load sentrius-agent:$SENTRIUS_AGENT_VERSION
+   # minikube image load sentrius-agent:latest
 fi

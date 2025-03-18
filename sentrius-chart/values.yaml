@@ -54,8 +54,40 @@ sentriusagent:
     pullPolicy: IfNotPresent
   port: 8080
   oauth2:
-    client_id: sentrius-api
-    client_secret: nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0
+    client_id: java-agents
+    client_secret: KLJMLKSDJGlkj23@#jasdlkjg@#dsagsagdsag
+    authorization_grant_type: authorization_code
+    redirect-uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
+    scope: openid,profile,email
+    issuer-uri: http://keycloak.{{ .Values.subdomain }}/realms/sentrius
+  ssh:
+    port: 22
+  env:
+    SPRING_DATASOURCE_USERNAME: admin
+    SPRING_DATASOURCE_PASSWORD: password
+    KEYSTORE_PASSWORD: sentrius
+  resources: {}
+  config:
+    application: |
+  annotations:
+    gke:
+      cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
+    aws:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    azure:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+
+sentriusaiagent:
+  service:
+    type: NodePort
+    nodePort: 30085
+  image:
+    repository: sentrius-ai-agent
+    pullPolicy: IfNotPresent
+  port: 8080
+  oauth2:
+    client_id: java-agents
+    client_secret: KLJMLKSDJGlkj23@#jasdlkjg@#dsagsagdsag
     authorization_grant_type: authorization_code
     redirect-uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     scope: openid,profile,email
