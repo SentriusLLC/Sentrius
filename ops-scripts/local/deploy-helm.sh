@@ -26,7 +26,8 @@ fi
 helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set tenant=${TENANT} \
     --set subdomain="localhost" \
-    --set keycloakSubdomain="sentrius-keycloak:8081" \
+    --set keycloakSubdomain="sentrius-keycloak" \
+    --set keycloakHostname="sentrius-keycloak:8081" \
     --set keycloakDomain="http://sentrius-keycloak:8081" \
     --set sentriusDomain="http://sentrius:8080" \
     --set sentrius.image.repository="sentrius" \

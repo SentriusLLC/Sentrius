@@ -29,7 +29,9 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
 
         String command = "ssh connect host123";
 
+        log.info("Registering agent...");
         zeroTrustClientService.requestZtatToken(user, command);
+        log.info("Registered agent is running");
         return;
     }
 

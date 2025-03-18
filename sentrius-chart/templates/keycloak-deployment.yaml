@@ -55,7 +55,7 @@ spec:
             - name: KC_DB_PASSWORD
               value: {{ .Values.keycloak.db.password }}
             - name: KC_HOSTNAME
-              value: {{ .Values.keycloakSubdomain }}
+              value: {{ .Values.keycloakHostname }}
             - name: KC_HOSTNAME_STRICT
               value: "false"
             - name: KEYCLOAK_LOGLEVEL

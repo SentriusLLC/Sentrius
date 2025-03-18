@@ -23,12 +23,12 @@ spec:
   {{- if .Values.ingress.tlsEnabled }}
   tls:
     - hosts:
-        - keycloak.{{ .Values.subdomain }}
+        - {{ .Values.keycloakSubdomain }}
         - {{ .Values.subdomain }}
       secretName: wildcard-cert-{{ .Values.tenant }}
   {{- end }}
   rules:
-    - host: keycloak.{{ .Values.subdomain }}
+    - host: {{ .Values.keycloakSubdomain }}
       http:
         paths:
           - path: /
