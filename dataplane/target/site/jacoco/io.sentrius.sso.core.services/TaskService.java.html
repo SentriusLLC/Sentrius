@@ -1,0 +1,376 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TaskService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services</a> &gt; <span class="el_source">TaskService.java</span></div><h1>TaskService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.security.GeneralSecurityException;
+import java.sql.SQLException;
+import java.util.Map;
+import java.util.UUID;
+import com.jcraft.jsch.Channel;
+import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.ConfigRepository;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
+import io.sentrius.sso.automation.watchdog.WatchDog;
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.model.ApplicationKey;
+import io.sentrius.sso.core.model.ConnectedSystem;
+import io.sentrius.sso.core.model.HostSystem;
+import io.sentrius.sso.core.model.automation.Automation;
+import io.sentrius.sso.core.model.automation.AutomationExecution;
+import io.sentrius.sso.core.model.hostgroup.HostGroup;
+import io.sentrius.sso.core.model.sessions.SessionLog;
+import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.repository.ApplicationKeyRepository;
+import io.sentrius.sso.core.repository.AutomationExecutionRepository;
+import io.sentrius.sso.core.repository.SystemRepository;
+import io.sentrius.sso.core.services.automation.AutomationService;
+import io.sentrius.sso.core.services.security.KeyStoreService;
+import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
+import io.sentrius.sso.core.services.terminal.SessionTrackingService;
+import io.sentrius.sso.core.utils.SecureShellTask;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationContext;
+import org.springframework.stereotype.Service;
+
+<span class="nc" id="L40">@Slf4j</span>
+@Service
+<span class="nc" id="L42">@RequiredArgsConstructor</span>
+public class TaskService {
+
+    protected final SystemOptions systemOptions;
+    protected final SessionService sessionService;
+    protected final ApplicationKeyRepository applicationKeyRepository;
+    protected final SessionTrackingService sessionOutputService;
+    protected final SecureShellTask secureShellTask;
+    protected final AutomationService automationService;
+    protected final UserPublicKeyService userPublicKeyService;
+    protected final KeyStoreService keyStoreService;
+    protected final ZeroTrustAccessTokenService ztatService;
+    protected final ApplicationContext applicationContext;
+    protected final KnownHostService knownHostService;
+
+    protected final AutomationExecutionRepository automationExecutionRepository;
+
+    public static final int SESSION_TIMEOUT = 60000;
+    public static final int CHANNEL_TIMEOUT = 60000;
+
+
+
+    public static final String PRIVATE_KEY = &quot;privateKey&quot;;
+    public static final String PUBLIC_KEY = &quot;publicKey&quot;;
+    private final SessionTrackingService sessionTrackingService;
+    private final SystemRepository systemRepository;
+
+    public String openTerminalForScript(
+        String passphrase,
+        String password,
+        User user,
+        SessionLog sessionLog,
+        HostGroup enclave,
+        HostSystem selectedSystem,
+        Automation scriptToRun)
+        throws SQLException, GeneralSecurityException, JSchException, IOException {
+<span class="nc" id="L78">        return openTerminalForScript(</span>
+            passphrase, password, user, sessionLog,enclave,selectedSystem, scriptToRun, null, null, false);
+    }
+
+    public String openTerminalForScript(
+        String passphrase,
+        String password,
+        User user,
+        SessionLog sessionLog,
+        HostGroup enclave,
+        HostSystem selectedSystem,
+        Automation scriptToRun,
+        WatchDog watchdog,
+        Map&lt;String, String&gt; environmentVariables,
+        boolean appendToWatchDog)
+        throws SQLException, GeneralSecurityException, JSchException, IOException {
+<span class="nc" id="L94">        ApplicationKey appKey = keyStoreService.getGlobalKey();</span>
+<span class="nc" id="L95">        return openTerminalForScript(</span>
+            appKey,
+            passphrase,
+            password,
+            user,
+            sessionLog,
+            enclave,
+            selectedSystem,
+            scriptToRun,
+            watchdog,
+            environmentVariables,
+            appendToWatchDog);
+    }
+
+    public String openTerminalForScript(
+        ApplicationKey appKey,
+        String passphrase,
+        String password,
+        User user,
+        SessionLog sessionLog,
+        HostGroup enclave,
+        HostSystem selectedSystem,
+        Automation scriptToRun,
+        WatchDog watchdog,
+        Map&lt;String, String&gt; environmentVariables,
+        boolean appendToWatchDog)
+        throws SQLException, GeneralSecurityException {
+<span class="nc" id="L122">        return openTerminalForScript(</span>
+            appKey,
+            passphrase,
+            password,
+            user,
+            sessionLog,
+            enclave,
+            selectedSystem,
+            scriptToRun,
+            watchdog,
+            environmentVariables,
+            appendToWatchDog,
+            false);
+    }
+
+    public String openTerminalForScript(
+        ApplicationKey appKey,
+        String passphrase,
+        String password,
+        User user,
+        SessionLog sessionLog,
+        HostGroup enclave,
+        HostSystem selectedSystem,
+        Automation scriptToRun,
+        WatchDog watchdog,
+        Map&lt;String, String&gt; environmentVariables,
+        boolean appendToWatchDog,
+        boolean setPtyFalse)
+        throws SQLException, GeneralSecurityException {
+<span class="nc" id="L151">        JSch jsch = new JSch();</span>
+<span class="nc" id="L152">        jsch.setInstanceLogger(</span>
+<span class="nc" id="L153">            new com.jcraft.jsch.Logger() {</span>
+                @Override
+                public boolean isEnabled(int level) {
+<span class="nc" id="L156">                    return true;</span>
+                }
+
+                @Override
+                public void log(int level, String message) {
+<span class="nc" id="L161">                    log.info(&quot;JSCH: &quot; + message);</span>
+<span class="nc" id="L162">                }</span>
+            });
+
+        final var schSession =
+<span class="nc" id="L166">            ConnectedSystem.builder().hostSystem(selectedSystem).enclave(enclave).user(user).session(sessionLog).build();</span>
+
+<span class="nc" id="L168">        selectedSystem.setStatusCd(HostSystem.SUCCESS_STATUS);</span>
+
+<span class="nc" id="L170">        String result = &quot;&quot;;</span>
+
+        try {
+
+            // check to see if passphrase has been provided
+<span class="nc bnc" id="L175" title="All 4 branches missed.">            if (passphrase == null || passphrase.trim().equals(&quot;&quot;)) {</span>
+<span class="nc" id="L176">                passphrase = appKey.getPassphrase();</span>
+                // check for null inorder to use key without passphrase
+<span class="nc bnc" id="L178" title="All 2 branches missed.">                if (passphrase == null) {</span>
+<span class="nc" id="L179">                    passphrase = &quot;&quot;;</span>
+                }
+            }
+<span class="nc" id="L182">            String hostname = UUID.randomUUID().toString();</span>
+<span class="nc" id="L183">            Session session = null;</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">            if (!appKey.isFile()) {</span>
+                // add private key
+<span class="nc" id="L186">                jsch.addIdentity(</span>
+<span class="nc" id="L187">                    appKey.getId().toString(),</span>
+<span class="nc" id="L188">                    appKey.getPrivateKey().trim().getBytes(),</span>
+<span class="nc" id="L189">                    appKey.getPublicKey().getBytes(),</span>
+<span class="nc" id="L190">                    passphrase.getBytes());</span>
+<span class="nc" id="L191">                session = jsch.getSession(selectedSystem.getSshUser(), selectedSystem.getHost(), selectedSystem.getPort());</span>
+            } else {
+                // provide path to private key
+                //    jsch.addIdentity(appKey.getPrivateKey().trim(),appKey.getPrivateKey() +&quot;.pub&quot;,
+                // passphrase.getBytes());
+<span class="nc" id="L196">                jsch.addIdentity(appKey.getPrivateKey().trim(), passphrase.getBytes());</span>
+
+<span class="nc" id="L198">                String config =</span>
+                    &quot;Port 22\n&quot;
+                        + &quot;\n&quot;
+                        + &quot;Host &quot;
+                        + hostname
+                        + &quot;\n&quot;
+                        + &quot;  User &quot;
+<span class="nc" id="L205">                        + selectedSystem.getSshUser()</span>
+                        + &quot;\n&quot;
+                        + &quot;  Hostname &quot;
+<span class="nc" id="L208">                        + selectedSystem.getHost()</span>
+                        + &quot;\n&quot;
+                        + &quot;Host *\n&quot;
+                        + &quot;  ConnectTime &quot;
+                        + 60000
+                        + &quot;\n&quot;
+                        + &quot;  PreferredAuthentications keyboard-interactive,password,publickey\n&quot;
+                        + &quot;  IdentityFile &quot;
+<span class="nc" id="L216">                        + appKey.getPrivateKey()</span>
+                        + &quot;\n&quot;
+                        + &quot;  UserKnownHostsFile &quot;
+<span class="nc" id="L219">                        + knownHostService.getKnownHostsPath();</span>
+
+<span class="nc" id="L221">                ConfigRepository configRepository = com.jcraft.jsch.OpenSSHConfig.parse(config);</span>
+
+<span class="nc" id="L223">                jsch.setConfigRepository(configRepository);</span>
+
+<span class="nc" id="L225">                session = jsch.getSession(hostname);</span>
+            }
+            // create session
+            // Session session = jsch.getSession(&quot;foo&quot;);
+
+            // session.setPassword(appKey.getPassphrase());
+            // set password if it exists
+
+<span class="nc bnc" id="L233" title="All 4 branches missed.">            if (password != null &amp;&amp; !password.trim().equals(&quot;&quot;)) {</span>
+<span class="nc" id="L234">                session.setPassword(password);</span>
+            }
+
+<span class="nc bnc" id="L237" title="All 2 branches missed.">            if (!appKey.isFile()) {</span>
+<span class="nc" id="L238">                jsch.setKnownHosts(knownHostService.getKnownHostsPath());</span>
+<span class="nc" id="L239">                session.setConfig(&quot;PreferredAuthentications&quot;, &quot;publickey,password&quot;);</span>
+            }
+<span class="nc" id="L241">            session.setServerAliveInterval(60000);</span>
+            try {
+<span class="nc" id="L243">                session.connect(SESSION_TIMEOUT);</span>
+<span class="nc" id="L244">            } catch (JSchException je) {</span>
+<span class="nc" id="L245">                je.printStackTrace();</span>
+        /*
+        if (je.getMessage().contains(&quot;USERAUTH fail&quot;)){
+            if (!StringUtils.isNotEmpty(appKey.getPassphrase())){
+                var cons = System.console();
+                char[] passwd;
+                if (cons != null &amp;&amp;
+                        (passwd = cons.readPassword(&quot;[%s]&quot;, &quot;Password:&quot;)) != null) {
+                    appKey.setPassphrase(new String(passwd));
+                    java.util.Arrays.fill(passwd, ' ');
+                }
+                jsch.removeAllIdentity();
+                jsch.addIdentity(appKey.getPrivateKey().trim(), appKey.getPassphrase().getBytes));
+                session.connect(SESSION_TIMEOUT);
+            }
+        } else {
+
+         */
+<span class="nc" id="L263">                throw je;</span>
+                // }
+<span class="nc" id="L265">            }</span>
+            // session.connect(SESSION_TIMEOUT);
+<span class="nc" id="L267">            Channel channel = session.openChannel(&quot;exec&quot;);</span>
+
+            // 80, 24, 640, 480);
+            // ((ChannelShell) channel).setPtyType(&quot;xterm-256color&quot;, 425, 81, 0, 0);
+<span class="nc bnc" id="L271" title="All 2 branches missed.">            if (setPtyFalse) {</span>
+<span class="nc" id="L272">                ((ChannelExec) channel).setPty(false);</span>
+            } else {
+<span class="nc" id="L274">                ((ChannelExec) channel).setPtyType(&quot;xterm-256color&quot;, 120, 81, 0, 0);</span>
+<span class="nc" id="L275">                channel.setInputStream(null);</span>
+<span class="nc" id="L276">                ((ChannelExec) channel).setPty(true);</span>
+            }
+
+<span class="nc" id="L279">            String prepend = &quot;&quot;;</span>
+<span class="nc bnc" id="L280" title="All 2 branches missed.">            if (null != environmentVariables) {</span>
+<span class="nc bnc" id="L281" title="All 2 branches missed.">                for (Map.Entry&lt;String, String&gt; entry : environmentVariables.entrySet()) {</span>
+<span class="nc" id="L282">                    prepend += &quot;export &quot; + entry.getKey() + &quot;=&quot; + entry.getValue() + &quot; &amp;&amp; &quot;;</span>
+<span class="nc" id="L283">                }</span>
+            }
+
+<span class="nc" id="L286">            var scr = scriptToRun.getScript().trim();</span>
+<span class="nc" id="L287">            scr = prepend + scr;</span>
+<span class="nc" id="L288">            scr = scr.replace('\r', '\n');</span>
+
+<span class="nc" id="L290">            ((ChannelExec) channel).setCommand(scr);</span>
+
+<span class="nc" id="L292">            OutputStream out = new ByteArrayOutputStream();</span>
+<span class="nc" id="L293">            channel.setOutputStream(out);</span>
+<span class="nc" id="L294">            ((ChannelExec) channel).setErrStream(out);</span>
+
+<span class="nc" id="L296">            InputStream outFromChannel = channel.getInputStream();</span>
+
+<span class="nc" id="L298">            channel.connect();</span>
+
+<span class="nc" id="L300">            byte[] buff = new byte[1024];</span>
+            int read;
+<span class="nc" id="L302">            ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();</span>
+            while (true) {
+<span class="nc bnc" id="L304" title="All 4 branches missed.">                if (null != watchdog &amp;&amp; !watchdog.canRun()) {</span>
+<span class="nc" id="L305">                    break;</span>
+                }
+<span class="nc bnc" id="L307" title="All 2 branches missed.">                if (outFromChannel.available() &gt; 0) {</span>
+
+<span class="nc" id="L309">                    read = outFromChannel.read(buff, 0, 1024);</span>
+<span class="nc bnc" id="L310" title="All 2 branches missed.">                    if (read != -1) {</span>
+<span class="nc" id="L311">                        outputBuffer.write(buff, 0, read);</span>
+<span class="nc bnc" id="L312" title="All 4 branches missed.">                        if (null != watchdog &amp;&amp; appendToWatchDog) {</span>
+<span class="nc" id="L313">                            var st = new String(buff, 0, read);</span>
+<span class="nc" id="L314">                            watchdog.appendScriptOutput(outputToAppend -&gt; {</span>
+<span class="nc" id="L315">                                automationExecutionRepository.save(</span>
+<span class="nc" id="L316">                                    AutomationExecution.builder().system(selectedSystem).automation(scriptToRun).executionOutput(</span>
+<span class="nc" id="L317">                                        outputToAppend.getOutput()).build());</span>
+<span class="nc" id="L318">                            }, st);</span>
+                        }
+                        // sleep 100 ms. these are expected to be asynchronous
+                    }
+                }
+<span class="nc bnc" id="L323" title="All 2 branches missed.">                if (channel.isClosed()) {</span>
+<span class="nc bnc" id="L324" title="All 2 branches missed.">                    if (outFromChannel.available() &lt;= 0) break;</span>
+                }
+<span class="nc" id="L326">                Thread.sleep(500);</span>
+            }
+
+<span class="nc" id="L329">            var intermediate = new String(outputBuffer.toByteArray(), 0, outputBuffer.size());</span>
+<span class="nc bnc" id="L330" title="All 4 branches missed.">            if (null != watchdog &amp;&amp; appendToWatchDog) {</span>
+<span class="nc" id="L331">                watchdog.appendScriptOutput(outputToAppend -&gt; {</span>
+<span class="nc" id="L332">                    automationExecutionRepository.save(</span>
+<span class="nc" id="L333">                        AutomationExecution.builder().system(selectedSystem).automation(scriptToRun).executionOutput(</span>
+<span class="nc" id="L334">                            outputToAppend.getOutput()).build());</span>
+<span class="nc" id="L335">                }, intermediate);</span>
+            }
+            //                watchdog.
+<span class="nc" id="L338">            result += intermediate;</span>
+
+<span class="nc bnc" id="L340" title="All 2 branches missed.">            if (null != watchdog) {</span>
+<span class="nc" id="L341">                watchdog.appendError(out.toString());</span>
+            } else {
+<span class="nc" id="L343">                result += out.toString();</span>
+            }
+<span class="nc" id="L345">            outFromChannel.close();</span>
+
+<span class="nc" id="L347">            channel.disconnect();</span>
+<span class="nc" id="L348">            session.disconnect();</span>
+
+            // refresh keys for session
+
+<span class="nc" id="L352">        } catch (Throwable ex) {</span>
+<span class="nc" id="L353">            ex.printStackTrace();</span>
+<span class="nc" id="L354">            log.info(ex.toString(), ex);</span>
+<span class="nc" id="L355">            selectedSystem.setErrorMsg(ex.getMessage());</span>
+<span class="nc bnc" id="L356" title="All 2 branches missed.">            if (ex.getMessage().toLowerCase().contains(&quot;userauth fail&quot;)) {</span>
+<span class="nc" id="L357">                selectedSystem.setStatusCd(HostSystem.PUBLIC_KEY_FAIL_STATUS);</span>
+<span class="nc bnc" id="L358" title="All 2 branches missed.">            } else if (ex.getMessage().toLowerCase().contains(&quot;auth fail&quot;)</span>
+<span class="nc bnc" id="L359" title="All 2 branches missed.">                || ex.getMessage().toLowerCase().contains(&quot;auth cancel&quot;)) {</span>
+<span class="nc" id="L360">                selectedSystem.setStatusCd(HostSystem.AUTH_FAIL_STATUS);</span>
+<span class="nc bnc" id="L361" title="All 2 branches missed.">            } else if (ex.getMessage().toLowerCase().contains(&quot;unknownhostexception&quot;)) {</span>
+<span class="nc" id="L362">                selectedSystem.setErrorMsg(&quot;DNS Lookup Failed&quot;);</span>
+<span class="nc" id="L363">                selectedSystem.setStatusCd(HostSystem.HOST_FAIL_STATUS);</span>
+            } else {
+<span class="nc" id="L365">                selectedSystem.setStatusCd(HostSystem.GENERIC_FAIL_STATUS);</span>
+            }
+<span class="nc" id="L367">        }</span>
+
+        //        SystemStatusDB.updateSystemStatus(hostSystem, userId);
+        //      SystemDB.updateSystem(hostSystem);
+
+<span class="nc" id="L372">        return result;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

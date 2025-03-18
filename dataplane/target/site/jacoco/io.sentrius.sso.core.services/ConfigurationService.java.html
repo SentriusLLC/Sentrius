@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConfigurationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services</a> &gt; <span class="el_source">ConfigurationService.java</span></div><h1>ConfigurationService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services;
+
+import io.sentrius.sso.core.model.install.Configuration;
+import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.repository.ConfigurationRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+@Service
+public class ConfigurationService {
+
+    private final ConfigurationRepository configurationRepository;
+
+<span class="nc" id="L17">    public ConfigurationService(ConfigurationRepository configurationRepository) {</span>
+<span class="nc" id="L18">        this.configurationRepository = configurationRepository;</span>
+<span class="nc" id="L19">    }</span>
+
+    @Transactional
+    public Configuration saveOrUpdateConfiguration(User user, String configName, String content) {
+<span class="nc" id="L23">        Optional&lt;Configuration&gt; existingConfig = configurationRepository.findByConfigNameAndUserId(configName,</span>
+<span class="nc" id="L24">            user.getId());</span>
+
+        Configuration configuration;
+<span class="nc bnc" id="L27" title="All 2 branches missed.">        if (existingConfig.isPresent()) {</span>
+            // Update existing configuration
+<span class="nc" id="L29">            configuration = existingConfig.get();</span>
+<span class="nc" id="L30">            configuration.setContent(content);</span>
+<span class="nc" id="L31">            configuration.setUpdatedAt(LocalDateTime.now());</span>
+        } else {
+            // Save new configuration
+<span class="nc" id="L34">            configuration = new Configuration();</span>
+<span class="nc" id="L35">            configuration.setUser(user);</span>
+<span class="nc" id="L36">            configuration.setConfigName(configName);</span>
+<span class="nc" id="L37">            configuration.setContent(content);</span>
+        }
+
+<span class="nc" id="L40">        return configurationRepository.save(configuration);</span>
+    }
+
+    public Optional&lt;Configuration&gt; findById(Long databaseId) {
+<span class="nc" id="L44">        return configurationRepository.findById(databaseId);</span>
+    }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

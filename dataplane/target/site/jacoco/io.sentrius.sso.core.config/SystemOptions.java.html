@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SystemOptions.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.config</a> &gt; <span class="el_source">SystemOptions.java</span></div><h1>SystemOptions.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.config;
+
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
+import io.sentrius.sso.core.annotations.RequiresRestart;
+import io.sentrius.sso.core.annotations.Updatable;
+import io.sentrius.sso.core.dto.SystemOption;
+import jakarta.annotation.PostConstruct;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+/** Purpose: Centralizes a POJO for options with sensible defaults. */
+<span class="nc" id="L20">@Slf4j</span>
+<span class="nc bnc" id="L21" title="All 48 branches missed.">@Builder</span>
+@Getter
+<span class="nc" id="L23">@NoArgsConstructor</span>
+<span class="nc" id="L24">@AllArgsConstructor</span>
+@Component
+public class SystemOptions {
+
+
+  @Autowired
+<span class="nc" id="L30">  private ThreadSafeDynamicPropertiesService dynamicPropertiesService;</span>
+
+<span class="nc" id="L32">  @Builder.Default public String systemLogoName = &quot;Sentrius&quot;;</span>
+
+<span class="nc" id="L34">  @Builder.Default public String systemLogoPathSmall = &quot;/images/sentrius_small.png&quot;;</span>
+
+<span class="nc" id="L36">  @Builder.Default public String systemLogoPathLarge = &quot;/images/sentrius_large.jpg&quot;;</span>
+
+<span class="nc" id="L38">  @Builder.Default public String systemTopBanner = &quot;&quot;;</span>
+
+<span class="nc" id="L40">  @Builder.Default public String systemTopBannerClass = &quot;&quot;;</span>
+
+  /** Full admin can login. */
+<span class="nc" id="L43">  @Builder.Default public Boolean fullAdminCanLogin = true;</span>
+
+<span class="nc" id="L45">  @Builder.Default public Boolean ztatRequiresTicket = false;</span>
+
+<span class="nc" id="L47">  @Builder.Default public Integer approvedJITPeriod = 60;</span>
+
+<span class="nc" id="L49">  @Builder.Default public Boolean allowProxies = true;</span>
+
+<span class="nc" id="L51">  @Builder.Default public String auditorClass = &quot;io.sentrius.sso.automation.auditing.RuleAlertAuditor&quot;;</span>
+
+<span class="nc" id="L53">  @Builder.Default public Integer automationThreads = 10;</span>
+
+<span class="nc" id="L55">  @Builder.Default public Integer automationStateRefreshSecs = 60;</span>
+
+<span class="nc" id="L57">  @Builder.Default public Boolean allowInsecureCookies = false;</span>
+
+<span class="nc" id="L59">  @Builder.Default public Boolean requireProfileForLogin = true;</span>
+
+<span class="nc" id="L61">  @Builder.Default public Integer maxJitUses = 1;</span>
+
+  /**
+   * This is how long before a ztat request ( that has been denied or approved ) can last.
+   */
+<span class="nc" id="L66">  @Builder.Default public Integer maxJitDurationMs = (1440 * 1000); // 60 min * 24 hrs * 1000 ms</span>
+
+<span class="nc" id="L68">  @Builder.Default public int sessionLogThreadPoolSize = 1;</span>
+
+<span class="nc" id="L70">  @Builder.Default public Boolean enableInternalAudit = true;</span>
+
+<span class="nc" id="L72">  @Builder.Default public Integer auditFlushIntervalMs = 5000;</span>
+
+  @Builder.Default
+<span class="nc" id="L75">  public String knownHostsPath = System.getProperty(&quot;user.home&quot;) + &quot;/.ssh/known_hosts&quot;;</span>
+
+<span class="nc" id="L77">  @Builder.Default public Boolean terminalsInNewTab = true;</span>
+
+<span class="nc" id="L79">  @Builder.Default public Boolean testMode = false;</span>
+
+<span class="nc" id="L81">  @Builder.Default public String defaultUserTypeName = &quot;&quot;;</span>
+
+  @Builder.Default
+<span class="nc" id="L84">  public Integer globalCacheExpirationMinutes = 1440; // 24 hours</span>
+
+<span class="nc" id="L86">  public String systemBanner = &quot;&quot;;</span>
+
+<span class="nc" id="L88">  public Boolean agentForwarding = false;</span>
+
+<span class="nc" id="L90">  public Boolean keyManagementEnabled = true;</span>
+
+<span class="nc" id="L92">  public Integer serverAliveInterval = 60;</span>
+
+<span class="nc" id="L94">  public String yamlConfiguration = &quot;&quot;;</span>
+
+<span class="nc" id="L96">  public Boolean deleteYamlConfigurationFile = false;</span>
+
+<span class="nc" id="L98">  public Boolean allowUploadSystemConfiguration = false;</span>
+
+<span class="nc" id="L100">  public Boolean enableLLMQuestions = false;</span>
+
+
+<span class="nc" id="L103">  public Boolean sshEnabled = true;</span>
+
+<span class="nc" id="L105">  public Double aiRiskThreshold = 0.8;</span>
+
+<span class="nc" id="L107">  public Integer commandsToBuffer = 10;</span>
+
+<span class="nc" id="L109">    public Integer commandsToEvaluate = 5;</span>
+
+  /**
+   * Purely for testing mode
+   */
+<span class="nc" id="L114">  public Boolean canApproveOwnZtat = false;</span>
+
+
+  // the default path may be sufficient
+  public String uploadPath;
+<span class="nc" id="L119">  public String sshKeyType = &quot;rsa&quot;;</span>
+
+  public String getUploadPath() {
+<span class="nc bnc" id="L122" title="All 4 branches missed.">    if (null == uploadPath || uploadPath.isEmpty()){</span>
+      // since these are loaded at startup we will get an NPE if we attempt to set
+      // this as the default value.
+<span class="nc" id="L125">      return SystemOptions.class.getClassLoader().getResource(&quot;.&quot;).getPath() + &quot;.&quot; +</span>
+              &quot;./upload&quot;;
+    }
+<span class="nc" id="L128">    return uploadPath;</span>
+  }
+
+  @PostConstruct
+  private void init() throws IllegalAccessException {
+<span class="nc" id="L133">    Field[] fields = getClass().getDeclaredFields();</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">    for (Field field : fields) {</span>
+<span class="nc" id="L135">      field.setAccessible(true); // Allow access to private fields</span>
+      // Only process fields with non-null defaults or initialize with a default if null
+<span class="nc bnc" id="L137" title="All 2 branches missed.">      String defaultValue = field.get(this) != null ? field.get(this).toString() : &quot;&quot;;</span>
+<span class="nc" id="L138">      String propertyValue = dynamicPropertiesService.getProperty(field.getName(), defaultValue);</span>
+
+      // Convert propertyValue to the field's actual \ if necessary
+<span class="nc bnc" id="L141" title="All 4 branches missed.">      if (field.getType() == Boolean.class || field.getType() == boolean.class) {</span>
+<span class="nc" id="L142">        field.set(this, Boolean.parseBoolean(propertyValue));</span>
+<span class="nc bnc" id="L143" title="All 4 branches missed.">      } else if (field.getType() == Integer.class || field.getType() == int.class) {</span>
+<span class="nc" id="L144">        field.set(this, Integer.parseInt(propertyValue));</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">      } else if (field.getType() == String.class) {</span>
+<span class="nc" id="L146">        field.set(this, propertyValue);</span>
+      }
+      // Add additional type checks as needed
+    }
+<span class="nc" id="L150">  }</span>
+
+  /**
+   * Updates the value of a specific system option by reflecting on the field name.
+   * It also updates the application configuration file based on the new value.
+   *
+   * @param fieldName  the name of the field to update
+   * @param fieldValue the new value to set for the field
+   * @return true if the field was successfully updated, false otherwise.
+   */
+  public boolean setValue(String fieldName, Object fieldValue, boolean save){
+<span class="nc" id="L161">    Field[] fields = this.getClass().getDeclaredFields();</span>
+<span class="nc bnc" id="L162" title="All 2 branches missed.">    for (var field : fields) {</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">      if (field.getName().equalsIgnoreCase(fieldName)) {</span>
+<span class="nc" id="L164">        log.debug(&quot;Setting field {} to {}&quot;, fieldName, fieldValue);</span>
+        try {
+<span class="nc" id="L166">          field.set(this, fieldValue);</span>
+
+          // Update the AppConfig with the new field value
+<span class="nc" id="L169">          dynamicPropertiesService.updateProperty(fieldName, fieldValue.toString());</span>
+<span class="nc" id="L170">          log.debug(&quot;Set field {} to {}&quot;, fieldName, fieldValue);</span>
+<span class="nc" id="L171">          return true;</span>
+<span class="nc" id="L172">        } catch (IllegalAccessException e) {</span>
+<span class="nc" id="L173">          log.error(&quot;Failed to update field {}&quot;, fieldName);</span>
+<span class="nc" id="L174">          return false;</span>
+<span class="nc" id="L175">        } catch (IOException e) {</span>
+<span class="nc" id="L176">          log.error(&quot;Failed to update field {}&quot;, fieldName);</span>
+<span class="nc" id="L177">            throw new RuntimeException(e);</span>
+        }
+      }
+    }
+<span class="nc" id="L181">    return false;</span>
+  }
+
+  public boolean setValue(String fieldName, Object fieldValue){
+<span class="nc" id="L185">    return setValue(fieldName, fieldValue, true);</span>
+  }
+
+  /**
+   * Retrieves the system options marked as updatable and returns them as a map of field names to SystemOption objects.
+   * Each field is checked for annotations such as @Updatable and @RequiresRestart to set the necessary attributes.
+   *
+   * @return a Map of system option field names and corresponding SystemOption objects.
+   * @throws IllegalAccessException if there is an issue accessing the field value via reflection.
+   */
+  public Map&lt;String, SystemOption&gt; getOptions() throws IllegalAccessException {
+    // Retrieve all fields from the system options class
+<span class="nc" id="L197">    Field[] fields = getClass().getDeclaredFields();</span>
+
+    // Map to store the updatable fields with their respective SystemOption objects
+<span class="nc" id="L200">    Map&lt;String, SystemOption&gt; entries = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L201" title="All 2 branches missed.">    for (Field field : fields) {</span>
+      // Check if the field is marked with the @Updatable annotation
+<span class="nc bnc" id="L203" title="All 2 branches missed.">      if (field.isAnnotationPresent(Updatable.class)) {</span>
+<span class="nc" id="L204">        boolean requiresRestart = false;</span>
+
+        // Check if the field requires a system restart when updated
+<span class="nc bnc" id="L207" title="All 2 branches missed.">        if (field.isAnnotationPresent(RequiresRestart.class)) {</span>
+<span class="nc" id="L208">          requiresRestart = true;</span>
+        }
+
+<span class="nc" id="L211">        String fieldName = field.getName();</span>
+<span class="nc" id="L212">        Object fieldValue = field.get(this);</span>
+
+<span class="nc" id="L214">        log.trace(&quot;Field: {} Value: {}&quot;, fieldName, fieldValue);</span>
+
+        // Create a SystemOption object with the field details
+<span class="nc" id="L217">        var sysOpt = SystemOption.builder()</span>
+<span class="nc" id="L218">            .name(fieldName)</span>
+<span class="nc bnc" id="L219" title="All 2 branches missed.">            .value(fieldValue == null ? &quot;&quot; : String.valueOf(fieldValue))</span>
+<span class="nc" id="L220">            .requiresRestart(requiresRestart);</span>
+
+        // Set the description if available in the annotation
+<span class="nc" id="L223">        var desc = field.getAnnotation(Updatable.class).description();</span>
+<span class="nc bnc" id="L224" title="All 4 branches missed.">        if (null != desc &amp;&amp; !desc.isEmpty()) {</span>
+<span class="nc" id="L225">          sysOpt = sysOpt.description(desc);</span>
+        }
+
+        // Set the closest data type of the field if it's not a primitive type
+<span class="nc bnc" id="L229" title="All 2 branches missed.">        if (!field.getType().isPrimitive()) {</span>
+<span class="nc" id="L230">          sysOpt.closestType(field.getType().getCanonicalName());</span>
+        }
+
+        // Add the field to the map of system options
+<span class="nc" id="L234">        entries.put(fieldName, sysOpt.build());</span>
+      }
+    }
+<span class="nc" id="L237">    return entries;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

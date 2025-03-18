@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuditService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services.auditing</a> &gt; <span class="el_source">AuditService.java</span></div><h1>AuditService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services.auditing;
+
+import io.sentrius.sso.core.model.ConnectedSystem;
+import io.sentrius.sso.core.model.sessions.SessionLog;
+import io.sentrius.sso.core.model.sessions.TerminalLogs;
+import io.sentrius.sso.core.repository.SessionLogRepository;
+import io.sentrius.sso.core.repository.TerminalLogsRepository;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+<span class="nc" id="L25">@Slf4j</span>
+@Service
+public class AuditService {
+
+<span class="nc" id="L29">    private final AtomicBoolean isRunning = new AtomicBoolean(false);</span>
+
+
+<span class="nc" id="L32">    final String CLEAR_SCREEN_SEQUENCE = &quot;\u001B[2J&quot;;</span>
+<span class="nc" id="L33">    final String RESET_SCREEN_SEQUENCE = &quot;\u001B[c&quot;;</span>
+
+<span class="nc" id="L35">    public static List&lt;String&gt; ESCAPE_SEQUENCES = new ArrayList&lt;&gt;();</span>
+
+    static {
+        //ESCAPE_SEQUENCES.add(&quot;\u0007&quot;);     // Bell character
+        //ESCAPE_SEQUENCES.add(&quot;\u001B[K&quot;);   // Clear line from cursor to end
+        //ESCAPE_SEQUENCES.add(&quot;\u001B[0m&quot;);  // Reset formatting
+        //ESCAPE_SEQUENCES.add(&quot;\u001B[2J&quot;);  // Clear the screen
+        //ESCAPE_SEQUENCES.add(&quot;\u001B[c&quot;);   // Full terminal reset
+
+<span class="nc" id="L44">        ESCAPE_SEQUENCES.add(&quot;\u001B[2J&quot;);</span>
+<span class="nc" id="L45">        ESCAPE_SEQUENCES.add(&quot;\u001Bc&quot;);</span>
+<span class="nc" id="L46">        ESCAPE_SEQUENCES.add(&quot;\u001B]104\u0007&quot;);</span>
+<span class="nc" id="L47">        ESCAPE_SEQUENCES.add(&quot;\u001B[!p&quot;);</span>
+<span class="nc" id="L48">        ESCAPE_SEQUENCES.add(&quot;\u001B[?3;4l&quot;);</span>
+<span class="nc" id="L49">        ESCAPE_SEQUENCES.add(&quot;\u001B[4l&quot;);</span>
+<span class="nc" id="L50">        ESCAPE_SEQUENCES.add(&quot;\u001B&gt;&quot;);</span>
+    /*
+    c]104[!p[?3;4l[4l&gt;
+
+     */
+<span class="nc" id="L55">    }</span>
+
+    private final TerminalLogsRepository terminalLogsRepository;
+
+<span class="nc" id="L59">    ConcurrentHashMap&lt;ConnectedSystem, TerminalLogs&gt; sessionAuditMap = new ConcurrentHashMap&lt;&gt;();</span>
+
+    private final SessionLogRepository sessionLogRepository;
+    private final TerminalLogsRepository TerminalLogsRepository;
+
+    public AuditService(SessionLogRepository sessionLogRepository, TerminalLogsRepository TerminalLogsRepository,
+                        TerminalLogsRepository terminalLogsRepository
+<span class="nc" id="L66">    ) {</span>
+<span class="nc" id="L67">        this.sessionLogRepository = sessionLogRepository;</span>
+<span class="nc" id="L68">        this.TerminalLogsRepository = TerminalLogsRepository;</span>
+<span class="nc" id="L69">        this.terminalLogsRepository = terminalLogsRepository;</span>
+<span class="nc" id="L70">    }</span>
+
+    @Transactional
+    public SessionLog createSession(String username, String ipAddress) {
+<span class="nc" id="L74">        SessionLog session = new SessionLog();</span>
+<span class="nc" id="L75">        session.setUsername(username);</span>
+<span class="nc" id="L76">        session.setIpAddress(ipAddress);</span>
+<span class="nc" id="L77">        session.setSessionTm(Timestamp.valueOf(LocalDateTime.now()));</span>
+<span class="nc" id="L78">        session.setClosed(false);</span>
+<span class="nc" id="L79">        return sessionLogRepository.save(session);</span>
+    }
+
+    @Transactional
+    public void logTerminalOutput(Long sessionId, String output) {
+<span class="nc" id="L84">        TerminalLogs log = new TerminalLogs();</span>
+<span class="nc" id="L85">        log.setSession(sessionLogRepository.findById(sessionId).orElseThrow());</span>
+<span class="nc" id="L86">        log.setOutput(output);</span>
+<span class="nc" id="L87">        log.setLogTm(Timestamp.valueOf(LocalDateTime.now()));</span>
+<span class="nc" id="L88">        TerminalLogsRepository.save(log);</span>
+<span class="nc" id="L89">    }</span>
+
+    @Transactional(readOnly = true)
+    public List&lt;TerminalLogs&gt; getTerminalLogsForSession(Long sessionId) {
+<span class="nc" id="L93">        return TerminalLogsRepository.findBySessionId(sessionId);</span>
+    }
+
+    public Optional&lt;SessionLog&gt; getSession(Long sessionId) {
+<span class="nc" id="L97">        return sessionLogRepository.findById(sessionId);</span>
+    }
+
+    @Transactional
+    public void closeSession(Long sessionId) {
+<span class="nc" id="L102">        SessionLog session = sessionLogRepository.findById(sessionId).orElseThrow();</span>
+<span class="nc" id="L103">        session.setClosed(true);</span>
+<span class="nc" id="L104">        sessionLogRepository.save(session);</span>
+<span class="nc" id="L105">    }</span>
+
+
+    @PostConstruct
+    public void initialize() {
+<span class="nc" id="L110">        isRunning.set(true);</span>
+<span class="nc" id="L111">        System.out.println(&quot;AuditService started.&quot;);</span>
+<span class="nc" id="L112">    }</span>
+
+    @PreDestroy
+    public void cleanup() {
+<span class="nc" id="L116">        isRunning.set(false);</span>
+<span class="nc" id="L117">        System.out.println(&quot;AuditService stopped.&quot;);</span>
+<span class="nc" id="L118">    }</span>
+
+
+<span class="nc bnc" id="L121" title="All 2 branches missed.">    private static boolean hasEscapeSequence(@NonNull final String sequence ) {</span>
+<span class="nc bnc" id="L122" title="All 2 branches missed.">        for(String escape : ESCAPE_SEQUENCES){</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">            if (sequence.contains(escape)) {</span>
+<span class="nc" id="L124">                return true;</span>
+            }
+<span class="nc" id="L126">        }</span>
+<span class="nc" id="L127">        return false;</span>
+    }
+
+    @Async
+    public void audit(final ConnectedSystem ident, String sessionOutput) {
+        try {
+<span class="nc bnc" id="L133" title="All 2 branches missed.">            if (isRunning.get()) {</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">                if (sessionOutput == null) return;</span>
+<span class="nc" id="L135">                var trimmed = sessionOutput.trim();</span>
+<span class="nc bnc" id="L136" title="All 2 branches missed.">                if (hasEscapeSequence(trimmed)) {</span>
+<span class="nc" id="L137">                    return;</span>
+                }
+<span class="nc" id="L139">                sessionAuditMap.merge(</span>
+                    ident,
+<span class="nc" id="L141">                    TerminalLogs.from(ident, sessionOutput),</span>
+                    (oldVal, newVal) -&gt; {
+<span class="nc" id="L143">                        oldVal.append(newVal.getOutput().toString());</span>
+<span class="nc" id="L144">                        return oldVal;</span>
+                    }
+                );
+            }
+<span class="nc" id="L148">        }catch(Throwable t){</span>
+<span class="nc" id="L149">            t.printStackTrace();</span>
+<span class="nc" id="L150">            throw t;</span>
+<span class="nc" id="L151">        }</span>
+<span class="nc" id="L152">    }</span>
+
+    public void flushLogs(ConnectedSystem system){
+<span class="nc bnc" id="L155" title="All 2 branches missed.">        if (isRunning.get()) {</span>
+<span class="nc" id="L156">            var audit = sessionAuditMap.remove(system);</span>
+<span class="nc bnc" id="L157" title="All 2 branches missed.">            if (audit != null) {</span>
+<span class="nc" id="L158">                terminalLogsRepository.save(audit);</span>
+            }
+        }
+<span class="nc" id="L161">    }</span>
+
+    public void flushLogs() {
+<span class="nc bnc" id="L164" title="All 2 branches missed.">        if (isRunning.get()) {</span>
+<span class="nc" id="L165">            var keyset = sessionAuditMap.keySet();</span>
+<span class="nc bnc" id="L166" title="All 2 branches missed.">            for (var ident : keyset) {</span>
+<span class="nc" id="L167">                var audit = sessionAuditMap.remove(ident);</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">                if (audit != null) {</span>
+<span class="nc" id="L169">                    terminalLogsRepository.save(audit);</span>
+                }
+<span class="nc" id="L171">            }</span>
+        }
+<span class="nc" id="L173">    }</span>
+
+    @Transactional
+    public List&lt;TerminalLogs&gt; listSessions() {
+<span class="nc" id="L177">        return terminalLogsRepository.findAll();</span>
+    }
+
+    @Transactional
+    public List&lt;SessionLog&gt; listUniqueSessions() {
+<span class="nc" id="L182">        return sessionLogRepository.findUniqueSessionIds();</span>
+    }
+
+    @Transactional
+    public Map&lt;String, Map&lt;Integer, Long&gt;&gt; getSessionHeatmapData() {
+<span class="nc" id="L187">        List&lt;SessionLog&gt; sessions = sessionLogRepository.findAll();</span>
+
+<span class="nc" id="L189">        Map&lt;String, Map&lt;Integer, Long&gt;&gt; heatmapData = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">        for (SessionLog session : sessions) {</span>
+<span class="nc" id="L191">            var localTime = session.getSessionTm().toLocalDateTime();</span>
+<span class="nc" id="L192">            String weekday = localTime.getDayOfWeek().name(); // &quot;MONDAY&quot;, &quot;TUESDAY&quot;, etc.</span>
+<span class="nc" id="L193">            int hour = localTime.getHour(); // 0 - 23</span>
+
+<span class="nc" id="L195">            heatmapData.putIfAbsent(weekday, new HashMap&lt;&gt;());</span>
+<span class="nc" id="L196">            heatmapData.get(weekday).merge(hour, 1L, Long::sum);</span>
+<span class="nc" id="L197">        }</span>
+
+<span class="nc" id="L199">        return heatmapData;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

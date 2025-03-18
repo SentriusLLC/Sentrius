@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuditWrapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.model</a> &gt; <span class="el_source">AuditWrapper.java</span></div><h1>AuditWrapper.java</h1><pre class="source lang-java linenums">/**
+ * Copyright (C) 2015 Loophole, LLC
+ *
+ * &lt;p&gt;Licensed under The Prosperity Public License 3.0.0
+ */
+package io.sentrius.sso.core.model;
+
+import io.sentrius.sso.core.model.sessions.SessionOutput;
+import io.sentrius.sso.core.model.users.User;
+
+public class AuditWrapper {
+
+  User user;
+  SessionOutput sessionOutput;
+
+<span class="nc" id="L16">  public AuditWrapper(User user, SessionOutput sessionOutput) {</span>
+<span class="nc" id="L17">    this.user = user;</span>
+<span class="nc" id="L18">    this.sessionOutput = sessionOutput;</span>
+<span class="nc" id="L19">  }</span>
+
+  public User getUser() {
+<span class="nc" id="L22">    return user;</span>
+  }
+
+  public void setUser(User user) {
+<span class="nc" id="L26">    this.user = user;</span>
+<span class="nc" id="L27">  }</span>
+
+  public SessionOutput getSessionOutput() {
+<span class="nc" id="L30">    return sessionOutput;</span>
+  }
+
+  public void setSessionOutput(SessionOutput sessionOutput) {
+<span class="nc" id="L34">    this.sessionOutput = sessionOutput;</span>
+<span class="nc" id="L35">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

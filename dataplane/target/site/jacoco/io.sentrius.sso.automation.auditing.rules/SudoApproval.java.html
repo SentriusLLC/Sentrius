@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SudoApproval.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.automation.auditing.rules</a> &gt; <span class="el_source">SudoApproval.java</span></div><h1>SudoApproval.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.automation.auditing.rules;
+
+import java.util.regex.Pattern;
+import io.sentrius.sso.automation.auditing.TriggerAction;
+import lombok.extern.slf4j.Slf4j;
+
+<span class="nc" id="L7">@Slf4j</span>
+public class SudoApproval extends SudoPrevention {
+
+  // Updated pattern to match both 'sudo' and 'su' as standalone commands (case-insensitive)
+<span class="nc" id="L11">  private static final Pattern SUDO_SU_PATTERN = Pattern.compile(&quot;\\b(sudo|su)\\b&quot;, Pattern.CASE_INSENSITIVE);</span>
+
+  public SudoApproval() {
+<span class="nc" id="L14">    super();</span>
+<span class="nc" id="L15">    action = TriggerAction.JIT_ACTION;</span>
+<span class="nc" id="L16">    message = &quot;SUDO and SU require approval.&quot;;</span>
+<span class="nc" id="L17">    isSanitized = true;</span>
+<span class="nc" id="L18">  }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

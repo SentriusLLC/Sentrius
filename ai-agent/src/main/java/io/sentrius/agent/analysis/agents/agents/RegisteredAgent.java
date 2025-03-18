@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "agents.ai.registered.agent.enabled", havingValue = "true", matchIfMissing = false)
 public class RegisteredAgent implements ApplicationListener<ApplicationReadyEvent> {
-    
+
 
     final ZeroTrustClientService zeroTrustClientService;
 

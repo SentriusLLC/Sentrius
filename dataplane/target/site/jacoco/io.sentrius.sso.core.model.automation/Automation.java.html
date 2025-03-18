@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Automation.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.model.automation</a> &gt; <span class="el_source">Automation.java</span></div><h1>Automation.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.model.automation;
+
+import io.sentrius.sso.automation.sideeffects.state.State;
+import io.sentrius.sso.core.model.users.User;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = &quot;automation&quot;)
+<span class="nc bnc" id="L12" title="All 70 branches missed.">@Data</span>
+<span class="nc" id="L13">@NoArgsConstructor</span>
+<span class="nc" id="L14">@AllArgsConstructor</span>
+public class Automation {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L18">    private Long id;</span>
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = &quot;user_id&quot;, nullable = false)
+<span class="nc" id="L22">    private User user;</span>
+
+    @Column(name = &quot;script_type&quot;)
+<span class="nc" id="L25">    private String type;</span>
+
+    @Column(name = &quot;display_nm&quot;, nullable = false)
+<span class="nc" id="L28">    private String displayName;</span>
+
+<span class="nc" id="L30">    @Column(name = &quot;script&quot;, nullable = false, columnDefinition = &quot;TEXT&quot;)</span>
+<span class="nc" id="L31">    private String script = &quot;#!/bin/bash\n\n&quot;;</span>
+
+    @Column(name = &quot;description&quot;)
+<span class="nc" id="L34">    private String description;</span>
+
+    @Transient
+<span class="nc" id="L37">    private State state;</span>
+
+
+    @Column(name = &quot;automation_options&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L41">    private String automationOptionsStr;</span>
+
+    public void setAutomationName(String name) {
+<span class="nc" id="L44">        this.displayName = name;</span>
+<span class="nc" id="L45">    }</span>
+
+    public void setAutomationType(String type) {
+<span class="nc" id="L48">        this.type = type;</span>
+<span class="nc" id="L49">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

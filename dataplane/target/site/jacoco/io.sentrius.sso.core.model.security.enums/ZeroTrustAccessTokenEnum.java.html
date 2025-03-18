@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ZeroTrustAccessTokenEnum.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.model.security.enums</a> &gt; <span class="el_source">ZeroTrustAccessTokenEnum.java</span></div><h1>ZeroTrustAccessTokenEnum.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.model.security.enums;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+<span class="fc" id="L7">public enum ZeroTrustAccessTokenEnum {</span>
+<span class="fc" id="L8">  CAN_VIEW_ZTATS(1),</span>
+
+<span class="fc" id="L10">  CAN_APPROVE_ZTATS(3),</span>
+
+<span class="fc" id="L12">  CAN_DENY_ZTATS(7),</span>
+
+<span class="fc" id="L14">  CAN_MANAGE_ZTATS(15);</span>
+
+  private final int value;
+
+<span class="fc" id="L18">  ZeroTrustAccessTokenEnum(int i) {</span>
+<span class="fc" id="L19">    value = i;</span>
+<span class="fc" id="L20">  }</span>
+
+  public int getValue() {
+<span class="fc" id="L23">    return value;</span>
+  }
+
+  public Set&lt;String&gt; getAccessStrings() {
+<span class="fc" id="L27">    Set&lt;String&gt; accessStrings = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L28" title="All 2 branches covered.">    for (var accessEnum : values()) {</span>
+<span class="pc bpc" id="L29" title="1 of 2 branches missed.">      if ((value &amp; accessEnum.getValue()) == accessEnum.getValue()) {</span>
+<span class="fc" id="L30">        accessStrings.add(accessEnum.name());</span>
+      }
+    }
+<span class="fc" id="L33">    return accessStrings;</span>
+  }
+
+  public static ZeroTrustAccessTokenEnum of(int value) {
+<span class="nc bnc" id="L37" title="All 2 branches missed.">    for (var accessEnum : values()) {</span>
+<span class="nc bnc" id="L38" title="All 2 branches missed.">      if (accessEnum.getValue() == value) {</span>
+<span class="nc" id="L39">        return accessEnum;</span>
+      }
+    }
+<span class="nc" id="L42">    return null;</span>
+  }
+
+  public static ZeroTrustAccessTokenEnum of(List&lt;String&gt; userAccessList) {
+<span class="nc" id="L46">    int value = 0;</span>
+<span class="nc bnc" id="L47" title="All 2 branches missed.">    for (var accessEnum : values()) {</span>
+<span class="nc bnc" id="L48" title="All 2 branches missed.">      if (userAccessList.contains(accessEnum.name())) {</span>
+<span class="nc" id="L49">        value = value | accessEnum.getValue();</span>
+      }
+    }
+<span class="nc" id="L52">    return ZeroTrustAccessTokenEnum.of(value);</span>
+  }
+
+  public interface OpsIfc {
+    String created(long id) throws RuntimeException;
+    String approved(long id) throws RuntimeException;
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

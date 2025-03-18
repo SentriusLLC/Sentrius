@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JiraService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.integrations.ticketing</a> &gt; <span class="el_source">JiraService.java</span></div><h1>JiraService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.integrations.ticketing;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import io.sentrius.sso.core.dto.TicketDTO;
+import io.sentrius.sso.core.integrations.external.ExternalIntegrationDTO;
+import io.sentrius.sso.core.model.security.IntegrationSecurityToken;
+import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.utils.JsonUtil;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
+
+;
+<span class="nc" id="L28">@Slf4j</span>
+public class JiraService {
+    private final RestTemplate restTemplate;
+
+    private String jiraBaseUrl;
+
+    private String apiToken;
+
+    private String username;
+
+<span class="nc" id="L38">    public JiraService(RestTemplateBuilder builder) {</span>
+<span class="nc" id="L39">        this.restTemplate = builder.build();</span>
+<span class="nc" id="L40">    }</span>
+
+<span class="nc" id="L42">    public JiraService(RestTemplate builder, IntegrationSecurityToken integration) throws JsonProcessingException {</span>
+<span class="nc" id="L43">        this.restTemplate = builder;</span>
+
+<span class="nc" id="L45">        ExternalIntegrationDTO externalIntegrationDTO = JsonUtil.MAPPER.readValue(integration.getConnectionInfo(),</span>
+            ExternalIntegrationDTO.class);
+<span class="nc" id="L47">        this.jiraBaseUrl = externalIntegrationDTO.getBaseUrl();</span>
+<span class="nc" id="L48">        this.apiToken = externalIntegrationDTO.getApiToken();</span>
+<span class="nc" id="L49">        this.username = externalIntegrationDTO.getUsername();</span>
+<span class="nc" id="L50">    }</span>
+
+    public boolean isTicketActive(String ticketKey) {
+<span class="nc" id="L53">        String url = String.format(&quot;%s/rest/api/3/issue/%s&quot;, jiraBaseUrl, ticketKey);</span>
+
+<span class="nc" id="L55">        HttpHeaders headers = new HttpHeaders();</span>
+<span class="nc" id="L56">        headers.setBearerAuth(apiToken);</span>
+        //headers.setBasicAuth(username, apiToken);
+<span class="nc" id="L58">        headers.setContentType(MediaType.APPLICATION_JSON);</span>
+
+<span class="nc" id="L60">        HttpEntity&lt;Void&gt; requestEntity = new HttpEntity&lt;&gt;(headers);</span>
+<span class="nc" id="L61">        ResponseEntity&lt;Map&gt; response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, Map.class);</span>
+
+<span class="nc" id="L63">        Map&lt;String, Object&gt; fields = (Map&lt;String, Object&gt;) response.getBody().get(&quot;fields&quot;);</span>
+<span class="nc" id="L64">        String status = (String) ((Map&lt;String, Object&gt;) fields.get(&quot;status&quot;)).get(&quot;name&quot;);</span>
+
+<span class="nc" id="L66">        return &quot;Active&quot;.equalsIgnoreCase(status);</span>
+    }
+
+    public Optional&lt;String&gt; getUser(User user) throws JsonProcessingException {
+<span class="nc" id="L70">        String userSearchUrl = String.format(&quot;%s/rest/api/3/user/search?query=%s&quot;, jiraBaseUrl, user.getEmailAddress());</span>
+
+<span class="nc" id="L72">        HttpHeaders headers = new HttpHeaders();</span>
+<span class="nc" id="L73">        headers.setBasicAuth(username, apiToken); // Use your stored credentials</span>
+<span class="nc" id="L74">        headers.setContentType(MediaType.APPLICATION_JSON);</span>
+
+<span class="nc" id="L76">        HttpEntity&lt;Void&gt; requestEntity = new HttpEntity&lt;&gt;(headers);</span>
+
+<span class="nc" id="L78">        ResponseEntity&lt;String&gt; userSearchResponse = restTemplate.exchange(userSearchUrl, HttpMethod.GET, requestEntity, String.class);</span>
+
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        if (userSearchResponse.getStatusCode() == HttpStatus.OK) {</span>
+            // Parse the response and find the matching user
+<span class="nc" id="L82">            var users = JsonUtil.MAPPER.readValue(userSearchResponse.getBody(), ArrayNode.class);</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">            if (users.size() &gt; 0) {</span>
+                // Assume first user is the best match
+<span class="nc" id="L85">                String jiraAccountId = String.valueOf(users.get(0).get(&quot;accountId&quot;));</span>
+<span class="nc" id="L86">                log.info(&quot;Jira User Found: &quot; + jiraAccountId);</span>
+<span class="nc" id="L87">                return Optional.of(jiraAccountId);</span>
+
+            } else {
+<span class="nc" id="L90">                log.info(&quot;No matching user found in Jira for {}.&quot;, user.getEmailAddress());</span>
+            }
+<span class="nc" id="L92">        } else {</span>
+<span class="nc" id="L93">            log.info(&quot;Failed to search for Jira users. Status: &quot; + userSearchResponse.getStatusCode());</span>
+        }
+<span class="nc" id="L95">        return Optional.empty();</span>
+    }
+
+    public List&lt;TicketDTO&gt; searchForIncidents(String query) throws ExecutionException, InterruptedException {
+<span class="nc" id="L99">        List&lt;TicketDTO&gt; ticketsFound = new ArrayList&lt;&gt;();</span>
+
+        // Jira Search API endpoint
+<span class="nc" id="L102">        String url = String.format(&quot;%s/rest/api/3/search&quot;, jiraBaseUrl);</span>
+
+        // JQL query to search by summary, description, or issue key
+<span class="nc" id="L105">        boolean isIssueKey = query.matches(&quot;[A-Z]+-\\d+&quot;); // Regex to match issue keys like &quot;PROJECT-123&quot;</span>
+
+<span class="nc bnc" id="L107" title="All 2 branches missed.">        String jql = isIssueKey</span>
+<span class="nc" id="L108">            ? String.format(&quot;(key = \&quot;%s\&quot; OR summary ~ \&quot;%s\&quot; OR description ~ \&quot;%s\&quot;) &quot;, query, query, query)</span>
+<span class="nc" id="L109">            : String.format(&quot;(summary ~ \&quot;%s\&quot; OR description ~ \&quot;%s\&quot;) &quot;, query, query);</span>
+<span class="nc" id="L110">        log.info(&quot;Searching Jira with JQL: {}&quot;, jql);</span>
+
+        // Request body for Jira API
+<span class="nc" id="L113">        Map&lt;String, Object&gt; requestBody = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L114">        requestBody.put(&quot;jql&quot;, jql);</span>
+<span class="nc" id="L115">        requestBody.put(&quot;expand&quot;, Arrays.asList(&quot;names&quot;, &quot;schema&quot;, &quot;operations&quot;));</span>
+<span class="nc" id="L116">        requestBody.put(&quot;fields&quot;, Arrays.asList(&quot;summary&quot;, &quot;description&quot;, &quot;status&quot;, &quot;assignee&quot;, &quot;key&quot;));</span>
+<span class="nc" id="L117">        requestBody.put(&quot;fieldsByKeys&quot;, false);</span>
+<span class="nc" id="L118">        requestBody.put(&quot;maxResults&quot;, 15);</span>
+<span class="nc" id="L119">        requestBody.put(&quot;startAt&quot;, 0);</span>
+        //requestBody.put(&quot;fields&quot;, Arrays.asList(&quot;key&quot;, &quot;summary&quot;, &quot;description&quot;, &quot;status&quot;));
+
+<span class="nc" id="L122">        HttpHeaders headers = new HttpHeaders();</span>
+<span class="nc" id="L123">        headers.setBasicAuth(username,apiToken); // Use API token for authentication</span>
+<span class="nc" id="L124">        log.info(&quot;auth: {}:{}&quot;, username, apiToken);</span>
+
+<span class="nc" id="L126">        headers.setContentType(MediaType.APPLICATION_JSON);</span>
+
+<span class="nc" id="L128">        HttpEntity&lt;Map&lt;String, Object&gt;&gt; requestEntity = new HttpEntity&lt;&gt;(requestBody, headers);</span>
+<span class="nc" id="L129">        ResponseEntity&lt;Map&gt; response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, Map.class);</span>
+
+<span class="nc" id="L131">        List&lt;Map&lt;String, Object&gt;&gt; issues = (List&lt;Map&lt;String, Object&gt;&gt;) response.getBody().get(&quot;issues&quot;);</span>
+<span class="nc bnc" id="L132" title="All 2 branches missed.">        for (Map&lt;String, Object&gt; issue : issues) {</span>
+<span class="nc" id="L133">            String key = (String) issue.get(&quot;key&quot;);</span>
+<span class="nc" id="L134">            Map&lt;String, Object&gt; fields = (Map&lt;String, Object&gt;) issue.get(&quot;fields&quot;);</span>
+<span class="nc" id="L135">            String summary = (String) fields.get(&quot;summary&quot;);</span>
+<span class="nc" id="L136">            String description = (String) fields.get(&quot;description&quot;);</span>
+<span class="nc" id="L137">            String status = (String) ((Map&lt;String, Object&gt;) fields.get(&quot;status&quot;)).get(&quot;name&quot;);</span>
+
+            // Add to the result list
+<span class="nc" id="L140">            ticketsFound.add(</span>
+<span class="nc" id="L141">                TicketDTO.builder().id(key).description(description).summary(summary).status(status).type(&quot;jira&quot;).build() );</span>
+<span class="nc" id="L142">        }</span>
+
+<span class="nc" id="L144">        log.info(&quot;Found {} tickets&quot;, ticketsFound.size());</span>
+
+<span class="nc" id="L146">        return ticketsFound;</span>
+    }
+
+    public boolean assignTicket(String ticketKey, Optional&lt;String&gt; assignee) {
+<span class="nc bnc" id="L150" title="All 2 branches missed.">        if (assignee.isEmpty()) {</span>
+<span class="nc" id="L151">            log.info(&quot;No assignee found for ticket. Skipping assignment.&quot;);</span>
+<span class="nc" id="L152">            return false;</span>
+        }
+<span class="nc" id="L154">        String assignUrl = String.format(&quot;%s/rest/api/3/issue/%s/assignee&quot;, jiraBaseUrl, ticketKey);</span>
+        //String assignUrl = &quot;https://your-domain.atlassian.net/rest/api/3/issue/&quot; + issueKey + &quot;/assignee&quot;;
+
+<span class="nc" id="L157">        Map&lt;String, String&gt; assignBody = Map.of(&quot;accountId&quot;, assignee.get());</span>
+
+<span class="nc" id="L159">        HttpHeaders headers = new HttpHeaders();</span>
+<span class="nc" id="L160">        headers.setBasicAuth(username,apiToken); // Use API token for authentication</span>
+<span class="nc" id="L161">        log.info(&quot;auth: {}:{}&quot;, username, apiToken);</span>
+
+<span class="nc" id="L163">        headers.setContentType(MediaType.APPLICATION_JSON);</span>
+
+<span class="nc" id="L165">        HttpEntity&lt;Map&lt;String, String&gt;&gt; assignRequestEntity = new HttpEntity&lt;&gt;(assignBody, headers);</span>
+
+<span class="nc" id="L167">        ResponseEntity&lt;Void&gt; assignResponse = restTemplate.exchange(assignUrl, HttpMethod.PUT, assignRequestEntity, Void.class);</span>
+
+<span class="nc bnc" id="L169" title="All 2 branches missed.">        if (assignResponse.getStatusCode() == HttpStatus.NO_CONTENT) {</span>
+<span class="nc" id="L170">            log.info(&quot;Ticket successfully assigned to user.&quot;);</span>
+<span class="nc" id="L171">            return true;</span>
+        } else {
+<span class="nc" id="L173">            log.info(&quot;Failed to assign ticket. Status: &quot; + assignResponse.getStatusCode());</span>
+<span class="nc" id="L174">            return false;</span>
+        }
+    }
+
+
+    public boolean updateTicket(String ticketKey, String message) {
+        try {
+<span class="nc" id="L181">            String commentUrl = String.format(&quot;%s/rest/api/3/issue/%s/comment&quot;, jiraBaseUrl, ticketKey);</span>
+
+            // Construct the structured body for the comment
+<span class="nc" id="L184">            Map&lt;String, Object&gt; textContent = Map.of(&quot;type&quot;, &quot;text&quot;, &quot;text&quot;, message);</span>
+<span class="nc" id="L185">            Map&lt;String, Object&gt; paragraphContent = Map.of(&quot;type&quot;, &quot;paragraph&quot;, &quot;content&quot;, List.of(textContent));</span>
+<span class="nc" id="L186">            Map&lt;String, Object&gt; body = Map.of(</span>
+<span class="nc" id="L187">                &quot;version&quot;, 1,</span>
+                &quot;type&quot;, &quot;doc&quot;,
+<span class="nc" id="L189">                &quot;content&quot;, List.of(paragraphContent)</span>
+            );
+
+<span class="nc" id="L192">            Map&lt;String, Object&gt; commentBody = Map.of(&quot;body&quot;, body);</span>
+
+<span class="nc" id="L194">            String jsonPayload = JsonUtil.MAPPER.writeValueAsString(commentBody);</span>
+
+<span class="nc" id="L196">            HttpHeaders headers = new HttpHeaders();</span>
+<span class="nc" id="L197">            headers.setBasicAuth(username, apiToken);</span>
+<span class="nc" id="L198">            headers.setContentType(MediaType.APPLICATION_JSON);</span>
+
+<span class="nc" id="L200">            log.info(&quot;Adding comment body: {}&quot;, jsonPayload);</span>
+
+<span class="nc" id="L202">            HttpEntity&lt;String&gt; commentRequestEntity = new HttpEntity&lt;&gt;(jsonPayload, headers);</span>
+<span class="nc" id="L203">            ResponseEntity&lt;String&gt; commentResponse = restTemplate.exchange(commentUrl, HttpMethod.POST, commentRequestEntity, String.class);</span>
+
+<span class="nc bnc" id="L205" title="All 2 branches missed.">            if (commentResponse.getStatusCode() == HttpStatus.CREATED) {</span>
+<span class="nc" id="L206">                log.info(&quot;Comment successfully added to the ticket.&quot;);</span>
+<span class="nc" id="L207">                return true;</span>
+            } else {
+<span class="nc" id="L209">                log.info(&quot;Failed to add comment. Status: {}&quot;, commentResponse.getStatusCode());</span>
+<span class="nc" id="L210">                log.info(&quot;Response Body: {}&quot;, commentResponse.getBody());</span>
+<span class="nc" id="L211">                return false;</span>
+            }
+<span class="nc" id="L213">        } catch (Exception e) {</span>
+<span class="nc" id="L214">            log.error(&quot;Error while adding comment to ticket: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L215">            return false;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

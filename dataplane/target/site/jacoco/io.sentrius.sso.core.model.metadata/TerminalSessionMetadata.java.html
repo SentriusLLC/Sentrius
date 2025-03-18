@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TerminalSessionMetadata.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.model.metadata</a> &gt; <span class="el_source">TerminalSessionMetadata.java</span></div><h1>TerminalSessionMetadata.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.model.metadata;
+
+import java.sql.Timestamp;
+import io.sentrius.sso.core.model.HostSystem;
+import io.sentrius.sso.core.model.sessions.SessionLog;
+import io.sentrius.sso.core.model.users.User;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+
+@Entity
+<span class="nc" id="L23">@Setter</span>
+<span class="nc bnc" id="L24" title="All 2 branches missed.">@Builder</span>
+@Getter
+<span class="nc" id="L26">@NoArgsConstructor</span>
+<span class="nc" id="L27">@AllArgsConstructor</span>
+@Table(name = &quot;terminal_session_metadata&quot;)
+public class TerminalSessionMetadata {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L32">    private Long id;</span>
+
+    @ManyToOne
+    @JoinColumn(name = &quot;session_id&quot;, nullable = false)
+<span class="nc" id="L36">    private SessionLog sessionLog;</span>
+
+    @ManyToOne
+    @JoinColumn(name = &quot;user_id&quot;, nullable = false)
+<span class="nc" id="L40">    private User user;</span>
+
+    @ManyToOne
+    @JoinColumn(name = &quot;host_system_id&quot;, nullable = false)
+<span class="nc" id="L44">    private HostSystem hostSystem;</span>
+
+    @Column(name = &quot;start_time&quot;, nullable = false)
+<span class="nc" id="L47">    private Timestamp startTime;</span>
+
+    @Column(name = &quot;end_time&quot;)
+<span class="nc" id="L50">    private Timestamp endTime;</span>
+
+    @Column(name = &quot;ip_address&quot;, length = 45)
+<span class="nc" id="L53">    private String ipAddress;</span>
+
+    // ACTIVE -&gt; (INACTIVE) -&gt; (ACTIVE) -&gt; CLOSED -&gt; PROCESSED
+<span class="nc" id="L56">    @Column(name = &quot;session_status&quot;, nullable = false)</span>
+<span class="nc" id="L57">    private String sessionStatus = &quot;ACTIVE&quot;;</span>
+
+    @Column(name = &quot;is_suspicious&quot;, nullable = false)
+    @Builder.Default
+<span class="nc" id="L61">    private Boolean isSuspicious = false;</span>
+
+    // Getters and Setters
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AutomationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services.automation</a> &gt; <span class="el_source">AutomationService.java</span></div><h1>AutomationService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services.automation;
+
+import io.sentrius.sso.core.model.HostSystem;
+import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.model.automation.*;
+import io.sentrius.sso.core.repository.automation.ScriptAssignmentRepository;
+import io.sentrius.sso.core.repository.automation.ScriptCronEntryRepository;
+import io.sentrius.sso.core.repository.automation.ScriptExecutionRepository;
+import io.sentrius.sso.core.repository.automation.ScriptRepository;
+import io.sentrius.sso.core.repository.automation.ScriptShareRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
+
+@Service
+<span class="nc" id="L18">public class AutomationService {</span>
+
+    @Autowired
+    private ScriptRepository scriptRepository;
+
+    @Autowired
+    private ScriptShareRepository scriptShareRepository;
+
+    @Autowired
+    private ScriptAssignmentRepository scriptAssignmentRepository;
+
+    @Autowired
+    private ScriptCronEntryRepository scriptCronEntryRepository;
+
+    @Autowired
+    private ScriptExecutionRepository scriptExecutionRepository;
+
+    @Transactional
+    public Automation addScript(Automation script) {
+<span class="nc" id="L37">        return scriptRepository.save(script);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Optional&lt;Automation&gt; getScriptById(Long id) {
+<span class="nc" id="L42">        return scriptRepository.findById(id);</span>
+    }
+
+    @Transactional
+    public void deleteScript(Long scriptId) {
+<span class="nc" id="L47">        scriptRepository.deleteById(scriptId);</span>
+<span class="nc" id="L48">    }</span>
+
+    @Transactional
+    public AutomationShare shareScript(Automation script, User user) {
+<span class="nc" id="L52">        AutomationShare scriptShare = new AutomationShare();</span>
+<span class="nc" id="L53">        scriptShare.setAutomation(script);</span>
+<span class="nc" id="L54">        scriptShare.setUser(user);</span>
+<span class="nc" id="L55">        return scriptShareRepository.save(scriptShare);</span>
+    }
+
+    @Transactional
+    public AutomationAssignment assignScript(Automation script, HostSystem system, Integer numberExecs) {
+<span class="nc" id="L60">        AutomationAssignment scriptAssignment = new AutomationAssignment();</span>
+<span class="nc" id="L61">        scriptAssignment.setAutomation(script);</span>
+<span class="nc" id="L62">        scriptAssignment.setSystem(system);</span>
+<span class="nc" id="L63">        scriptAssignment.setNumberExecs(numberExecs);</span>
+<span class="nc" id="L64">        return scriptAssignmentRepository.save(scriptAssignment);</span>
+    }
+
+    @Transactional
+    public AutomationCronEntry addCronEntry(Automation script, String cronExpression) {
+<span class="nc" id="L69">        AutomationCronEntry cronEntry = new AutomationCronEntry();</span>
+<span class="nc" id="L70">        cronEntry.setAutomationId(script.getId());</span>
+<span class="nc" id="L71">        cronEntry.setScriptCron(cronExpression);</span>
+<span class="nc" id="L72">        return scriptCronEntryRepository.save(cronEntry);</span>
+    }
+
+    @Transactional
+    public AutomationExecution logScriptExecution(Automation script, HostSystem system, String executionOutput) {
+<span class="nc" id="L77">        AutomationExecution scriptExecution = new AutomationExecution();</span>
+<span class="nc" id="L78">        scriptExecution.setAutomation(script);</span>
+<span class="nc" id="L79">        scriptExecution.setSystem(system);</span>
+<span class="nc" id="L80">        scriptExecution.setExecutionOutput(executionOutput);</span>
+<span class="nc" id="L81">        scriptExecution.setLogTm(new java.sql.Timestamp(System.currentTimeMillis()));</span>
+<span class="nc" id="L82">        return scriptExecutionRepository.save(scriptExecution);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ScriptCronTask.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.utils</a> &gt; <span class="el_source">ScriptCronTask.java</span></div><h1>ScriptCronTask.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.utils;
+
+
+import java.util.List;
+import io.sentrius.sso.core.services.TerminalService;
+import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.auditing.AuditService;
+import io.sentrius.sso.core.services.automation.AutomationService;
+import lombok.extern.slf4j.Slf4j;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+<span class="nc" id="L16">@Slf4j</span>
+@Component
+<span class="nc" id="L18">public class ScriptCronTask implements Job {</span>
+
+    @Autowired
+    private AutomationService automationService;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private TerminalService terminalService;
+
+    @Autowired
+    private AuditService sessionAuditService;
+
+
+
+    /**
+     * Called by the &lt;code&gt;{@link org.quartz.Scheduler}&lt;/code&gt; when a &lt;code&gt;{@link org.quartz.Trigger}
+     * &lt;/code&gt; fires that is associated with the &lt;code&gt;Job&lt;/code&gt;.
+     *
+     * @throws JobExecutionException if there is an exception while executing the job.
+     */
+
+    public void execute(JobExecutionContext context) throws JobExecutionException {
+
+<span class="nc" id="L43">        var script_id = (Long) context.getJobDetail().getJobDataMap().get(&quot;script_id&quot;);</span>
+<span class="nc" id="L44">        var userId = (Long) context.getJobDetail().getJobDataMap().get(&quot;user_id&quot;);</span>
+<span class="nc" id="L45">        var scriptStr = (String) context.getJobDetail().getJobDataMap().get(&quot;script&quot;);</span>
+<span class="nc" id="L46">        var scriptType = (String) context.getJobDetail().getJobDataMap().get(&quot;script_type&quot;);</span>
+<span class="nc" id="L47">        var systemIds = (List&lt;Long&gt;) context.getJobDetail().getJobDataMap().get(&quot;system_ids&quot;);</span>
+
+  //      executeTask(script_id, userId, scriptType, scriptStr, systemIds);
+<span class="nc" id="L50">    }</span>
+/*
+    public String executeTask(
+        Long scriptId,
+        Long userId,
+        String scriptStr,
+        Long systemId,
+        WatchDog watchdog,
+        Map&lt;String, String&gt; environmentVariables,
+        boolean appendToWatchDog) {
+        try {
+            return executeTask(
+                PrivateKeyDB.getApplicationKey(),
+                scriptId,
+                userId,
+                scriptStr,
+                systemId,
+                watchdog,
+                environmentVariables,
+                appendToWatchDog);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (GeneralSecurityException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public String executeTask(
+        ApplicationKey appKey,
+        HostSystem hostSystem,
+        String scriptStr,
+        Map&lt;String, String&gt; environmentVariables,
+        boolean appendToWatchDog) {
+        Automation script = new Automation();
+        script.setScript(scriptStr);
+        script.setId(0L);
+        String output = &quot;&quot;;
+        User user = null;
+        try {
+
+            output =
+                terminalService.openTerminalForScript(
+                    appKey,
+                    &quot;&quot;,
+                    &quot;&quot;,
+                    0L,
+                    0L,
+                    hostSystem,
+                    script,
+                    null,
+                    environmentVariables,
+                    appendToWatchDog);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return output;
+    }
+
+    public String executeTask(
+        ApplicationKey appKey,
+        HostSystem hostSystem,
+        String scriptStr,
+        Map&lt;String, String&gt; environmentVariables,
+        boolean appendToWatchDog,
+        boolean setPtyFalse) {
+        Automation script = new Automation();
+        script.setScript(scriptStr);
+        script.setId(0L);
+        String output = &quot;&quot;;
+        User user = null;
+        try {
+
+            output =
+                terminalService.openTerminalForScript(
+                    appKey,
+                    &quot;&quot;,
+                    &quot;&quot;,
+                    0L,
+                    0L,
+                    hostSystem,
+                    script,
+                    null,
+                    environmentVariables,
+                    appendToWatchDog,
+                    setPtyFalse);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return output;
+    }
+
+    public String executeTask(
+        ApplicationKey appKey,
+        Long scriptId,
+        Long userId,
+        String scriptStr,
+        Long systemId,
+        WatchDog watchdog,
+        Map&lt;String, String&gt; environmentVariables,
+        boolean appendToWatchDog) {
+        Automation script = new Automation();
+        script.setScript(scriptStr);
+        script.setId(scriptId);
+        String output = &quot;&quot;;
+        User user = null;
+        try {
+            user = userService.getUser(userId);
+
+            Long sessionId = SessionAuditDB.createSessionLog(user);
+
+            HostSystem hostSystem = SystemDB.getSystem(systemId);
+
+            if (script != null &amp;&amp; script.getId() != null &amp;&amp; script.getId() &gt; 0) {
+
+                output =
+                    terminalService.openTerminalForScript(
+                        appKey,
+                        &quot;&quot;,
+                        &quot;&quot;,
+                        userId,
+                        sessionId,
+                        hostSystem,
+                        script,
+                        watchdog,
+                        environmentVariables,
+                        appendToWatchDog);
+
+                if (null != output){
+                    var scriptName = script.getDisplayNm();
+                    if (null == scriptName){
+                        scriptName = &quot;Script&quot;;
+                    }
+                    var host = hostSystem.getHost();
+                    if (null == host){
+                        host = &quot;Host&quot;;
+                    }
+                    SessionOutput sessionOutput =
+                        SessionOutput.builder().host(host).displayNm(scriptName).sessionId(sessionId).instanceId(0).output(new StringBuilder(output)).build();
+                    SessionAuditDB.insertTerminalLog(sessionOutput);
+                }
+                SessionOutputUtil.removeUserSession(sessionId);
+                SessionAuditDB.closeSessionLog(sessionId);
+
+
+                SessionOutputUtil.removeUserSession(sessionId);
+
+                if (output != null &amp;&amp; null == watchdog) {
+
+                    ScriptDB.addOutput(script.getId(), systemId, output);
+                }
+            }
+
+            // SessionAuditDB.se
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return output;
+    }
+
+    public static void executeTask(
+        Long scriptId, Long userId, String scriptType, String scriptStr, List&lt;Long&gt; systemIds) {
+        Automation script = new Automation();
+        script.setScript(scriptStr);
+        script.setType(scriptType);
+        script.setId(scriptId);
+
+        User user = null;
+        try {
+            user = UserDB.getUser(userId);
+
+            for (Long systemId : systemIds) {
+
+                Long sessionId = SessionAuditDB.createSessionLog(user);
+
+                HostSystem hostSystem = SystemDB.getSystem(systemId);
+
+                if (script != null &amp;&amp; script.getId() != null &amp;&amp; script.getId() &gt; 0) {
+
+                    if (&quot;script&quot;.equals(script.getType())) {
+                        String output =
+                            SSHUtil.openTerminalForScript(&quot;&quot;, &quot;&quot;, userId, sessionId, hostSystem, script);
+                        var scriptName = script.getDisplayNm();
+                        if (null == scriptName){
+                            scriptName = &quot;Script&quot;;
+                        }
+                        var host = hostSystem.getHost();
+                        if (null == host){
+                            host = &quot;Host&quot;;
+                        }
+                        SessionOutput sessionOutput =
+                            SessionOutput.builder().host(host).displayNm(scriptName).sessionId(sessionId).instanceId(0).output(new StringBuilder(output)).build();
+                        SessionAuditDB.insertTerminalLog(sessionOutput);
+                        SessionOutputUtil.removeUserSession(sessionId);
+                        SessionAuditDB.closeSessionLog(sessionId);
+
+                        if (output != null) {
+                            ScriptDB.addOutput(script.getId(), systemId, output);
+                        }
+                    } else {
+                        var automationTracker = AutomationTracker.getInstance();
+                        Properties props = new Properties();
+                        props.load(
+                            new ByteArrayInputStream(script.getScript().getBytes(StandardCharsets.UTF_8)));
+
+                        var newInstance =
+                            PluginFactory.createNewInstance((String property) -&gt; AppConfig.getProperty(property), script.getType(),
+                                script.getScript());
+
+                        List&lt;Host&gt; hostSystems = new ArrayList&lt;&gt;();
+                        hostSystems.add(hostSystem);
+
+                        List&lt;SideEffect&gt; sideEffects = new ArrayList&lt;&gt;();
+
+                        var identifier = AutomationTracker.computeIdentifier(userId, script.getId());
+                        final Automota tracker =
+                            Automota.builder()
+                                .asUser(userId)
+                                .systems(hostSystems)
+                                .databaseId(script.getId())
+                                .instanceIdentifier(identifier)
+                                .sideEffects(sideEffects)
+                                .build();
+                        automationTracker.execute(tracker, newInstance);
+
+                        // should we notify the user?
+                    }
+                }
+            }
+
+        } catch (Exception ex) {
+            log.error(ex.toString(), ex);
+            throw new RuntimeException(ex);
+        }
+    }*/
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuditConfigProvider.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.utils</a> &gt; <span class="el_source">AuditConfigProvider.java</span></div><h1>AuditConfigProvider.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.utils;
+
+import java.util.ArrayList;
+import java.util.List;
+import io.sentrius.sso.automation.auditing.AccessTokenAuditor;
+import io.sentrius.sso.automation.auditing.AccessTokenEvaluator;
+import io.sentrius.sso.automation.auditing.rules.RuleConfiguration;
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.config.ThreadSafeDynamicPropertiesService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+<span class="nc" id="L14">@Slf4j</span>
+@Service
+<span class="nc" id="L16">@RequiredArgsConstructor</span>
+public class AuditConfigProvider {
+
+
+    private final SystemOptions systemOptions;
+    private final ThreadSafeDynamicPropertiesService dynamicPropertiesService;
+
+
+
+<span class="nc" id="L25">    static List&lt;RuleConfiguration&gt; ruleConfigurationList = null;</span>
+
+    public static List&lt;RuleConfiguration&gt; getRuleConfigurationList(ThreadSafeDynamicPropertiesService dynamicPropertiesService) throws ClassNotFoundException {
+<span class="nc bnc" id="L28" title="All 2 branches missed.">        if (null == ruleConfigurationList) {</span>
+<span class="nc" id="L29">            synchronized (AuditConfigProvider.class) {</span>
+<span class="nc" id="L30">                ruleConfigurationList = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L31">                var auditorClass = AccessTokenAuditor.class.getName();</span>
+<span class="nc" id="L32">                var configName = Class.forName(auditorClass).getSimpleName();</span>
+                // we don't need more than 10k rules..
+<span class="nc bnc" id="L34" title="All 2 branches missed.">                for (int i = 0; i &lt; 10000; i++) {</span>
+<span class="nc" id="L35">                    String option = configName + &quot;.rule.&quot; + Integer.valueOf(i).toString();</span>
+<span class="nc" id="L36">                    var rule = dynamicPropertiesService.getProperty(option, null);</span>
+<span class="nc bnc" id="L37" title="All 2 branches missed.">                    if (null == rule) {</span>
+<span class="nc" id="L38">                        break;</span>
+                    }
+<span class="nc" id="L40">                    String[] ruleSplit = rule.split(&quot;;&quot;);</span>
+<span class="nc bnc" id="L41" title="All 2 branches missed.">                    if (ruleSplit.length == 2) {</span>
+<span class="nc" id="L42">                        ruleConfigurationList.add(</span>
+<span class="nc" id="L43">                            RuleConfiguration.builder()</span>
+<span class="nc" id="L44">                                .shortName(ruleSplit[1].trim())</span>
+<span class="nc" id="L45">                                .longName(ruleSplit[0].trim())</span>
+<span class="nc" id="L46">                                .clazz((Class&lt;? extends AccessTokenEvaluator&gt;) Class.forName(ruleSplit[0].trim()))</span>
+<span class="nc" id="L47">                                .build());</span>
+                    }
+                }
+                // RuleAlertAuditor.rule.1
+<span class="nc" id="L51">            }</span>
+        }
+<span class="nc" id="L53">        return ruleConfigurationList;</span>
+    }
+
+    public List&lt;RuleConfiguration&gt; getRuleConfigurationList() throws ClassNotFoundException {
+<span class="nc" id="L57">        return getRuleConfigurationList(dynamicPropertiesService);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

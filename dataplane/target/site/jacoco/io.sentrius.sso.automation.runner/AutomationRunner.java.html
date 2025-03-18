@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AutomationRunner.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.automation.runner</a> &gt; <span class="el_source">AutomationRunner.java</span></div><h1>AutomationRunner.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.automation.runner;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import io.sentrius.sso.automation.AutomationPlugin;
+import io.sentrius.sso.automation.sideeffects.SideEffect;
+import io.sentrius.sso.automation.sideeffects.state.StateTrackingFunction;
+import io.sentrius.sso.automation.watchdog.CustomWatchdog;
+import io.sentrius.sso.automation.watchdog.WatchDog;
+import io.sentrius.sso.core.model.Host;
+import lombok.extern.slf4j.Slf4j;
+
+<span class="nc" id="L16">@Slf4j</span>
+public class AutomationRunner implements Callable&lt;List&lt;SideEffect&gt;&gt;, StateTrackingFunction {
+
+  private final AutomationPlugin plugin;
+  private final Long scriptId;
+  private final List&lt;Host&gt; systems;
+  private final Long asUser;
+
+  private final WatchDog watchDog;
+
+  // Set to track side effects during the automation process.
+<span class="nc" id="L27">  Set&lt;SideEffect&gt; sideEffects = ConcurrentHashMap.newKeySet();</span>
+
+  /**
+   * Constructs an AutomationRunner with the given parameters.
+   *
+   * @param scriptId The ID of the automation script.
+   * @param plugin The AutomationPlugin to be run.
+   * @param asUser The user ID under which the automation will run.
+   * @param systems The list of hosts on which the automation will be executed.
+   */
+  protected AutomationRunner(
+<span class="nc" id="L38">      Long scriptId, AutomationPlugin plugin, Long asUser, List&lt;Host&gt; systems) {</span>
+<span class="nc" id="L39">    this.scriptId = scriptId;</span>
+<span class="nc" id="L40">    this.plugin = plugin;</span>
+<span class="nc" id="L41">    this.asUser = asUser;</span>
+<span class="nc" id="L42">    this.systems = systems;</span>
+
+    // Use a custom watchdog if the plugin supports it, otherwise use a default watchdog.
+<span class="nc bnc" id="L45" title="All 2 branches missed.">    if (plugin instanceof CustomWatchdog) {</span>
+<span class="nc" id="L46">      this.watchDog = ((CustomWatchdog) plugin).getWatchDog();</span>
+    } else {
+<span class="nc" id="L48">      this.watchDog = WatchDog.builder().build();</span>
+    }
+<span class="nc" id="L50">  }</span>
+
+  /**
+   * Executes the automation plugin.
+   *
+   * @return A list of side effects resulting from running the automation plugin.
+   * @throws Exception If an error occurs during the execution of the plugin.
+   */
+  @Override
+  public List&lt;SideEffect&gt; call() throws Exception {
+<span class="nc" id="L60">    this.watchDog.start();</span>
+<span class="nc" id="L61">    List&lt;SideEffect&gt; effects = new ArrayList&lt;&gt;();</span>
+    try {
+      // Run the plugin and collect side effects.
+<span class="nc" id="L64">      effects = plugin.run(asUser, this.scriptId, systems, this);</span>
+<span class="nc" id="L65">    } catch (Throwable e) {</span>
+<span class="nc" id="L66">      var msg = &quot;Exception while running plugin&quot;;</span>
+<span class="nc" id="L67">      log.error(msg, e);</span>
+<span class="nc" id="L68">      this.watchDog.appendScriptOutput(this.plugin.getOutputCallback(), msg + &quot;: &quot; + e.getMessage());</span>
+<span class="nc" id="L69">    }</span>
+<span class="nc" id="L70">    return effects;</span>
+  }
+
+  /**
+   * Adds a side effect to the current set of tracked side effects.
+   *
+   * @param last The side effect to add.
+   */
+  @Override
+  public void addSideEffect(SideEffect last) {
+<span class="nc" id="L80">    sideEffects.add(last);</span>
+<span class="nc" id="L81">  }</span>
+
+  /**
+   * Retrieves the current set of side effects.
+   *
+   * @return The current set of tracked side effects.
+   */
+  @Override
+  public Set&lt;SideEffect&gt; getCurrentSideEffects() {
+<span class="nc" id="L90">    return sideEffects;</span>
+  }
+
+  /**
+   * Retrieves the WatchDog associated with this runner.
+   *
+   * @return The WatchDog instance.
+   */
+  @Override
+  public WatchDog getWatchDog() {
+<span class="nc" id="L100">    return this.watchDog;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

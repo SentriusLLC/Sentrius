@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RecordingStudio.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.data.auditing</a> &gt; <span class="el_source">RecordingStudio.java</span></div><h1>RecordingStudio.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.data.auditing;
+
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
+import io.sentrius.sso.automation.auditing.PersistentMessage;
+import io.sentrius.sso.automation.auditing.Recorder;
+import io.sentrius.sso.automation.auditing.Trigger;
+import io.sentrius.sso.automation.auditing.TriggerAction;
+import io.sentrius.sso.core.model.ConnectedSystem;
+import io.sentrius.sso.core.model.automation.Automation;
+import io.sentrius.sso.core.services.automation.AutomationService;
+import io.sentrius.sso.core.services.terminal.SessionTrackingService;
+
+public class RecordingStudio extends Recorder {
+
+    private final AutomationService automationService;
+    private final SessionTrackingService sessionTrackingService;
+    private final ConnectedSystem connectedSystem;
+<span class="nc" id="L24">    List&lt;String&gt; commands = new ArrayList&lt;&gt;();</span>
+
+    public static final String RECORD = &quot;record&quot;;
+    public static final String STOP = &quot;stop&quot;;
+
+    boolean recordingStarted;
+
+    String automationName;
+
+    public RecordingStudio(ConnectedSystem session, SessionTrackingService sessionTrackingService, AutomationService service) {
+<span class="nc" id="L34">        super(session.getUser(), session.getSession(), session.getHostSystem());</span>
+        // async thread evaluate
+<span class="nc" id="L36">        recordingStarted = false;</span>
+<span class="nc" id="L37">        this.automationService = service;</span>
+<span class="nc" id="L38">        this.connectedSystem = session;</span>
+<span class="nc" id="L39">        this.sessionTrackingService = sessionTrackingService;</span>
+<span class="nc" id="L40">    }</span>
+
+    @Override
+<span class="nc" id="L43">    protected void onPartial() {}</span>
+
+    @Override
+    public void shutdown() {
+        // nothing to
+        // do here
+
+<span class="nc" id="L50">    }</span>
+
+    public boolean isRecordingStarted() {
+<span class="nc" id="L53">        return recordingStarted;</span>
+    }
+
+    @Override
+    public synchronized String clear(int keycode) {
+
+<span class="nc bnc" id="L59" title="All 4 branches missed.">        if (keycode == 13 &amp;&amp; currentTrigger.getAction() == TriggerAction.DENY_ACTION) {</span>
+        } else {
+<span class="nc" id="L61">            currentTrigger = Trigger.NO_ACTION;</span>
+        }
+<span class="nc" id="L63">        return super.clear(keycode);</span>
+    }
+
+    @Override
+    protected synchronized TriggerAction submit(String cmd) {
+
+        // currentTrigger
+<span class="nc" id="L70">        String command = cmd.trim();</span>
+<span class="nc bnc" id="L71" title="All 4 branches missed.">        if (recordingStarted &amp;&amp; !command.startsWith(STOP)) {</span>
+
+<span class="nc bnc" id="L73" title="All 2 branches missed.">            if (!cmd.isEmpty()) commands.add(command);</span>
+<span class="nc" id="L74">            return TriggerAction.NO_ACTION;</span>
+        } else {
+<span class="nc bnc" id="L76" title="All 2 branches missed.">            if (command.startsWith(RECORD)) {</span>
+<span class="nc bnc" id="L77" title="All 2 branches missed.">                if (command.length() &gt;= RECORD.length()) {</span>
+<span class="nc" id="L78">                    int firstIndex = command.indexOf(&quot; &quot;);</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">                    if (firstIndex &gt;= RECORD.length()) {</span>
+<span class="nc" id="L80">                        automationName = command.substring(firstIndex + 1);</span>
+                    } else {
+<span class="nc" id="L82">                        automationName = &quot;&quot;;</span>
+                    }
+                }
+<span class="nc bnc" id="L85" title="All 2 branches missed.">                if (automationName.isEmpty()) {</span>
+<span class="nc" id="L86">                    DateFormat dateFormat = new SimpleDateFormat(&quot;yyyy/MM/dd HH:mm:ss&quot;);</span>
+<span class="nc" id="L87">                    Date date = new Date();</span>
+<span class="nc" id="L88">                    automationName = &quot;custom-&quot; + dateFormat.format(date) + &quot;-&quot; + UUID.randomUUID().toString();</span>
+                }
+<span class="nc" id="L90">                recordingStarted = true;</span>
+<span class="nc" id="L91">                sessionTrackingService.addPersistentMessage(connectedSystem, </span>
+                    new PersistentMessage(
+                        &quot;Recording has commenced for &quot;
+                            + automationName
+                            + &quot;. Please type stop to end the session&quot;));
+<span class="nc" id="L96">                return TriggerAction.RECORD_ACTION;</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">            } else if (command.startsWith(STOP)) {</span>
+<span class="nc" id="L98">                recordingStarted = false;</span>
+<span class="nc" id="L99">                sessionTrackingService.addPersistentMessage(connectedSystem, new PersistentMessage(&quot;&quot;));</span>
+<span class="nc" id="L100">                Automation script = new Automation();</span>
+<span class="nc" id="L101">                StringBuilder generatedScriptBuilder = new StringBuilder();</span>
+<span class="nc" id="L102">                generatedScriptBuilder.append(script.getScript());</span>
+<span class="nc" id="L103">                commands.forEach(line -&gt; generatedScriptBuilder.append(line + &quot;\n&quot;));</span>
+                // = script.getScript();
+
+<span class="nc" id="L106">                script.setAutomationName(automationName);</span>
+
+<span class="nc" id="L108">                script.setScript(generatedScriptBuilder.toString());</span>
+<span class="nc" id="L109">                automationName = &quot;&quot;;</span>
+<span class="nc" id="L110">                commands.clear();</span>
+<span class="nc" id="L111">                automationService.addScript(script);</span>
+<span class="nc" id="L112">                return TriggerAction.RECORD_ACTION;</span>
+            }
+        }
+
+<span class="nc" id="L116">        return TriggerAction.NO_ACTION;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

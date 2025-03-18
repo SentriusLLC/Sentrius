@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserPublicKeyService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services</a> &gt; <span class="el_source">UserPublicKeyService.java</span></div><h1>UserPublicKeyService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services;
+
+import io.sentrius.sso.core.model.users.UserPublicKey;
+import io.sentrius.sso.core.repository.UserPublicKeyRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+<span class="nc" id="L13">@RequiredArgsConstructor</span>
+public class UserPublicKeyService {
+    private final UserPublicKeyRepository userPublicKeyRepository;
+
+    @Transactional(readOnly = true)
+    public List&lt;UserPublicKey&gt; getPublicKeysForUser(Long userId) {
+<span class="nc" id="L19">        return userPublicKeyRepository.findByUserId(userId);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;UserPublicKey&gt; getPublicKeysForHostGroup(Long hostGroup) {
+<span class="nc" id="L24">        return userPublicKeyRepository.findByHostGroupId(hostGroup);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;UserPublicKey&gt; getPublicKeysForHostGroup(Long userId, Long hostGroupId) {
+<span class="nc" id="L29">        return userPublicKeyRepository.findByUserIdAndHostGroupId(userId, hostGroupId);</span>
+    }
+
+    @Transactional
+    public UserPublicKey addPublicKey(UserPublicKey userPublicKey) {
+<span class="nc" id="L34">        return userPublicKeyRepository.save(userPublicKey);</span>
+    }
+
+    @Transactional
+    public void deletePublicKey(Long publicKeyId) {
+<span class="nc" id="L39">        userPublicKeyRepository.deleteById(publicKeyId);</span>
+<span class="nc" id="L40">    }</span>
+
+    @Transactional(readOnly = true)
+    public Optional&lt;UserPublicKey&gt; getPublicKeyById(Long id) {
+<span class="nc" id="L44">        return userPublicKeyRepository.findById(id);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NotificationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services</a> &gt; <span class="el_source">NotificationService.java</span></div><h1>NotificationService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services;
+import java.util.List;
+import io.sentrius.sso.core.data.NotificationType;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import io.sentrius.sso.core.model.Notification;
+import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.repository.NotificationRepository;
+import lombok.extern.slf4j.Slf4j;
+
+<span class="nc" id="L12">@Slf4j</span>
+@Service
+<span class="nc" id="L14">public class NotificationService {</span>
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Transactional(readOnly = true)
+    public List&lt;Notification&gt; getNotificationsByRecipient(User recipient) {
+<span class="nc" id="L21">        return notificationRepository.findByRecipientsContains(recipient);</span>
+    }
+
+    @Transactional
+    public void sendNotification(Notification notification) {
+        try {
+<span class="nc" id="L27">            notificationRepository.save(notification);</span>
+<span class="nc" id="L28">            log.info(&quot;Notification sent: {}&quot;, notification);</span>
+<span class="nc" id="L29">        } catch (Exception e) {</span>
+<span class="nc" id="L30">            log.error(&quot;Error while sending a notification&quot;, e);</span>
+<span class="nc" id="L31">        }</span>
+<span class="nc" id="L32">    }</span>
+
+    @Transactional
+    public void sendNotification(String message, User recipient) {
+        Notification notification =
+<span class="nc" id="L37">            Notification.builder().message(message).notificationType(NotificationType.JIT_NOTIFICATION.getValue()).recipients(List.of(recipient)).build();</span>
+<span class="nc" id="L38">        sendNotification(notification);</span>
+<span class="nc" id="L39">    }</span>
+
+    @Transactional
+    public void sendNotification(String message, User recipient, User initiator) {
+<span class="nc" id="L43">        Notification notification = Notification.builder().message(message).initiator(initiator).recipients(List.of(recipient)).build();</span>
+<span class="nc" id="L44">        sendNotification(notification);</span>
+<span class="nc" id="L45">    }</span>
+
+    @Transactional
+    public void sendNotification(String message, NotificationType type, String reference, List&lt;User&gt; recipients) {
+        try {
+<span class="nc" id="L50">            Notification notification = Notification.builder()</span>
+<span class="nc" id="L51">                .notificationReference(reference)</span>
+<span class="nc" id="L52">                .notificationType(type.getValue())</span>
+<span class="nc" id="L53">                .message(message)</span>
+<span class="nc" id="L54">                .initiator(User.builder().id(-1L).build())</span>
+<span class="nc" id="L55">                .recipients(recipients)</span>
+<span class="nc" id="L56">                .build();</span>
+<span class="nc" id="L57">            sendNotification(notification);</span>
+<span class="nc" id="L58">        } catch (Exception e) {</span>
+<span class="nc" id="L59">            log.error(&quot;Error while sending a notification&quot;, e);</span>
+<span class="nc" id="L60">        }</span>
+<span class="nc" id="L61">    }</span>
+
+    @Transactional
+    public void sendNotification(String message, List&lt;User&gt; recipients, User initiator) {
+<span class="nc" id="L65">        Notification notification = Notification.builder().message(message).initiator(initiator).recipients(recipients).build();</span>
+<span class="nc" id="L66">        sendNotification(notification);</span>
+<span class="nc" id="L67">    }</span>
+
+    @Transactional
+    public void setNotificationActedUpon(User operatingUser, Long notificationId) {
+<span class="nc" id="L71">        Notification notification = notificationRepository.findById(notificationId).orElseThrow(() -&gt; new RuntimeException(&quot;Notification not found&quot;));</span>
+<span class="nc bnc" id="L72" title="All 2 branches missed.">        if (notification.getRecipients().contains(operatingUser)) {</span>
+<span class="nc" id="L73">            notificationRepository.updateRecipientActedStatus(notificationId, operatingUser.getId(), true);</span>
+        } else {
+<span class="nc" id="L75">            throw new RuntimeException(&quot;User is not a recipient of the notification&quot;);</span>
+        }
+<span class="nc" id="L77">    }</span>
+
+    @Transactional
+    public void deleteById(User operatingUser, Long notificationId) {
+<span class="nc" id="L81">        Notification notification = notificationRepository.findById(notificationId).orElseThrow(() -&gt; new RuntimeException(&quot;Notification not found&quot;));</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">        if (notification.getRecipients().contains(operatingUser)) {</span>
+<span class="nc" id="L83">            notificationRepository.deleteById(notificationId);</span>
+        } else {
+<span class="nc" id="L85">            throw new RuntimeException(&quot;User is not a recipient of the notification&quot;);</span>
+        }
+<span class="nc" id="L87">    }</span>
+
+    public List&lt;Notification&gt; findUnseenNotifications(User operatingUser) {
+<span class="nc" id="L90">        return notificationRepository.findUnseenNotifications(operatingUser.getId(), false);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

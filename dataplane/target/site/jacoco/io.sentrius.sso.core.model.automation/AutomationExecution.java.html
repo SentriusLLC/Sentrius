@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AutomationExecution.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.model.automation</a> &gt; <span class="el_source">AutomationExecution.java</span></div><h1>AutomationExecution.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.model.automation;
+
+import io.sentrius.sso.core.model.HostSystem;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+
+// ScriptExecution Entity
+@Entity
+<span class="nc" id="L13">@Builder</span>
+@Table(name = &quot;automation_executions&quot;)
+<span class="nc bnc" id="L15" title="All 46 branches missed.">@Data</span>
+<span class="nc" id="L16">@NoArgsConstructor</span>
+<span class="nc" id="L17">@AllArgsConstructor</span>
+public class AutomationExecution {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L21">    private Long id;</span>
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;system_id&quot;, nullable = false)
+<span class="nc" id="L25">    private HostSystem system;</span>
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;automation_id&quot;, nullable = false)
+<span class="nc" id="L29">    private Automation automation;</span>
+
+    @Column(name = &quot;execution_output&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L32">    private String executionOutput;</span>
+
+    @Column(name = &quot;log_tm&quot;, columnDefinition = &quot;TIMESTAMP DEFAULT CURRENT_TIMESTAMP&quot;)
+<span class="nc" id="L35">    private java.sql.Timestamp logTm;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

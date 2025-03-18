@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CryptoService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services.security</a> &gt; <span class="el_source">CryptoService.java</span></div><h1>CryptoService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services.security;
+
+import javax.crypto.Cipher;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.Arrays;
+import java.util.Base64;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.KeyPair;
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.model.ApplicationKey;
+import io.sentrius.sso.core.repository.ApplicationKeyRepository;
+import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+
+<span class="nc" id="L26">@Slf4j</span>
+@Service
+public class CryptoService {
+
+    final KeyStoreService keyStoreUtil;
+    final SystemOptions systemOptions;
+    final ApplicationKeyRepository applicationKeyRepository;
+    private final byte[] key;
+
+    private static final String CIPHER_INSTANCE = &quot;AES/GCM/NoPadding&quot;;
+    private static final String CRYPT_ALGORITHM = &quot;AES&quot;;
+    private static final String HASH_ALGORITHM = &quot;SHA-256&quot;;
+<span class="nc" id="L38">    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();</span>
+
+    public CryptoService(KeyStoreService keyStoreUtil, SystemOptions systemOptions,
+                         ApplicationKeyRepository applicationKeyRepository,
+<span class="nc" id="L42">                         @Value(&quot;${keystore.alias}&quot;) String alias) {</span>
+        try {
+<span class="nc" id="L44">            this.key = keyStoreUtil.getSecretBytes(alias);</span>
+<span class="nc" id="L45">        } catch (GeneralSecurityException ex) {</span>
+<span class="nc" id="L46">            throw new RuntimeException(&quot;Failed to load encryption key&quot;, ex);</span>
+<span class="nc" id="L47">        }</span>
+<span class="nc" id="L48">        this.keyStoreUtil = keyStoreUtil;</span>
+<span class="nc" id="L49">        this.systemOptions = systemOptions;</span>
+<span class="nc" id="L50">        this.applicationKeyRepository = applicationKeyRepository;</span>
+<span class="nc" id="L51">    }</span>
+
+    public String generateSalt() {
+<span class="nc" id="L54">        byte[] salt = new byte[32];</span>
+<span class="nc" id="L55">        new SecureRandom().nextBytes(salt);</span>
+<span class="nc" id="L56">        return Base64.getEncoder().encodeToString(salt);</span>
+    }
+
+    public String hash(String str, String salt) throws NoSuchAlgorithmException {
+<span class="nc" id="L60">        MessageDigest md = MessageDigest.getInstance(HASH_ALGORITHM);</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">        if (salt != null) {</span>
+<span class="nc" id="L62">            md.update(Base64.getDecoder().decode(salt));</span>
+        }
+<span class="nc" id="L64">        md.update(str.getBytes(StandardCharsets.UTF_8));</span>
+<span class="nc" id="L65">        return Base64.getEncoder().encodeToString(md.digest());</span>
+    }
+
+    public String encrypt(String str) throws GeneralSecurityException {
+<span class="nc" id="L69">        Cipher cipher = Cipher.getInstance(CIPHER_INSTANCE);</span>
+<span class="nc" id="L70">        byte[] iv = new byte[12];</span>
+<span class="nc" id="L71">        new SecureRandom().nextBytes(iv);</span>
+<span class="nc" id="L72">        GCMParameterSpec gcmSpec = new GCMParameterSpec(128, iv);</span>
+<span class="nc" id="L73">        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, CRYPT_ALGORITHM), gcmSpec);</span>
+<span class="nc" id="L74">        byte[] encVal = cipher.doFinal(str.getBytes(StandardCharsets.UTF_8));</span>
+<span class="nc" id="L75">        byte[] encryptedIvAndText = new byte[iv.length + encVal.length];</span>
+<span class="nc" id="L76">        System.arraycopy(iv, 0, encryptedIvAndText, 0, iv.length);</span>
+<span class="nc" id="L77">        System.arraycopy(encVal, 0, encryptedIvAndText, iv.length, encVal.length);</span>
+<span class="nc" id="L78">        return Base64.getEncoder().encodeToString(encryptedIvAndText);</span>
+    }
+
+    public String encrypt(byte [] bytes) throws GeneralSecurityException {
+<span class="nc" id="L82">        Cipher cipher = Cipher.getInstance(CIPHER_INSTANCE);</span>
+<span class="nc" id="L83">        byte[] iv = new byte[12];</span>
+<span class="nc" id="L84">        new SecureRandom().nextBytes(iv);</span>
+<span class="nc" id="L85">        GCMParameterSpec gcmSpec = new GCMParameterSpec(128, iv);</span>
+<span class="nc" id="L86">        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, CRYPT_ALGORITHM), gcmSpec);</span>
+<span class="nc" id="L87">        byte[] encVal = cipher.doFinal(bytes);</span>
+<span class="nc" id="L88">        byte[] encryptedIvAndText = new byte[iv.length + encVal.length];</span>
+<span class="nc" id="L89">        System.arraycopy(iv, 0, encryptedIvAndText, 0, iv.length);</span>
+<span class="nc" id="L90">        System.arraycopy(encVal, 0, encryptedIvAndText, iv.length, encVal.length);</span>
+<span class="nc" id="L91">        return Base64.getEncoder().encodeToString(encryptedIvAndText);</span>
+    }
+
+    public String decrypt(String encryptedStr) throws GeneralSecurityException {
+<span class="nc" id="L95">        Cipher cipher = Cipher.getInstance(&quot;AES/GCM/NoPadding&quot;);</span>
+
+        // Decode Base64
+<span class="nc" id="L98">        byte[] decodedVal = Base64.getDecoder().decode(encryptedStr);</span>
+
+        // Extract IV (first 12 bytes)
+<span class="nc" id="L101">        byte[] iv = Arrays.copyOfRange(decodedVal, 0, 12);</span>
+
+        // Extract actual ciphertext (rest of the bytes)
+<span class="nc" id="L104">        byte[] cipherText = Arrays.copyOfRange(decodedVal, 12, decodedVal.length);</span>
+
+        // Ensure we use the same IV for decryption
+<span class="nc" id="L107">        GCMParameterSpec gcmSpec = new GCMParameterSpec(128, iv);</span>
+<span class="nc" id="L108">        cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, CRYPT_ALGORITHM), gcmSpec);</span>
+
+        // Decrypt the text
+<span class="nc" id="L111">        byte[] decryptedBytes = cipher.doFinal(cipherText);</span>
+
+<span class="nc" id="L113">        return new String(decryptedBytes, StandardCharsets.UTF_8);</span>
+    }
+
+
+    public String encodePassword(String password) throws NoSuchAlgorithmException {
+<span class="nc" id="L118">        return encoder.encode(password);</span>
+    }
+
+    /**
+     * generates system's public/private key par and returns passphrase
+     *
+     * @return passphrase for system generated key
+     */
+    @Transactional
+    public ApplicationKey generateKeyPair(String passphrase) throws JSchException, IOException,
+        GeneralSecurityException {
+
+<span class="nc" id="L130">        JSch jsch = new JSch();</span>
+<span class="nc" id="L131">        String typeStr = systemOptions.sshKeyType;</span>
+<span class="nc" id="L132">        int type = KeyPair.RSA;</span>
+<span class="nc bnc" id="L133" title="All 6 branches missed.">        switch(typeStr) {</span>
+            case &quot;dsa&quot;:
+<span class="nc" id="L135">                type = KeyPair.DSA;</span>
+<span class="nc" id="L136">                break;</span>
+            case &quot;ecdsa&quot;:
+<span class="nc" id="L138">                type = KeyPair.ECDSA;</span>
+<span class="nc" id="L139">                break;</span>
+            case &quot;rsa&quot;:
+<span class="nc" id="L141">                type = KeyPair.RSA;</span>
+<span class="nc" id="L142">                break;</span>
+            case &quot;ed25519&quot;:
+<span class="nc" id="L144">                type = KeyPair.ED25519;</span>
+<span class="nc" id="L145">                break;</span>
+            case &quot;ed448&quot;:
+<span class="nc" id="L147">                type = KeyPair.ED448;</span>
+<span class="nc" id="L148">                break;</span>
+            default:
+<span class="nc" id="L150">                throw new RuntimeException(&quot;Unsupported key type: &quot; + typeStr);</span>
+        }
+<span class="nc" id="L152">        int keyLength = 2048;</span>
+<span class="nc" id="L153">        KeyPair keyPair = KeyPair.genKeyPair(jsch, type, keyLength);</span>
+
+<span class="nc" id="L155">        ApplicationKey applicationKey = new ApplicationKey();</span>
+<span class="nc" id="L156">        applicationKey.setPrivateKey(</span>
+<span class="nc" id="L157">            encrypt(</span>
+<span class="nc" id="L158">            this.keyStoreUtil.getPrivateKeyBytes(keyPair, passphrase)));</span>
+
+<span class="nc" id="L160">        applicationKey.setPassphrase(</span>
+<span class="nc" id="L161">            encrypt(passphrase.getBytes(StandardCharsets.UTF_8)));</span>
+
+<span class="nc" id="L163">        applicationKey.setPublicKey(new String (this.keyStoreUtil.getPublicKeyBytes(keyPair)));</span>
+
+<span class="nc" id="L165">        keyPair.dispose();</span>
+
+<span class="nc" id="L167">        applicationKey =  applicationKeyRepository.save(applicationKey);</span>
+
+<span class="nc" id="L169">        return applicationKey;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

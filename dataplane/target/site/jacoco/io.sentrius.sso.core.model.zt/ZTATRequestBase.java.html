@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ZTATRequestBase.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.model.zt</a> &gt; <span class="el_source">ZTATRequestBase.java</span></div><h1>ZTATRequestBase.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.model.zt;
+
+import io.sentrius.sso.core.model.HostSystem;
+import io.sentrius.sso.core.model.users.User;
+import jakarta.persistence.Column;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.MappedSuperclass;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
+
+<span class="nc" id="L20">@SuperBuilder(toBuilder = true)</span>
+<span class="nc bnc" id="L21" title="All 62 branches missed.">@Data</span>
+<span class="nc" id="L22">@NoArgsConstructor</span>
+<span class="nc" id="L23">@AllArgsConstructor</span>
+@MappedSuperclass
+@Inheritance(strategy = InheritanceType.JOINED)
+public abstract class ZTATRequestBase {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L29">    private Long id;</span>
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;user_id&quot;)
+<span class="nc" id="L33">    private User user;</span>
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;system_id&quot;)
+<span class="nc" id="L37">    private HostSystem system;</span>
+
+    @Column(name = &quot;command&quot;, nullable = false)
+<span class="nc" id="L40">    private String command;</span>
+
+    @Column(name = &quot;command_hash&quot;, nullable = false)
+<span class="nc" id="L43">    private String commandHash;</span>
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = &quot;ztat_reason_id&quot;)
+<span class="nc" id="L47">    private ZeroTrustAccessTokenReason ztatReason;</span>
+
+    @Column(name = &quot;last_updated&quot;, columnDefinition = &quot;TIMESTAMP DEFAULT CURRENT_TIMESTAMP&quot;)
+<span class="nc" id="L50">    private java.sql.Timestamp lastUpdated;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

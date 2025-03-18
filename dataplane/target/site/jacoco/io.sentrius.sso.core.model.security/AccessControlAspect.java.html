@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AccessControlAspect.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.model.security</a> &gt; <span class="el_source">AccessControlAspect.java</span></div><h1>AccessControlAspect.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.model.security;
+
+import io.sentrius.sso.core.annotations.LimitAccess;
+import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
+import io.sentrius.sso.core.model.security.enums.RuleAccessEnum;
+import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
+import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
+import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.utils.AccessUtil;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
+import java.security.GeneralSecurityException;
+import java.sql.SQLException;
+
+@Aspect
+@Component
+<span class="nc" id="L29">@Slf4j</span>
+<span class="nc" id="L30">@RequiredArgsConstructor</span>
+public class AccessControlAspect {
+
+    private final UserService userService;
+
+
+    //@Before(&quot;@annotation(io.sentrius.core.security.access.LimitAccess)&quot;)
+    //public void checkAccess(ProceedingJoinPoint joinPoint) throws Throwable {
+    @Before(&quot;@annotation(limitAccess)&quot;)
+    public void checkLimitAccess(LimitAccess limitAccess) throws SQLException, GeneralSecurityException {
+        //MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        //Method method = signature.getMethod();
+<span class="nc" id="L42">        boolean canAccess = true;</span>
+<span class="nc" id="L43">        LimitAccess accessAnnotation = limitAccess;</span>
+<span class="nc" id="L44">        var operatingUser = userService.getOperatingUser(getCurrentHttpRequest(),getCurrentHttpResponse(),null);</span>
+<span class="nc bnc" id="L45" title="All 2 branches missed.">        if (accessAnnotation != null) {</span>
+            // Get the required roles from the annotation
+<span class="nc bnc" id="L47" title="All 2 branches missed.">            for (var userAccess : accessAnnotation.userAccess()) {</span>
+<span class="nc bnc" id="L48" title="All 2 branches missed.">                if (!canAccess(operatingUser, userAccess)) {</span>
+<span class="nc" id="L49">                    log.info(&quot;Access Denied to {} at {}&quot;, operatingUser, userAccess);</span>
+<span class="nc" id="L50">                    canAccess = false;</span>
+<span class="nc" id="L51">                    break;</span>
+                }
+            }
+<span class="nc bnc" id="L54" title="All 2 branches missed.">            for (var appAccess : accessAnnotation.applicationAccess()) {</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">                if (!canAccess(operatingUser, appAccess)) {</span>
+<span class="nc" id="L56">                    log.info(&quot;Access Denied to {} at {}&quot;, operatingUser, appAccess);</span>
+<span class="nc" id="L57">                    canAccess = false;</span>
+<span class="nc" id="L58">                    break;</span>
+                }
+            }
+
+<span class="nc bnc" id="L62" title="All 2 branches missed.">            if (!canAccess) {</span>
+
+<span class="nc" id="L64">                throw new ResponseStatusException(HttpStatus.FORBIDDEN, &quot;Access Denied to &quot;);</span>
+            }
+        }
+<span class="nc" id="L67">    }</span>
+
+
+    protected boolean canAccess(User operatingUser, RuleAccessEnum access) {
+<span class="nc" id="L71">        return AccessUtil.canAccess(operatingUser, access);</span>
+    }
+
+    protected boolean canAccess(User operatingUser, ZeroTrustAccessTokenEnum access) {
+<span class="nc" id="L75">        return AccessUtil.canAccess(operatingUser, access);</span>
+    }
+
+    protected boolean canAccess(User operatingUser, SSHAccessEnum access) {
+<span class="nc" id="L79">        return AccessUtil.canAccess(operatingUser, access);</span>
+    }
+
+
+    protected boolean canAccess(User operatingUser, ApplicationAccessEnum access) throws SQLException,
+        GeneralSecurityException {
+<span class="nc" id="L85">        return AccessUtil.canAccess(operatingUser, access);</span>
+    }
+
+    protected boolean canAccess(User operatingUser, UserAccessEnum access) throws SQLException, GeneralSecurityException {
+<span class="nc" id="L89">        return AccessUtil.canAccess(operatingUser, access);</span>
+    }
+
+    private HttpServletRequest getCurrentHttpRequest() {
+<span class="nc" id="L93">        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">        if (requestAttributes instanceof ServletRequestAttributes) {</span>
+<span class="nc" id="L95">            return ((ServletRequestAttributes) requestAttributes).getRequest();</span>
+        }
+<span class="nc" id="L97">        return null;</span>
+    }
+
+    private HttpServletResponse getCurrentHttpResponse() {
+<span class="nc" id="L101">        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">        if (requestAttributes instanceof ServletRequestAttributes) {</span>
+<span class="nc" id="L103">            return ((ServletRequestAttributes) requestAttributes).getResponse();</span>
+        }
+<span class="nc" id="L105">        return null;</span>
+    }
+
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

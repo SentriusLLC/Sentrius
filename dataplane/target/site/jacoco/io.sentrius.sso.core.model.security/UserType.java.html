@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserType.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.model.security</a> &gt; <span class="el_source">UserType.java</span></div><h1>UserType.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.model.security;
+
+import io.sentrius.sso.core.dto.UserTypeDTO;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.model.security.enums.AutomationAccessEnum;
+import io.sentrius.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
+import io.sentrius.sso.core.model.security.enums.RuleAccessEnum;
+import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
+import io.sentrius.sso.core.model.security.enums.SpecialAccesses;
+import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
+import jakarta.persistence.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import lombok.*;
+
+/** Value object that contains user information */
+<span class="pc bpc" id="L18" title="7 of 14 branches missed.">@Builder(</span>
+    toBuilder = true,
+    builderClassName = &quot;UserTypeBuilder&quot;,
+    builderMethodName = &quot;internalBuilder&quot;)
+@Getter
+<span class="nc" id="L23">@Setter</span>
+<span class="nc" id="L24">@NoArgsConstructor</span>
+<span class="nc bnc" id="L25" title="All 78 branches missed.">@EqualsAndHashCode</span>
+<span class="fc" id="L26">@AllArgsConstructor</span>
+<span class="nc" id="L27">@ToString</span>
+@Entity(name = &quot;usertypes&quot;)
+public class UserType {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = &quot;id&quot;)
+<span class="fc" id="L34">    Long id;</span>
+
+    @Column(name = &quot;user_type_name&quot;, unique = true, nullable = false)
+<span class="fc" id="L37">    String userTypeName;</span>
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;automation_access&quot;)
+    @Builder.Default
+    AutomationAccessEnum automationAccess = AutomationAccessEnum.CAN_VIEW_AUTOMATION;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;system_access&quot;)
+    @Builder.Default
+    SSHAccessEnum systemAccess = SSHAccessEnum.CAN_VIEW_SYSTEMS;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;rule_access&quot;)
+    @Builder.Default
+    RuleAccessEnum ruleAccess = RuleAccessEnum.CAN_VIEW_RULES;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;user_access&quot;)
+    @Builder.Default
+    UserAccessEnum userAccess = UserAccessEnum.IS_USER;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;ztat_access&quot;)
+    @Builder.Default
+    ZeroTrustAccessTokenEnum ztAccessTokenAccess = ZeroTrustAccessTokenEnum.CAN_VIEW_ZTATS;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;application_access&quot;)
+    @Builder.Default
+    ApplicationAccessEnum applicationAccess = ApplicationAccessEnum.CAN_LOG_IN;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = &quot;user_special_control_set&quot;, joinColumns = @JoinColumn(name = &quot;user_type_id&quot;))
+    @Column(name = &quot;special_control_set&quot;)
+    @Builder.Default
+    Set&lt;String&gt; specialControlSet = new HashSet&lt;&gt;();
+
+    public AutomationAccessEnum getAutomationAccess() {
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">        return null != automationAccess ? automationAccess : AutomationAccessEnum.CAN_VIEW_AUTOMATION;</span>
+    }
+
+    public SSHAccessEnum getSystemAccess() {
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">        return null != systemAccess ? systemAccess : SSHAccessEnum.CAN_VIEW_SYSTEMS;</span>
+    }
+
+    public RuleAccessEnum getRuleAccess() {
+<span class="pc bpc" id="L84" title="1 of 2 branches missed.">        return null != ruleAccess ? ruleAccess : RuleAccessEnum.CAN_VIEW_RULES;</span>
+    }
+
+    public UserAccessEnum getUserAccess() {
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">        return null != userAccess ? userAccess : UserAccessEnum.IS_USER;</span>
+    }
+
+    public ZeroTrustAccessTokenEnum getZtAccessTokenAccess() {
+<span class="pc bpc" id="L92" title="1 of 2 branches missed.">        return null != ztAccessTokenAccess ? ztAccessTokenAccess : ZeroTrustAccessTokenEnum.CAN_VIEW_ZTATS;</span>
+    }
+
+    public ApplicationAccessEnum getApplicationAccess() {
+<span class="pc bpc" id="L96" title="1 of 2 branches missed.">        return null != applicationAccess ? applicationAccess : ApplicationAccessEnum.CAN_LOG_IN;</span>
+    }
+
+    public Set&lt;String&gt; getSpecialControlSet() {
+<span class="nc" id="L100">        return specialControlSet;</span>
+    }
+
+
+    public Set&lt;String&gt; getAccessSet() {
+<span class="fc" id="L105">        Set&lt;String&gt; accesses = new HashSet&lt;&gt;();</span>
+
+<span class="pc bpc" id="L107" title="1 of 2 branches missed.">        if (automationAccess != null)</span>
+<span class="fc" id="L108">            automationAccess.getAccessStrings().forEach(accesses::add);</span>
+<span class="pc bpc" id="L109" title="1 of 2 branches missed.">        if (null != systemAccess)</span>
+<span class="fc" id="L110">            systemAccess.getAccessStrings().forEach(accesses::add);</span>
+<span class="pc bpc" id="L111" title="1 of 2 branches missed.">        if (null != ruleAccess)</span>
+<span class="fc" id="L112">            ruleAccess.getAccessStrings().forEach(accesses::add);</span>
+<span class="pc bpc" id="L113" title="1 of 2 branches missed.">        if (null != userAccess)</span>
+<span class="fc" id="L114">            userAccess.getAccessStrings().forEach(accesses::add);</span>
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">        if (null != applicationAccess)</span>
+<span class="fc" id="L116">            applicationAccess.getAccessStrings().forEach(accesses::add);</span>
+<span class="pc bpc" id="L117" title="1 of 2 branches missed.">        if (null != ztAccessTokenAccess)</span>
+<span class="fc" id="L118">            ztAccessTokenAccess.getAccessStrings().forEach(accesses::add);</span>
+<span class="fc" id="L119">        return accesses;</span>
+    }
+
+    public boolean can(SpecialAccesses access) {
+<span class="nc" id="L123">        return specialControlSet.contains(access.getValue());</span>
+    }
+
+    public static UserType createSuperUser() {
+<span class="fc" id="L127">        return UserType.builder()</span>
+<span class="fc" id="L128">            .id(-1L)</span>
+<span class="fc" id="L129">            .userTypeName(&quot;Full Access&quot;)</span>
+<span class="fc" id="L130">            .ruleAccess(RuleAccessEnum.CAN_MANAGE_RULES)</span>
+<span class="fc" id="L131">            .automationAccess(AutomationAccessEnum.CAN_MANAGE_AUTOMATION)</span>
+<span class="fc" id="L132">            .systemAccess(SSHAccessEnum.CAN_MANAGE_SYSTEMS)</span>
+<span class="fc" id="L133">            .userAccess(UserAccessEnum.CAN_MANAGE_USERS)</span>
+<span class="fc" id="L134">            .applicationAccess(ApplicationAccessEnum.CAN_MANAGE_APPLICATION)</span>
+<span class="fc" id="L135">            .ztAccessTokenAccess(ZeroTrustAccessTokenEnum.CAN_MANAGE_ZTATS)</span>
+<span class="fc" id="L136">            .build();</span>
+    }
+
+    public static UserType createSystemAdmin() {
+<span class="nc" id="L140">        return UserType.builder()</span>
+<span class="nc" id="L141">            .id(-2L)</span>
+<span class="nc" id="L142">            .userTypeName(&quot;System Admin&quot;)</span>
+<span class="nc" id="L143">            .ruleAccess(RuleAccessEnum.CAN_VIEW_RULES)</span>
+<span class="nc" id="L144">            .automationAccess(AutomationAccessEnum.CAN_RUN_AUTOMATION)</span>
+<span class="nc" id="L145">            .systemAccess(SSHAccessEnum.CAN_VIEW_SYSTEMS)</span>
+<span class="nc" id="L146">            .userAccess(UserAccessEnum.IS_USER)</span>
+<span class="nc" id="L147">            .applicationAccess(ApplicationAccessEnum.CAN_LOG_IN)</span>
+<span class="nc" id="L148">            .ztAccessTokenAccess(ZeroTrustAccessTokenEnum.CAN_VIEW_ZTATS)</span>
+<span class="nc" id="L149">            .build();</span>
+    }
+
+    public static UserType createBaseUser() {
+<span class="nc" id="L153">        return UserType.builder()</span>
+<span class="nc" id="L154">            .id(-4L)</span>
+<span class="nc" id="L155">            .userTypeName(&quot;Default User&quot;)</span>
+<span class="nc" id="L156">            .ruleAccess(null)</span>
+<span class="nc" id="L157">            .automationAccess(null)</span>
+<span class="nc" id="L158">            .systemAccess(SSHAccessEnum.CAN_VIEW_SYSTEMS)</span>
+<span class="nc" id="L159">            .userAccess(null)</span>
+<span class="nc" id="L160">            .applicationAccess(ApplicationAccessEnum.CAN_LOG_IN)</span>
+<span class="nc" id="L161">            .ztAccessTokenAccess(null)</span>
+<span class="nc" id="L162">            .build();</span>
+    }
+
+    public static UserType createUnknownUser() {
+<span class="nc" id="L166">        return UserType.builder()</span>
+<span class="nc" id="L167">            .id(-3L)</span>
+<span class="nc" id="L168">            .userTypeName(&quot;Unknown User&quot;)</span>
+<span class="nc" id="L169">            .ruleAccess(null)</span>
+<span class="nc" id="L170">            .automationAccess(null)</span>
+<span class="nc" id="L171">            .systemAccess(null)</span>
+<span class="nc" id="L172">            .userAccess(null)</span>
+<span class="nc" id="L173">            .applicationAccess(null)</span>
+<span class="nc" id="L174">            .ztAccessTokenAccess(null)</span>
+<span class="nc" id="L175">            .build();</span>
+    }
+
+    public static UBuilder builder() {
+<span class="fc" id="L179">        return new UBuilder();</span>
+    }
+
+    public void setAccesses(List&lt;String&gt; userAccessList) {
+<span class="nc" id="L183">        automationAccess = AutomationAccessEnum.of(userAccessList);</span>
+<span class="nc" id="L184">        systemAccess = SSHAccessEnum.of(userAccessList);</span>
+<span class="nc" id="L185">        ruleAccess = RuleAccessEnum.of(userAccessList);</span>
+<span class="nc" id="L186">        userAccess = UserAccessEnum.of(userAccessList);</span>
+<span class="nc" id="L187">        ztAccessTokenAccess = ZeroTrustAccessTokenEnum.of(userAccessList);</span>
+<span class="nc" id="L188">        applicationAccess = ApplicationAccessEnum.of(userAccessList);</span>
+<span class="nc" id="L189">    }</span>
+
+    public void addSpecialControl(SpecialAccesses specialAccesses) {
+<span class="nc" id="L192">        specialControlSet.add(specialAccesses.getValue());</span>
+<span class="nc" id="L193">    }</span>
+
+    public boolean can(ApplicationAccessEnum applicationAccessEnum) {
+<span class="nc bnc" id="L196" title="All 2 branches missed.">        if (null != applicationAccessEnum) {</span>
+<span class="nc bnc" id="L197" title="All 2 branches missed.">            if (null != getApplicationAccess()) {</span>
+<span class="nc" id="L198">                return getApplicationAccess().getAccessStrings().contains(applicationAccessEnum.getValue());</span>
+            }
+        }
+<span class="nc" id="L201">        return false;</span>
+    }
+
+    public boolean can(SSHAccessEnum sshAccessEnum) {
+<span class="nc bnc" id="L205" title="All 2 branches missed.">        if (null != sshAccessEnum) {</span>
+<span class="nc bnc" id="L206" title="All 2 branches missed.">            if (null != getSystemAccess()) {</span>
+<span class="nc" id="L207">                return getSystemAccess().getAccessStrings().contains(sshAccessEnum.getValue());</span>
+            }
+        }
+<span class="nc" id="L210">        return false;</span>
+    }
+
+    public static class UBuilder extends UserTypeBuilder {
+
+        UBuilder() {
+<span class="fc" id="L216">            super();</span>
+<span class="fc" id="L217">        }</span>
+
+        @Override
+        public UserType build() {
+<span class="fc" id="L221">            UserType userTypeObj = super.build();</span>
+
+            // If we are formally tracking the query we will do so.
+<span class="fc" id="L224">            Set&lt;String&gt; accesses = new HashSet&lt;&gt;();</span>
+
+<span class="pc bpc" id="L226" title="1 of 2 branches missed.">            if (userTypeObj.automationAccess != null)</span>
+<span class="fc" id="L227">                userTypeObj.automationAccess.getAccessStrings().forEach(accesses::add);</span>
+<span class="pc bpc" id="L228" title="1 of 2 branches missed.">            if (null != userTypeObj.systemAccess)</span>
+<span class="fc" id="L229">                userTypeObj.systemAccess.getAccessStrings().forEach(accesses::add);</span>
+<span class="pc bpc" id="L230" title="1 of 2 branches missed.">            if (null != userTypeObj.ruleAccess)</span>
+<span class="fc" id="L231">                userTypeObj.ruleAccess.getAccessStrings().forEach(accesses::add);</span>
+<span class="pc bpc" id="L232" title="1 of 2 branches missed.">            if (null != userTypeObj.userAccess)</span>
+<span class="fc" id="L233">                userTypeObj.userAccess.getAccessStrings().forEach(accesses::add);</span>
+<span class="pc bpc" id="L234" title="1 of 2 branches missed.">            if (null != userTypeObj.applicationAccess)</span>
+<span class="fc" id="L235">                userTypeObj.applicationAccess.getAccessStrings().forEach(accesses::add);</span>
+<span class="pc bpc" id="L236" title="1 of 2 branches missed.">            if (null != userTypeObj.ztAccessTokenAccess)</span>
+<span class="fc" id="L237">                userTypeObj.ztAccessTokenAccess.getAccessStrings().forEach(accesses::add);</span>
+//            if (null != userTypeObj.accessSet) userTypeObj.accessSet = accesses;
+
+<span class="fc" id="L240">            return userTypeObj;</span>
+        }
+    }
+
+    public UserTypeDTO toDTO() {
+        var builder =
+<span class="fc" id="L246">            UserTypeDTO.builder().dtoId(getId().toString()).userTypeName(getUserTypeName()).automationAccess(getAutomationAccess().name());</span>
+<span class="fc" id="L247">        builder =</span>
+<span class="fc" id="L248">            builder.systemAccess(getSystemAccess().name()).ruleAccess(getRuleAccess().name()).userAccess(getUserAccess().name());</span>
+<span class="fc" id="L249">        builder =</span>
+<span class="fc" id="L250">            builder.ztAccessTokenAccess(getZtAccessTokenAccess().name()).applicationAccess(getApplicationAccess().name()).accessSet(getAccessSet());</span>
+<span class="fc" id="L251">        return builder.build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

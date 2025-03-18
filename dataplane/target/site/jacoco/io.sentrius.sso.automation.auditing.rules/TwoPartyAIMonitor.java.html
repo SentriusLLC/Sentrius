@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TwoPartyAIMonitor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.automation.auditing.rules</a> &gt; <span class="el_source">TwoPartyAIMonitor.java</span></div><h1>TwoPartyAIMonitor.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.automation.auditing.rules;
+
+import java.util.LinkedList;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
+import io.sentrius.sso.automation.auditing.SessionTokenEvaluator;
+import io.sentrius.sso.automation.auditing.Trigger;
+import io.sentrius.sso.automation.auditing.TriggerAction;
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.model.ConnectedSystem;
+import io.sentrius.sso.core.services.openai.OpenAITwoPartyMonitorService;
+import io.sentrius.sso.core.services.terminal.SessionTrackingService;
+import io.sentrius.sso.genai.model.TwoPartyRequest;
+import io.sentrius.sso.protobuf.Session;
+import lombok.extern.slf4j.Slf4j;
+
+<span class="nc" id="L20">@Slf4j</span>
+<span class="nc" id="L21">public class TwoPartyAIMonitor extends SessionTokenEvaluator {</span>
+
+    private static final String DESCRIPTION = &quot;Automated AI monitoring has identifed concerning system activity. &quot; +
+        &quot;Please standby while we request two party monitoring of your session to proceed..&quot;;
+<span class="nc" id="L25">    private static final String CLASS_NAME = TwoPartyAIMonitor.class.getName();</span>
+    private ConnectedSystem connectedSystem;
+    private SessionTrackingService sessionTrackingService;
+
+<span class="nc" id="L29">    private long buffer = 10;</span>
+<span class="nc" id="L30">    private long commandsToEvaluate = 5;</span>
+<span class="nc" id="L31">    private double aiRiskThreshold = 0.8;</span>
+<span class="nc" id="L32">    private boolean enableLLMQuestions = false;</span>
+
+    // Rolling list of last 10 commands
+<span class="nc" id="L35">    private final Queue&lt;String&gt; recentCommands = new LinkedList&lt;&gt;();</span>
+
+    // Flag to indicate malicious activity
+<span class="nc" id="L38">    private AtomicReference&lt;String&gt; llmResponse = new AtomicReference&lt;&gt;(null);</span>
+<span class="nc" id="L39">    private AtomicReference&lt;String&gt; llmQuestion = new AtomicReference&lt;&gt;(null);</span>
+<span class="nc" id="L40">    private volatile boolean flaggedAsMalicious = false;</span>
+<span class="nc" id="L41">    private volatile long lastCommandTime = 0;</span>
+
+    @Override
+    public void setConnectedSystem(ConnectedSystem connectedSystem) {
+<span class="nc" id="L45">        this.connectedSystem = connectedSystem;</span>
+<span class="nc" id="L46">    }</span>
+
+    @Override
+    public void setTrackingService(SessionTrackingService sessionTrackingService) {
+<span class="nc" id="L50">        this.sessionTrackingService = sessionTrackingService;</span>
+<span class="nc" id="L51">    }</span>
+
+    @Override
+    public Optional&lt;Trigger&gt; trigger(String cmd) {
+<span class="nc" id="L55">        var command = cmd.trim();</span>
+<span class="nc bnc" id="L56" title="All 2 branches missed.">        if (command.isEmpty()) {</span>
+<span class="nc" id="L57">            log.info(&quot;Empty command No analysis&quot;);</span>
+            Trigger
+<span class="nc bnc" id="L59" title="All 2 branches missed.">                trg = new Trigger(TriggerAction.PERSISTENT_MESSAGE, llmResponse.get() != null ? llmResponse.get() : &quot;&quot;);</span>
+<span class="nc" id="L60">            return Optional.of(trg);</span>
+        }
+<span class="nc" id="L62">        var openAi = pluggableServices.get(&quot;openaitwoparty&quot;);</span>
+<span class="nc bnc" id="L63" title="All 2 branches missed.">        if (null == openAi) {</span>
+<span class="nc" id="L64">            log.info(&quot;no open ai integration&quot;);</span>
+<span class="nc" id="L65">            Trigger trg = new Trigger(TriggerAction.NO_ACTION, &quot;&quot;);</span>
+<span class="nc" id="L66">            return Optional.of(trg);</span>
+        }
+        // Add command to the rolling list
+<span class="nc bnc" id="L69" title="All 2 branches missed.">        if (recentCommands.size() &gt;= buffer) {</span>
+<span class="nc" id="L70">            recentCommands.poll(); // Remove the oldest command</span>
+        }
+<span class="nc" id="L72">        recentCommands.offer(command);</span>
+
+
+<span class="nc bnc" id="L75" title="All 2 branches missed.">        if (recentCommands.size() &lt; commandsToEvaluate) {</span>
+<span class="nc" id="L76">            log.info(&quot;Insufficient commands for analysis&quot;);</span>
+<span class="nc bnc" id="L77" title="All 2 branches missed.">            Trigger trg = new Trigger(TriggerAction.PERSISTENT_MESSAGE, llmResponse.get() != null ? llmResponse.get() : &quot;&quot;);</span>
+<span class="nc" id="L78">            return Optional.of(trg);</span>
+        }
+
+<span class="nc bnc" id="L81" title="All 2 branches missed.">        if (System.currentTimeMillis() - lastCommandTime &lt; 10000) {</span>
+<span class="nc" id="L82">            log.info(&quot;Insufficient time between commands for analysis&quot;);</span>
+
+<span class="nc bnc" id="L84" title="All 2 branches missed.">            Trigger trg = new Trigger(TriggerAction.PERSISTENT_MESSAGE, llmResponse.get() != null ? llmResponse.get() : &quot;&quot;);</span>
+<span class="nc" id="L85">            lastCommandTime = System.currentTimeMillis();</span>
+<span class="nc" id="L86">            return Optional.of(trg);</span>
+        }
+        else {
+<span class="nc" id="L89">            lastCommandTime = System.currentTimeMillis();</span>
+        }
+
+        // Merge recent commands into a single payload
+<span class="nc" id="L93">        String mergedCommands = String.join(&quot;\n&quot;, recentCommands);</span>
+<span class="nc" id="L94">        log.debug(&quot;merged commands: {}&quot;, mergedCommands);</span>
+        // Submit merged commands for asynchronous analysis
+<span class="nc" id="L96">        CompletableFuture&lt;Void&gt; analysis =</span>
+<span class="nc" id="L97">            ((OpenAITwoPartyMonitorService)openAi).analyzeTerminalLogs(TwoPartyRequest.builder().userInput(mergedCommands).build()).thenAccept(response -&gt; {</span>
+<span class="nc" id="L98">                log.info(&quot;OpenAI analysis completed. Malicious: {}&quot;, response);</span>
+<span class="nc bnc" id="L99" title="All 2 branches missed.">                if (response != null) {</span>
+<span class="nc bnc" id="L100" title="All 2 branches missed.">                    flaggedAsMalicious = response.getScore()&gt; aiRiskThreshold;</span>
+<span class="nc" id="L101">                    llmResponse.set(response.getResponse());</span>
+<span class="nc bnc" id="L102" title="All 6 branches missed.">                    if (response.getQuestion() != null &amp;&amp; !flaggedAsMalicious &amp;&amp; response.getScore()&gt;=0.75){</span>
+<span class="nc" id="L103">                        llmQuestion.set(response.getQuestion());</span>
+                    }
+                    else {
+<span class="nc" id="L106">                        llmQuestion.set(null);</span>
+                    }
+                }
+<span class="nc" id="L109">            });</span>
+
+        try {
+<span class="nc" id="L112">            analysis.get();</span>
+<span class="nc" id="L113">        } catch (InterruptedException e) {</span>
+<span class="nc" id="L114">            log.info(&quot;OpenAI analysis interrupted&quot;);</span>
+<span class="nc" id="L115">            e.printStackTrace();</span>
+<span class="nc" id="L116">            throw new RuntimeException(e);</span>
+<span class="nc" id="L117">        } catch (ExecutionException e) {</span>
+<span class="nc" id="L118">            e.printStackTrace();</span>
+<span class="nc" id="L119">            throw new RuntimeException(e);</span>
+<span class="nc" id="L120">        }</span>
+
+<span class="nc bnc" id="L122" title="All 2 branches missed.">        if (llmResponse.get() != null) {</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">            Trigger trg = llmQuestion.get() != null ? new Trigger(TriggerAction.PROMPT_ACTION, llmResponse.get(),</span>
+<span class="nc" id="L124">                llmQuestion.get()) :</span>
+<span class="nc" id="L125">                new Trigger(TriggerAction.PERSISTENT_MESSAGE, llmResponse.get());</span>
+<span class="nc" id="L126">            return Optional.of(trg);</span>
+        }
+
+<span class="nc" id="L129">        Trigger trg = new Trigger(TriggerAction.PERSISTENT_MESSAGE, &quot;&quot;);</span>
+<span class="nc" id="L130">        return Optional.of(trg);</span>
+    }
+
+    @Override
+    public boolean configure(SystemOptions systemOptions, String configuration) {
+<span class="nc" id="L135">        commandsToEvaluate = systemOptions.getCommandsToEvaluate();</span>
+<span class="nc" id="L136">        buffer = systemOptions.getCommandsToBuffer();</span>
+<span class="nc" id="L137">        aiRiskThreshold = systemOptions.getAiRiskThreshold();</span>
+<span class="nc" id="L138">        enableLLMQuestions = systemOptions.getEnableLLMQuestions();</span>
+<span class="nc" id="L139">        return true;</span>
+
+    }
+
+    @Override
+    public TriggerAction describeAction() {
+<span class="nc" id="L145">        return TriggerAction.WARN_ACTION;</span>
+    }
+
+    @Override
+    public boolean requiresSanitized() {
+<span class="nc" id="L150">        return false;</span>
+    }
+
+    @Override
+    public Optional&lt;Trigger&gt; onMessage(Session.TerminalMessage text) {
+        // Return a trigger based on current state
+<span class="nc bnc" id="L156" title="All 2 branches missed.">        if (text.getType() == Session.MessageType.USER_PROMPT) {</span>
+<span class="nc" id="L157">            log.info(&quot;*** response&quot;);</span>
+<span class="nc" id="L158">            var openAi = pluggableServices.get(&quot;openaitwoparty&quot;);</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">            if (null == openAi) {</span>
+<span class="nc" id="L160">                log.info(&quot;no open ai integration&quot;);</span>
+<span class="nc" id="L161">                Trigger trg = new Trigger(TriggerAction.NO_ACTION, &quot;&quot;);</span>
+<span class="nc" id="L162">                return Optional.of(trg);</span>
+            }
+
+<span class="nc" id="L165">            String mergedCommands = String.join(&quot;\n&quot;, recentCommands);</span>
+
+<span class="nc" id="L167">            CompletableFuture&lt;Void&gt; analysis =</span>
+<span class="nc" id="L168">                ((OpenAITwoPartyMonitorService)openAi).analyzeTerminalLogs(TwoPartyRequest.builder().previousPrompt(text.getCommand()).promptResponse(text.getPrompt()).userInput(mergedCommands).build()).thenAccept(response -&gt; {</span>
+<span class="nc" id="L169">                    log.info(&quot;From user response: OpenAI analysis completed. Malicious: {}&quot;, response);</span>
+<span class="nc bnc" id="L170" title="All 2 branches missed.">                    if (response != null) {</span>
+<span class="nc bnc" id="L171" title="All 2 branches missed.">                        flaggedAsMalicious = response.getScore()&gt;0.8;</span>
+<span class="nc" id="L172">                        llmResponse.set(response.getResponse());</span>
+<span class="nc bnc" id="L173" title="All 8 branches missed.">                        if (response.getQuestion() != null &amp;&amp; !flaggedAsMalicious &amp;&amp; response.getScore()&gt;=0.75 &amp;&amp; enableLLMQuestions) {</span>
+<span class="nc" id="L174">                            llmQuestion.set(response.getQuestion());</span>
+                        }
+                        else {
+<span class="nc" id="L177">                            llmQuestion.set(null);</span>
+                        }
+                    }
+<span class="nc" id="L180">                });</span>
+
+            try {
+<span class="nc" id="L183">                analysis.get();</span>
+
+<span class="nc bnc" id="L185" title="All 4 branches missed.">                if (llmResponse.get() != null &amp;&amp; llmQuestion.get() != null) {</span>
+<span class="nc bnc" id="L186" title="All 4 branches missed.">                    Trigger trg = llmQuestion.get() != null &amp;&amp; enableLLMQuestions ? new Trigger(TriggerAction.PROMPT_ACTION,</span>
+<span class="nc" id="L187">                        llmResponse.get(),</span>
+<span class="nc" id="L188">                        llmQuestion.get()) :</span>
+<span class="nc" id="L189">                        new Trigger(TriggerAction.PERSISTENT_MESSAGE, llmResponse.get());</span>
+<span class="nc" id="L190">                    return Optional.of(trg);</span>
+                }
+
+<span class="nc" id="L193">            } catch (InterruptedException e) {</span>
+<span class="nc" id="L194">                throw new RuntimeException(e);</span>
+<span class="nc" id="L195">            } catch (ExecutionException e) {</span>
+<span class="nc" id="L196">                throw new RuntimeException(e);</span>
+<span class="nc" id="L197">            }</span>
+        }
+<span class="nc bnc" id="L199" title="All 6 branches missed.">        if ((connectedSystem.getWebsocketListenerSessionId() == null || connectedSystem.getWebsocketListenerSessionId().isEmpty() ) &amp;&amp; flaggedAsMalicious) {</span>
+<span class="nc bnc" id="L200" title="All 2 branches missed.">            if (llmQuestion.get()!= null){</span>
+<span class="nc" id="L201">                Trigger trg = new Trigger(TriggerAction.PROMPT_ACTION, DESCRIPTION);</span>
+<span class="nc" id="L202">                return Optional.of(trg);</span>
+            }
+            else {
+<span class="nc" id="L205">                Trigger trg = new Trigger(TriggerAction.JIT_ACTION, DESCRIPTION);</span>
+<span class="nc" id="L206">                return Optional.of(trg);</span>
+            }
+        }
+        /*
+        if (llmResponse.get() != null) {
+            log.info(&quot;OpenAI analysis completed. not malicious but have an llm response: {}&quot;, llmResponse.get());
+            Trigger trg = new Trigger(TriggerAction.WARN_ACTION, llmResponse.get());
+            return Optional.of(trg);
+        }else {*/
+<span class="nc" id="L215">            Trigger trg = new Trigger(TriggerAction.NO_ACTION, CLASS_NAME);</span>
+<span class="nc" id="L216">            return Optional.of(trg);</span>
+//        }
+    }
+
+    @Override
+    public boolean isOnlySessionRule() {
+<span class="nc" id="L222">        return false;</span>
+    }
+
+    @Override
+    public boolean onFullCommand() {
+<span class="nc" id="L227">        return true;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

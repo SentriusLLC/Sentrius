@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Notification.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.model</a> &gt; <span class="el_source">Notification.java</span></div><h1>Notification.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.model;
+import java.sql.Timestamp;
+import io.sentrius.sso.core.dto.NotificationDTO;
+import io.sentrius.sso.core.model.users.User;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.util.List;
+
+<span class="nc" id="L22">@Builder</span>
+@Entity
+@Table(name = &quot;notifications&quot;)
+<span class="nc bnc" id="L25" title="All 62 branches missed.">@Data</span>
+<span class="nc" id="L26">@NoArgsConstructor</span>
+<span class="nc" id="L27">@AllArgsConstructor</span>
+public class Notification {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L31">    private Long id;</span>
+
+    @Column(name = &quot;notification_type&quot;, nullable = false, columnDefinition = &quot;INTEGER DEFAULT 0&quot;)
+<span class="nc" id="L34">    private Integer notificationType;</span>
+
+    @Column(name = &quot;notification_reference&quot;, length = 2048)
+<span class="nc" id="L37">    private String notificationReference;</span>
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;initiator&quot;)
+<span class="nc" id="L41">    private User initiator;</span>
+
+    @Column(name = &quot;message&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L44">    private String message;</span>
+
+    @Column(name = &quot;last_updated&quot;, columnDefinition = &quot;TIMESTAMP DEFAULT CURRENT_TIMESTAMP&quot;)
+<span class="nc" id="L47">    private Timestamp lastUpdated;</span>
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = &quot;notification_recipients&quot;,
+        joinColumns = @JoinColumn(name = &quot;notification_id&quot;),
+        inverseJoinColumns = @JoinColumn(name = &quot;user_id&quot;)
+    )
+<span class="nc" id="L55">    private List&lt;User&gt; recipients;</span>
+
+    public NotificationDTO toDTO(){
+<span class="nc" id="L58">        return NotificationDTO.builder()</span>
+<span class="nc" id="L59">            .id(this.id)</span>
+<span class="nc" id="L60">            .message(this.message)</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">            .initiator(null != this.initiator ? this.initiator.getUsername() : &quot;SYSTEM&quot;)</span>
+<span class="nc" id="L62">            .viewCount(this.recipients.size())</span>
+<span class="nc" id="L63">            .build();</span>
+    }
+
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HostGroupService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services</a> &gt; <span class="el_source">HostGroupService.java</span></div><h1>HostGroupService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.zip.ZipFile;
+import io.sentrius.sso.core.repository.HostGroupRepository;
+import io.sentrius.sso.core.repository.UserRepository;
+import io.sentrius.sso.core.repository.SystemRepository;
+import io.sentrius.sso.core.data.specification.HostGroupSpecification;
+import io.sentrius.sso.core.model.HostSystem;
+import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.model.hostgroup.HostGroup;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Hibernate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+<span class="nc" id="L22">@Slf4j</span>
+@Service
+<span class="nc" id="L24">public class HostGroupService {</span>
+
+    @Autowired
+    private HostGroupRepository hostGroupRepository;
+
+    @Autowired
+    private SystemRepository systemRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Transactional
+    public HostGroup getHostGroup(Long hostGroupId) {
+<span class="nc" id="L37">        HostGroup hostGroup = hostGroupRepository.findById(hostGroupId)</span>
+<span class="nc" id="L38">            .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Host &quot; + hostGroupId + &quot; Group not found&quot;));</span>
+
+<span class="nc" id="L40">        return hostGroup;</span>
+    }
+
+    @Transactional
+    public Optional&lt;HostGroup&gt; getHostGroupWithHostSystems(User user, Long hostGroupId) {
+<span class="nc" id="L45">        HostGroup hostGroup = hostGroupRepository.findByIdWithUsers(hostGroupId)</span>
+<span class="nc" id="L46">            .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Host Enclave not found&quot;));</span>
+
+
+<span class="nc" id="L49">        boolean userIsMember = hostGroup.getUsers().stream()</span>
+<span class="nc" id="L50">            .anyMatch(usr -&gt; usr.getId().equals(user.getId()));</span>
+
+<span class="nc bnc" id="L52" title="All 2 branches missed.">        if (!userIsMember) {</span>
+<span class="nc" id="L53">            return Optional.empty();</span>
+        }
+<span class="nc" id="L55">        hostGroup.getHostSystemList().size(); // Forces initialization of the hostSystemList</span>
+
+<span class="nc" id="L57">        return Optional.of(hostGroup);</span>
+    }
+
+
+    @Transactional
+    public Optional&lt;HostSystem&gt; getHostSystem(Long hostId) {
+<span class="nc" id="L63">        return systemRepository.findById(hostId);</span>
+    }
+
+    @Transactional
+    public List&lt;HostSystem&gt; getAssignedHostsForUser(User user) {
+<span class="nc" id="L68">        final List&lt;HostSystem&gt; systems = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L70">        userRepository.findHostGroupsByUserId(user.getId()).forEach(hostGroup -&gt; {</span>
+<span class="nc" id="L71">            HostGroup sys = hostGroupRepository.findById(hostGroup.getId())</span>
+<span class="nc" id="L72">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Host Enclave not found&quot;));</span>
+<span class="nc" id="L73">            log.info(&quot;HostGroup: {}&quot;, sys.getId());</span>
+<span class="nc bnc" id="L74" title="All 4 branches missed.">            if (null != sys &amp;&amp; null != sys.getHostSystemList()) {</span>
+<span class="nc" id="L75">                Hibernate.initialize(sys.getHostSystemList());</span>
+
+<span class="nc bnc" id="L77" title="All 2 branches missed.">                for(HostSystem system : sys.getHostSystemList()) {</span>
+<span class="nc" id="L78">                    log.info(&quot;HostSystem: {}&quot;, system);</span>
+<span class="nc" id="L79">                }</span>
+<span class="nc" id="L80">                log.info(&quot;Adding to Systems HostGroup: {}&quot;, sys.getHostSystemList());</span>
+<span class="nc" id="L81">                systems.addAll(sys.getHostSystemList());</span>
+            }
+<span class="nc" id="L83">        });</span>
+
+<span class="nc" id="L85">        return systems;</span>
+    }
+
+    @Transactional
+    public List&lt;HostSystem&gt; getAssignedHostsForUserAndId(User user, Long groupId) {
+<span class="nc" id="L90">        final List&lt;HostSystem&gt; systems = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L92">        userRepository.findHostGroupsByUserId(user.getId()).stream().filter(hostGroup-&gt; {</span>
+<span class="nc" id="L93">            return hostGroup.getId().equals(groupId);</span>
+<span class="nc" id="L94">    }).forEach(hostGroup -&gt; {</span>
+<span class="nc" id="L95">            HostGroup sys = hostGroupRepository.findById(hostGroup.getId())</span>
+<span class="nc" id="L96">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Host Enclave not found&quot;));</span>
+<span class="nc" id="L97">            log.info(&quot;HostGroup: {}&quot;, sys.getId());</span>
+<span class="nc bnc" id="L98" title="All 4 branches missed.">            if (null != sys &amp;&amp; null != sys.getHostSystemList()) {</span>
+<span class="nc" id="L99">                Hibernate.initialize(sys.getHostSystemList());</span>
+
+<span class="nc bnc" id="L101" title="All 2 branches missed.">                for (HostSystem system : sys.getHostSystemList()) {</span>
+<span class="nc" id="L102">                    log.info(&quot;HostSystem: {}&quot;, system);</span>
+<span class="nc" id="L103">                }</span>
+<span class="nc" id="L104">                log.info(&quot;Adding to Systems HostGroup: {}&quot;, sys.getHostSystemList());</span>
+<span class="nc" id="L105">                systems.addAll(sys.getHostSystemList());</span>
+            }
+<span class="nc" id="L107">        });</span>
+
+
+<span class="nc" id="L110">        return systems;</span>
+    }
+
+    @Transactional
+    public HostSystem addHost(User user, HostSystem system) {
+<span class="nc" id="L115">        return systemRepository.save(system);</span>
+    }
+
+    public List&lt;HostGroup&gt; searchHostGroupsByUserIdAndFilters(Long userId, String enclaveName) {
+<span class="nc" id="L119">        Specification&lt;HostGroup&gt; spec = HostGroupSpecification.findByUserIdAndOptionalFilters(userId, enclaveName);</span>
+<span class="nc" id="L120">        return hostGroupRepository.findAll(spec);</span>
+    }
+
+    @Transactional
+    public HostGroup createHostGroupAndAssignToUser(User operatingUser, HostGroup hostGroup) {
+        // Step 1: Create a new HostGroup (Enclave)
+<span class="nc" id="L126">        HostGroup savedHostGroup = hostGroupRepository.save(hostGroup);</span>
+
+        // Step 2: Assign the HostGroup to the User
+<span class="nc" id="L129">        Optional&lt;User&gt; userOptional = userRepository.findById(operatingUser.getId());</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">        if (userOptional.isPresent()) {</span>
+<span class="nc" id="L131">            User user = userOptional.get();</span>
+<span class="nc" id="L132">            user.getHostGroups().add(savedHostGroup);</span>
+<span class="nc" id="L133">            userRepository.save(user);</span>
+<span class="nc" id="L134">        } else {</span>
+<span class="nc" id="L135">            throw new RuntimeException(&quot;User with ID &quot; + operatingUser.getId() + &quot; not found&quot;);</span>
+        }
+
+<span class="nc" id="L138">        return savedHostGroup;</span>
+    }
+
+    @Transactional
+    public void assignHostSystemToHostGroup(Long hostGroupId, Long hostSystemId) {
+<span class="nc" id="L143">        Optional&lt;HostGroup&gt; hostGroupOptional = hostGroupRepository.findById(hostGroupId);</span>
+<span class="nc" id="L144">        Optional&lt;HostSystem&gt; hostSystemOptional = systemRepository.findById(hostSystemId);</span>
+
+<span class="nc bnc" id="L146" title="All 4 branches missed.">        if (hostGroupOptional.isPresent() &amp;&amp; hostSystemOptional.isPresent()) {</span>
+<span class="nc" id="L147">            HostGroup hostGroup = hostGroupOptional.get();</span>
+<span class="nc" id="L148">            HostSystem hostSystem = hostSystemOptional.get();</span>
+
+            // Assuming there's a List&lt;HostSystem&gt; in HostGroup and vice versa
+<span class="nc" id="L151">            hostGroup.getHostSystems().add(hostSystem);</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">            if (null == hostSystem.getHostGroups()){</span>
+<span class="nc" id="L153">                hostSystem.setHostGroups(new ArrayList&lt;&gt;());</span>
+            }
+<span class="nc" id="L155">            hostSystem.getHostGroups().add(hostGroup);</span>
+
+<span class="nc" id="L157">            hostGroupRepository.save(hostGroup);</span>
+<span class="nc" id="L158">            systemRepository.save(hostSystem);</span>
+<span class="nc" id="L159">        } else {</span>
+<span class="nc" id="L160">            throw new RuntimeException(&quot;HostGroup or HostSystem not found&quot;);</span>
+        }
+<span class="nc" id="L162">    }</span>
+
+    @Transactional
+    public void removeHostSystemFromHostGroup(Long hostGroupId, Long hostSystemId) {
+<span class="nc" id="L166">        Optional&lt;HostGroup&gt; hostGroupOptional = hostGroupRepository.findById(hostGroupId);</span>
+<span class="nc" id="L167">        Optional&lt;HostSystem&gt; hostSystemOptional = systemRepository.findById(hostSystemId);</span>
+
+<span class="nc bnc" id="L169" title="All 4 branches missed.">        if (hostGroupOptional.isPresent() &amp;&amp; hostSystemOptional.isPresent()) {</span>
+<span class="nc" id="L170">            HostGroup hostGroup = hostGroupOptional.get();</span>
+<span class="nc" id="L171">            HostSystem hostSystem = hostSystemOptional.get();</span>
+
+            // Assuming there's a List&lt;HostSystem&gt; in HostGroup and vice versa
+<span class="nc" id="L174">            hostGroup.getHostSystems().remove(hostSystem);</span>
+<span class="nc" id="L175">            hostSystem.getHostGroups().remove(hostGroup);</span>
+
+<span class="nc" id="L177">            hostGroupRepository.save(hostGroup);</span>
+<span class="nc" id="L178">            systemRepository.save(hostSystem);</span>
+<span class="nc" id="L179">        } else {</span>
+<span class="nc" id="L180">            throw new RuntimeException(&quot;HostGroup or HostSystem not found&quot;);</span>
+        }
+<span class="nc" id="L182">    }</span>
+
+    public List&lt;HostGroup&gt; getAllHostGroups() {
+<span class="nc" id="L185">        return hostGroupRepository.findAll();</span>
+    }
+
+    public List&lt;HostGroup&gt; getHostGroupsByName(String name) {
+<span class="nc" id="L189">        return hostGroupRepository.findByName(name);</span>
+    }
+
+
+    public List&lt;HostGroup&gt; getAllHostGroups(User user) {
+<span class="nc" id="L194">        return hostGroupRepository.findAllByUserId(user.getId());</span>
+    }
+
+    @Transactional
+    public void save(HostGroup hostGroup) {
+<span class="nc" id="L199">        hostGroupRepository.save(hostGroup);</span>
+<span class="nc" id="L200">    }</span>
+
+    public List&lt;HostSystem&gt; getAllHosts() {
+<span class="nc" id="L203">        return systemRepository.findAll();</span>
+    }
+
+    public List&lt;HostGroup&gt; searchAllHostGroups(String enclaveName) {
+<span class="nc" id="L207">        Specification&lt;HostGroup&gt; spec = HostGroupSpecification.findByOptionalFilters(enclaveName);</span>
+<span class="nc" id="L208">        return hostGroupRepository.findAll(spec);</span>
+    }
+
+    public void deleteHostSystem(User user, HostSystem hostSystem) {
+<span class="nc" id="L212">        systemRepository.delete(hostSystem);</span>
+<span class="nc" id="L213">    }</span>
+
+/*
+    public List&lt;HostSystem&gt; getUnassignedHostsForUser(User operatingUser) {
+        systemRepository.findAll().forEach(hostSystem -&gt; {
+            if (!hostSystem.getUsers().contains(operatingUser)) {
+                return;
+            }
+        });
+    }*/
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

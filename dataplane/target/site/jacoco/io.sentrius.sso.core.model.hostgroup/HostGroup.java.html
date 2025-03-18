@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HostGroup.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.model.hostgroup</a> &gt; <span class="el_source">HostGroup.java</span></div><h1>HostGroup.java</h1><pre class="source lang-java linenums">/**
+ * Copyright (C) 2013 Loophole, LLC
+ *
+ * &lt;p&gt;Licensed under The Prosperity Public License 3.0.0
+ */
+package io.sentrius.sso.core.model.hostgroup;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.sentrius.sso.core.dto.HostGroupDTO;
+import io.sentrius.sso.core.dto.UserDTO;
+import io.sentrius.sso.core.model.ApplicationKey;
+import io.sentrius.sso.core.model.HostSystem;
+import io.sentrius.sso.core.model.users.User;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
+
+/** Value object that contains profile information */
+<span class="nc bnc" id="L42" title="All 6 branches missed.">@Builder</span>
+@Getter
+<span class="nc" id="L44">@Setter</span>
+<span class="nc" id="L45">@NoArgsConstructor</span>
+<span class="nc" id="L46">@AllArgsConstructor</span>
+<span class="nc bnc" id="L47" title="All 82 branches missed.">@EqualsAndHashCode</span>
+@Entity
+@Table(name = &quot;host_groups&quot;)
+public class HostGroup {
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  //@Column(name = &quot;host_group_id&quot;)
+<span class="nc" id="L54">  private Long id;</span>
+
+  @Column(name = &quot;name&quot;)
+<span class="nc" id="L57">  private String name;</span>
+
+  @Column(name = &quot;description&quot;)
+<span class="nc" id="L60">  private String description;</span>
+  @ManyToMany(fetch = FetchType.EAGER)
+  @JoinTable(
+      name = &quot;hostgroup_hostsystems&quot;,
+      joinColumns = @JoinColumn(name = &quot;hostgroup_id&quot;),
+      inverseJoinColumns = @JoinColumn(name = &quot;host_system_id&quot;)
+  )
+<span class="nc" id="L67">  private List&lt;HostSystem&gt; hostSystemList;</span>
+
+  @Column(name = &quot;configuration&quot;, columnDefinition = &quot;TEXT&quot;)
+  @Builder.Default
+<span class="nc" id="L71">  private String configurationJson = &quot;{}&quot;;</span>
+
+  @Builder.Default
+  @Transient
+<span class="nc" id="L75">  private boolean selected = false;</span>
+
+  @ManyToMany(fetch = FetchType.LAZY)
+  @JoinTable(
+      name = &quot;user_hostgroups&quot;,
+      joinColumns = @JoinColumn(name = &quot;hostgroup_id&quot;),
+      inverseJoinColumns = @JoinColumn(name = &quot;user_id&quot;)
+  )
+<span class="nc" id="L83">  private List&lt;User&gt; users;</span>
+
+  @ManyToMany(mappedBy = &quot;hostGroups&quot;, fetch = FetchType.LAZY)
+  @JsonManagedReference
+<span class="nc" id="L87">  private List&lt;HostSystem&gt; hostSystems;</span>
+
+  @ManyToMany
+  @JoinTable(
+      name = &quot;system_rules&quot;,
+      joinColumns = @JoinColumn(name = &quot;system_id&quot;),
+      inverseJoinColumns = @JoinColumn(name = &quot;rule_id&quot;)
+  )
+  @Builder.Default
+<span class="nc" id="L96">  private Set&lt;ProfileRule&gt; rules = new HashSet&lt;&gt;();</span>
+
+  @OneToOne(cascade = {CascadeType.MERGE, CascadeType.REMOVE})
+  @JoinColumn(name = &quot;application_key_id&quot;, referencedColumnName = &quot;id&quot;, unique = true)
+<span class="nc" id="L100">  private ApplicationKey applicationKey;</span>
+
+  public void setSystems(Collection&lt;String&gt; systems) {
+<span class="nc" id="L103">    hostSystemList = new java.util.ArrayList&lt;&gt;();</span>
+<span class="nc" id="L104">    systems.forEach(</span>
+        system -&gt; {
+<span class="nc" id="L106">          HostSystem hostSystem = new HostSystem();</span>
+<span class="nc" id="L107">          hostSystem.setDisplayName(system);</span>
+<span class="nc" id="L108">          hostSystemList.add(hostSystem);</span>
+<span class="nc" id="L109">        });</span>
+<span class="nc" id="L110">  }</span>
+
+  public ProfileConfiguration getConfiguration() {
+<span class="nc" id="L113">    ObjectMapper objectMapper = new ObjectMapper();</span>
+    try {
+<span class="nc bnc" id="L115" title="All 4 branches missed.">      if (null == configurationJson || configurationJson.isEmpty()) {</span>
+<span class="nc" id="L116">        return new ProfileConfiguration();</span>
+      }
+<span class="nc" id="L118">      return objectMapper.readValue(configurationJson, ProfileConfiguration.class);</span>
+<span class="nc" id="L119">    } catch (IOException e) {</span>
+<span class="nc" id="L120">      return new ProfileConfiguration();</span>
+    }
+  }
+
+  public void setConfiguration(ProfileConfiguration configuration) {
+<span class="nc" id="L125">    ObjectMapper objectMapper = new ObjectMapper();</span>
+    try {
+<span class="nc" id="L127">      this.configurationJson = objectMapper.writeValueAsString(configuration);</span>
+<span class="nc" id="L128">    } catch (IOException e) {</span>
+<span class="nc" id="L129">      throw new RuntimeException(&quot;Failed to serialize configuration to JSON&quot;, e);</span>
+<span class="nc" id="L130">    }</span>
+<span class="nc" id="L131">  }</span>
+
+  public HostGroupDTO toDTO(){
+<span class="nc" id="L134">    return toDTO(false);</span>
+  }
+
+  public HostGroupDTO toDTO(boolean setUsers){
+<span class="nc" id="L138">    var builder = HostGroupDTO.builder();</span>
+
+<span class="nc" id="L140">    builder.groupId(this.getId());</span>
+<span class="nc" id="L141">    builder.displayName(this.getName());</span>
+<span class="nc" id="L142">    builder.description(this.getDescription());</span>
+<span class="nc" id="L143">    builder.hostCount(this.getHostSystemList().size());</span>
+<span class="nc" id="L144">    builder.configuration(this.getConfiguration());</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">    if (setUsers){</span>
+<span class="nc" id="L146">      builder.users(this.getUsers().stream().map(x -&gt; x.toDto()).toList());</span>
+    }
+
+<span class="nc" id="L149">    return builder.build();</span>
+
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>KnownHostService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services</a> &gt; <span class="el_source">KnownHostService.java</span></div><h1>KnownHostService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services;
+
+import io.sentrius.sso.core.model.KnownHost;
+import io.sentrius.sso.core.repository.KnownHostRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.file.StandardOpenOption;
+import java.util.List;
+
+@Service
+public class KnownHostService {
+
+    private final KnownHostRepository knownHostRepository;
+    private final File knownHostsFile;
+
+<span class="nc" id="L22">    public KnownHostService(KnownHostRepository knownHostRepository) throws IOException {</span>
+<span class="nc" id="L23">        this.knownHostRepository = knownHostRepository;</span>
+
+        // Create a shared known_hosts file
+<span class="nc" id="L26">        this.knownHostsFile = File.createTempFile(&quot;sentrius-&quot;, &quot;-known-hosts&quot;);</span>
+<span class="nc" id="L27">        this.knownHostsFile.deleteOnExit();</span>
+
+        // Initialize the file with current known hosts
+<span class="nc" id="L30">        rebuildKnownHostsFile();</span>
+<span class="nc" id="L31">    }</span>
+
+    @Transactional
+    public void saveHostKey(String hostname, String keyType, String keyValue) {
+<span class="nc" id="L35">        KnownHost knownHost = knownHostRepository.findByHostnameAndKeyType(hostname, keyType);</span>
+<span class="nc bnc" id="L36" title="All 2 branches missed.">        if (knownHost== null) {</span>
+<span class="nc" id="L37">            knownHost = new KnownHost();</span>
+<span class="nc" id="L38">            knownHost.setHostname(hostname);</span>
+<span class="nc" id="L39">            knownHost.setKeyType(keyType);</span>
+<span class="nc" id="L40">            knownHost.setKeyValue(keyValue);</span>
+<span class="nc" id="L41">            knownHostRepository.save(knownHost);</span>
+
+            // Rebuild the file after adding a new host key
+<span class="nc" id="L44">            rebuildKnownHostsFile();</span>
+        } else {
+<span class="nc" id="L46">            knownHost.setKeyValue(keyValue);</span>
+<span class="nc" id="L47">            knownHostRepository.save(knownHost);</span>
+
+            // Rebuild the file after adding a new host key
+<span class="nc" id="L50">            rebuildKnownHostsFile();</span>
+        }
+<span class="nc" id="L52">    }</span>
+
+    public String getKnownHostsPath() {
+<span class="nc" id="L55">        return knownHostsFile.getAbsolutePath();</span>
+    }
+
+    private void rebuildKnownHostsFile() {
+<span class="nc" id="L59">        try (FileChannel channel = FileChannel.open(knownHostsFile.toPath(), StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);</span>
+<span class="nc" id="L60">             FileWriter writer = new FileWriter(knownHostsFile)) {</span>
+
+            // Lock the file while rebuilding
+<span class="nc" id="L63">            try (FileLock lock = channel.lock()) {</span>
+<span class="nc" id="L64">                List&lt;KnownHost&gt; knownHosts = knownHostRepository.findAll();</span>
+<span class="nc bnc" id="L65" title="All 2 branches missed.">                for (KnownHost host : knownHosts) {</span>
+<span class="nc" id="L66">                    writer.write(host.getHostname() + &quot; &quot; + host.getKeyType() + &quot; &quot; + host.getKeyValue() + &quot;\n&quot;);</span>
+<span class="nc" id="L67">                }</span>
+            }
+<span class="nc" id="L69">        } catch (IOException e) {</span>
+<span class="nc" id="L70">            throw new RuntimeException(&quot;Failed to rebuild known_hosts file&quot;, e);</span>
+<span class="nc" id="L71">        }</span>
+<span class="nc" id="L72">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

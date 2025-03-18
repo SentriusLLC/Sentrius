@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services</a> &gt; <span class="el_source">UserService.java</span></div><h1>UserService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services;
+
+import java.security.GeneralSecurityException;
+import java.security.NoSuchAlgorithmException;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import io.sentrius.sso.core.dto.UserDTO;
+import io.sentrius.sso.core.dto.UserTypeDTO;
+import io.sentrius.sso.core.repository.ProfileRepository;
+import io.sentrius.sso.core.repository.UserRepository;
+import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.model.hostgroup.HostGroup;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.model.security.UserType;
+import io.sentrius.sso.core.repository.UserTypeRepository;
+import io.sentrius.sso.core.services.security.AuthService;
+import io.sentrius.sso.core.services.security.CookieService;
+import io.sentrius.sso.core.services.security.CryptoService;
+import io.sentrius.sso.core.services.security.JwtUtil;
+import io.sentrius.sso.core.utils.ByteUtils;
+import io.sentrius.sso.core.utils.UIMessaging;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Hibernate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+<span class="nc" id="L33">@Slf4j</span>
+@Service
+<span class="nc" id="L35">@RequiredArgsConstructor</span>
+public class UserService {
+
+    @Value(&quot;${keycloak.realm}&quot;)
+    private String realm;
+
+    private static final String AUTHORIZATION_HEADER = &quot;Authorization&quot;;
+    private static final String TOKEN_PREFIX = &quot;Bearer &quot;;
+    public static final String USER_ID_CLAIM = &quot;user-id&quot;;
+
+
+    private final UserRepository UserDB;
+    private final ProfileRepository ProfileDB;
+    private final CookieService cookieService;
+    private final AuthService authService;
+    private final UserRepository userRepository;
+    private final UserTypeRepository userTypeRepository;
+    private final CryptoService cryptoService;
+
+    @Transactional
+    public User getUserWithDetails(String userName) {
+<span class="nc" id="L56">        var user = UserDB.findByUsername(userName);</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">        if (user.isEmpty()) {</span>
+<span class="nc" id="L58">            return null;</span>
+        }
+        // Initialize lazy-loaded associations while the session is still active
+<span class="nc" id="L61">        Hibernate.initialize(user.get().getAuthorizationType());</span>
+<span class="nc" id="L62">        return user.get();</span>
+    }
+
+    public User getOperatingUser(HttpServletRequest request,
+                                 HttpServletResponse response,
+                                 UIMessaging userMessage
+                                 ) {
+<span class="nc" id="L69">        var jwt = JwtUtil.getJWT();</span>
+<span class="nc" id="L70">        Optional&lt;String&gt; userIdStr = JwtUtil.getUserId(jwt);</span>
+<span class="nc" id="L71">        Optional&lt;String&gt; usernameStr = JwtUtil.getUsername(jwt);</span>
+<span class="nc" id="L72">        Optional&lt;String&gt; email = JwtUtil.getEmail(jwt);</span>
+<span class="nc bnc" id="L73" title="All 4 branches missed.">        if (userIdStr.isPresent() &amp;&amp; usernameStr.isPresent()) {</span>
+            try {
+                //Long userId = ByteUtils.convertToLong(userIdStr);
+<span class="nc" id="L76">                User operatingUser = UserDB.getByUsername(usernameStr.get());</span>
+<span class="nc bnc" id="L77" title="All 2 branches missed.">                if (operatingUser == null) {</span>
+<span class="nc" id="L78">                    var userUserType = UserType.createSystemAdmin();</span>
+<span class="nc" id="L79">                    Optional&lt;String&gt; userType = JwtUtil.getUserTypeName(jwt);</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">                    if (!userType.isEmpty()) {</span>
+<span class="nc" id="L81">                        String keycloakUserType = userType.get();</span>
+<span class="nc" id="L82">                        Optional&lt;UserType&gt; newType = userTypeRepository.findByUserTypeName(keycloakUserType);</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">                        if (newType.isPresent()) {</span>
+<span class="nc" id="L84">                            userUserType = newType.get();</span>
+                        }
+                    }
+<span class="nc" id="L87">                    operatingUser = User.builder()</span>
+<span class="nc" id="L88">                        .username(usernameStr.get())</span>
+<span class="nc" id="L89">                        .emailAddress(email.get())</span>
+<span class="nc" id="L90">                        .password(UUID.randomUUID().toString())</span>
+<span class="nc" id="L91">                        .userId(userIdStr.get())</span>
+<span class="nc" id="L92">                        .authorizationType(userUserType)</span>
+<span class="nc" id="L93">                        .build();</span>
+<span class="nc" id="L94">                    log.info(&quot;Creating new user: {}&quot;, operatingUser);</span>
+<span class="nc" id="L95">                    save(operatingUser);</span>
+                    HostGroup newHg =
+<span class="nc" id="L97">                        HostGroup.builder().name(&quot;Host Enclave for &quot; + operatingUser.getUsername()).description(</span>
+<span class="nc" id="L98">                            operatingUser.getUsername() + &quot;'s Host Enclave&quot;).build();</span>
+<span class="nc" id="L99">                    ProfileDB.save(newHg);</span>
+
+<span class="nc" id="L101">                    operatingUser.getHostGroups().add(newHg);</span>
+<span class="nc" id="L102">                    save(operatingUser);</span>
+                    // create their first host group!
+
+
+
+<span class="nc" id="L107">                }</span>
+                else {
+<span class="nc bnc" id="L109" title="All 4 branches missed.">                    if ( operatingUser.getUserId() == null || operatingUser.getUserId().isEmpty()) {</span>
+<span class="nc" id="L110">                        operatingUser.setUserId(userIdStr.get());</span>
+<span class="nc" id="L111">                        save(operatingUser);</span>
+                    }
+                }
+<span class="nc" id="L114">                Long userId = operatingUser.getId();</span>
+<span class="nc" id="L115">                Hibernate.initialize(operatingUser.getAuthorizationType());</span>
+<span class="nc" id="L116">                log.trace(&quot;Operating user: {} and {}&quot;, operatingUser.getUsername(),</span>
+<span class="nc" id="L117">                    operatingUser.getAuthorizationType());</span>
+                List&lt;HostGroup&gt; profileList;
+<span class="nc" id="L119">                Long selectedProfile = -1L;</span>
+                try {
+<span class="nc" id="L121">                    selectedProfile =</span>
+<span class="nc" id="L122">                        ByteUtils.convertToLong(cookieService.getEncryptedCookie(request, CookieService.SELECTED_PROFILE));</span>
+<span class="nc" id="L123">                } catch (Exception e) {</span>
+<span class="nc" id="L124">                    selectedProfile = -1L;</span>
+<span class="nc" id="L125">                }</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">                if (null != userId) {</span>
+<span class="nc" id="L127">                    if (operatingUser</span>
+<span class="nc" id="L128">                        .getAuthorizationType()</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">                        .can(ApplicationAccessEnum.CAN_MANAGE_APPLICATION)) {</span>
+<span class="nc" id="L130">                        profileList = ProfileDB.findAll();</span>
+                    } else {
+<span class="nc" id="L132">                        profileList = operatingUser.getHostGroups();</span>
+                    }
+<span class="nc bnc" id="L134" title="All 2 branches missed.">                    if (null != profileList) {</span>
+<span class="nc" id="L135">                        boolean found = false;</span>
+<span class="nc bnc" id="L136" title="All 2 branches missed.">                        for (HostGroup profile : profileList) {</span>
+<span class="nc bnc" id="L137" title="All 2 branches missed.">                            if (profile.getId().equals(selectedProfile)) {</span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">                                if (operatingUser.canAccessProfile(profile)) {</span>
+<span class="nc" id="L139">                                    profile.setSelected(true);</span>
+<span class="nc" id="L140">                                    found = true;</span>
+                                } else {
+<span class="nc bnc" id="L142" title="All 2 branches missed.">                                    if (null != userMessage ) {</span>
+<span class="nc" id="L143">                                        userMessage.errorToUser = &quot;You cannot access this profile during this time &quot; +</span>
+                                            &quot;window.&quot;;
+<span class="nc" id="L145">                                        userMessage.banner = &quot;You cannot access this profile during this time window.&quot;;</span>
+                                    }
+                                }
+                            }
+<span class="nc" id="L149">                        }</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">                        if (!found) {</span>
+<span class="nc" id="L151">                            selectedProfile = null;</span>
+<span class="nc" id="L152">                            cookieService.setEncryptedCookie(request, response, CookieService.SELECTED_PROFILE, null,</span>
+                                0);
+<span class="nc bnc" id="L154" title="All 2 branches missed.">                            if (!profileList.isEmpty()) {</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">                                for (HostGroup profile : profileList) {</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">                                    if (operatingUser.canAccessProfile(profile)) {</span>
+<span class="nc" id="L157">                                        profile.setSelected(true);</span>
+
+<span class="nc" id="L159">                                        selectedProfile = profile.getId();</span>
+<span class="nc" id="L160">                                        cookieService.setEncryptedCookie(request, response,</span>
+                                            CookieService.SELECTED_PROFILE,
+<span class="nc" id="L162">                                            selectedProfile.toString(), 0);</span>
+<span class="nc" id="L163">                                        break;</span>
+                                    }
+<span class="nc" id="L165">                                }</span>
+                            }
+                        }
+
+<span class="nc" id="L169">                    }</span>
+                } else {
+<span class="nc" id="L171">                    selectedProfile = null;</span>
+<span class="nc" id="L172">                    cookieService.setEncryptedCookie(request, response, CookieService.SELECTED_PROFILE, null, 0);</span>
+                }
+<span class="nc" id="L174">                return operatingUser;</span>
+<span class="nc" id="L175">            } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L176">                return null;</span>
+            }
+        } else {
+<span class="nc" id="L179">            log.info(&quot;no operating user&quot;);</span>
+<span class="nc" id="L180">            return null;</span>
+        }
+    }
+
+
+
+    private User createUnknownUser() {
+<span class="nc" id="L187">        User user = new User();</span>
+<span class="nc" id="L188">        user.setAuthorizationType(UserType.createUnknownUser());</span>
+<span class="nc" id="L189">        return user;</span>
+    }
+
+    @Transactional
+    public List&lt;UserDTO&gt; getAllUsers() {
+<span class="nc" id="L194">        List&lt;User&gt; users = userRepository.findAllWithAuthorizationType();</span>
+        // Initialize the lazy-loaded field to avoid LazyInitializationException
+<span class="nc" id="L196">        users.forEach(user -&gt; Hibernate.initialize(user.getAuthorizationType()));</span>
+
+<span class="nc" id="L198">        return users.stream().map(x -&gt; x.toDto()).map(userDTO -&gt; {</span>
+            try {
+<span class="nc" id="L200">                userDTO.setUserId(cryptoService.encrypt(userDTO.getId().toString()));</span>
+<span class="nc" id="L201">            } catch (GeneralSecurityException e) {</span>
+<span class="nc" id="L202">                throw new RuntimeException(e);</span>
+<span class="nc" id="L203">            }</span>
+<span class="nc" id="L204">            return userDTO;</span>
+<span class="nc" id="L205">        }).collect(Collectors.toList());</span>
+    }
+
+    public List&lt;UserTypeDTO&gt; getUserTypeList() {
+<span class="nc" id="L209">        return userTypeRepository.findAll().stream().map(x -&gt; x.toDTO()).collect(Collectors.toList());</span>
+    }
+
+    public String encodePassword(String password) throws NoSuchAlgorithmException {
+<span class="nc" id="L213">        return cryptoService.encodePassword(password);</span>
+    }
+
+    @Transactional
+    public User addUscer(User user) {
+<span class="nc" id="L218">        return userRepository.save(user);</span>
+    }
+
+    public User getUser(Long userId) {
+<span class="nc" id="L222">        return userRepository.getById(userId);</span>
+    }
+
+    @Transactional
+    public void deleteUser(Long userId) {
+<span class="nc" id="L227">        userRepository.deleteById(userId);</span>
+<span class="nc" id="L228">    }</span>
+
+    @Transactional
+    public UserType saveUserType(UserType userDto) {
+<span class="nc" id="L232">        return userTypeRepository.save(userDto);</span>
+    }
+
+    @Transactional
+    public void deleteUserType(Long id) {
+<span class="nc" id="L237">        userTypeRepository.deleteById(id);</span>
+<span class="nc" id="L238">    }</span>
+
+    public Optional&lt;User&gt; findByUsername(String username) {
+<span class="nc" id="L241">        var user = UserDB.findByUsername(username);</span>
+<span class="nc bnc" id="L242" title="All 2 branches missed.">        if (user.isEmpty()) {</span>
+<span class="nc" id="L243">            return Optional.empty();</span>
+        }
+        // Initialize lazy-loaded associations while the session is still active
+<span class="nc" id="L246">        Hibernate.initialize(user.get().getAuthorizationType());</span>
+<span class="nc" id="L247">        return user;</span>
+    }
+
+    public User save(User user) {
+<span class="nc" id="L251">        return UserDB.save(user);</span>
+    }
+
+    public User getUserById(Long id) {
+<span class="nc" id="L255">        return UserDB.getById(id);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

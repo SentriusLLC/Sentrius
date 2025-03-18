@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>User.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.model.users</a> &gt; <span class="el_source">User.java</span></div><h1>User.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.model.users;
+
+
+import java.util.ArrayList;
+import java.util.List;
+
+import io.sentrius.sso.core.dto.UserDTO;
+import io.sentrius.sso.core.dto.UserTypeDTO;
+import io.sentrius.sso.core.model.actors.PrincipalEntity;
+import io.sentrius.sso.core.model.hostgroup.HostGroup;
+import io.sentrius.sso.core.model.security.UserType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+import lombok.experimental.SuperBuilder;
+
+@Entity
+@Getter
+<span class="nc" id="L29">@Setter</span>
+<span class="nc" id="L30">@ToString</span>
+<span class="nc bnc" id="L31" title="All 2 branches missed.">@SuperBuilder</span>
+<span class="nc" id="L32">@NoArgsConstructor</span>
+<span class="nc" id="L33">@AllArgsConstructor</span>
+<span class="nc bnc" id="L34" title="All 54 branches missed.">@EqualsAndHashCode</span>
+@Table(name = &quot;users&quot;)
+public class User extends PrincipalEntity {
+
+
+
+    @Column(name = &quot;username&quot;)
+<span class="nc" id="L41">    private String username;</span>
+
+    @Column(name = &quot;password&quot;)
+<span class="nc" id="L44">    private String password;</span>
+
+    @Column(name = &quot;email_address&quot;)
+<span class="nc" id="L47">    private String emailAddress;</span>
+
+    @Column(name = &quot;user_id&quot;)
+<span class="nc" id="L50">    private String userId;</span>
+
+
+    @Column(name = &quot;team&quot;)
+<span class="nc" id="L54">    private String team;</span>
+
+    @ManyToMany
+    @JoinTable(
+        name = &quot;user_hostgroups&quot;,  // join table name
+        joinColumns = @JoinColumn(name = &quot;user_id&quot;),
+        inverseJoinColumns = @JoinColumn(name = &quot;hostgroup_id&quot;)
+    )
+    @Builder.Default
+<span class="nc" id="L63">    private List&lt;HostGroup&gt; hostGroups = new ArrayList&lt;&gt;();</span>
+
+    public boolean canAccessProfile(HostGroup profile) {
+<span class="nc" id="L66">        return true;</span>
+        /*
+        var timeConfig = hostGroupWindows.get(profile.getId());
+        if (null == timeConfig) {
+            return true;
+        }
+        LocalDateTime currentTime = LocalDateTime.now();
+        for (var config : timeConfig.getTimeConfigs()) {
+            try {
+                if (TimeChecker.isTimeWithinRange(currentTime, config)) {
+                    return true;
+                }
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return false;
+
+         */
+    }
+
+    public  UserDTO toDto(){
+<span class="nc" id="L88">        var builder = UserDTO.builder();</span>
+<span class="nc" id="L89">        builder.id(getId()).username(username).userId(userId).name(name).password(password).emailAddress(emailAddress).authorizationType(authorizationType.toDTO()).team(team);</span>
+
+<span class="nc" id="L91">        return builder.build();</span>
+    }
+
+    public static User from(UserDTO dto){
+<span class="nc" id="L95">        return User.builder().id(dto.getId())</span>
+<span class="nc" id="L96">            .username(dto.getUsername())</span>
+<span class="nc" id="L97">            .userId(dto.getUserId())</span>
+<span class="nc" id="L98">            .name(dto.getName())</span>
+<span class="nc" id="L99">            .password(dto.getPassword())</span>
+<span class="nc" id="L100">            .emailAddress(dto.getEmailAddress())</span>
+<span class="nc" id="L101">            .authorizationType(UserType.builder().id(dto.getAuthorizationType().getId()).build())</span>
+<span class="nc" id="L102">            .team(dto.getTeam())</span>
+<span class="nc" id="L103">            .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

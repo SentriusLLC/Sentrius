@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services.security</a> &gt; <span class="el_source">AuthService.java</span></div><h1>AuthService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services.security;
+
+import java.security.Key;
+import java.util.Date;
+import java.util.List;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+@Service
+<span class="nc" id="L13">@RequiredArgsConstructor</span>
+public class AuthService {
+
+    private final KeyStoreService keyStoreService;
+
+    private static final String JWT_SIGNING_KEY_ALIAS = &quot;jwt-signing-key&quot;;
+
+    private Key getSigningKey() {
+        try {
+<span class="nc" id="L22">            byte[] keyBytes = keyStoreService.getSecretBytes(JWT_SIGNING_KEY_ALIAS);</span>
+<span class="nc" id="L23">            return Keys.hmacShaKeyFor(keyBytes);</span>
+<span class="nc" id="L24">        } catch (Exception e) {</span>
+<span class="nc" id="L25">            throw new RuntimeException(&quot;Failed to retrieve JWT signing key&quot;, e);</span>
+        }
+    }
+
+    public Claims getClaimsFromToken(String jwtToken) {
+<span class="nc" id="L30">        return Jwts.parser()</span>
+<span class="nc" id="L31">            .setSigningKey(getSigningKey())</span>
+<span class="nc" id="L32">            .build()</span>
+<span class="nc" id="L33">            .parseClaimsJws(jwtToken)</span>
+<span class="nc" id="L34">            .getBody();</span>
+    }
+
+    public String generateToken(String subject, List&lt;String&gt; roles, Claims claims) {
+<span class="nc" id="L38">        return Jwts.builder()</span>
+<span class="nc" id="L39">            .setSubject(subject)</span>
+<span class="nc" id="L40">            .claims(claims)</span>
+<span class="nc" id="L41">            .setIssuedAt(new Date())</span>
+<span class="nc" id="L42">            .setExpiration(new Date(System.currentTimeMillis() + 86400000)) // 1 day expiration</span>
+<span class="nc" id="L43">            .signWith(getSigningKey())</span>
+<span class="nc" id="L44">            .compact();</span>
+    }
+
+    public boolean validateToken(String token) {
+        try {
+<span class="nc" id="L49">            getClaimsFromToken(token); // Check if parsing succeeds</span>
+<span class="nc" id="L50">            return true;</span>
+<span class="nc" id="L51">        } catch (Exception e) {</span>
+<span class="nc" id="L52">            return false;</span>
+        }
+    }
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
