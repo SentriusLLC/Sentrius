@@ -18,7 +18,6 @@ import io.sentrius.sso.core.model.metadata.TerminalSessionMetadata;
 import io.sentrius.sso.core.model.metadata.UserExperienceMetrics;
 import io.sentrius.sso.core.model.sessions.TerminalLogs;
 import io.sentrius.sso.core.repository.AnalyticsTrackingRepository;
-import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
 import io.sentrius.sso.core.services.SessionService;
 import io.sentrius.sso.core.services.metadata.TerminalBehaviorMetricsService;
 import io.sentrius.sso.core.services.metadata.TerminalCommandService;
@@ -26,6 +25,7 @@ import io.sentrius.sso.core.services.metadata.TerminalRiskIndicatorService;
 import io.sentrius.sso.core.services.metadata.TerminalSessionMetadataService;
 import io.sentrius.sso.core.services.metadata.UserExperienceMetricsService;
 import io.sentrius.sso.core.services.openai.categorization.CommandCategorizer;
+import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -226,6 +226,6 @@ public class SessionAnalyticsAgent {
     }
 
     private CommandCategory categorizeCommand(String command) {
-        return commandCategorizer.categorizeCommand(command);
+        return CommandCategory.fromDTO(commandCategorizer.categorizeCommand(command));
     }
 }

@@ -24,9 +24,8 @@ import io.sentrius.sso.automation.sideeffects.SideEffectType;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.ConfigurationOption;
 import io.sentrius.sso.core.model.HostSystem;
-import io.sentrius.sso.core.model.dto.HostGroupDTO;
-import io.sentrius.sso.core.model.dto.HostSystemDTO;
-import io.sentrius.sso.core.model.dto.UserTypeDTO;
+import io.sentrius.sso.core.dto.HostGroupDTO;
+import io.sentrius.sso.core.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.model.hostgroup.ProfileRule;
 import io.sentrius.sso.core.model.security.UserType;
@@ -42,10 +41,10 @@ import io.sentrius.sso.core.repository.HostGroupRepository;
 import io.sentrius.sso.core.repository.SystemRepository;
 import io.sentrius.sso.core.repository.UserRepository;
 import io.sentrius.sso.core.repository.UserTypeRepository;
-import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.RuleService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.install.configuration.InstallConfiguration;
 import io.sentrius.sso.install.configuration.dtos.HostGroupConfigurationDTO;
 import io.sentrius.sso.install.configuration.dtos.RuleDTO;
@@ -252,7 +251,7 @@ public class ConfigurationApplicationTask {
                                 }else {
                                     // it is possible that these are already assigned.
                                     log.info("Adding new systems to profile");
-                                    systems.add(HostSystemDTO.fromDTO(hostSystem));
+                                    systems.add(HostSystem.fromDTO(hostSystem));
                                 }
                                 break;
                             }
@@ -325,7 +324,7 @@ public class ConfigurationApplicationTask {
         List<SideEffect> sideEffects = new ArrayList<>();
         if (null != installConfiguration.getSystems()) {
             for (var system : installConfiguration.getSystems()) {
-                var systemObj = HostSystemDTO.fromDTO(system);
+                var systemObj = HostSystem.fromDTO(system);
                 if ( shouldInsertSystem(systemObj)) {
                     if (action) {
                         var sys = systemRepository.save(systemObj);
@@ -417,12 +416,12 @@ public class ConfigurationApplicationTask {
                 if (null != userDTO.getAuthorizationType()) {
                     for (UserType type : userTypes) {
                         if (type.getUserTypeName().equals(userDTO.getAuthorizationType().getUserTypeName())) {
-                            userDTO.setAuthorizationType(new UserTypeDTO(type));
+                            userDTO.setAuthorizationType(type.toDTO());
                             break;
                         }
                     }
                 } else {
-                    userDTO.setAuthorizationType(new UserTypeDTO( UserType.createSystemAdmin()));
+                    userDTO.setAuthorizationType( UserType.createSystemAdmin().toDTO());
                 }
 
                 User user = User.from(userDTO);
@@ -525,7 +524,7 @@ public class ConfigurationApplicationTask {
                 if (action) {
                     try {
                         user.setPassword(userService.encodePassword(user.getPassword()));
-                        user.setAuthorizationType(new UserTypeDTO(UserType.createSuperUser()));
+                        user.setAuthorizationType(UserType.createSuperUser().toDTO());
 
                         userService.addUscer(User.from(user));
                     } catch (NoSuchAlgorithmException e) {

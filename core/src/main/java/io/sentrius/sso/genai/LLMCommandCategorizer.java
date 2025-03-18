@@ -2,7 +2,7 @@ package io.sentrius.sso.genai;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.sentrius.sso.core.model.categorization.CommandCategory;
+import io.sentrius.sso.core.dto.CommandCategoryDTO;
 import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.genai.model.endpoints.ChatApiEndpointRequest;
 import io.sentrius.sso.integrations.exceptions.HttpException;
@@ -24,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
  * calculating compliance scores based on input data.
  */
 @Slf4j
-public class LLMCommandCategorizer extends DataGenerator<String, CommandCategory> {
+public class LLMCommandCategorizer extends DataGenerator<String, CommandCategoryDTO> {
 
     public LLMCommandCategorizer(TokenProvider token, GenerativeAPI generator, GeneratorConfiguration config) {
         super(token, generator, config);
@@ -36,7 +36,7 @@ public class LLMCommandCategorizer extends DataGenerator<String, CommandCategory
      * @return List of queries.
      */
     @Override
-    public CommandCategory generate(String on) throws HttpException, JsonProcessingException {
+    public CommandCategoryDTO generate(String on) throws HttpException, JsonProcessingException {
         var ipt = generateInput(on);
         log.info("Input: {}", ipt);
         ChatApiEndpointRequest request = ChatApiEndpointRequest.builder().userInput(ipt).build();
@@ -45,7 +45,7 @@ public class LLMCommandCategorizer extends DataGenerator<String, CommandCategory
         var resp = hello.concatenateResponses();
         log.info("Response: {}", resp);
         var objectNode = JsonUtil.MAPPER.readValue(resp, ObjectNode.class);
-        return CommandCategory.builder().categoryName(objectNode.get("category").asText()).pattern(objectNode.get(
+        return CommandCategoryDTO.builder().categoryName(objectNode.get("category").asText()).pattern(objectNode.get(
             "pattern").asText()).priority(objectNode.get("priority").asInt()).build();
     }
 

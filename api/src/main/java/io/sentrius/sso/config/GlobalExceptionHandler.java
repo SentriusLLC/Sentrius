@@ -4,11 +4,9 @@ import io.sentrius.sso.core.model.ErrorOutput;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.utils.MessagingUtil;
 import io.sentrius.sso.core.utils.ZTATUtils;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @ControllerAdvice

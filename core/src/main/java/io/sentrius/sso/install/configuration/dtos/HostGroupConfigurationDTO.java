@@ -2,7 +2,6 @@ package io.sentrius.sso.install.configuration.dtos;
 
 import java.util.ArrayList;
 import java.util.List;
-import io.sentrius.sso.core.model.hostgroup.ProfileConfiguration;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,5 +21,5 @@ public class HostGroupConfigurationDTO {
     private List<String> systems;
     @Builder.Default
     private List<String> assignedRules = new ArrayList<>();
-    private ProfileConfiguration configuration;
+    private ProfileConfigurationDTO configuration;
 }

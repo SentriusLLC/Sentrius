@@ -8,6 +8,7 @@
   <description>Multi-module project for sentrius</description>
   <modules>
     <module>core</module>
+    <module>dataplane</module>
     <module>api</module>
     <module>java-agent</module>
     <module>ai-agent</module>

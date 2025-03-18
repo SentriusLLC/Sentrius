@@ -7,9 +7,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.services.ErrorOutputService;
-import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
+import io.sentrius.sso.core.integrations.external.ExternalIntegrationDTO;
 import io.sentrius.sso.core.services.UserService;
-import io.sentrius.sso.integrations.external.ExternalIntegrationDTO;
+import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -23,8 +23,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class IntegrationController extends BaseController {
 
     final IntegrationSecurityTokenService integrationService;
-    protected IntegrationController(UserService userService, SystemOptions systemOptions,
-                                    ErrorOutputService errorOutputService, IntegrationSecurityTokenService integrationService) {
+    protected IntegrationController(
+        UserService userService, SystemOptions systemOptions,
+        ErrorOutputService errorOutputService, IntegrationSecurityTokenService integrationService) {
         super(userService, systemOptions, errorOutputService);
         this.integrationService = integrationService;
     }

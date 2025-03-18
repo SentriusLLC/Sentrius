@@ -7,7 +7,7 @@ import java.util.Map;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.sentrius.sso.core.annotations.LimitAccess;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.model.DataTableResponse;
 import io.sentrius.sso.core.model.ErrorOutput;
@@ -17,8 +17,6 @@ import io.sentrius.sso.core.services.NotificationService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.utils.AccessUtil;
 import io.sentrius.sso.core.utils.JsonUtil;
-import io.sentrius.sso.core.utils.MessagingUtil;
-import io.sentrius.sso.core.config.SystemOptions;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -49,10 +47,11 @@ public class NotificationApiController extends BaseController {
         return errorOutput;
     }
 
-    protected NotificationApiController(UserService userService,
-                                        SystemOptions systemOptions,
-                                        NotificationService notificationService,
-                                        ErrorOutputService errorOutputService) {
+    protected NotificationApiController(
+        UserService userService,
+        SystemOptions systemOptions,
+        NotificationService notificationService,
+        ErrorOutputService errorOutputService) {
         super(userService, systemOptions, errorOutputService);
         this.notificationService = notificationService;
     }
@@ -87,7 +86,6 @@ public class NotificationApiController extends BaseController {
 
 
     @PostMapping("/errors/clear")
-    @LimitAccess(sshAccess = SSHAccessEnum.CAN_MANAGE_SYSTEMS, notificationMessage = MessagingUtil.CANNOT_MANAGE_SYSTEMS)
     public ResponseEntity<String> clearLogs() {
 
         log.info("clear");
@@ -118,7 +116,6 @@ public class NotificationApiController extends BaseController {
     }
 
     @GetMapping("/error/log/count")
-    @LimitAccess(sshAccess = SSHAccessEnum.CAN_MANAGE_SYSTEMS, notificationMessage = MessagingUtil.CANNOT_MANAGE_SYSTEMS)
     public ResponseEntity<JsonNode> countErrorLog(HttpServletRequest request, HttpServletResponse response) throws GeneralSecurityException,
         SQLException {
 
@@ -132,7 +129,6 @@ public class NotificationApiController extends BaseController {
     }
 
     @GetMapping("/errors/list")
-    @LimitAccess(sshAccess = SSHAccessEnum.CAN_MANAGE_SYSTEMS, notificationMessage = MessagingUtil.CANNOT_MANAGE_SYSTEMS)
     public ResponseEntity<?> listErrors(
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "10") int size,

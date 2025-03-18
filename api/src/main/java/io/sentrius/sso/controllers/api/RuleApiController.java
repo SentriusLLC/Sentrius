@@ -7,10 +7,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.model.dto.ProfileRuleDTO;
+import io.sentrius.sso.core.dto.ProfileRuleDTO;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.model.hostgroup.ProfileRule;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
@@ -41,9 +40,10 @@ public class RuleApiController extends BaseController {
     final HostGroupService hostGroupService;
     final RuleService ruleService;
 
-    protected RuleApiController(UserService userService, SystemOptions systemOptions,
-                                ErrorOutputService errorOutputService,
-                                HostGroupService hostGroupService, RuleService ruleService) {
+    protected RuleApiController(
+        UserService userService, SystemOptions systemOptions,
+        ErrorOutputService errorOutputService,
+        HostGroupService hostGroupService, RuleService ruleService) {
         super(userService, systemOptions, errorOutputService);
         this.hostGroupService =     hostGroupService;
         this.ruleService = ruleService;
@@ -51,7 +51,6 @@ public class RuleApiController extends BaseController {
 
     @GetMapping("/{ruleId}")
     @ResponseBody
-    @LimitAccess(ruleAccess = {RuleAccessEnum.CAN_VIEW_RULES})
     public ResponseEntity<ProfileRuleDTO> getRule(HttpServletRequest request, HttpServletResponse response,
                                                   @PathVariable("ruleId") Long ruleId) {
         var user = getOperatingUser(request, response);
@@ -62,14 +61,13 @@ public class RuleApiController extends BaseController {
         boolean canViewRules = AccessUtil.canAccess(user, RuleAccessEnum.CAN_VIEW_RULES);
         boolean canEditRules = AccessUtil.canAccess(user, RuleAccessEnum.CAN_EDIT_RULES);
         boolean canDeleteRules = AccessUtil.canAccess(user, RuleAccessEnum.CAN_MANAGE_RULES);
-        return ResponseEntity.ok(new ProfileRuleDTO(rule,rule.getHostGroups().stream().collect(Collectors.toList()),
+        return ResponseEntity.ok(rule.toDTO(
             canViewRules,
             canEditRules,
             canDeleteRules));
     }
     @GetMapping("/list")
     @ResponseBody
-    @LimitAccess(ruleAccess = {RuleAccessEnum.CAN_VIEW_RULES})
     public ResponseEntity<List<ProfileRuleDTO>> listRules(HttpServletRequest request, HttpServletResponse response) {
         List<ProfileRuleDTO> rules = new ArrayList<>();
         var user = getOperatingUser(request, response);
@@ -80,7 +78,7 @@ public class RuleApiController extends BaseController {
         if (AccessUtil.canAccess(user, ApplicationAccessEnum.CAN_MANAGE_APPLICATION)) {
             log.info("User can manage rules {}", user.getAuthorizationType());
             for(ProfileRule rule: ruleService.getAllRules()) {
-                var dto = new ProfileRuleDTO(rule, rule.getHostGroups().stream().toList(), canViewRules, canEditRules,
+                var dto = rule.toDTO( canViewRules, canEditRules,
                     canDeleteRules);
                 rules.add(dto);
                 log.info("Adding {}", dto);
@@ -90,7 +88,7 @@ public class RuleApiController extends BaseController {
             var groups = hostGroupService.getAllHostGroups(user);
             for (HostGroup group : groups) {
                 for(ProfileRule rule : group.getRules()) {
-                    rules.add(new ProfileRuleDTO(rule,group, canViewRules, canEditRules, canDeleteRules));
+                    rules.add(rule.toDTO(group, canViewRules, canEditRules, canDeleteRules));
                 }
 
             }
@@ -101,7 +99,6 @@ public class RuleApiController extends BaseController {
     }
 
     @DeleteMapping(path="/delete/{ruleId}")
-    @LimitAccess(ruleAccess = {RuleAccessEnum.CAN_MANAGE_RULES})
     public ResponseEntity<String> deleteRule
         (
          @PathVariable String ruleId) {
@@ -113,7 +110,6 @@ public class RuleApiController extends BaseController {
     }
 
     @PostMapping("/save")
-    @LimitAccess(ruleAccess = {RuleAccessEnum.CAN_EDIT_RULES})
     public ResponseEntity<String> saveRuleConfig(HttpServletRequest request, HttpServletResponse response,
                                  @RequestBody Map<String, String> payload
                                  ) {
@@ -159,7 +155,6 @@ public class RuleApiController extends BaseController {
     }
 
     @PostMapping("/assign")
-    @LimitAccess(ruleAccess = {RuleAccessEnum.CAN_EDIT_RULES})
     public ResponseEntity<String> assignConfig(HttpServletRequest request, HttpServletResponse response,
                                                  @RequestBody Map<String, Object> payload
     ) {

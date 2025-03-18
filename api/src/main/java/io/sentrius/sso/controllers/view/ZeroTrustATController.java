@@ -1,15 +1,14 @@
 package io.sentrius.sso.controllers.view;
 
 import java.util.List;
-import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.model.dto.JITTrackerDTO;
+import io.sentrius.sso.core.dto.JITTrackerDTO;
 import io.sentrius.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.services.ErrorOutputService;
-import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.utils.AccessUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,9 +24,10 @@ public class ZeroTrustATController extends BaseController {
 
     private final ZeroTrustRequestService ztatRequestService;
 
-    protected ZeroTrustATController(UserService userService,
-                                    SystemOptions systemOptions, ErrorOutputService errorOutputService,
-                                    ZeroTrustRequestService ztatRequestService) {
+    protected ZeroTrustATController(
+        UserService userService,
+        SystemOptions systemOptions, ErrorOutputService errorOutputService,
+        ZeroTrustRequestService ztatRequestService) {
         super(userService, systemOptions, errorOutputService);
         this.ztatRequestService = ztatRequestService;
     }
@@ -40,7 +40,6 @@ public class ZeroTrustATController extends BaseController {
 
 
     @GetMapping("/list")
-    @LimitAccess(ztatAccess= {ZeroTrustAccessTokenEnum.CAN_VIEW_ZTATS})
     public String viewTatRequests(HttpServletRequest request, HttpServletResponse response, Model model) {
         var operatingUser = getOperatingUser(request, response);
         modelTATs(model, operatingUser);
@@ -48,7 +47,6 @@ public class ZeroTrustATController extends BaseController {
     }
 
     @GetMapping("/my")
-    @LimitAccess(ztatAccess= {ZeroTrustAccessTokenEnum.CAN_VIEW_ZTATS})
     public String viewMyTats(HttpServletRequest request, HttpServletResponse response, Model model) {
         var operatingUser = getOperatingUser(request, response);
         modelTATs(model, operatingUser);

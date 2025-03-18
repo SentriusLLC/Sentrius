@@ -4,16 +4,16 @@ import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.model.dto.JITTrackerDTO;
-import io.sentrius.sso.core.model.dto.ztat.ZtatRequestDTO;
+import io.sentrius.sso.core.dto.JITTrackerDTO;
+import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.services.ErrorOutputService;
-import io.sentrius.sso.core.services.security.KeycloakService;
-import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.NotificationService;
 import io.sentrius.sso.core.services.UserService;
-import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.services.security.KeycloakService;
+import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -37,9 +37,10 @@ public class ZeroTrustATApiController extends BaseController {
     private final NotificationService notificationService;
     private final KeycloakService keycloakService;
 
-    protected ZeroTrustATApiController(UserService userService, SystemOptions systemOptions,
-                                       ErrorOutputService errorOutputService, ZeroTrustAccessTokenService ztatService, NotificationService notificationService,
-                                       KeycloakService keycloakService
+    protected ZeroTrustATApiController(
+        UserService userService, SystemOptions systemOptions,
+        ErrorOutputService errorOutputService, ZeroTrustAccessTokenService ztatService, NotificationService notificationService,
+        KeycloakService keycloakService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.ztatService = ztatService;

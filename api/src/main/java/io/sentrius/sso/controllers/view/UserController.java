@@ -11,24 +11,22 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.sentrius.sso.core.annotations.LimitAccess;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.model.WorkHours;
-import io.sentrius.sso.core.model.dto.DayOfWeekDTO;
-import io.sentrius.sso.core.model.dto.SystemOption;
-import io.sentrius.sso.core.model.dto.UserDTO;
-import io.sentrius.sso.core.model.dto.UserTypeDTO;
+import io.sentrius.sso.core.dto.DayOfWeekDTO;
+import io.sentrius.sso.core.dto.SystemOption;
+import io.sentrius.sso.core.dto.UserDTO;
+import io.sentrius.sso.core.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.security.UserType;
-import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.model.users.UserConfig;
 import io.sentrius.sso.core.model.users.UserSettings;
-import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserCustomizationService;
 import io.sentrius.sso.core.services.UserService;
-import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.services.WorkHoursService;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -49,9 +47,10 @@ public class UserController extends BaseController {
     final WorkHoursService  workHoursService;
     final CryptoService cryptoService;
 
-    protected UserController(UserService userService, SystemOptions systemOptions,
-                             ErrorOutputService errorOutputService, UserCustomizationService userThemeService, WorkHoursService  workHoursService,
-                             CryptoService cryptoService
+    protected UserController(
+        UserService userService, SystemOptions systemOptions,
+        ErrorOutputService errorOutputService, UserCustomizationService userThemeService, WorkHoursService workHoursService,
+        CryptoService cryptoService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.userThemeService = userThemeService;
@@ -156,7 +155,6 @@ public class UserController extends BaseController {
     }
 
     @GetMapping("/list")
-    @LimitAccess(userAccess = {UserAccessEnum.CAN_VIEW_USERS})
     public String listUsers(Model model) {
         model.addAttribute("globalAccessSet", UserType.createSuperUser().getAccessSet());
 
@@ -165,13 +163,12 @@ public class UserController extends BaseController {
 
 
     @GetMapping("/edit")
-    @LimitAccess(userAccess = {UserAccessEnum.CAN_EDIT_USERS})
     public String editUser(Model model, HttpServletRequest request, HttpServletResponse response,
                            @RequestParam("userId") String userId) throws GeneralSecurityException {
         model.addAttribute("globalAccessSet", UserType.createSuperUser().getAccessSet());
         Long id = Long.parseLong(cryptoService.decrypt(userId));
         User user = userService.getUserById(id);
-        UserDTO userDTO = new UserDTO(user);
+        UserDTO userDTO = user.toDto();
         var types = userService.getUserTypeList();
         model.addAttribute("userTypes",types);
         model.addAttribute("user", userDTO);
@@ -179,7 +176,6 @@ public class UserController extends BaseController {
     }
 
     @GetMapping("/settings")
-    @LimitAccess(userAccess = {UserAccessEnum.CAN_VIEW_USERS})
     public String getUserSettings(Model model, HttpServletRequest request, HttpServletResponse response) {
 
         var user = userService.getOperatingUser(request,response, null);
@@ -207,7 +203,6 @@ public class UserController extends BaseController {
 
 
     @GetMapping("/audit/list")
-    @LimitAccess(userAccess = {UserAccessEnum.CAN_MANAGE_USERS})
     public String auditUsers() {
         return "sso/users/audit_users";
     }

@@ -38,6 +38,11 @@
       <version>1.0.0-SNAPSHOT</version>
     </dependency>
     <dependency>
+      <groupId>io.sentrius</groupId>
+      <artifactId>sentrius-dataplane</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
       <scope>test</scope>
@@ -71,6 +76,12 @@
       <groupId>net.snowflake</groupId>
       <artifactId>snowflake-ingest-sdk</artifactId>
       <version>${snowflake-ingest-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.sentrius</groupId>
+      <artifactId>sentrius-dataplane</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
+      <scope>compile</scope>
     </dependency>
   </dependencies>
 

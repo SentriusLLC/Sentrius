@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package io.sentrius.sso.protobuf;
+
+enum TriggerAction {
+  NO_ACTION = 0;
+  LOG_ACTION = 1;
+  ALERT_ACTION = 2;
+  WARN_ACTION = 3;
+  DENY_ACTION = 4;
+  JIT_ACTION = 5;
+  RECORD_ACTION = 6;
+  APPROVE_ACTION = 7;
+  PERSISTENT_MESSAGE = 8;
+  CONVERT_ACTION=9;
+  PROMPT_ACTION=10;
+}
+
+enum MessageType {
+  HEARTBEAT = 0;
+  USER_DATA = 1;
+  SESSION_DATA = 3;
+  PROMPT_DATA = 4;
+  USER_PROMPT = 5;
+}
+
+message Trigger {
+  TriggerAction action = 1;
+  string description = 2;
+}
+
+message TerminalMessage {
+  string sessionId = 1;
+  MessageType type = 2;
+  Trigger trigger = 3;
+  double keycode = 4;
+  string command = 5;
+  string prompt = 6;
+}
+
+message ChatMessage {
+  int64 session_id = 1;
+  string chat_group_id = 2; // Separate chat groups for a session
+  string sender = 3;
+  string message = 4;
+  int64 timestamp = 5; // Store as epoch time (milliseconds)
+}

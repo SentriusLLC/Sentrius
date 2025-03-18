@@ -1,13 +1,11 @@
 package io.sentrius.agent.services;
-import io.sentrius.sso.core.model.dto.UserDTO;
-import io.sentrius.sso.core.model.dto.ztat.ZtatRequestDTO;
+import io.sentrius.sso.core.dto.UserDTO;
+import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
-import java.util.Map;
 
 @Service
 public class ZeroTrustClientService {

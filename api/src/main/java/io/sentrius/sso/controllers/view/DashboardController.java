@@ -1,21 +1,17 @@
 package io.sentrius.sso.controllers.view;
 
 import java.util.List;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.model.dto.SystemOption;
+import io.sentrius.sso.core.dto.SystemOption;
 import io.sentrius.sso.core.model.users.User;
-import io.sentrius.sso.core.model.dto.UserTypeDTO;
+import io.sentrius.sso.core.dto.UserTypeDTO;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
-import io.sentrius.sso.core.config.SystemOptions;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,8 +24,9 @@ public class DashboardController extends BaseController {
     @Value("${spring.security.oauth2.client.provider.keycloak.issuer-uri}")
     private String issuerUri;
 
-    protected DashboardController(UserService userService, SystemOptions systemOptions,
-                                  ErrorOutputService errorOutputService) {
+    protected DashboardController(
+        UserService userService, SystemOptions systemOptions,
+        ErrorOutputService errorOutputService) {
         super(userService, systemOptions, errorOutputService);
     }
 
