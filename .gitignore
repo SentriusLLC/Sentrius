@@ -38,6 +38,8 @@ core/target/
 java-agent/target/
 ai-agent/target/**
 ai-agent/target/
+dataplane/target/**
+dataplane/target/
 node/*
 node_modules/*
 api/node_modules/*
