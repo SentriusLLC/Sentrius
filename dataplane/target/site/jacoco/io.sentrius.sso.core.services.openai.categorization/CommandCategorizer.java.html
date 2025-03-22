@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CommandCategorizer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services.openai.categorization</a> &gt; <span class="el_source">CommandCategorizer.java</span></div><h1>CommandCategorizer.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services.openai.categorization;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import io.sentrius.sso.core.dto.CommandCategoryDTO;
+import io.sentrius.sso.core.model.categorization.CommandCategory;
+import io.sentrius.sso.core.repository.CommandCategoryRepository;
+import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
+import io.sentrius.sso.core.utils.JsonUtil;
+import io.sentrius.sso.genai.GenerativeAPI;
+import io.sentrius.sso.genai.GeneratorConfiguration;
+import io.sentrius.sso.genai.LLMCommandCategorizer;
+import io.sentrius.sso.core.integrations.external.ExternalIntegrationDTO;
+import io.sentrius.sso.security.ApiKey;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+<span class="nc" id="L26">@Slf4j</span>
+@Service
+<span class="nc" id="L28">@RequiredArgsConstructor</span>
+public class CommandCategorizer {
+
+    private final IntegrationSecurityTokenService integrationSecurityTokenService;
+
+    private final CommandCategoryRepository commandCategoryRepository;
+
+
+<span class="nc" id="L36">    private final Cache&lt;String, CommandCategoryDTO&gt; commandCache = Caffeine.newBuilder()</span>
+<span class="nc" id="L37">        .maximumSize(1000)</span>
+<span class="nc" id="L38">        .expireAfterWrite(1, TimeUnit.HOURS)</span>
+<span class="nc" id="L39">        .build();</span>
+
+
+
+    private CommandCategory fetchFromDatabase(String command) {
+<span class="nc" id="L44">        List&lt;CommandCategory&gt; matchingCategories = commandCategoryRepository.findMatchingCategories(command);</span>
+<span class="nc" id="L45">        return matchingCategories.stream()</span>
+<span class="nc" id="L46">            .min(Comparator.comparingInt(CommandCategory::getPriority))</span>
+<span class="nc" id="L47">            .orElse(null);</span>
+    }
+
+
+    @Transactional
+    public CommandCategoryDTO categorizeCommand(String command) {
+<span class="nc" id="L53">        return commandCache.get(command, this::categorizeWithRulesOrML);</span>
+    }
+
+    protected List&lt;CommandCategory&gt; getDBCommandCategory(String command){
+<span class="nc" id="L57">        return commandCategoryRepository.findByPattern(command);</span>
+    }
+
+
+    public boolean isValidRegex(String regex) {
+        try {
+<span class="nc" id="L63">            Pattern.compile(regex);</span>
+<span class="nc" id="L64">            return true; // Valid regex</span>
+<span class="nc" id="L65">        } catch (PatternSyntaxException e) {</span>
+<span class="nc" id="L66">            return false; // Invalid regex</span>
+        }
+    }
+
+
+    @Transactional
+    protected CommandCategoryDTO categorizeWithRulesOrML(String command) {
+<span class="nc" id="L73">        CommandCategoryDTO category = fetchFromDatabase(command).toDTO();</span>
+<span class="nc bnc" id="L74" title="All 2 branches missed.">        if (category != null) {</span>
+<span class="nc" id="L75">            log.info(&quot;Found command category {} for {} &quot;, category, command);</span>
+<span class="nc" id="L76">            return category;</span>
+        }
+        
+<span class="nc" id="L79">        var openaiService = integrationSecurityTokenService.findByConnectionType(&quot;openai&quot;).stream().findFirst().orElse(null);</span>
+
+<span class="nc bnc" id="L81" title="All 2 branches missed.">        if (null != openaiService){</span>
+<span class="nc" id="L82">            log.info(&quot;OpenAI service is available&quot;);</span>
+<span class="nc" id="L83">            ExternalIntegrationDTO externalIntegrationDTO = null;</span>
+            try {
+<span class="nc" id="L85">                externalIntegrationDTO = JsonUtil.MAPPER.readValue(openaiService.getConnectionInfo(),</span>
+                    ExternalIntegrationDTO.class);
+<span class="nc" id="L87">            } catch (JsonProcessingException e) {</span>
+<span class="nc" id="L88">                throw new RuntimeException(e);</span>
+<span class="nc" id="L89">            }</span>
+            ApiKey key =
+<span class="nc" id="L91">                ApiKey.builder().apiKey(externalIntegrationDTO.getApiToken()).principal(externalIntegrationDTO.getUsername()).build();</span>
+
+<span class="nc" id="L93">            var commandCategorizer = new LLMCommandCategorizer(key, new GenerativeAPI(key), GeneratorConfiguration.builder().build());</span>
+
+            try {
+<span class="nc" id="L96">                category = commandCategorizer.generate(command);</span>
+
+<span class="nc bnc" id="L98" title="All 2 branches missed.">                if (isValidRegex(category.getPattern())) {</span>
+<span class="nc" id="L99">                    addCommandCategory(category.getPattern(), category);</span>
+                }
+<span class="nc" id="L101">                log.info(&quot;Categorized command: {}&quot;, category);</span>
+<span class="nc" id="L102">                return category;</span>
+<span class="nc" id="L103">            } catch (Exception e) {</span>
+<span class="nc" id="L104">                e.printStackTrace();</span>
+<span class="nc" id="L105">                log.error(&quot;Error categorizing command&quot;, e);</span>
+            }
+
+<span class="nc" id="L108">        } else {</span>
+<span class="nc" id="L109">            log.info(&quot;OpenAI service is not enabled&quot;);</span>
+        }
+
+<span class="nc" id="L112">        log.info(&quot;Finished processing terminal commands&quot;);</span>
+
+<span class="nc" id="L114">        return CommandCategoryDTO.builder().build();</span>
+    }
+
+    private void addCommandCategory(String pattern, CommandCategoryDTO category) {
+<span class="nc" id="L118">        commandCategoryRepository.save(CommandCategory.fromDTO(category));</span>
+<span class="nc" id="L119">        commandCache.put(pattern, category);</span>
+<span class="nc" id="L120">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

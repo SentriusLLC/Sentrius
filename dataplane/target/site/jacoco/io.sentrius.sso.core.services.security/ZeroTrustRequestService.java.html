@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ZeroTrustRequestService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services.security</a> &gt; <span class="el_source">ZeroTrustRequestService.java</span></div><h1>ZeroTrustRequestService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services.security;
+
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.dto.JITTrackerDTO;
+import io.sentrius.sso.core.model.HostSystem;
+import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenApproval;
+import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenRequest;
+import io.sentrius.sso.core.model.zt.OpsApproval;
+import io.sentrius.sso.core.model.zt.OpsZeroTrustAcessTokenRequest;
+import io.sentrius.sso.core.model.zt.ZtatUse;
+import io.sentrius.sso.core.repository.ZeroTrustAccessTokenApprovalRepository;
+import io.sentrius.sso.core.repository.JITReasonRepository;
+import io.sentrius.sso.core.repository.ZeroTrustAccessTokenRequestRepository;
+import io.sentrius.sso.core.repository.OpsApprovalRepository;
+import io.sentrius.sso.core.repository.OpsJITRequestRepository;
+import io.sentrius.sso.core.repository.ZtatUseRepository;
+import io.sentrius.sso.core.utils.ZTATUtils;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+<span class="nc" id="L29">@Slf4j</span>
+@Service
+<span class="nc" id="L31">public class ZeroTrustRequestService {</span>
+
+    @Autowired
+    private ZeroTrustAccessTokenRequestRepository ztatRequestRepository;
+
+    @Autowired
+    private OpsJITRequestRepository opsJITRequestRepository;
+
+    @Autowired
+    private JITReasonRepository ztatReasonRepository;
+
+    @Autowired
+    private ZeroTrustAccessTokenApprovalRepository ztatApprovalRepository;
+
+    @Autowired
+    private OpsApprovalRepository opsApprovalRepository;
+    @Autowired
+    private SystemOptions systemOptions;
+
+    @Autowired
+    private ZtatUseRepository ztatUseRepository;
+
+
+    @Transactional(readOnly = true)
+    public List&lt;ZeroTrustAccessTokenRequest&gt; getAllJITRequests() {
+<span class="nc" id="L56">        return ztatRequestRepository.findAll();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public ZeroTrustAccessTokenRequest getAccessTokenRequestById(Long id) {
+<span class="nc" id="L61">        return ztatRequestRepository.findById(id)</span>
+<span class="nc" id="L62">            .orElseThrow(() -&gt; new RuntimeException(&quot;JITRequest not found&quot;));</span>
+    }
+
+
+    public OpsZeroTrustAcessTokenRequest getOpsAccessTokenRequestById(Long ztatId) {
+<span class="nc" id="L67">        return opsJITRequestRepository.findById(ztatId)</span>
+<span class="nc" id="L68">            .orElseThrow(() -&gt; new RuntimeException(&quot;OpsJITRequest not found&quot;));</span>
+    }
+
+    @Transactional
+    public OpsZeroTrustAcessTokenRequest createOpsTATRequest(OpsZeroTrustAcessTokenRequest ztatRequest) {
+        try {
+<span class="nc" id="L74">            OpsZeroTrustAcessTokenRequest savedRequest = opsJITRequestRepository.save(ztatRequest);</span>
+<span class="nc" id="L75">            log.info(&quot;JITRequest created: {}&quot;, savedRequest);</span>
+<span class="nc" id="L76">            return savedRequest;</span>
+<span class="nc" id="L77">        } catch (Exception e) {</span>
+<span class="nc" id="L78">            log.error(&quot;Error while creating JITRequest&quot;, e);</span>
+<span class="nc" id="L79">            throw new RuntimeException(&quot;Failed to create JITRequest&quot;, e);</span>
+        }
+    }
+
+    @Transactional
+    public ZeroTrustAccessTokenRequest createTATRequest(ZeroTrustAccessTokenRequest ztatRequest) {
+        try {
+<span class="nc" id="L86">            ZeroTrustAccessTokenRequest savedRequest = ztatRequestRepository.save(ztatRequest);</span>
+<span class="nc" id="L87">            log.info(&quot;JITRequest created: {}&quot;, savedRequest);</span>
+<span class="nc" id="L88">            return savedRequest;</span>
+<span class="nc" id="L89">        } catch (Exception e) {</span>
+<span class="nc" id="L90">            log.error(&quot;Error while creating JITRequest&quot;, e);</span>
+<span class="nc" id="L91">            throw new RuntimeException(&quot;Failed to create JITRequest&quot;, e);</span>
+        }
+    }
+
+    @Transactional
+    public void deleteJITRequest(Long id) {
+        try {
+<span class="nc" id="L98">            ztatRequestRepository.deleteById(id);</span>
+<span class="nc" id="L99">            log.info(&quot;JITRequest deleted with id: {}&quot;, id);</span>
+<span class="nc" id="L100">        } catch (Exception e) {</span>
+<span class="nc" id="L101">            log.error(&quot;Error while deleting JITRequest&quot;, e);</span>
+<span class="nc" id="L102">            throw new RuntimeException(&quot;Failed to delete JITRequest&quot;, e);</span>
+<span class="nc" id="L103">        }</span>
+<span class="nc" id="L104">    }</span>
+
+    @Transactional
+    public ZeroTrustAccessTokenRequest updateJITRequest(Long id, ZeroTrustAccessTokenRequest updatedJITRequest) {
+<span class="nc" id="L108">        ZeroTrustAccessTokenRequest existingRequest = getAccessTokenRequestById(id);</span>
+
+<span class="nc" id="L110">        ZeroTrustAccessTokenRequest jr = ZeroTrustAccessTokenRequest.builder()</span>
+<span class="nc" id="L111">            .id(id)</span>
+<span class="nc" id="L112">            .command(updatedJITRequest.getCommand())</span>
+<span class="nc" id="L113">            .ztatReason(updatedJITRequest.getZtatReason())</span>
+<span class="nc" id="L114">            .system(updatedJITRequest.getSystem())</span>
+<span class="nc" id="L115">            .user(updatedJITRequest.getUser())</span>
+<span class="nc" id="L116">            .build();</span>
+
+        try {
+<span class="nc" id="L119">            ZeroTrustAccessTokenRequest savedRequest = ztatRequestRepository.save(jr);</span>
+<span class="nc" id="L120">            log.info(&quot;JITRequest updated: {}&quot;, savedRequest);</span>
+<span class="nc" id="L121">            return savedRequest;</span>
+<span class="nc" id="L122">        } catch (Exception e) {</span>
+<span class="nc" id="L123">            log.error(&quot;Error while updating JITRequest&quot;, e);</span>
+<span class="nc" id="L124">            throw new RuntimeException(&quot;Failed to update JITRequest&quot;, e);</span>
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasJITRequest(String command, Long userId, Long systemId) {
+<span class="nc" id="L130">        return ztatRequestRepository.existsByCommandAndUserIdAndSystemId(command, userId, systemId);</span>
+    }
+
+    @Transactional
+    public ZeroTrustAccessTokenRequest addJITRequest(ZeroTrustAccessTokenRequest ztatRequest) {
+        try {
+<span class="nc" id="L136">            ztatRequest.setZtatReason( ztatReasonRepository.save(ztatRequest.getZtatReason()) );</span>
+<span class="nc" id="L137">            ZeroTrustAccessTokenRequest savedRequest = ztatRequestRepository.save(ztatRequest);</span>
+<span class="nc" id="L138">            log.info(&quot;JITRequest added: {}&quot;, savedRequest);</span>
+<span class="nc" id="L139">            return savedRequest;</span>
+<span class="nc" id="L140">        } catch (Exception e) {</span>
+<span class="nc" id="L141">            log.error(&quot;Error while adding JITRequest&quot;, e);</span>
+<span class="nc" id="L142">            throw new RuntimeException(&quot;Failed to add JITRequest&quot;, e);</span>
+        }
+    }
+
+
+    @Transactional(readOnly = true)
+    public List&lt;ZeroTrustAccessTokenRequest&gt; getAccessTokenRequests(String command, User user, HostSystem system) {
+<span class="nc" id="L149">        final String commandHash = ZTATUtils.getCommandHash(command);</span>
+<span class="nc" id="L150">        var requests = ztatRequestRepository.findJITRequests(commandHash, user.getId(), system.getId());</span>
+<span class="nc bnc" id="L151" title="All 2 branches missed.">        for(var request : requests){</span>
+<span class="nc" id="L152">            request.getApprovals().size();</span>
+<span class="nc" id="L153">        }</span>
+<span class="nc" id="L154">        return requests;</span>
+    }
+
+    public void revokeJIT(ZeroTrustAccessTokenRequest ztatRequest, Long userId) {
+        // Check if the JITRequest is linked to the given user
+<span class="nc bnc" id="L159" title="All 2 branches missed.">        if (ztatRequest.getUser().getId().equals(userId)) {</span>
+<span class="nc" id="L160">            ztatRequestRepository.delete(ztatRequest);</span>
+        } else {
+<span class="nc" id="L162">            throw new IllegalArgumentException(&quot;The JITRequest does not belong to the specified user.&quot;);</span>
+        }
+<span class="nc" id="L164">    }</span>
+
+    public Optional&lt;ZeroTrustAccessTokenApproval&gt; getAccessTokenStatus(ZeroTrustAccessTokenRequest request) {
+<span class="nc" id="L167">        var approvals = request.getApprovals();</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">        if (!approvals.isEmpty()) {</span>
+<span class="nc" id="L169">            return Optional.of(approvals.get(0));</span>
+        }
+        // Implement logic to retrieve the JIT status (if applicable).
+        // Example: Retrieve from a specific table or calculate based on data.
+<span class="nc" id="L173">        return Optional.empty(); // Placeholder for actual implementation.</span>
+    }
+
+    @Transactional
+    public void setOpsAccessTokenStatus(OpsZeroTrustAcessTokenRequest reqeust, User user, boolean approval) {
+<span class="nc" id="L178">        opsApprovalRepository.deleteByZtatRequestId(reqeust.getId());</span>
+
+<span class="nc" id="L180">        OpsApproval opsApproval = new OpsApproval();</span>
+<span class="nc" id="L181">        opsApproval.setApprover(user);</span>
+<span class="nc" id="L182">        opsApproval.setApproved(approval);</span>
+<span class="nc" id="L183">        opsApproval.setZtatRequest(reqeust);</span>
+<span class="nc" id="L184">        opsApproval.setUses(0);</span>
+<span class="nc" id="L185">        opsApprovalRepository.save(opsApproval);</span>
+<span class="nc" id="L186">    }</span>
+
+    @Transactional
+    public void getAccessTokenStatus(ZeroTrustAccessTokenRequest request, User user, boolean approval) {
+<span class="nc" id="L190">        ztatApprovalRepository.deleteByztatRequestId(request.getId());</span>
+
+<span class="nc" id="L192">        ZeroTrustAccessTokenApproval ztatApproval = new ZeroTrustAccessTokenApproval();</span>
+<span class="nc" id="L193">        ztatApproval.setApprover(user);</span>
+<span class="nc" id="L194">        ztatApproval.setApproved(approval);</span>
+<span class="nc" id="L195">        ztatApproval.setZtatRequest(request);</span>
+<span class="nc" id="L196">        ztatApproval.setUses(0);</span>
+<span class="nc" id="L197">        ztatApprovalRepository.save(ztatApproval);</span>
+<span class="nc" id="L198">    }</span>
+
+    @Transactional
+    public void incrementAccessTokenUses(ZeroTrustAccessTokenRequest request) {
+<span class="nc bnc" id="L202" title="All 2 branches missed.">        if (request.getSystem().getId().equals(-1L)) {</span>
+<span class="nc" id="L203">            log.info(&quot;Incrementing uses for JITRequest: {}&quot;, ztatApprovalRepository.findByZtatRequestId(request.getId()).isPresent());</span>
+<span class="nc" id="L204">            opsApprovalRepository.findByZtatRequestId(request.getId()).ifPresent(approval -&gt; {</span>
+<span class="nc bnc" id="L205" title="All 2 branches missed.">                if (approval.getUses() &gt;= systemOptions.maxJitUses) {</span>
+<span class="nc" id="L206">                    throw new RuntimeException(&quot;JIT uses exceeded&quot;);</span>
+                }
+<span class="nc" id="L208">                approval.setUses(approval.getUses() + 1);</span>
+<span class="nc" id="L209">                log.info(&quot;Incrementing uses for JITRequest: {}&quot;, request.getId());</span>
+<span class="nc" id="L210">                opsApprovalRepository.save(approval);</span>
+<span class="nc" id="L211">            });</span>
+        } else {
+<span class="nc" id="L213">            log.info(&quot;Incrementing uses for JITRequest: {}&quot;, ztatApprovalRepository.findByZtatRequestId(request.getId()).isPresent());</span>
+<span class="nc" id="L214">            ztatApprovalRepository.findByZtatRequestId(request.getId()).ifPresent(approval -&gt; {</span>
+<span class="nc bnc" id="L215" title="All 2 branches missed.">                if (approval.getUses() &gt;= systemOptions.maxJitUses) {</span>
+<span class="nc" id="L216">                    throw new RuntimeException(&quot;JIT uses exceeded&quot;);</span>
+                }
+                ;
+<span class="nc" id="L219">                ztatUseRepository.save(ZtatUse.builder().ztatApproval(approval).user(request.getUser()).build());</span>
+<span class="nc" id="L220">                log.info(&quot;Incrementing uses for JITRequest: {}&quot;, request.getId());</span>
+<span class="nc" id="L221">                ztatApprovalRepository.save(approval);</span>
+<span class="nc" id="L222">            });</span>
+        }
+<span class="nc" id="L224">    }</span>
+
+    public void revokeOpsAccesToken(ZeroTrustAccessTokenRequest ztatRequest, Long userId) {
+<span class="nc" id="L227">        opsApprovalRepository.deleteByZtatRequestId(ztatRequest.getId());</span>
+<span class="nc" id="L228">    }</span>
+
+<span class="nc bnc" id="L230" title="All 2 branches missed.">    public List&lt;JITTrackerDTO&gt; getOpenAccessTokenRequests(@NonNull User currentUser) {</span>
+<span class="nc" id="L231">        List&lt;ZeroTrustAccessTokenRequest&gt; openRequests = ztatRequestRepository.findOpenJITRequests(null);</span>
+
+
+        // Map each JITRequest to a JITTrackerDTO
+<span class="nc" id="L235">        List&lt;JITTrackerDTO&gt; ztatTrackerList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L236" title="All 2 branches missed.">        for (ZeroTrustAccessTokenRequest request : openRequests) {</span>
+<span class="nc" id="L237">            var dto = convertToDTO(request);</span>
+<span class="nc bnc" id="L238" title="All 2 branches missed.">            if (currentUser.getId() == request.getUser().getId()) {</span>
+<span class="nc" id="L239">                dto.setCurrentUser(true);</span>
+            }
+<span class="nc" id="L241">            ztatTrackerList.add(dto);</span>
+<span class="nc" id="L242">        }</span>
+
+<span class="nc" id="L244">        return ztatTrackerList;</span>
+    }
+
+<span class="nc bnc" id="L247" title="All 2 branches missed.">    public List&lt;JITTrackerDTO&gt; getOpenOpsRequests(@NonNull User currentUser) {</span>
+        // Fetch open JIT requests
+<span class="nc" id="L249">        List&lt;OpsZeroTrustAcessTokenRequest&gt; openRequests = opsJITRequestRepository.findOpenOpsJITRequests(null);</span>
+
+<span class="nc" id="L251">        List&lt;JITTrackerDTO&gt; ztatTrackerList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L252" title="All 2 branches missed.">        for (OpsZeroTrustAcessTokenRequest request : openRequests) {</span>
+<span class="nc" id="L253">            var dto = convertToDTO(request);</span>
+<span class="nc bnc" id="L254" title="All 2 branches missed.">            if (currentUser.getId() == request.getUser().getId()) {</span>
+<span class="nc" id="L255">                dto.setCurrentUser(true);</span>
+            }
+<span class="nc" id="L257">            ztatTrackerList.add(dto);</span>
+<span class="nc" id="L258">        }</span>
+
+<span class="nc" id="L260">        return ztatTrackerList;</span>
+    }
+
+<span class="nc bnc" id="L263" title="All 2 branches missed.">    public List&lt;JITTrackerDTO&gt; getDeniedOpsAccessTokenRequests(@NonNull User currentUser) {</span>
+        // Fetch open JIT requests
+<span class="nc" id="L265">        List&lt;OpsZeroTrustAcessTokenRequest&gt; openRequests = opsJITRequestRepository.findAllWithUnapprovedRequests(null);</span>
+
+<span class="nc" id="L267">        List&lt;JITTrackerDTO&gt; ztatTrackerList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L268" title="All 2 branches missed.">        for (OpsZeroTrustAcessTokenRequest request : openRequests) {</span>
+
+<span class="nc" id="L270">            var dto = convertToDTO(request);</span>
+<span class="nc bnc" id="L271" title="All 2 branches missed.">            if (currentUser.getId() == request.getUser().getId()) {</span>
+<span class="nc" id="L272">                dto.setCurrentUser(true);</span>
+            }
+<span class="nc" id="L274">            ztatTrackerList.add(dto);</span>
+<span class="nc" id="L275">        }</span>
+
+<span class="nc" id="L277">        return ztatTrackerList;</span>
+
+    }
+
+
+
+<span class="nc bnc" id="L283" title="All 2 branches missed.">    public List&lt;JITTrackerDTO&gt; getApprovedOpsAccessTokenRequests(@NonNull User currentUser) {</span>
+<span class="nc" id="L284">        List&lt;OpsZeroTrustAcessTokenRequest&gt; openRequests = opsJITRequestRepository.findAllApprovedRequests(null);</span>
+
+<span class="nc" id="L286">        List&lt;JITTrackerDTO&gt; ztatTrackerList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L287" title="All 2 branches missed.">        for (var request : openRequests) {</span>
+<span class="nc" id="L288">            var dto = convertToDTO(request);</span>
+<span class="nc bnc" id="L289" title="All 2 branches missed.">            if (currentUser.getId() == request.getUser().getId()) {</span>
+<span class="nc" id="L290">                dto.setCurrentUser(true);</span>
+            }
+<span class="nc" id="L292">            ztatTrackerList.add(dto);</span>
+<span class="nc" id="L293">        }</span>
+
+<span class="nc" id="L295">        return ztatTrackerList;</span>
+    }
+
+<span class="nc bnc" id="L298" title="All 2 branches missed.">    public List&lt;JITTrackerDTO&gt; getApprovedTerminalAccessTokenRequests(@NonNull User currentUser) {</span>
+<span class="nc" id="L299">        List&lt;ZeroTrustAccessTokenRequest&gt; openRequests = ztatRequestRepository.findAllApprovedRequests(null);</span>
+
+<span class="nc" id="L301">        List&lt;JITTrackerDTO&gt; ztatTrackerList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L302" title="All 2 branches missed.">        for (var request : openRequests) {</span>
+<span class="nc" id="L303">            var dto = convertToDTO(request);</span>
+<span class="nc bnc" id="L304" title="All 2 branches missed.">            if (currentUser.getId() == request.getUser().getId()) {</span>
+<span class="nc" id="L305">                dto.setCurrentUser(true);</span>
+            }
+<span class="nc" id="L307">            ztatTrackerList.add(dto);</span>
+<span class="nc" id="L308">        }</span>
+
+<span class="nc" id="L310">        return ztatTrackerList;</span>
+    }
+
+
+    private JITTrackerDTO convertToDTO(ZeroTrustAccessTokenRequest request) {
+<span class="nc" id="L315">        return JITTrackerDTO.builder()</span>
+<span class="nc" id="L316">            .id(request.getId())</span>
+<span class="nc" id="L317">            .command(request.getCommand())</span>
+<span class="nc" id="L318">            .lastUpdated(request.getLastUpdated())</span>
+<span class="nc" id="L319">            .commandHash(request.getCommandHash())</span>
+<span class="nc" id="L320">            .userName(request.getUser().getUsername())</span>
+<span class="nc" id="L321">            .hostName(request.getSystem().getHost())</span>
+<span class="nc bnc" id="L322" title="All 2 branches missed.">            .reasonIdentifier(request.getZtatReason() != null ? request.getZtatReason().getReasonIdentifier() : null)</span>
+<span class="nc bnc" id="L323" title="All 2 branches missed.">            .reasonUrl(request.getZtatReason() != null ? request.getZtatReason().getUrl() : null)</span>
+<span class="nc" id="L324">            .usesRemaining(getUsesRemaining(request)) // Add logic to calculate uses remaining</span>
+<span class="nc" id="L325">            .canResubmit(false) // Define logic as needed</span>
+<span class="nc" id="L326">            .build();</span>
+    }
+
+    private JITTrackerDTO convertToDTO(OpsZeroTrustAcessTokenRequest request) {
+<span class="nc" id="L330">        return JITTrackerDTO.builder()</span>
+<span class="nc" id="L331">            .id(request.getId())</span>
+<span class="nc" id="L332">            .summary(request.getSummary())</span>
+<span class="nc" id="L333">            .command(request.getCommand())</span>
+<span class="nc" id="L334">            .commandHash(request.getCommandHash())</span>
+<span class="nc" id="L335">            .userName(request.getUser().getUsername())</span>
+<span class="nc" id="L336">            .hostName(&quot;&quot;)</span>
+<span class="nc bnc" id="L337" title="All 2 branches missed.">            .reasonIdentifier(request.getZtatReason() != null ? request.getZtatReason().getReasonIdentifier() : null)</span>
+<span class="nc bnc" id="L338" title="All 2 branches missed.">            .reasonUrl(request.getZtatReason() != null ? request.getZtatReason().getUrl() : null)</span>
+<span class="nc" id="L339">            .usesRemaining(getUsesRemaining(request)) // Add logic to calculate uses remaining</span>
+<span class="nc" id="L340">            .canResubmit(false) // Define logic as needed</span>
+<span class="nc" id="L341">            .build();</span>
+    }
+
+    private Integer getUsesRemaining(ZeroTrustAccessTokenRequest request) {
+             // get the latest approval
+<span class="nc" id="L346">            List&lt;ZeroTrustAccessTokenApproval&gt; approval = request.getApprovals();</span>
+<span class="nc bnc" id="L347" title="All 2 branches missed.">            if (!approval.isEmpty()) {</span>
+<span class="nc" id="L348">                var uses = ztatUseRepository.getUses(approval.get(0));</span>
+<span class="nc" id="L349">                return systemOptions.maxJitUses - uses.size();</span>
+            }
+
+<span class="nc" id="L352">        return systemOptions.maxJitUses; // Update as needed based on your logic</span>
+    }
+
+    private Integer getUsesRemaining(OpsZeroTrustAcessTokenRequest request) {
+
+<span class="nc" id="L357">            List&lt;OpsApproval&gt; approval = request.getApprovals();</span>
+<span class="nc bnc" id="L358" title="All 2 branches missed.">            if (!approval.isEmpty()) {</span>
+
+<span class="nc" id="L360">                return systemOptions.maxJitUses - approval.get(0).getUses();</span>
+            }
+
+<span class="nc" id="L363">        return systemOptions.maxJitUses; // Update as needed based on your logic</span>
+    }
+
+<span class="nc bnc" id="L366" title="All 2 branches missed.">    public List&lt;JITTrackerDTO&gt; getDeniedTerminalAccessTokenRequests(@NonNull User currentUser) {</span>
+<span class="nc" id="L367">        List&lt;ZeroTrustAccessTokenRequest&gt; openRequests = ztatRequestRepository.findAllWithUnapprovedRequests( null);</span>
+
+<span class="nc" id="L369">        List&lt;JITTrackerDTO&gt; ztatTrackerList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L370" title="All 2 branches missed.">        for (ZeroTrustAccessTokenRequest request : openRequests) {</span>
+
+<span class="nc" id="L372">            var dto = convertToDTO(request);</span>
+<span class="nc bnc" id="L373" title="All 2 branches missed.">            if (currentUser.getId() == request.getUser().getId()) {</span>
+<span class="nc" id="L374">                dto.setCurrentUser(true);</span>
+            }
+<span class="nc" id="L376">            ztatTrackerList.add(dto);</span>
+<span class="nc" id="L377">        }</span>
+
+<span class="nc" id="L379">        return ztatTrackerList;</span>
+
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

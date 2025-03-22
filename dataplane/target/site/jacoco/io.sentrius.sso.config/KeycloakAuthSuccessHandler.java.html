@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>KeycloakAuthSuccessHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.config</a> &gt; <span class="el_source">KeycloakAuthSuccessHandler.java</span></div><h1>KeycloakAuthSuccessHandler.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.config;
+
+import java.io.IOException;
+import java.util.Optional;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.sentrius.sso.core.model.security.UserType;
+import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.repository.UserRepository;
+import io.sentrius.sso.core.repository.UserTypeRepository;
+import io.sentrius.sso.core.services.security.JwtUtil;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.keycloak.admin.client.Keycloak;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
+import org.springframework.stereotype.Component;
+
+@Component
+<span class="nc" id="L21">@Slf4j</span>
+public class KeycloakAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
+
+    private final Keycloak keycloak;
+    private final UserRepository userRepository;
+    private final UserTypeRepository userTypeRepository;
+
+    public KeycloakAuthSuccessHandler(KeycloakManager keycloak, UserRepository userRepository,
+                                      UserTypeRepository userTypeRepository
+<span class="nc" id="L30">    ) {</span>
+<span class="nc" id="L31">        this.keycloak = keycloak.getKeycloak();</span>
+<span class="nc" id="L32">        this.userRepository = userRepository;</span>
+<span class="nc" id="L33">        this.userTypeRepository = userTypeRepository;</span>
+<span class="nc" id="L34">    }</span>
+
+    @Override
+    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
+                                        Authentication authentication) throws IOException, ServletException {
+<span class="nc" id="L39">        var jwt = JwtUtil.getJWT();</span>
+<span class="nc" id="L40">        Optional&lt;String&gt; userIdStr = JwtUtil.getUserId(jwt);</span>
+<span class="nc" id="L41">        Optional&lt;String&gt; usernameStr = JwtUtil.getUsername(jwt);</span>
+
+
+<span class="nc bnc" id="L44" title="All 2 branches missed.">        if (usernameStr.isPresent()) {</span>
+<span class="nc" id="L45">            log.info(&quot; ** Syncing user attributes for user: {} &quot;, usernameStr.get());</span>
+<span class="nc" id="L46">            syncUserAttributes(jwt, usernameStr.get());</span>
+        }
+
+<span class="nc" id="L49">        super.onAuthenticationSuccess(request, response, authentication);</span>
+<span class="nc" id="L50">    }</span>
+
+    private void syncUserAttributes(ObjectNode jwtNode, String userId) {
+        // Get Keycloak attributes
+
+        // Get user from DB
+<span class="nc" id="L56">        Optional&lt;User&gt; user = userRepository.findByUsername(userId);</span>
+<span class="nc" id="L57">        var userTypeFromJwtNode = JwtUtil.getUserTypeName(jwtNode);</span>
+<span class="nc bnc" id="L58" title="All 4 branches missed.">        if (user.isPresent() &amp;&amp; userTypeFromJwtNode.isPresent()) {</span>
+            // Example: Syncing &quot;userType&quot; attribute
+<span class="nc" id="L60">            String keycloakUserType = userTypeFromJwtNode.get();</span>
+<span class="nc" id="L61">            UserType dbUserType = user.get().getAuthorizationType();</span>
+<span class="nc" id="L62">            log.info(&quot; ** Syncing user attributes for user: {} and {}&quot;, userId, keycloakUserType);</span>
+<span class="nc bnc" id="L63" title="All 4 branches missed.">            if (keycloakUserType != null &amp;&amp; !keycloakUserType.isEmpty()) {</span>
+<span class="nc" id="L64">                String keycloakValue = keycloakUserType;</span>
+<span class="nc bnc" id="L65" title="All 2 branches missed.">                if (!keycloakValue.equals(dbUserType.getUserTypeName())) {</span>
+<span class="nc" id="L66">                    Optional&lt;UserType&gt; newType = userTypeRepository.findByUserTypeName(keycloakValue);</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">                    if (newType.isPresent()) {</span>
+                        // Update database
+<span class="nc" id="L69">                        user.get().setAuthorizationType(newType.get());</span>
+<span class="nc" id="L70">                        userRepository.save(user.get());</span>
+                    }
+                }
+            }
+<span class="nc" id="L74">        } else {</span>
+<span class="nc" id="L75">            log.info(&quot; userTypeFromJwtNode not defined {} &quot;, userTypeFromJwtNode);</span>
+        }
+<span class="nc" id="L77">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

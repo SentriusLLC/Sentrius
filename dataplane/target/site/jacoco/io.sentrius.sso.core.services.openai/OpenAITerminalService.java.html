@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OpenAITerminalService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services.openai</a> &gt; <span class="el_source">OpenAITerminalService.java</span></div><h1>OpenAITerminalService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services.openai;
+
+
+import java.util.concurrent.CompletableFuture;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import io.sentrius.sso.core.model.security.IntegrationSecurityToken;
+import io.sentrius.sso.core.integrations.external.ExternalIntegrationDTO;
+import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
+import io.sentrius.sso.core.utils.JsonUtil;
+import io.sentrius.sso.genai.GenerativeAPI;
+import io.sentrius.sso.genai.GeneratorConfiguration;
+import io.sentrius.sso.genai.TerminalComplianceScorer;
+import io.sentrius.sso.genai.TerminalLogConfiguration;
+import io.sentrius.sso.security.ApiKey;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+@Service
+<span class="nc" id="L20">@Slf4j</span>
+<span class="nc" id="L21">@RequiredArgsConstructor</span>
+public class OpenAITerminalService implements io.sentrius.sso.core.services.PluggableServices {
+
+    final IntegrationSecurityTokenService integrationSecurityTokenService;
+
+<span class="nc" id="L26">    IntegrationSecurityToken openAiToken = null;</span>
+
+<span class="nc" id="L28">    TerminalComplianceScorer terminalComplianceScorer = null;</span>
+
+    public String getName() {
+<span class="nc" id="L31">        return &quot;openai&quot;;</span>
+    }
+
+    @Override
+    public boolean isEnabled() {
+<span class="nc bnc" id="L36" title="All 2 branches missed.">        if (null == openAiToken) {</span>
+<span class="nc" id="L37">            synchronized (this) {</span>
+<span class="nc bnc" id="L38" title="All 2 branches missed.">                if (null == openAiToken) {</span>
+<span class="nc" id="L39">                    log.info(&quot;setting open ai token&quot;);</span>
+<span class="nc" id="L40">                    openAiToken = integrationSecurityTokenService.findByConnectionType(&quot;openai&quot;).stream().findFirst().orElse(null);</span>
+<span class="nc bnc" id="L41" title="All 2 branches missed.">                    if (openAiToken == null) {</span>
+<span class="nc" id="L42">                        log.info(&quot;no integration&quot;);</span>
+<span class="nc" id="L43">                        return false;</span>
+                    }
+<span class="nc" id="L45">                    ExternalIntegrationDTO externalIntegrationDTO = null;</span>
+                    try {
+<span class="nc" id="L47">                        externalIntegrationDTO = JsonUtil.MAPPER.readValue(openAiToken.getConnectionInfo(),</span>
+                            ExternalIntegrationDTO.class);
+<span class="nc" id="L49">                    } catch (JsonProcessingException e) {</span>
+<span class="nc" id="L50">                        throw new RuntimeException(e);</span>
+<span class="nc" id="L51">                    }</span>
+                    ApiKey key =
+<span class="nc" id="L53">                        ApiKey.builder().apiKey(externalIntegrationDTO.getApiToken()).principal(externalIntegrationDTO.getUsername()).build();</span>
+<span class="nc" id="L54">                    terminalComplianceScorer = new TerminalComplianceScorer(key, new GenerativeAPI(key),</span>
+<span class="nc" id="L55">                        GeneratorConfiguration.builder().build(), TerminalLogConfiguration.builder().build()</span>
+                    );
+                }
+<span class="nc" id="L58">            }</span>
+        }
+<span class="nc bnc" id="L60" title="All 2 branches missed.">        log.info(&quot;openai enabled: &quot; + (openAiToken != null));</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">        return openAiToken != null;</span>
+    }
+
+    // Asynchronous method for scoring terminal commands
+    public CompletableFuture&lt;Boolean&gt; analyzeTerminalLogs(String terminalLog) {
+<span class="nc" id="L66">        return CompletableFuture.supplyAsync(() -&gt; {</span>
+            try {
+<span class="nc bnc" id="L68" title="All 2 branches missed.">                log.info(&quot;analyzing terminal log {}&quot;, (terminalComplianceScorer == null) );</span>
+                // Submit terminal log to OpenAI
+<span class="nc" id="L70">                double score = terminalComplianceScorer.generate(terminalLog);</span>
+<span class="nc" id="L71">                log.info(&quot;score: {}&quot;, score);</span>
+                // Return true if malicious (e.g., score &gt; 0.8)
+<span class="nc bnc" id="L73" title="All 2 branches missed.">                return score &gt;= 0.85;</span>
+<span class="nc" id="L74">            } catch (Exception e) {</span>
+<span class="nc" id="L75">                log.info(&quot;Failed to analyze terminal log&quot;, e);</span>
+<span class="nc" id="L76">                e.printStackTrace();</span>
+<span class="nc" id="L77">                throw new RuntimeException(&quot;Failed to analyze terminal log&quot;, e);</span>
+            }
+        });
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HostSystem.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.model</a> &gt; <span class="el_source">HostSystem.java</span></div><h1>HostSystem.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.model;
+
+import java.util.ArrayList;
+import java.util.List;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import io.sentrius.sso.core.dto.HostGroupDTO;
+import io.sentrius.sso.core.dto.HostSystemDTO;
+import io.sentrius.sso.core.model.hostgroup.HostGroup;
+import io.sentrius.sso.core.utils.TimeAgoFormatter;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
+
+<span class="nc bnc" id="L32" title="All 16 branches missed.">@SuperBuilder(toBuilder = true)</span>
+@Getter
+<span class="nc" id="L34">@Setter</span>
+<span class="nc" id="L35">@NoArgsConstructor</span>
+<span class="nc" id="L36">@AllArgsConstructor</span>
+<span class="nc bnc" id="L37" title="All 130 branches missed.">@EqualsAndHashCode</span>
+@Entity
+@Table(name = &quot;host_systems&quot;) // Name of the table for HostSystem
+public class HostSystem implements Host {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // Auto-generate the ID
+    @Column(name = &quot;host_system_id&quot;)
+<span class="nc" id="L45">    private Long id;</span>
+
+    @Column(name = &quot;display_name&quot;)
+<span class="nc" id="L48">    private String displayName;</span>
+
+    @Builder.Default
+    @Column(name = &quot;ssh_user&quot;, nullable = false)
+<span class="nc" id="L52">    private String sshUser = &quot;root&quot;;</span>
+
+    @Builder.Default
+    @Column(name = &quot;ssh_user_password&quot;)
+<span class="nc" id="L56">    private String sshPassword = &quot;&quot;;</span>
+
+    @Column(name = &quot;host&quot;)
+    @Builder.Default
+<span class="nc" id="L60">    private String host = &quot;&quot;;</span>
+
+    @Builder.Default
+    @Column(name = &quot;port&quot;)
+<span class="nc" id="L64">    private Integer port = 22;</span>
+
+    @Column(name = &quot;display_label&quot;)
+<span class="nc" id="L67">    private String displayLabel;</span>
+
+    @Builder.Default
+    @Column(name = &quot;authorized_keys&quot;)
+<span class="nc" id="L71">    private String authorizedKeys = &quot;~/.ssh/authorized_keys&quot;;</span>
+
+    @Builder.Default
+    @Column(name = &quot;checked&quot;)
+<span class="nc" id="L75">    private Boolean checked = false;</span>
+
+    @Builder.Default
+    @Column(name = &quot;status_code&quot;)
+<span class="nc" id="L79">    private String statusCd = INITIAL_STATUS;</span>
+
+    @Column(name = &quot;error_message&quot;)
+<span class="nc" id="L82">    private String errorMsg;</span>
+
+    @ElementCollection // Stores the list of public keys
+    @CollectionTable(name = &quot;host_system_public_keys&quot;, joinColumns = @JoinColumn(name = &quot;host_system_id&quot;))
+    @Column(name = &quot;public_key&quot;)
+<span class="nc" id="L87">    private List&lt;String&gt; publicKeyList;</span>
+
+    @Column(name = &quot;instance_id&quot;)
+<span class="nc" id="L90">    private Integer instanceId;</span>
+
+    @Builder.Default
+    @Column(name = &quot;locked&quot;)
+<span class="nc" id="L94">    private boolean locked = false;</span>
+
+    @OneToMany(mappedBy = &quot;hostSystem&quot;, cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+<span class="nc" id="L97">    private List&lt;ProxyHost&gt; proxies;</span>
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = &quot;hostgroup_hostsystems&quot;,
+        joinColumns = @JoinColumn(name = &quot;host_system_id&quot;),
+        inverseJoinColumns = @JoinColumn(name = &quot;hostgroup_id&quot;)
+    )
+    @JsonBackReference
+<span class="nc" id="L106">    private List&lt;HostGroup&gt; hostGroups;</span>
+
+
+    public static final String INITIAL_STATUS = &quot;INITIAL&quot;;
+    public static final String AUTH_FAIL_STATUS = &quot;AUTHFAIL&quot;;
+    public static final String PUBLIC_KEY_FAIL_STATUS = &quot;KEYAUTHFAIL&quot;;
+    public static final String GENERIC_FAIL_STATUS = &quot;GENERICFAIL&quot;;
+    public static final String SUCCESS_STATUS = &quot;CONNECTED&quot;;
+    public static final String HOST_FAIL_STATUS = &quot;HOSTFAIL&quot;;
+
+
+
+    public HostSystemDTO toDTO() {
+<span class="nc" id="L119">        var dto = HostSystemDTO.builder();</span>
+
+<span class="nc" id="L121">        dto.id(this.id);</span>
+<span class="nc" id="L122">        dto.displayName(this.displayName);</span>
+<span class="nc" id="L123">        dto.host(this.host);</span>
+<span class="nc" id="L124">        dto.statusCd(this.statusCd);</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">        dto.publicKeyList(this.publicKeyList != null ? new ArrayList&lt;&gt;(this.publicKeyList) : new ArrayList&lt;&gt;());</span>
+<span class="nc" id="L126">        dto.errorMsg(this.errorMsg);</span>
+<span class="nc" id="L127">        dto.port(this.port);</span>
+<span class="nc" id="L128">        dto.lastAccessed(&quot;never&quot;);</span>
+<span class="nc" id="L129">        dto.sshUser(this.sshUser);</span>
+<span class="nc" id="L130">        dto.group(new HostGroupDTO());</span>
+
+<span class="nc" id="L132">        return dto.build();</span>
+    }
+
+    public HostSystemDTO toDTO(HostGroup hg) {
+<span class="nc" id="L136">        var dto = HostSystemDTO.builder();</span>
+
+<span class="nc" id="L138">        dto.id(this.id);</span>
+<span class="nc" id="L139">        dto.displayName(this.displayName);</span>
+<span class="nc" id="L140">        dto.host(this.host);</span>
+<span class="nc" id="L141">        dto.statusCd(this.statusCd);</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">        dto.publicKeyList(this.publicKeyList != null ? new ArrayList&lt;&gt;(this.publicKeyList) : new ArrayList&lt;&gt;());</span>
+<span class="nc" id="L143">        dto.errorMsg(this.errorMsg);</span>
+<span class="nc" id="L144">        dto.port(this.port);</span>
+<span class="nc" id="L145">        dto.lastAccessed(&quot;never&quot;);</span>
+<span class="nc" id="L146">        dto.sshUser(this.sshUser);</span>
+<span class="nc" id="L147">        dto.group(hg.toDTO());</span>
+
+<span class="nc" id="L149">        return dto.build();</span>
+    }
+
+    public HostSystemDTO toDTO(String hostConnectionString, ConnectedSystem connectedSystem) {
+<span class="nc" id="L153">        var dto = toDTO();</span>
+<span class="nc" id="L154">        dto.setHostConnection(hostConnectionString);</span>
+<span class="nc" id="L155">        dto.setLastAccessed(TimeAgoFormatter.formatTimestampToMinutesAgo(connectedSystem.getSession().getSessionTm()));</span>
+<span class="nc" id="L156">        return dto;</span>
+    }
+
+    public static HostSystem fromDTO(HostSystemDTO dto) {
+<span class="nc" id="L160">        HostSystem hostSystem = new HostSystem();</span>
+<span class="nc bnc" id="L161" title="All 2 branches missed.">        if (null != dto) {</span>
+<span class="nc" id="L162">            hostSystem.setId(dto.getId());</span>
+        }
+<span class="nc" id="L164">        hostSystem.setHost(dto.getHost());</span>
+<span class="nc" id="L165">        hostSystem.setSshPassword(dto.getPassword());</span>
+<span class="nc" id="L166">        hostSystem.setDisplayLabel(dto.getDisplayName());</span>
+<span class="nc" id="L167">        hostSystem.setDisplayName(dto.getDisplayName());</span>
+<span class="nc" id="L168">        hostSystem.setStatusCd(dto.getStatusCd());</span>
+<span class="nc" id="L169">        hostSystem.setPublicKeyList(dto.getPublicKeyList());</span>
+<span class="nc" id="L170">        hostSystem.setErrorMsg(dto.getErrorMsg());</span>
+<span class="nc" id="L171">        hostSystem.setPort(dto.getPort());</span>
+<span class="nc" id="L172">        hostSystem.setSshUser(dto.getSshUser());</span>
+<span class="nc" id="L173">        return hostSystem;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

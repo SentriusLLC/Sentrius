@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SessionOutput.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.model.sessions</a> &gt; <span class="el_source">SessionOutput.java</span></div><h1>SessionOutput.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.model.sessions;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Predicate;
+import io.sentrius.sso.automation.auditing.Trigger;
+import io.sentrius.sso.automation.auditing.TriggerAction;
+import io.sentrius.sso.protobuf.Session;
+import io.sentrius.sso.core.model.ConnectedSystem;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.experimental.SuperBuilder;
+import lombok.extern.slf4j.Slf4j;
+
+/** Output from ssh session */
+<span class="nc" id="L21">@Slf4j</span>
+<span class="nc" id="L22">@SuperBuilder(toBuilder = true)</span>
+@Getter
+<span class="nc bnc" id="L24" title="All 86 branches missed.">@EqualsAndHashCode</span>
+public class SessionOutput  {
+
+
+<span class="nc" id="L28">    private final ConnectedSystem connectedSystem;</span>
+<span class="nc" id="L29">    private StringBuilder output = new StringBuilder(256);</span>
+<span class="nc" id="L30">    private final ReentrantLock lock = new ReentrantLock();</span>
+<span class="nc" id="L31">    private final Condition notEmpty = lock.newCondition();</span>
+<span class="nc" id="L32">    ConcurrentLinkedDeque&lt;Trigger&gt; persistentMessage = new ConcurrentLinkedDeque&lt;&gt;();</span>
+<span class="nc" id="L33">    ConcurrentLinkedDeque&lt;Trigger&gt; prompt = new ConcurrentLinkedDeque&lt;&gt;();</span>
+
+<span class="nc" id="L35">    ConcurrentLinkedDeque&lt;Trigger&gt; warn = new ConcurrentLinkedDeque&lt;&gt;();</span>
+<span class="nc" id="L36">    ConcurrentLinkedDeque&lt;Trigger&gt; deny = new ConcurrentLinkedDeque&lt;&gt;();</span>
+
+<span class="nc" id="L38">    ConcurrentLinkedDeque&lt;Trigger&gt; ztat = new ConcurrentLinkedDeque&lt;&gt;();</span>
+
+<span class="nc" id="L40">    private AtomicReference&lt;Trigger&gt; sessionMessage = new AtomicReference&lt;&gt;();</span>
+
+<span class="nc" id="L42">    public SessionOutput(ConnectedSystem connectedSystem) {</span>
+<span class="nc" id="L43">        this.connectedSystem = connectedSystem;</span>
+<span class="nc" id="L44">    }</span>
+
+    public Long getSessionId() {
+<span class="nc" id="L47">        return connectedSystem.getSession().getId();</span>
+    }
+
+    public String getOutput() {
+<span class="nc" id="L51">        lock.lock();</span>
+        try {
+<span class="nc" id="L53">            return output.toString();</span>
+        } finally {
+<span class="nc" id="L55">            lock.unlock();</span>
+        }
+    }
+
+
+    public void append(char[] str, int offset, int count) {
+<span class="nc" id="L61">        lock.lock();</span>
+        try {
+<span class="nc" id="L63">            output.append(str, offset, count);</span>
+<span class="nc" id="L64">            notEmpty.signalAll(); // Notify waiting threads</span>
+        } finally {
+<span class="nc" id="L66">            lock.unlock();</span>
+        }
+<span class="nc" id="L68">    }</span>
+
+    public void append(String str) {
+<span class="nc" id="L71">        lock.lock();</span>
+        try {
+<span class="nc" id="L73">            output.append(str);</span>
+<span class="nc" id="L74">            notEmpty.signalAll(); // Notify waiting threads</span>
+        } finally {
+<span class="nc" id="L76">            lock.unlock();</span>
+        }
+<span class="nc" id="L78">    }</span>
+
+    public void addSystemMessage(Trigger trigger) {
+<span class="nc" id="L81">        lock.lock();</span>
+        try {
+<span class="nc" id="L83">            log.info(&quot;Setting trigger and notifying&quot;);</span>
+<span class="nc" id="L84">            sessionMessage.set(trigger);</span>
+<span class="nc" id="L85">            notEmpty.signalAll(); // Notify waiting threads</span>
+        } finally {
+<span class="nc" id="L87">            lock.unlock();</span>
+        }
+<span class="nc" id="L89">    }</span>
+
+    public void addWarning(Trigger trigger) {
+<span class="nc" id="L92">        lock.lock();</span>
+        try {
+<span class="nc" id="L94">            warn.add(trigger);</span>
+<span class="nc" id="L95">            notEmpty.signalAll(); // Notify waiting threads</span>
+        } finally {
+<span class="nc" id="L97">            lock.unlock();</span>
+        }
+
+<span class="nc" id="L100">    }</span>
+
+
+    public void addPersistentMessage(Trigger trigger) {
+<span class="nc" id="L104">        lock.lock();</span>
+        try {
+<span class="nc" id="L106">            log.info(&quot;Adding persistent message: {}&quot;, trigger.getDescription());</span>
+<span class="nc" id="L107">            persistentMessage.add(trigger);</span>
+<span class="nc" id="L108">            notEmpty.signalAll(); // Notify waiting threads</span>
+        } finally {
+<span class="nc" id="L110">            lock.unlock();</span>
+        }
+<span class="nc" id="L112">    }</span>
+
+    public void addPrompt(Trigger trigger) {
+<span class="nc" id="L115">        lock.lock();</span>
+        try {
+<span class="nc" id="L117">            log.info(&quot;Adding persistent message: {}&quot;, trigger.getDescription());</span>
+<span class="nc" id="L118">            prompt.add(trigger);</span>
+<span class="nc" id="L119">            notEmpty.signalAll(); // Notify waiting threads</span>
+        } finally {
+<span class="nc" id="L121">            lock.unlock();</span>
+        }
+<span class="nc" id="L123">    }</span>
+
+    public void addDenial(Trigger trigger) {
+<span class="nc" id="L126">        lock.lock();</span>
+        try {
+
+<span class="nc" id="L129">            deny.add(trigger);</span>
+<span class="nc" id="L130">            log.info(&quot;Adding Denial message: {} is empty ? {}&quot;, trigger.getDescription(), deny.isEmpty());</span>
+<span class="nc" id="L131">            notEmpty.signalAll(); // Notify waiting threads</span>
+        } finally {
+<span class="nc" id="L133">            lock.unlock();</span>
+        }
+<span class="nc" id="L135">    }</span>
+
+    /*public Trigger getNextWarning() {
+        return warn.isEmpty() ? null : warn.pop();
+    }
+
+    public PersistentMessage getNextPeristentMessage() {
+        return persistentMessage.isEmpty() ? null : persistentMessage.pop();
+    }
+
+    public Trigger getNextDenial() {
+        return deny.isEmpty() ? null : deny.pop();
+    }
+*/
+    public void addJIT(Trigger trg) {
+<span class="nc" id="L150">        String message =</span>
+            &quot;This command will require approval. Your command will not execute until approval is&quot;
+                + &quot; garnered.If approval is not already submitted you will be notified when it is&quot;
+                + &quot; submitted.. &quot;
+<span class="nc" id="L154">                + trg.getDescription();</span>
+<span class="nc" id="L155">        lock.lock();</span>
+        try {
+<span class="nc" id="L157">            ztat.add(new Trigger(trg.getAction(), message));</span>
+<span class="nc" id="L158">            warn.add(new Trigger(trg.getAction(), message));</span>
+<span class="nc" id="L159">            notEmpty.signalAll(); // Notify waiting threads</span>
+        } finally {
+<span class="nc" id="L161">            lock.unlock();</span>
+        }
+<span class="nc" id="L163">    }</span>
+
+
+    private Session.TerminalMessage getTrigger(Trigger trigger){
+<span class="nc bnc" id="L167" title="All 2 branches missed.">        if (trigger.getAction() == TriggerAction.PROMPT_ACTION){</span>
+<span class="nc" id="L168">            log.info(&quot;Prompting: {}&quot;, trigger);</span>
+<span class="nc" id="L169">            return getTrigger(trigger, Session.MessageType.PROMPT_DATA);</span>
+        }
+        else {
+<span class="nc" id="L172">            return getTrigger(trigger, Session.MessageType.USER_DATA);</span>
+        }
+    }
+
+    private Session.TerminalMessage getTrigger(Trigger trigger, Session.MessageType messageType){
+<span class="nc" id="L177">        var terminalMessage = Session.TerminalMessage.newBuilder();</span>
+<span class="nc" id="L178">        terminalMessage.setType(messageType);</span>
+<span class="nc" id="L179">        Session.Trigger.Builder triggerBuilder = Session.Trigger.newBuilder();</span>
+<span class="nc bnc" id="L180" title="All 8 branches missed.">        switch(trigger.getAction()){</span>
+            case DENY_ACTION:
+<span class="nc" id="L182">                triggerBuilder.setAction(Session.TriggerAction.DENY_ACTION);</span>
+<span class="nc" id="L183">                break;</span>
+            case JIT_ACTION:
+<span class="nc" id="L185">                triggerBuilder.setAction(Session.TriggerAction.JIT_ACTION);</span>
+<span class="nc" id="L186">                break;</span>
+            case RECORD_ACTION:
+<span class="nc" id="L188">                triggerBuilder.setAction(Session.TriggerAction.RECORD_ACTION);</span>
+<span class="nc" id="L189">                break;</span>
+            case APPROVE_ACTION:
+<span class="nc" id="L191">                triggerBuilder.setAction(Session.TriggerAction.APPROVE_ACTION);</span>
+<span class="nc" id="L192">                break;</span>
+            case WARN_ACTION:
+<span class="nc" id="L194">                triggerBuilder.setAction(Session.TriggerAction.WARN_ACTION);</span>
+<span class="nc" id="L195">                break;</span>
+            case PERSISTENT_MESSAGE:
+<span class="nc" id="L197">                triggerBuilder.setAction(Session.TriggerAction.PERSISTENT_MESSAGE);</span>
+<span class="nc" id="L198">                break;</span>
+            case PROMPT_ACTION:
+<span class="nc" id="L200">                triggerBuilder.setAction(Session.TriggerAction.PROMPT_ACTION);</span>
+<span class="nc" id="L201">                break;</span>
+            default:
+                break;
+        }
+<span class="nc bnc" id="L205" title="All 2 branches missed.">        triggerBuilder.setDescription(trigger.getDescription().isEmpty() ? &quot;&quot; : trigger.getDescription());</span>
+<span class="nc bnc" id="L206" title="All 4 branches missed.">        if (trigger.getAction() == TriggerAction.PROMPT_ACTION &amp;&amp; trigger.getAsk() != null) {</span>
+<span class="nc" id="L207">            terminalMessage.setPrompt(trigger.getAsk());</span>
+        }
+<span class="nc" id="L209">        terminalMessage.setTrigger(triggerBuilder.build());</span>
+<span class="nc" id="L210">        return terminalMessage.build();</span>
+    }
+
+    public AuditOutput waitForOutput(Long time,
+                                                       TimeUnit unit, Predicate&lt;SessionOutput&gt; condition) throws InterruptedException {
+<span class="nc" id="L215">        List&lt;Session.TerminalMessage&gt; triggers = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L216">        var bldr = AuditOutput.builder();</span>
+
+<span class="nc" id="L218">        lock.lock();</span>
+        try {
+<span class="nc bnc" id="L220" title="All 16 branches missed.">            while ((output.length() == 0 &amp;&amp; persistentMessage.isEmpty()  &amp;&amp; prompt.isEmpty() &amp;&amp; warn.isEmpty() &amp;&amp; ztat.isEmpty() &amp;&amp; deny.isEmpty()) &amp;&amp; condition.test(this) &amp;&amp; sessionMessage.get() == null) {</span>
+<span class="nc" id="L221">                notEmpty.await(time, unit); // Wait until notified</span>
+            }
+
+<span class="nc bnc" id="L224" title="All 2 branches missed.">            if (!output.isEmpty()) {</span>
+<span class="nc" id="L225">                Session.TerminalMessage.Builder terminalMessage = Session.TerminalMessage.newBuilder();</span>
+<span class="nc" id="L226">                terminalMessage.setType(Session.MessageType.USER_DATA);</span>
+<span class="nc" id="L227">                terminalMessage.setCommand(output.toString());</span>
+<span class="nc" id="L228">                output = new StringBuilder(256);</span>
+<span class="nc" id="L229">                bldr.outputMessage( terminalMessage.build());</span>
+            }
+
+<span class="nc" id="L232">            var systemTrigger = sessionMessage.getAndSet(null);</span>
+<span class="nc bnc" id="L233" title="All 2 branches missed.">            if (null != systemTrigger){</span>
+<span class="nc" id="L234">                log.info(&quot;System Trigger: {}&quot;, systemTrigger);</span>
+<span class="nc" id="L235">                triggers.add( getTrigger(systemTrigger, Session.MessageType.SESSION_DATA));</span>
+            }
+
+<span class="nc bnc" id="L238" title="All 2 branches missed.">            if (!warn.isEmpty()){</span>
+
+<span class="nc" id="L240">                var trigger = warn.pop();</span>
+<span class="nc" id="L241">                log.info(&quot;Warning: {}&quot;, trigger);</span>
+<span class="nc" id="L242">                triggers.add( getTrigger(trigger));</span>
+            }
+<span class="nc bnc" id="L244" title="All 2 branches missed.">            if (!deny.isEmpty()){</span>
+<span class="nc" id="L245">                var trigger = deny.pop();</span>
+<span class="nc" id="L246">                log.info(&quot;Denial: {}&quot;, trigger);</span>
+<span class="nc" id="L247">                triggers.add( getTrigger(trigger));</span>
+            }
+
+<span class="nc bnc" id="L250" title="All 2 branches missed.">            if (!persistentMessage.isEmpty()){</span>
+<span class="nc" id="L251">                var trigger = persistentMessage.pop();</span>
+<span class="nc" id="L252">                triggers.add( getTrigger(trigger));</span>
+            }
+
+<span class="nc bnc" id="L255" title="All 2 branches missed.">            if (!prompt.isEmpty()){</span>
+<span class="nc" id="L256">                var trigger = prompt.pop();</span>
+<span class="nc" id="L257">                triggers.add( getTrigger(trigger));</span>
+            }
+
+<span class="nc" id="L260">            bldr.triggers(triggers);</span>
+<span class="nc" id="L261">            return bldr.build();</span>
+        } finally {
+<span class="nc" id="L263">            lock.unlock();</span>
+        }
+    }
+
+    public void clearOutput() {
+<span class="nc" id="L268">        lock.lock();</span>
+        try {
+<span class="nc" id="L270">            output = new StringBuilder(256);</span>
+        } finally {
+<span class="nc" id="L272">            lock.unlock();</span>
+        }
+<span class="nc" id="L274">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

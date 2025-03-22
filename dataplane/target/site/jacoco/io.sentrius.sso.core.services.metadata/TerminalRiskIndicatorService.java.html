@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TerminalRiskIndicatorService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services.metadata</a> &gt; <span class="el_source">TerminalRiskIndicatorService.java</span></div><h1>TerminalRiskIndicatorService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services.metadata;
+
+import java.sql.Timestamp;
+import java.time.LocalTime;
+import java.util.List;
+import io.sentrius.sso.core.model.metadata.TerminalBehaviorMetrics;
+import io.sentrius.sso.core.model.metadata.TerminalCommand;
+import io.sentrius.sso.core.model.metadata.TerminalRiskIndicator;
+import io.sentrius.sso.core.model.metadata.TerminalSessionMetadata;
+import io.sentrius.sso.core.repository.TerminalBehaviorMetricsRepository;
+import io.sentrius.sso.core.repository.TerminalRiskIndicatorRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class TerminalRiskIndicatorService {
+    private final TerminalRiskIndicatorRepository riskIndicatorRepository;
+
+    @Autowired
+<span class="nc" id="L20">    public TerminalRiskIndicatorService(TerminalRiskIndicatorRepository riskIndicatorRepository) {</span>
+<span class="nc" id="L21">        this.riskIndicatorRepository = riskIndicatorRepository;</span>
+<span class="nc" id="L22">    }</span>
+
+    public TerminalRiskIndicator computeRiskIndicators(TerminalSessionMetadata session, List&lt;TerminalCommand&gt; commands) {
+        // just an example
+<span class="nc" id="L26">        int dangerousCommandsCount = (int) commands.stream()</span>
+<span class="nc" id="L27">            .filter(cmd -&gt; cmd.getCommand().contains(&quot;rm -rf&quot;))</span>
+<span class="nc" id="L28">            .count();</span>
+<span class="nc" id="L29">        int unauthorizedAccessAttempts = (int) commands.stream()</span>
+<span class="nc" id="L30">            .filter(cmd -&gt; cmd.getCommand().contains(&quot;unauthorized&quot;))</span>
+<span class="nc" id="L31">            .count();</span>
+<span class="nc" id="L32">        boolean geoAnomaly = isGeoAnomaly(session.getIpAddress());</span>
+<span class="nc" id="L33">        boolean outOfHours = isOutOfHours(session.getStartTime());</span>
+
+<span class="nc" id="L35">        TerminalRiskIndicator riskIndicator = new TerminalRiskIndicator();</span>
+<span class="nc" id="L36">        riskIndicator.setSession(session);</span>
+<span class="nc" id="L37">        riskIndicator.setDangerousCommandsCount(dangerousCommandsCount);</span>
+<span class="nc" id="L38">        riskIndicator.setUnauthorizedAccessAttempts(unauthorizedAccessAttempts);</span>
+<span class="nc" id="L39">        riskIndicator.setGeoAnomaly(geoAnomaly);</span>
+<span class="nc" id="L40">        riskIndicator.setOutOfHours(outOfHours);</span>
+
+<span class="nc" id="L42">        return riskIndicatorRepository.save(riskIndicator);</span>
+    }
+
+    private boolean isGeoAnomaly(String ipAddress) {
+        // Implement geo-location-based anomaly detection logic
+<span class="nc" id="L47">        return false;</span>
+    }
+
+    private boolean isOutOfHours(Timestamp startTime) {
+<span class="nc" id="L51">        LocalTime start = startTime.toLocalDateTime().toLocalTime();</span>
+<span class="nc bnc" id="L52" title="All 4 branches missed.">        return start.isBefore(LocalTime.of(8, 0)) || start.isAfter(LocalTime.of(18, 0));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

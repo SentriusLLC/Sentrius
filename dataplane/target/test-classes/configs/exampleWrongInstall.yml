@@ -1,0 +1,7 @@
+employees:
+  - id: 1
+    name: user
+    age: 30
+    position: Software Engineer
+    address:
+      street: "street"

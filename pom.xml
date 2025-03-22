@@ -8,8 +8,10 @@
   <description>Multi-module project for sentrius</description>
   <modules>
     <module>core</module>
+    <module>dataplane</module>
     <module>api</module>
-    <module>java-agent</module>
+    <module>analytics</module>
+    <module>ai-agent</module>
   </modules>
   <properties>
     <java.version>17</java.version>

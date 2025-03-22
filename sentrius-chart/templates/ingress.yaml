@@ -1,0 +1,51 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: managed-cert-ingress-{{ .Values.tenant }}
+  namespace: {{ .Values.tenant }}
+  annotations:
+    #kubernetes.io/ingress.class: {{ .Values.ingress.class }}
+    {{- if eq .Values.environment "gke" }}
+    {{- range $key, $value := .Values.ingress.annotations.gke }}
+    {{ $key }}: "{{ $value }}"
+    {{- end }}
+    {{- else if eq .Values.environment "aws" }}
+    {{- range $key, $value := .Values.ingress.annotations.aws }}
+    {{ $key }}: "{{ $value }}"
+    {{- end }}
+    {{- else if eq .Values.environment "local" }}
+    {{- range $key, $value := .Values.ingress.annotations.local }}
+    {{ $key }}: "{{ $value }}"
+    {{- end }}
+    {{- end }}
+spec:
+  {{- if .Values.ingress.tlsEnabled }}
+  tls:
+    - hosts:
+        - {{ .Values.keycloakSubdomain }}
+        - {{ .Values.subdomain }}
+      secretName: wildcard-cert-{{ .Values.tenant }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.keycloakSubdomain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-keycloak
+                port:
+                  number: 8081
+    - host: {{ .Values.subdomain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-sentrius
+                port:
+                  number: 8080
+{{- end }}

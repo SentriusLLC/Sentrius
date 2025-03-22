@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RuleFactory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.automation.auditing</a> &gt; <span class="el_source">RuleFactory.java</span></div><h1>RuleFactory.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.automation.auditing;
+
+import java.lang.reflect.InvocationTargetException;
+import java.util.List;
+import java.util.Map;
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.model.ConnectedSystem;
+import io.sentrius.sso.core.model.auditing.Rule;
+import io.sentrius.sso.core.services.PluggableServices;
+import io.sentrius.sso.core.services.terminal.SessionTrackingService;
+import lombok.extern.slf4j.Slf4j;
+
+<span class="nc" id="L13">@Slf4j</span>
+<span class="nc" id="L14">public class RuleFactory {</span>
+
+    public static void createRules(
+        SystemOptions systemOptions,
+        ConnectedSystem connectedSystem,
+        SessionTrackingService sessionTrackingService,
+        List&lt;Rule&gt; initialRules, List&lt;AccessTokenEvaluator&gt; synchronousRules, List&lt;SessionTokenEvaluator&gt; beforeAndAfterRules,
+        Map&lt;String, PluggableServices&gt; pluggableServicesMap)
+        throws NoSuchMethodException, ClassNotFoundException, InvocationTargetException, InstantiationException,
+        IllegalAccessException {
+<span class="nc bnc" id="L24" title="All 2 branches missed.">        for (Rule rule : initialRules) {</span>
+<span class="nc" id="L25">            Class&lt;? extends AccessTokenEvaluator&gt; newRuleClass =</span>
+<span class="nc" id="L26">                Class.forName(rule.getRuleClass()).asSubclass(AccessTokenEvaluator.class);</span>
+<span class="nc" id="L27">            AccessTokenEvaluator newRule = newRuleClass.getConstructor().newInstance();</span>
+<span class="nc" id="L28">            newRule.configure(systemOptions, rule.getRuleConfig());</span>
+<span class="nc" id="L29">            newRule.setConnectedSystem(connectedSystem);</span>
+<span class="nc" id="L30">            newRule.setTrackingService(sessionTrackingService);</span>
+<span class="nc bnc" id="L31" title="All 2 branches missed.">            if (newRule instanceof SessionTokenEvaluator) {</span>
+<span class="nc" id="L32">                ((SessionTokenEvaluator) newRule).setPluggableServices(pluggableServicesMap);</span>
+<span class="nc bnc" id="L33" title="All 2 branches missed.">                if (((SessionTokenEvaluator) newRule).isOnlySessionRule()) {</span>
+<span class="nc" id="L34">                    beforeAndAfterRules.add((SessionTokenEvaluator) newRule);</span>
+                } else {
+<span class="nc" id="L36">                    log.info(&quot;Adding {} to synchronous rules&quot;, newRule.getClass().getName());</span>
+<span class="nc" id="L37">                    beforeAndAfterRules.add((SessionTokenEvaluator) newRule);</span>
+<span class="nc" id="L38">                    synchronousRules.add(newRule);</span>
+                }
+            } else {
+<span class="nc" id="L41">                log.info(&quot;Adding {} to synchronous rules&quot;, newRule.getClass().getName());</span>
+<span class="nc" id="L42">                synchronousRules.add(newRule);</span>
+            }
+<span class="nc" id="L44">        }</span>
+<span class="nc" id="L45">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

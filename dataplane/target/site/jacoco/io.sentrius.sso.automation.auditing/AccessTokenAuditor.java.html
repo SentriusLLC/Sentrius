@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AccessTokenAuditor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.automation.auditing</a> &gt; <span class="el_source">AccessTokenAuditor.java</span></div><h1>AccessTokenAuditor.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.automation.auditing;
+
+import java.lang.reflect.InvocationTargetException;
+import java.security.GeneralSecurityException;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import io.sentrius.sso.core.data.auditing.RecordingStudio;
+import io.sentrius.sso.core.model.ConnectedSystem;
+import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
+import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenRequest;
+import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
+import io.sentrius.sso.core.services.terminal.SessionTrackingService;
+import lombok.extern.slf4j.Slf4j;
+
+<span class="nc" id="L19">@Slf4j</span>
+public class AccessTokenAuditor extends BaseAccessTokenAuditor {
+
+<span class="nc" id="L22">  public List&lt;AccessTokenEvaluator&gt; synchronousRules = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L24">  public List&lt;AccessTokenEvaluator&gt; synchronousFullRules = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L26">  public List&lt;AccessTokenEvaluator&gt; asyncRules = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L28">  public List&lt;AccessTokenEvaluator&gt; asyncFullRules = new ArrayList&lt;&gt;();</span>
+
+  final ExecutorService executorService;
+
+  private AsyncAccessTokenAuditor runner;
+  private AsyncAccessTokenAuditor fullRunner;
+
+<span class="nc" id="L35">  List&lt;String&gt; commands = new ArrayList&lt;&gt;();</span>
+
+  public static final String RECORD = &quot;record&quot;;
+  public static final String STOP = &quot;stop&quot;;
+
+  final Recorder recordingStudio;
+
+  final ConnectedSystem connectedSystem;
+
+  final SessionTrackingService sessionTrackingService;
+
+  final ZeroTrustAccessTokenService ztatService;
+
+  public AccessTokenAuditor(
+      ZeroTrustAccessTokenService ztatService,
+      ConnectedSystem schSession, SessionTrackingService sessionTrackingService, RecordingStudio recorder) {
+<span class="nc" id="L51">    super(schSession.getUser(), schSession.getSession(), schSession.getHostSystem());</span>
+
+<span class="nc" id="L53">    this.ztatService = ztatService;</span>
+
+<span class="nc" id="L55">    this.connectedSystem = schSession;</span>
+
+<span class="nc" id="L57">    this.sessionTrackingService = sessionTrackingService;</span>
+
+<span class="nc" id="L59">    this.recordingStudio = recorder;</span>
+
+    // async thread evaluate
+<span class="nc" id="L62">    executorService = Executors.newFixedThreadPool(2);</span>
+
+<span class="nc" id="L64">  }</span>
+
+  @Override
+  protected void onPartial() {
+    // explicitly approved command
+<span class="nc" id="L69">    log.trace(&quot;on partial {}&quot;, get());</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">    if (currentTrigger.getAction() == TriggerAction.APPROVE_ACTION) {</span>
+<span class="nc" id="L71">      return;</span>
+    }
+
+<span class="nc bnc" id="L74" title="All 2 branches missed.">    if (currentTrigger.getAction() == TriggerAction.DENY_ACTION) {</span>
+<span class="nc" id="L75">      return;</span>
+    }
+<span class="nc" id="L77">    final String cstr = get();</span>
+<span class="nc" id="L78">    final String sanitized = getSantized();</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">    for (AccessTokenEvaluator rule : synchronousRules) {</span>
+      try {
+<span class="nc bnc" id="L81" title="All 2 branches missed.">        Optional&lt;Trigger&gt; result = rule.trigger(rule.requiresSanitized() ? sanitized : cstr);</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">        if (result.isPresent()) {</span>
+<span class="nc" id="L83">          Trigger trg = result.get();</span>
+<span class="nc" id="L84">          sessionTrackingService.addTrigger(connectedSystem, trg);</span>
+<span class="nc bnc" id="L85" title="All 3 branches missed.">          switch (trg.getAction()) {</span>
+            case JIT_ACTION:
+<span class="nc" id="L87">              currentTrigger = trg;</span>
+<span class="nc" id="L88">              break;</span>
+            case DENY_ACTION:
+<span class="nc" id="L90">              currentTrigger = trg;</span>
+<span class="nc" id="L91">              break;</span>
+            default:
+              break;
+          }
+        }
+<span class="nc" id="L96">      }catch (Throwable t) {</span>
+<span class="nc" id="L97">        log.error(&quot;error while evaluating rule&quot;, t);</span>
+
+<span class="nc" id="L99">      }</span>
+<span class="nc" id="L100">    }</span>
+<span class="nc" id="L101">    runner.enqueue(cstr);</span>
+    // do nothing
+<span class="nc" id="L103">  }</span>
+
+  public void setStartupActions(List&lt;SessionTokenEvaluator&gt; startupActions) {
+<span class="nc bnc" id="L106" title="All 2 branches missed.">    for (SessionTokenEvaluator action : startupActions) {</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">      if (action.describeAction() == TriggerAction.JIT_ACTION) {</span>
+<span class="nc" id="L108">        synchronousRules.add(action);</span>
+      }
+<span class="nc" id="L110">    }</span>
+<span class="nc" id="L111">  }</span>
+
+  public void setSynchronousRules(List&lt;AccessTokenEvaluator&gt; synchronousRules)
+      throws ClassNotFoundException,
+          NoSuchMethodException,
+          InvocationTargetException,
+          InstantiationException,
+          IllegalAccessException {
+<span class="nc bnc" id="L119" title="All 2 branches missed.">    for (AccessTokenEvaluator newRule : synchronousRules) {</span>
+<span class="nc bnc" id="L120" title="All 4 branches missed.">      switch (newRule.describeAction()) {</span>
+        case JIT_ACTION:
+<span class="nc bnc" id="L122" title="All 2 branches missed.">          if (newRule.onFullCommand()){</span>
+<span class="nc" id="L123">            log.info(&quot;Adding full command rule {}&quot;, newRule.getClass());</span>
+<span class="nc" id="L124">            this.asyncFullRules.add(newRule);</span>
+          }
+          else {
+<span class="nc" id="L127">            this.synchronousRules.add(newRule);</span>
+<span class="nc" id="L128">            this.asyncRules.add(newRule);</span>
+          }
+<span class="nc" id="L130">          break;</span>
+        case DENY_ACTION:
+<span class="nc" id="L132">          this.synchronousRules.add(newRule);</span>
+<span class="nc" id="L133">          break;</span>
+        case APPROVE_ACTION:
+<span class="nc" id="L135">          this.synchronousRules.add(newRule);</span>
+<span class="nc" id="L136">          break;</span>
+        default:
+<span class="nc bnc" id="L138" title="All 2 branches missed.">          if (newRule.onFullCommand()){</span>
+<span class="nc" id="L139">            log.info(&quot;Adding full command rule {}&quot;, newRule.getClass());</span>
+<span class="nc" id="L140">            this.asyncFullRules.add(newRule);</span>
+          }
+          else {
+<span class="nc" id="L143">            this.asyncRules.add(newRule);</span>
+          }
+      }
+<span class="nc" id="L146">    }</span>
+    // async runner as user types
+<span class="nc" id="L148">    runner = new AsyncAccessTokenAuditor(ztatService, asyncRules, connectedSystem, sessionTrackingService);</span>
+<span class="nc" id="L149">    executorService.submit(runner);</span>
+
+    // async runner as user types, only to evaluate full commands
+<span class="nc" id="L152">    fullRunner = new AsyncAccessTokenAuditor(ztatService, asyncFullRules, connectedSystem, sessionTrackingService);</span>
+<span class="nc" id="L153">    executorService.submit(fullRunner);</span>
+<span class="nc" id="L154">  }</span>
+
+  public void addRule(AccessTokenEvaluator rule) {
+<span class="nc" id="L157">    this.synchronousRules.add(rule);</span>
+<span class="nc" id="L158">  }</span>
+
+  @Override
+  public void shutdown() {
+<span class="nc" id="L162">    super.shutdown();</span>
+    // nothing to do here
+<span class="nc" id="L164">    executorService.shutdownNow();</span>
+<span class="nc" id="L165">  }</span>
+
+  @Override
+  public synchronized String clear(int keycode) {
+
+<span class="nc bnc" id="L170" title="All 4 branches missed.">    if (keycode == 13 &amp;&amp; currentTrigger.getAction() == TriggerAction.DENY_ACTION) {</span>
+<span class="nc bnc" id="L171" title="All 4 branches missed.">    } else if (keycode == 13 &amp;&amp; currentTrigger.getAction() == TriggerAction.RECORD_ACTION) {</span>
+<span class="nc" id="L172">      log.debug(&quot;&amp;** record no change&quot;);</span>
+    } else {
+<span class="nc" id="L174">      sessionTrackingService.addTrigger(connectedSystem, new Trigger(TriggerAction.NO_ACTION, &quot;&quot;));</span>
+
+<span class="nc" id="L176">      currentTrigger = Trigger.NO_ACTION;</span>
+    }
+<span class="nc" id="L178">    return super.clear(keycode);</span>
+  }
+
+  private boolean isRestrictedCommand() {
+<span class="nc bnc" id="L182" title="All 2 branches missed.">    return currentTrigger.getAction() == TriggerAction.JIT_ACTION</span>
+<span class="nc bnc" id="L183" title="All 2 branches missed.">        || currentTrigger.getAction() == TriggerAction.DENY_ACTION;</span>
+  }
+
+  @Override
+  protected synchronized TriggerAction submit(String command) {
+    // currentTrigger
+
+<span class="nc" id="L190">    fullRunner.enqueue(command);</span>
+<span class="nc bnc" id="L191" title="All 4 branches missed.">    if (null != recordingStudio &amp;&amp; !isRestrictedCommand()) {</span>
+
+<span class="nc" id="L193">      TriggerAction action = recordingStudio.submit(command);</span>
+<span class="nc bnc" id="L194" title="All 2 branches missed.">      if (action == TriggerAction.RECORD_ACTION) {</span>
+<span class="nc" id="L195">        currentTrigger = Trigger.RECORD_ACTION;</span>
+<span class="nc" id="L196">        return TriggerAction.RECORD_ACTION;</span>
+<span class="nc bnc" id="L197" title="All 2 branches missed.">      } else if (recordingStudio.isRecordingStarted()) {</span>
+<span class="nc" id="L198">        return TriggerAction.NO_ACTION;</span>
+      }
+    }
+
+<span class="nc bnc" id="L202" title="All 2 branches missed.">    if (currentTrigger.getAction() == TriggerAction.JIT_ACTION) {</span>
+      // need to form a ztat request
+      try {
+        // has a ztat request and not approved
+<span class="nc bnc" id="L206" title="All 2 branches missed.">        if (!ztatService.isApproved(command, user, system)) {</span>
+<span class="nc" id="L207">          log.info(&quot;on message not approved but has one {}&quot;, command);</span>
+          /*
+          if (!ztatService.hasJITRequest(command, user, system)) {
+            JITReason reason = ztatService.createReason(&quot;need &quot;, &quot; ticket &quot;, &quot; url&quot;);
+            JITRequest request = ztatService.createRequest(command, reason, connectedSystem.getUser(),
+                connectedSystem.getHostSystem()
+            );
+            request = ztatService.addJITRequest(request);
+            return TriggerAction.DENY_ACTION;
+          } else {
+            log.info(&quot;on message is approved {}&quot;, command);
+
+           */
+<span class="nc bnc" id="L220" title="All 4 branches missed.">            if (ztatService.hasJITRequest(command, user, system) &amp;&amp; !ztatService.isActive(command, user, system)) {</span>
+
+<span class="nc" id="L222">              log.info(&quot;on message is approved not active, awaiting response {}&quot;, command);</span>
+<span class="nc" id="L223">              return TriggerAction.DENY_ACTION;</span>
+            }else {
+<span class="nc bnc" id="L225" title="All 2 branches missed.">              if (ztatService.isApproved(command, user, system)) {</span>
+<span class="nc" id="L226">                ztatService.incrementUses(command, user, system);</span>
+<span class="nc" id="L227">                log.info(&quot;on message is approved {}&quot;, command);</span>
+<span class="nc" id="L228">                return TriggerAction.NO_ACTION;</span>
+              }else {
+                //ztatService.incrementUses(command, user, system);
+<span class="nc" id="L231">                ZeroTrustAccessTokenReason reason = ztatService.createReason(&quot;need &quot;, &quot; ticket &quot;, &quot; url&quot;);</span>
+<span class="nc" id="L232">                ZeroTrustAccessTokenRequest request = ztatService.createRequest(command, reason, connectedSystem.getUser(),</span>
+<span class="nc" id="L233">                    connectedSystem.getHostSystem()</span>
+                );
+<span class="nc" id="L235">                request = ztatService.addJITRequest(request);</span>
+<span class="nc" id="L236">                log.info(&quot;on message not approved, so let's wait {}&quot;, command);</span>
+<span class="nc" id="L237">                return TriggerAction.DENY_ACTION;</span>
+              }
+            }
+          //}
+
+          // keep the current trigger
+<span class="nc bnc" id="L243" title="All 2 branches missed.">        } else if (ztatService.hasJITRequest(command, user, system)){</span>
+
+<span class="nc bnc" id="L245" title="All 2 branches missed.">            if (!ztatService.isActive(command, user, system)) {</span>
+<span class="nc" id="L246">              ZeroTrustAccessTokenReason reason = ztatService.createReason(&quot;need &quot;, &quot; ticket &quot;, &quot; url&quot;);</span>
+<span class="nc" id="L247">              ZeroTrustAccessTokenRequest request = ztatService.createRequest(command, reason, connectedSystem.getUser(),</span>
+<span class="nc" id="L248">                  connectedSystem.getHostSystem()</span>
+              );
+<span class="nc" id="L250">              request = ztatService.addJITRequest(request);</span>
+<span class="nc" id="L251">              return TriggerAction.DENY_ACTION;</span>
+            } else {
+<span class="nc" id="L253">              ztatService.incrementUses(command, user, system);</span>
+<span class="nc" id="L254">              currentTrigger = Trigger.NO_ACTION;</span>
+            }
+
+
+      } else {
+
+<span class="nc" id="L260">            currentTrigger = Trigger.NO_ACTION;</span>
+        }
+
+<span class="nc" id="L263">      } catch (SQLException e) {</span>
+<span class="nc" id="L264">        log.error(&quot;error while evaluating ztat action&quot;, e);</span>
+<span class="nc" id="L265">        throw new RuntimeException(e);</span>
+<span class="nc" id="L266">      } catch (GeneralSecurityException e) {</span>
+<span class="nc" id="L267">        log.error(&quot;error while evaluating ztat action&quot;, e);</span>
+<span class="nc" id="L268">        throw new RuntimeException(e);</span>
+<span class="nc" id="L269">      } catch (Throwable t) {</span>
+<span class="nc" id="L270">        log.error(&quot;error while evaluating ztat action&quot;, t);</span>
+<span class="nc" id="L271">        throw new RuntimeException(t.getMessage());</span>
+<span class="nc" id="L272">      }</span>
+
+    } else {
+<span class="nc" id="L275">      log.trace(&quot;on message {}&quot;, command);</span>
+    }
+<span class="nc" id="L277">    return currentTrigger.getAction();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TimeConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.data</a> &gt; <span class="el_source">TimeConfig.java</span></div><h1>TimeConfig.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.data;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.sentrius.sso.core.model.hostgroup.TimeConfigJson;
+import io.sentrius.sso.core.utils.JsonUtil;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
+import lombok.extern.slf4j.Slf4j;
+
+<span class="nc" id="L26">@Slf4j</span>
+<span class="nc bnc" id="L27" title="All 98 branches missed.">@Data</span>
+@Getter
+<span class="nc" id="L29">@Setter</span>
+<span class="nc bnc" id="L30" title="All 2 branches missed.">@SuperBuilder</span>
+<span class="nc" id="L31">@NoArgsConstructor</span>
+<span class="nc" id="L32">@AllArgsConstructor</span>
+public class TimeConfig {
+
+<span class="nc" id="L35">    private Long id;</span>
+
+    @Builder.Default
+<span class="nc" id="L38">    private String uuid = UUID.randomUUID().toString();</span>
+
+<span class="nc" id="L40">    private String title;</span>
+
+<span class="nc" id="L42">    private String configurationJson;</span>
+
+<span class="nc" id="L44">    private Set&lt;Integer&gt; daysOfWeek = new HashSet&lt;&gt;();</span>
+
+<span class="nc" id="L46">    private int beginRangeHour;</span>
+
+<span class="nc" id="L48">    private int beginRangeMinute;</span>
+
+<span class="nc" id="L50">    private int beginRangeSecond;</span>
+
+<span class="nc" id="L52">    private int endRangeHour;</span>
+
+<span class="nc" id="L54">    private int endRangeMinute;</span>
+
+<span class="nc" id="L56">    private int endRangeSecond;</span>
+
+<span class="nc" id="L58">    private String startStr;</span>
+
+<span class="nc" id="L60">    private String endStr;</span>
+
+<span class="nc" id="L62">    private String startRecur;</span>
+
+<span class="nc" id="L64">    private String endRecur;</span>
+
+<span class="nc" id="L66">    private String duration;</span>
+
+    public static TimeConfig convertFromHttp(TimeConfigJson tc) throws
+        JsonProcessingException {
+<span class="nc" id="L70">        var str = tc.getConfigurationJson();</span>
+<span class="nc bnc" id="L71" title="All 4 branches missed.">        if (str == null || str.isEmpty()) {</span>
+<span class="nc" id="L72">            return null;</span>
+        }
+
+<span class="nc" id="L75">        ObjectNode node = (ObjectNode) JsonUtil.MAPPER.readTree(str);</span>
+<span class="nc" id="L76">        TimeConfig timeConfig = builder().build();</span>
+
+<span class="nc bnc" id="L78" title="All 2 branches missed.">        timeConfig.uuid = node.has(&quot;id&quot;) ? node.get(&quot;id&quot;).asText() : UUID.randomUUID().toString();</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">        timeConfig.title = node.has(&quot;title&quot;) ? node.get(&quot;title&quot;).asText() : null;</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        timeConfig.startRecur = node.has(&quot;startRecur&quot;) ? node.get(&quot;startRecur&quot;).asText() : null;</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">        timeConfig.endRecur = node.has(&quot;endRecur&quot;) ? node.get(&quot;endRecur&quot;).asText() : null;</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">        timeConfig.duration = node.has(&quot;duration&quot;) ? node.get(&quot;duration&quot;).asText() : null;</span>
+
+<span class="nc bnc" id="L84" title="All 2 branches missed.">        if (node.has(&quot;daysOfWeek&quot;)) {</span>
+<span class="nc" id="L85">            node.get(&quot;daysOfWeek&quot;).forEach(day -&gt; timeConfig.daysOfWeek.add(day.asInt()));</span>
+        }
+
+<span class="nc bnc" id="L88" title="All 4 branches missed.">        if (node.has(&quot;start&quot;) &amp;&amp; node.has(&quot;end&quot;)) {</span>
+<span class="nc" id="L89">            OffsetDateTime start = OffsetDateTime.parse(node.get(&quot;start&quot;).asText(), DateTimeFormatter.ISO_OFFSET_DATE_TIME);</span>
+<span class="nc" id="L90">            OffsetDateTime end = OffsetDateTime.parse(node.get(&quot;end&quot;).asText(), DateTimeFormatter.ISO_OFFSET_DATE_TIME);</span>
+
+<span class="nc" id="L92">            timeConfig.startStr = node.get(&quot;start&quot;).asText();</span>
+<span class="nc" id="L93">            timeConfig.beginRangeHour = start.getHour();</span>
+<span class="nc" id="L94">            timeConfig.beginRangeMinute = start.getMinute();</span>
+<span class="nc" id="L95">            timeConfig.beginRangeSecond = start.getSecond();</span>
+
+<span class="nc" id="L97">            timeConfig.endStr = node.get(&quot;end&quot;).asText();</span>
+<span class="nc" id="L98">            timeConfig.endRangeHour = end.getHour();</span>
+<span class="nc" id="L99">            timeConfig.endRangeMinute = end.getMinute();</span>
+<span class="nc" id="L100">            timeConfig.endRangeSecond = end.getSecond();</span>
+        }
+<span class="nc" id="L102">        return timeConfig;</span>
+    }
+
+    public void setStrings() {
+<span class="nc bnc" id="L106" title="All 4 branches missed.">        if (startStr == null || startStr.isEmpty()) {</span>
+<span class="nc" id="L107">            LocalDateTime startLDT = LocalDateTime.of(</span>
+<span class="nc" id="L108">                LocalDate.now(), LocalTime.of(beginRangeHour, beginRangeMinute, beginRangeSecond));</span>
+<span class="nc" id="L109">            OffsetDateTime startODT = OffsetDateTime.of(startLDT, getCurrentZoneOffset());</span>
+<span class="nc" id="L110">            startStr = startODT.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);</span>
+        }
+
+<span class="nc bnc" id="L113" title="All 4 branches missed.">        if (endStr == null || endStr.isEmpty()) {</span>
+<span class="nc" id="L114">            LocalDateTime endLDT = LocalDateTime.of(</span>
+<span class="nc" id="L115">                LocalDate.now(), LocalTime.of(endRangeHour, endRangeMinute, endRangeSecond));</span>
+<span class="nc" id="L116">            OffsetDateTime endODT = OffsetDateTime.of(endLDT, getCurrentZoneOffset());</span>
+<span class="nc" id="L117">            endStr = endODT.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);</span>
+        }
+<span class="nc" id="L119">    }</span>
+
+    private static ZoneOffset getCurrentZoneOffset() {
+<span class="nc" id="L122">        return ZoneId.systemDefault().getRules().getOffset(LocalDateTime.now());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

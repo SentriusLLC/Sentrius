@@ -17,17 +17,27 @@ spec:
       initContainers:
         - name: wait-for-postgres
           image: busybox
-          command: [ 'sh', '-c', 'until nc -z {{ .Release.Name }}-postgres.{{ .Release.Namespace }}.svc.cluster.local 5432; do echo waiting for postgres; sleep 2; done;' ]
-        - name: wait-for-keycloak
-          image: busybox
-          command: [ 'sh', '-c', 'until nc -z {{ .Release.Name }}-keycloak.{{ .Release.Namespace }}.svc.cluster.local
-           30081; do echo waiting for postgres; sleep 2; done;' ]
+          command: [ 'sh', '-c', 'until nc -z {{ .Release.Name }}-postgres 5432; do echo waiting for postgres; sleep 2; done;' ]
       containers:
         - name: sentrius
           image: "{{ .Values.sentrius.image.repository }}:{{ .Values.sentrius.image.tag }}"
           imagePullPolicy: {{ .Values.sentrius.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.sentrius.port }}
+          {{- if not (eq .Values.environment "gke") }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.readinessProbe.path }}
+              port: {{ .Values.healthCheck.readinessProbe.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.livenessProbe.path }}
+              port: {{ .Values.healthCheck.livenessProbe.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          {{- end }}
           volumeMounts:
             - name: config-volume
               mountPath: /config

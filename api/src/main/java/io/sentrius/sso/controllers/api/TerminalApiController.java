@@ -5,15 +5,15 @@ import java.util.ArrayList;
 import java.util.List;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.model.dto.HostSystemDTO;
-import io.sentrius.sso.core.model.dto.TerminalLogOutputDTO;
+import io.sentrius.sso.core.dto.HostSystemDTO;
+import io.sentrius.sso.core.dto.TerminalLogOutputDTO;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
-import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.SessionService;
 import io.sentrius.sso.core.services.TerminalService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import io.sentrius.sso.core.utils.AccessUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -76,7 +76,7 @@ public class TerminalApiController extends BaseController {
         connectedSystems.stream().map(connectedSystem -> {
             try {
                 var encryptedSessionId = cryptoService.encrypt(connectedSystem.getSession().getId().toString());
-                var dto = new HostSystemDTO(encryptedSessionId, connectedSystem);
+                var dto = connectedSystem.toHostSystemDTO(encryptedSessionId);
                 return dto;
             } catch (GeneralSecurityException e) {
                 e.printStackTrace();

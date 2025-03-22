@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BaseAccessTokenAuditor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.automation.auditing</a> &gt; <span class="el_source">BaseAccessTokenAuditor.java</span></div><h1>BaseAccessTokenAuditor.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.automation.auditing;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import io.sentrius.sso.core.model.HostSystem;
+import io.sentrius.sso.core.model.sessions.SessionLog;
+import io.sentrius.sso.core.model.users.User;
+
+public abstract class BaseAccessTokenAuditor {
+/*
+  protected final Long userId;
+  protected final Long sessionId;
+
+  protected final Long systemId;*/
+  protected final HostSystem system;
+  protected final SessionLog session;
+  protected final User user;
+
+<span class="nc" id="L19">  protected Trigger currentTrigger = Trigger.NO_ACTION;</span>
+
+<span class="nc" id="L21">  CommandBuilder builder = new CommandBuilder();</span>
+
+<span class="nc" id="L23">  AtomicBoolean receiveFromServer = new AtomicBoolean(false);</span>
+
+<span class="nc" id="L25">  AtomicBoolean shutdownRequested = new AtomicBoolean(false);</span>
+
+<span class="nc" id="L27">  protected AtomicReference&lt;Trigger&gt; sessionTrigger = new AtomicReference&lt;&gt;();</span>
+
+<span class="nc" id="L29">  public BaseAccessTokenAuditor(User user, SessionLog session, HostSystem system) {</span>
+<span class="nc" id="L30">    this.user = user;</span>
+<span class="nc" id="L31">    this.session = session;</span>
+<span class="nc" id="L32">    this.system = system;</span>
+
+<span class="nc" id="L34">    sessionTrigger.set(new Trigger(TriggerAction.NO_ACTION, &quot;&quot;));</span>
+<span class="nc" id="L35">  }</span>
+
+  public synchronized String clear(int keycode) {
+<span class="nc" id="L38">    String currentOutput = this.builder.toString();</span>
+<span class="nc" id="L39">    this.builder.setLength(0);</span>
+<span class="nc" id="L40">    return currentOutput;</span>
+  }
+
+  public synchronized String append(String strToAppend) {
+<span class="nc" id="L44">    this.builder.append(strToAppend);</span>
+    try {
+<span class="nc" id="L46">      onPartial();</span>
+<span class="nc" id="L47">    } catch (Exception e) {</span>
+
+<span class="nc" id="L49">    }</span>
+<span class="nc" id="L50">    return this.builder.toString();</span>
+  }
+
+  protected abstract void onPartial();
+
+  public synchronized String backspace() {
+<span class="nc bnc" id="L56" title="All 2 branches missed.">    if (!this.builder.toString().isEmpty()) {</span>
+<span class="nc" id="L57">      this.builder.deleteCharBack(1);</span>
+    }
+<span class="nc" id="L59">    return this.builder.toString();</span>
+  }
+
+  public synchronized String get() {
+<span class="nc" id="L63">    return this.builder.toString();</span>
+  }
+
+  public synchronized String getSantized() {
+<span class="nc" id="L67">    return this.builder.getSanitizedCommand();</span>
+  }
+
+  public synchronized boolean shouldReceiveFromServer() {
+<span class="nc" id="L71">    return receiveFromServer.get();</span>
+  }
+
+  public synchronized void receiveFromServer(String srvResponse) {
+<span class="nc" id="L75">    this.append(srvResponse);</span>
+<span class="nc" id="L76">    this.receiveFromServer.set(false);</span>
+<span class="nc" id="L77">  }</span>
+
+  public synchronized void setReceiveFromServer() {
+<span class="nc" id="L80">    this.receiveFromServer.set(true);</span>
+<span class="nc" id="L81">  }</span>
+
+  public synchronized TriggerAction keycode(Integer keyCode) {
+<span class="nc bnc" id="L84" title="All 6 branches missed.">    switch (keyCode) {</span>
+      case 9:
+<span class="nc" id="L86">        setReceiveFromServer();</span>
+<span class="nc" id="L87">        break;</span>
+      case 8:
+<span class="nc" id="L89">        backspace();</span>
+<span class="nc" id="L90">        break;</span>
+      case 13:
+<span class="nc" id="L92">        var resp = get();</span>
+<span class="nc" id="L93">        TriggerAction action = submit(resp);</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">        if (action == TriggerAction.NO_ACTION) {</span>
+<span class="nc" id="L95">          clear(13);</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">        } else if (action == TriggerAction.RECORD_ACTION) {</span>
+<span class="nc" id="L97">          return TriggerAction.RECORD_ACTION;</span>
+        }
+        break;
+      case 38:
+      case 48:
+<span class="nc" id="L102">        clear(48);</span>
+<span class="nc" id="L103">        setReceiveFromServer();</span>
+<span class="nc" id="L104">        break;</span>
+      case 67:
+<span class="nc" id="L106">        clear(67);</span>
+      default:
+        break;
+    }
+<span class="nc" id="L110">    return TriggerAction.NO_ACTION;</span>
+  }
+
+  protected synchronized TriggerAction submit(String command) {
+<span class="nc" id="L114">    return TriggerAction.NO_ACTION;</span>
+  }
+
+  public void shutdown() {
+    // nothing to do here
+<span class="nc" id="L119">    shutdownRequested.set(true);</span>
+<span class="nc" id="L120">  }</span>
+
+  public Trigger getCurrentTrigger() {
+<span class="nc" id="L123">    return currentTrigger;</span>
+  }
+
+  public void setSessionTrigger(Trigger trigger ){
+<span class="nc" id="L127">    sessionTrigger.set(trigger);</span>
+<span class="nc" id="L128">  }</span>
+
+  public Trigger getSessionTrigger() {
+<span class="nc" id="L131">    return sessionTrigger.get();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

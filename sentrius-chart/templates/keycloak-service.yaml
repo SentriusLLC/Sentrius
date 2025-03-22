@@ -2,17 +2,32 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Release.Name }}-keycloak
+  namespace: {{ .Values.tenant }}
+  annotations:
+    {{- if eq .Values.environment "gke" }}
+    cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
+    {{- else if eq .Values.environment "aws" }}
+    {{- range $key, $value := .Values.keycloak.annotations.aws }}
+    {{ $key }}: "{{ $value }}"
+    {{- end }}
+    {{- else if eq .Values.environment "azure" }}
+    {{- range $key, $value := .Values.keycloak.annotations.azure }}
+    {{ $key }}: "{{ $value }}"
+    {{- end }}
+    {{- end }}
   labels:
     app: keycloak
     release: {{ .Release.Name }}
+
 spec:
-  type: NodePort
+  type: {{ .Values.keycloak.serviceType }}
   ports:
     - name: http
-      port: 30081
-      targetPort: 30081
-      nodePort: 30081 # NodePort range: 30000-32767
+      port: {{ .Values.keycloak.port }}
+      targetPort: {{ .Values.keycloak.port }} # Replace with the internal port Keycloak listens to
+      {{- if eq .Values.keycloak.serviceType "NodePort" }}
+      nodePort: {{ .Values.keycloak.nodePort | default 30081  }}
+      {{- end }}
   selector:
     app: keycloak
     release: {{ .Release.Name }}
-

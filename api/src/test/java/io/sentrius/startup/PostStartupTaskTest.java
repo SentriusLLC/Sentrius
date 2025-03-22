@@ -1,16 +1,13 @@
 package io.sentrius.startup;
 
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
-
 import com.jcraft.jsch.JSchException;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.ConfigurationOption;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.repository.*;
-import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.startup.ConfigurationApplicationTask;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BaseScript.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.automation</a> &gt; <span class="el_source">BaseScript.java</span></div><h1>BaseScript.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.automation;
+
+import java.util.Objects;
+import java.util.Properties;
+import java.util.Set;
+
+<span class="nc" id="L7">public abstract class BaseScript implements AutomationPlugin {</span>
+<span class="nc" id="L8">  public String SHELL_LOCATION = &quot;shell.script.location.dir&quot;;</span>
+
+<span class="nc" id="L10">  public String SHELL_SCRIPT_NAME = &quot;shell.script.location.name&quot;;</span>
+
+<span class="nc" id="L12">  public String SHELL_ARGUMENTS = &quot;shell.script.argumentString&quot;;</span>
+  protected String shellScriptPath;
+  protected String shellScriptName;
+  protected String shellArguments;
+
+  @Override
+  public Set&lt;String&gt; expectedProperties() {
+<span class="nc" id="L19">    return Set.of(SHELL_LOCATION, SHELL_SCRIPT_NAME, SHELL_ARGUMENTS);</span>
+  }
+
+  @Override
+  public Properties configure(Properties configure) {
+<span class="nc" id="L24">    var shellScriptLoc = configure.get(SHELL_LOCATION);</span>
+<span class="nc" id="L25">    Objects.requireNonNull(shellScriptLoc);</span>
+<span class="nc" id="L26">    var shellScriptName = configure.get(SHELL_SCRIPT_NAME);</span>
+<span class="nc" id="L27">    Objects.requireNonNull(shellScriptName);</span>
+<span class="nc" id="L28">    var shellArguments = configure.get(SHELL_ARGUMENTS);</span>
+<span class="nc" id="L29">    Objects.requireNonNull(shellArguments);</span>
+<span class="nc" id="L30">    this.shellScriptPath = shellScriptLoc.toString();</span>
+<span class="nc" id="L31">    this.shellScriptName = shellScriptName.toString();</span>
+<span class="nc" id="L32">    this.shellArguments = shellArguments.toString();</span>
+<span class="nc" id="L33">    return configure;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

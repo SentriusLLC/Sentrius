@@ -19,5 +19,5 @@ COPY ./realms/sentrius-realm.json /opt/keycloak/data/import/sentrius-realm.json
 RUN ls -l /opt/keycloak/data/import/sentrius-realm.json
 
 ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
-CMD ["start-dev", "--proxy=passthrough", "--import-realm", "--health-enabled=true"]
+CMD ["start-dev", "--proxy=passthrough", "--import-realm", "--import-realm-overwrite=true", "--health-enabled=true"]
 

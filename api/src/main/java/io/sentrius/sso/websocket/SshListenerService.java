@@ -1,9 +1,9 @@
 package io.sentrius.sso.websocket;
 import io.sentrius.sso.automation.auditing.Trigger;
 import io.sentrius.sso.automation.auditing.TriggerAction;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.protobuf.Session;
 import io.sentrius.sso.core.model.ConnectedSystem;
-import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

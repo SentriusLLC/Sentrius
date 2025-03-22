@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GitHubService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.integrations.ticketing</a> &gt; <span class="el_source">GitHubService.java</span></div><h1>GitHubService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.integrations.ticketing;
+
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
+
+public class GitHubService {
+    private final RestTemplate restTemplate;
+
+    private String apiUrl;
+
+
+    private String token;
+
+<span class="nc" id="L20">    public GitHubService(RestTemplateBuilder builder) {</span>
+<span class="nc" id="L21">        this.restTemplate = builder.build();</span>
+<span class="nc" id="L22">    }</span>
+
+    public boolean isIssueOpen(String owner, String repo, int issueNumber) {
+<span class="nc" id="L25">        String url = String.format(&quot;%s/repos/%s/%s/issues/%d&quot;, apiUrl, owner, repo, issueNumber);</span>
+
+<span class="nc" id="L27">        HttpHeaders headers = new HttpHeaders();</span>
+<span class="nc" id="L28">        headers.setBearerAuth(token); // Add GitHub personal access token for authentication</span>
+<span class="nc" id="L29">        headers.setContentType(MediaType.APPLICATION_JSON);</span>
+
+<span class="nc" id="L31">        HttpEntity&lt;Void&gt; requestEntity = new HttpEntity&lt;&gt;(headers);</span>
+<span class="nc" id="L32">        ResponseEntity&lt;String&gt; response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, String.class);</span>
+
+<span class="nc bnc" id="L34" title="All 2 branches missed.">        if (response.getStatusCode() == HttpStatus.OK) {</span>
+<span class="nc" id="L35">            String body = response.getBody();</span>
+<span class="nc bnc" id="L36" title="All 4 branches missed.">            return body != null &amp;&amp; body.contains(&quot;\&quot;state\&quot;:\&quot;open\&quot;&quot;);</span>
+        } else {
+<span class="nc" id="L38">            throw new RuntimeException(&quot;Failed to fetch GitHub issue: &quot; + response.getStatusCode());</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

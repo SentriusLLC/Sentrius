@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AutomationAccessEnum.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.model.security.enums</a> &gt; <span class="el_source">AutomationAccessEnum.java</span></div><h1>AutomationAccessEnum.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.model.security.enums;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+<span class="fc" id="L7">public enum AutomationAccessEnum {</span>
+<span class="fc" id="L8">  CAN_VIEW_AUTOMATION(1),</span>
+
+<span class="fc" id="L10">  CAN_EDIT_AUTOMATION(3),</span>
+
+<span class="fc" id="L12">  CAN_DEL_AUTOMATION(7),</span>
+
+<span class="fc" id="L14">  CAN_RUN_AUTOMATION(9),</span>
+
+<span class="fc" id="L16">  CAN_MANAGE_AUTOMATION(15);</span>
+
+  private final int value;
+
+<span class="fc" id="L20">  AutomationAccessEnum(int i) {</span>
+<span class="fc" id="L21">    value = i;</span>
+<span class="fc" id="L22">  }</span>
+
+  public static AutomationAccessEnum of(List&lt;String&gt; userAccessList) {
+<span class="nc" id="L25">    int value = 0;</span>
+<span class="nc bnc" id="L26" title="All 2 branches missed.">    for (var accessEnum : values()) {</span>
+<span class="nc bnc" id="L27" title="All 2 branches missed.">      if (userAccessList.contains(accessEnum.name())) {</span>
+<span class="nc" id="L28">        value = value | accessEnum.getValue();</span>
+      }
+    }
+<span class="nc" id="L31">    return AutomationAccessEnum.of(value);</span>
+  }
+
+  public int getValue() {
+<span class="fc" id="L35">    return value;</span>
+  }
+
+  public Set&lt;String&gt; getAccessStrings() {
+<span class="fc" id="L39">    Set&lt;String&gt; accessStrings = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L40" title="All 2 branches covered.">    for (var accessEnum : values()) {</span>
+<span class="pc bpc" id="L41" title="1 of 2 branches missed.">      if ((value &amp; accessEnum.getValue()) == accessEnum.getValue()) {</span>
+<span class="fc" id="L42">        accessStrings.add(accessEnum.name());</span>
+      }
+    }
+<span class="fc" id="L45">    return accessStrings;</span>
+  }
+
+  public static AutomationAccessEnum of(int value) {
+<span class="nc bnc" id="L49" title="All 2 branches missed.">    for (var accessEnum : values()) {</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">      if (accessEnum.getValue() == value) {</span>
+<span class="nc" id="L51">        return accessEnum;</span>
+      }
+    }
+<span class="nc" id="L54">    return null;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

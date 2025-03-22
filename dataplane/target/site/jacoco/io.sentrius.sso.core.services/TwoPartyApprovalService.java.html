@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TwoPartyApprovalService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services</a> &gt; <span class="el_source">TwoPartyApprovalService.java</span></div><h1>TwoPartyApprovalService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services;
+
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.sentrius.sso.core.model.HostSystem;
+import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
+import io.sentrius.sso.core.model.security.enums.SystemOperationsEnum;
+import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
+import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenRequest;
+import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
+import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
+import io.sentrius.sso.core.utils.MessagingUtil;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.NonNull;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.security.GeneralSecurityException;
+import java.sql.SQLException;
+
+@Service
+public class TwoPartyApprovalService {
+
+    private final TwoPartyApprovalConfigService configService;
+    private final ZeroTrustRequestService ztatRequestService;
+    private final ObjectMapper objectMapper;
+    private final ZeroTrustAccessTokenService ztatService;
+
+<span class="nc" id="L31">    private static HostSystem SENTRIUS_SYS = HostSystem.builder().id(-1L).build();</span>
+
+    public TwoPartyApprovalService(TwoPartyApprovalConfigService configService, ZeroTrustRequestService ztatRequestService,
+<span class="nc" id="L34">                                   ObjectMapper objectMapper, ZeroTrustAccessTokenService ztatService) {</span>
+<span class="nc" id="L35">        this.configService = configService;</span>
+<span class="nc" id="L36">        this.ztatRequestService = ztatRequestService;</span>
+<span class="nc" id="L37">        this.objectMapper = objectMapper;</span>
+<span class="nc" id="L38">        this.ztatService = ztatService;</span>
+<span class="nc" id="L39">    }</span>
+
+    @Transactional
+    public String validateApproval(
+<span class="nc bnc" id="L43" title="All 2 branches missed.">        @NonNull SystemOperationsEnum systemOperationsEnum,</span>
+<span class="nc bnc" id="L44" title="All 2 branches missed.">        @NonNull HttpServletRequest request,</span>
+<span class="nc bnc" id="L45" title="All 2 branches missed.">        @NonNull User requestingUser,</span>
+<span class="nc bnc" id="L46" title="All 2 branches missed.">        @NonNull ZeroTrustAccessTokenEnum.OpsIfc lambda) throws ServletException {</span>
+
+<span class="nc" id="L48">        return validateApproval(systemOperationsEnum, request, requestingUser, lambda, null);</span>
+    }
+
+    @Transactional
+    public String validateApproval(
+<span class="nc bnc" id="L53" title="All 2 branches missed.">        @NonNull SystemOperationsEnum systemOperationsEnum,</span>
+<span class="nc bnc" id="L54" title="All 2 branches missed.">        @NonNull HttpServletRequest request,</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">        @NonNull User requestingUser,</span>
+<span class="nc bnc" id="L56" title="All 2 branches missed.">        @NonNull ZeroTrustAccessTokenEnum.OpsIfc lambda,</span>
+        String friendlyName) throws ServletException {
+
+<span class="nc" id="L59">        var twoPartyApprovalConfig = configService.getApprovalConfig(systemOperationsEnum);</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">        if (twoPartyApprovalConfig.isRequireApproval()) {</span>
+<span class="nc" id="L61">            String referrer = request.getHeader(&quot;Referer&quot;);</span>
+
+<span class="nc bnc" id="L63" title="All 2 branches missed.">            if (twoPartyApprovalConfig.isRequireExplanation()) {</span>
+                // TODO: Handle explanation logic
+<span class="nc" id="L65">                return &quot;redirect:&quot; + referrer;</span>
+            } else {
+<span class="nc" id="L67">                var objectNode = objectMapper.createObjectNode();</span>
+<span class="nc" id="L68">                objectNode.put(&quot;operation&quot;, systemOperationsEnum.toString());</span>
+<span class="nc" id="L69">                StringBuilder referralUri = new StringBuilder();</span>
+
+<span class="nc" id="L71">                request.getParameterMap().forEach((key, value) -&gt; {</span>
+<span class="nc bnc" id="L72" title="All 6 branches missed.">                    if (!key.equals(&quot;_csrf&quot;) &amp;&amp; !key.equals(&quot;messageId&quot;) &amp;&amp; !key.equals(&quot;errorId&quot;)) {</span>
+<span class="nc" id="L73">                        objectNode.put(key, value[0]);</span>
+<span class="nc" id="L74">                        referralUri.append(&quot;&amp;&quot;).append(key).append(&quot;=&quot;).append(value[0]);</span>
+                    }
+<span class="nc" id="L76">                });</span>
+
+<span class="nc" id="L78">                objectNode.put(&quot;requestingUser&quot;, requestingUser.getUsername());</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">                if (StringUtils.isNotEmpty(friendlyName)) {</span>
+<span class="nc" id="L80">                    objectNode.put(&quot;friendlyName&quot;, friendlyName);</span>
+                }
+
+<span class="nc" id="L83">                ZeroTrustAccessTokenReason reason = ZeroTrustAccessTokenReason.builder()</span>
+<span class="nc" id="L84">                    .commandNeed(systemOperationsEnum.toString())</span>
+<span class="nc" id="L85">                    .build();</span>
+
+<span class="nc" id="L87">                ZeroTrustAccessTokenRequest ztatRequest = ZeroTrustAccessTokenRequest.builder()</span>
+<span class="nc" id="L88">                    .system(HostSystem.builder().id(-1L).build())</span>
+<span class="nc" id="L89">                    .command(objectNode.toString())</span>
+<span class="nc" id="L90">                    .user(requestingUser)</span>
+<span class="nc" id="L91">                    .ztatReason(reason)</span>
+<span class="nc" id="L92">                    .build();</span>
+
+                try {
+<span class="nc" id="L95">                    return handleApprovalRequest(requestingUser, objectNode.toString(), referrer, referralUri, lambda, ztatRequest);</span>
+<span class="nc" id="L96">                } catch (SQLException | GeneralSecurityException e) {</span>
+<span class="nc" id="L97">                    throw new RuntimeException(e);</span>
+                }
+            }
+        } else {
+<span class="nc" id="L101">            return lambda.approved(0L);</span>
+        }
+    }
+
+    private String handleApprovalRequest(User requestingUser, String command, String referrer, StringBuilder referralUri, ZeroTrustAccessTokenEnum.OpsIfc lambda, ZeroTrustAccessTokenRequest ztatRequest) throws SQLException, GeneralSecurityException {
+<span class="nc bnc" id="L106" title="All 2 branches missed.">        if (ztatRequestService.hasJITRequest(command, requestingUser.getId(), -1L)) {</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">            if (!ztatService.isExpired(command, requestingUser, SENTRIUS_SYS)) {</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">                if (ztatService.isApproved(command, requestingUser, SENTRIUS_SYS)) {</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">                    if (ztatService.isActive(command, requestingUser, SENTRIUS_SYS)) {</span>
+<span class="nc" id="L110">                        ztatService.incrementUses(command, requestingUser, SENTRIUS_SYS);</span>
+<span class="nc" id="L111">                        return lambda.approved(0L);</span>
+                    } else {
+<span class="nc" id="L113">                        ztatRequestService.addJITRequest(ztatRequest);</span>
+<span class="nc" id="L114">                        return createRedirect(referrer, referralUri, MessagingUtil.REQUIRE_APPROVAL);</span>
+                    }
+<span class="nc bnc" id="L116" title="All 2 branches missed.">                } else if (ztatService.isDenied(command, requestingUser, SENTRIUS_SYS)) {</span>
+<span class="nc" id="L117">                    return createRedirect(referrer, referralUri, MessagingUtil.DENIED);</span>
+                } else {
+<span class="nc" id="L119">                    return createRedirect(referrer, referralUri, MessagingUtil.AWAITING_APPROVAL);</span>
+                }
+            }
+        }
+
+<span class="nc" id="L124">        ztatRequestService.addJITRequest(ztatRequest);</span>
+<span class="nc" id="L125">        lambda.created(ztatRequest.getId());</span>
+<span class="nc" id="L126">        return createRedirect(referrer, referralUri, MessagingUtil.REQUIRE_APPROVAL);</span>
+    }
+
+    private String createRedirect(String referrer, StringBuilder referralUri, String messageId) {
+<span class="nc" id="L130">        return &quot;redirect:&quot; + referrer + &quot;?messageId=&quot; + MessagingUtil.getMessageId(messageId) + referralUri;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,591 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TerminalService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services</a> &gt; <span class="el_source">TerminalService.java</span></div><h1>TerminalService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.lang.reflect.InvocationTargetException;
+import java.security.GeneralSecurityException;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import com.jcraft.jsch.Channel;
+import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.ChannelShell;
+import com.jcraft.jsch.HostKey;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
+import io.sentrius.sso.automation.auditing.AccessTokenAuditor;
+import io.sentrius.sso.automation.auditing.AccessTokenEvaluator;
+import io.sentrius.sso.automation.auditing.RuleFactory;
+import io.sentrius.sso.automation.auditing.SessionTokenEvaluator;
+import io.sentrius.sso.automation.auditing.TriggerAction;
+import io.sentrius.sso.automation.auditing.rules.SudoPrevention;
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.data.SchUserInfo;
+import io.sentrius.sso.core.data.auditing.RecordingStudio;
+import io.sentrius.sso.core.model.ApplicationKey;
+import io.sentrius.sso.core.model.ConnectedSystem;
+import io.sentrius.sso.core.model.HostSystem;
+import io.sentrius.sso.core.model.hostgroup.ProfileConfiguration;
+import io.sentrius.sso.core.model.hostgroup.ProfileRule;
+import io.sentrius.sso.core.model.security.SessionRule;
+import io.sentrius.sso.core.model.sessions.SessionLog;
+import io.sentrius.sso.core.model.sessions.SessionOutput;
+import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.model.users.UserPublicKey;
+import io.sentrius.sso.core.model.hostgroup.HostGroup;
+import io.sentrius.sso.core.repository.ApplicationKeyRepository;
+import io.sentrius.sso.core.repository.SystemRepository;
+import io.sentrius.sso.core.services.automation.AutomationService;
+import io.sentrius.sso.core.services.security.KeyStoreService;
+import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
+import io.sentrius.sso.core.services.terminal.SessionTrackingService;
+import io.sentrius.sso.core.utils.SecureShellTask;
+import jakarta.annotation.PreDestroy;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationContext;
+import org.springframework.stereotype.Service;
+
+<span class="nc" id="L57">@Slf4j</span>
+@Service
+<span class="nc" id="L59">@RequiredArgsConstructor</span>
+public class TerminalService {
+
+    protected final SystemOptions systemOptions;
+    protected final SessionService sessionService;
+    protected final ApplicationKeyRepository applicationKeyRepository;
+    protected final SessionTrackingService sessionOutputService;
+    protected final SecureShellTask secureShellTask;
+    protected final AutomationService automationService;
+    protected final UserPublicKeyService userPublicKeyService;
+    protected final KeyStoreService keyStoreService;
+    protected final ZeroTrustAccessTokenService ztatService;
+    protected final ApplicationContext applicationContext;
+    protected final KnownHostService knownHostService;
+
+    public static final int SESSION_TIMEOUT = 60000;
+    public static final int CHANNEL_TIMEOUT = 60000;
+
+
+
+    public static final String PRIVATE_KEY = &quot;privateKey&quot;;
+    public static final String PUBLIC_KEY = &quot;publicKey&quot;;
+    private final SessionTrackingService sessionTrackingService;
+    private final SystemRepository systemRepository;
+
+    public ConnectedSystem openTerminal(
+        User user,
+        SessionLog sessionLog,
+        HostGroup enclave,
+        String passphrase,
+        String password,
+        HostSystem selectedSystem, List&lt;SessionTokenEvaluator&gt; sessionRules
+    ) throws SQLException, GeneralSecurityException {
+<span class="nc" id="L92">        return openTerminal(user, sessionLog, enclave, passphrase, password, selectedSystem, sessionRules, false);</span>
+    }
+
+
+    public ConnectedSystem openTerminal(
+        User user,
+        SessionLog sessionLog,
+        HostGroup enclave,
+        String passphrase,
+        String password,
+        HostSystem selectedSystem, List&lt;SessionTokenEvaluator&gt; sessionRules, boolean fetchedHostKey
+    )
+        throws SQLException, GeneralSecurityException {
+
+<span class="nc" id="L106">        Map&lt;String, PluggableServices&gt; servicesMap = applicationContext.getBeansOfType(PluggableServices.class);</span>
+<span class="nc" id="L107">        Map&lt;String, PluggableServices&gt; services = applicationContext.getBeansOfType(PluggableServices.class);</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">        for (Map.Entry&lt;String, PluggableServices&gt; entry : servicesMap.entrySet()) {</span>
+<span class="nc" id="L109">            String beanName = entry.getValue().getName();</span>
+<span class="nc" id="L110">            PluggableServices service = entry.getValue();</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">            if (service.isEnabled()) {</span>
+<span class="nc" id="L112">                services.put(beanName, service);</span>
+<span class="nc" id="L113">                log.info(&quot;Processing service with bean name: &quot; + beanName);</span>
+<span class="nc" id="L114">                log.info(&quot;Service name: &quot; + service.getName());</span>
+            }
+<span class="nc" id="L116">        }</span>
+
+
+<span class="nc" id="L119">        JSch jsch = new JSch();</span>
+
+        final var schSession =
+<span class="nc" id="L122">            ConnectedSystem.builder().hostSystem(selectedSystem).enclave(enclave).user(user).session(sessionLog).build();</span>
+
+        try {
+<span class="nc" id="L125">            ApplicationKey appKey = keyStoreService.getGlobalKey();</span>
+            // check to see if passphrase has been provided
+<span class="nc bnc" id="L127" title="All 4 branches missed.">            if (passphrase == null || passphrase.trim().equals(&quot;&quot;)) {</span>
+<span class="nc" id="L128">                passphrase = appKey.getPassphrase();</span>
+                // check for null inorder to use key without passphrase
+<span class="nc bnc" id="L130" title="All 2 branches missed.">                if (passphrase == null) {</span>
+<span class="nc" id="L131">                    passphrase = &quot;&quot;;</span>
+                }
+            }
+
+<span class="nc bnc" id="L135" title="All 2 branches missed.">            if (null == selectedSystem.getStatusCd() ||</span>
+<span class="nc bnc" id="L136" title="All 2 branches missed.">                !selectedSystem.getStatusCd().equals(HostSystem.SUCCESS_STATUS)) {</span>
+<span class="nc" id="L137">                log.info(&quot;System is not ready for connection: &quot; + selectedSystem.getDisplayName());</span>
+<span class="nc" id="L138">                authorizePublicKey(selectedSystem, enclave, passphrase, password);</span>
+            }
+
+
+            // add private key
+<span class="nc" id="L143">            jsch.addIdentity(</span>
+<span class="nc" id="L144">                appKey.getId().toString(),</span>
+<span class="nc" id="L145">                appKey.getPrivateKey().trim().getBytes(),</span>
+<span class="nc" id="L146">                appKey.getPublicKey().getBytes(),</span>
+<span class="nc" id="L147">                passphrase.getBytes());</span>
+
+            // create session
+<span class="nc" id="L150">            log.info(&quot;Connecting to system: &quot; + schSession.getHostSystem().getDisplayName());</span>
+<span class="nc" id="L151">            Session session =</span>
+<span class="nc" id="L152">                jsch.getSession(selectedSystem.getSshUser(), schSession.getHostSystem().getHost(),</span>
+<span class="nc" id="L153">                    schSession.getHostSystem().getPort());</span>
+<span class="nc" id="L154">            SchUserInfo userInfo = SchUserInfo.builder().build();</span>
+<span class="nc" id="L155">            session.setUserInfo(userInfo);</span>
+            // set password if it exists
+<span class="nc bnc" id="L157" title="All 4 branches missed.">            if (password != null &amp;&amp; !password.trim().equals(&quot;&quot;)) {</span>
+<span class="nc" id="L158">                session.setPassword(password);</span>
+            } else {
+<span class="nc" id="L160">                log.info(&quot;Using public key for user {} ; {}&quot;, schSession.getUser().getUsername(),appKey.getPublicKey());</span>
+            }
+<span class="nc bnc" id="L162" title="All 2 branches missed.">            if (systemOptions.getTestMode()) {</span>
+<span class="nc" id="L163">                session.setConfig(&quot;StrictHostKeyChecking&quot;, &quot;no&quot;);</span>
+            }
+<span class="nc" id="L165">            Set&lt;ProfileRule&gt; rules = enclave.getRules();</span>
+
+            // rules that are in-line with data/command processing
+<span class="nc" id="L168">            List&lt;AccessTokenEvaluator&gt; synchronousRules = new ArrayList&lt;&gt;();</span>
+            // rules that are ONLY before a session begins.
+<span class="nc" id="L170">            List&lt;SessionTokenEvaluator&gt; definedSessionRules = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L172">            RuleFactory.createRules(systemOptions, schSession, sessionTrackingService,</span>
+<span class="nc" id="L173">                rules.stream().collect(Collectors.toList()),</span>
+                synchronousRules, definedSessionRules, services);
+
+
+<span class="nc" id="L177">            sessionRules.addAll(definedSessionRules);</span>
+
+<span class="nc bnc" id="L179" title="All 2 branches missed.">            for(var rule : sessionRules){</span>
+<span class="nc" id="L180">                rule.setConnectedSystem(schSession);</span>
+<span class="nc" id="L181">                rule.setTrackingService(sessionTrackingService);</span>
+<span class="nc" id="L182">                var trg = rule.trigger(&quot;&quot;);</span>
+<span class="nc bnc" id="L183" title="All 2 branches missed.">                    if (trg.get().getAction() == TriggerAction.DENY_ACTION){</span>
+<span class="nc" id="L184">                        return schSession;</span>
+                    }
+
+<span class="nc" id="L187">            }</span>
+
+<span class="nc" id="L189">            schSession.setSessionStartupActions(sessionRules);</span>
+
+<span class="nc" id="L191">            var serverAliveInterval = systemOptions.getServerAliveInterval() * 1000;</span>
+<span class="nc" id="L192">            jsch.setKnownHosts(knownHostService.getKnownHostsPath());</span>
+<span class="nc" id="L193">            session.setConfig(&quot;PreferredAuthentications&quot;, &quot;publickey,keyboard-interactive,password&quot;);</span>
+<span class="nc" id="L194">            session.setServerAliveInterval(serverAliveInterval);</span>
+<span class="nc" id="L195">            session.connect(SESSION_TIMEOUT);</span>
+<span class="nc" id="L196">            Channel channel = session.openChannel(&quot;shell&quot;);</span>
+<span class="nc bnc" id="L197" title="All 2 branches missed.">            if (&quot;true&quot;.equals(systemOptions.getAgentForwarding())){</span>
+<span class="nc" id="L198">                ((ChannelShell) channel).setAgentForwarding(true);</span>
+            }
+
+            // 80, 24, 640, 480);
+            // ((ChannelShell) channel).setPtyType(&quot;xterm-256color&quot;, 425, 81, 0, 0);
+<span class="nc" id="L203">            ((ChannelShell) channel).setPtyType(&quot;xterm-256color&quot;);</span>
+
+<span class="nc" id="L205">            InputStream outFromChannel = channel.getInputStream();</span>
+<span class="nc" id="L206">            RecordingStudio recorder = new RecordingStudio(schSession,sessionTrackingService, automationService);</span>
+<span class="nc" id="L207">            AccessTokenAuditor terminalAuditor =</span>
+                new AccessTokenAuditor(ztatService, schSession, sessionOutputService,
+                    recorder);
+
+<span class="nc" id="L211">            schSession.setChannel(channel);</span>
+<span class="nc" id="L212">            schSession.setTerminalRecorder(recorder);</span>
+<span class="nc" id="L213">            schSession.setTerminalAuditor(terminalAuditor);</span>
+            // new session output
+<span class="nc" id="L215">            SessionOutput sessionOutput = new SessionOutput(schSession);</span>
+            // need to add output here.  This is the first output
+<span class="nc" id="L217">            sessionOutputService.addOutput(sessionOutput);</span>
+<span class="nc" id="L218">            var message = userInfo.getMessage();</span>
+<span class="nc bnc" id="L219" title="All 2 branches missed.">            if (null != message ) {</span>
+<span class="nc" id="L220">                message = message.replaceAll(&quot;\n&quot;, &quot;\r\n&quot;);</span>
+<span class="nc" id="L221">                sessionOutputService.addToOutput(</span>
+<span class="nc" id="L222">                    schSession, message.toCharArray(), 0,</span>
+<span class="nc" id="L223">                    message.length()</span>
+                );
+<span class="nc" id="L225">                sessionOutputService.addToOutput(</span>
+<span class="nc" id="L226">                    schSession, message.toCharArray(), 0,</span>
+<span class="nc" id="L227">                    message.length()</span>
+                );
+            }
+
+<span class="nc" id="L231">            secureShellTask.execute(sessionOutput, outFromChannel);</span>
+
+<span class="nc" id="L233">            OutputStream inputToChannel = channel.getOutputStream();</span>
+<span class="nc" id="L234">            PrintStream commander = new PrintStream(inputToChannel, true);</span>
+
+<span class="nc" id="L236">            channel.connect();</span>
+<span class="nc" id="L237">            schSession.setOutFromChannel(outFromChannel);</span>
+<span class="nc" id="L238">            schSession.setInputToChannel(inputToChannel);</span>
+<span class="nc" id="L239">            schSession.setCommander(commander);</span>
+
+
+
+<span class="nc bnc" id="L243" title="All 2 branches missed.">            for(ProfileRule rule : rules) {</span>
+<span class="nc" id="L244">                log.info(&quot;Apply8ing {} to system&quot;, rule.getRuleName());</span>
+<span class="nc" id="L245">            }</span>
+<span class="nc bnc" id="L246" title="All 4 branches missed.">            if (null != enclave.getConfiguration() &amp;&amp; !enclave.getConfiguration().getAllowSudo()) {</span>
+<span class="nc" id="L247">                terminalAuditor.addRule(new SudoPrevention());</span>
+            }
+<span class="nc" id="L249">            terminalAuditor.setSynchronousRules(synchronousRules);</span>
+<span class="nc" id="L250">            schSession.setTerminalAuditor(terminalAuditor);</span>
+
+<span class="nc" id="L252">            schSession.setTerminalRecorder(recorder);</span>
+
+            // refresh keys for session
+<span class="nc" id="L255">            addPubKey(user, enclave, selectedSystem, session, appKey.getPublicKey());</span>
+<span class="nc" id="L256">            schSession.getHostSystem().setStatusCd(HostSystem.SUCCESS_STATUS);</span>
+            // we've connected
+<span class="nc" id="L258">            systemRepository.save(schSession.getHostSystem());</span>
+<span class="nc" id="L259">        } catch (JSchException</span>
+                 | IOException
+                 | GeneralSecurityException
+                 | ClassNotFoundException
+                 | NoSuchMethodException
+                 | InvocationTargetException
+                 | InstantiationException
+                 | IllegalAccessException ex) {
+<span class="nc" id="L267">            ex.printStackTrace();</span>
+<span class="nc" id="L268">            log.info(ex.toString(), ex);</span>
+<span class="nc" id="L269">            schSession.getHostSystem().setErrorMsg(ex.getMessage());</span>
+<span class="nc bnc" id="L270" title="All 2 branches missed.">            if (ex.getMessage().toLowerCase().contains(&quot;userauth fail&quot;)) {</span>
+<span class="nc" id="L271">                schSession.getHostSystem().setStatusCd(HostSystem.PUBLIC_KEY_FAIL_STATUS);</span>
+<span class="nc bnc" id="L272" title="All 2 branches missed.">            } else if (ex.getMessage().toLowerCase().contains(&quot;auth fail&quot;)</span>
+<span class="nc bnc" id="L273" title="All 2 branches missed.">                || ex.getMessage().toLowerCase().contains(&quot;auth cancel&quot;)) {</span>
+<span class="nc" id="L274">                ex.printStackTrace();</span>
+<span class="nc" id="L275">                schSession.getHostSystem().setStatusCd(HostSystem.AUTH_FAIL_STATUS);</span>
+<span class="nc bnc" id="L276" title="All 2 branches missed.">            } else if (ex.getMessage().toLowerCase().contains(&quot;reject hostkey&quot;)) {</span>
+                // host key has been changed.
+<span class="nc bnc" id="L278" title="All 2 branches missed.">                if (!fetchedHostKey) {</span>
+<span class="nc" id="L279">                    schSession.getHostSystem().setStatusCd(HostSystem.PUBLIC_KEY_FAIL_STATUS);</span>
+<span class="nc" id="L280">                    systemRepository.save(schSession.getHostSystem());</span>
+<span class="nc" id="L281">                    log.info(&quot;Failed to connect to system: &quot; + schSession.getHostSystem().getDisplayName());</span>
+                    // remove the tracking
+<span class="nc" id="L283">                    sessionOutputService.removeOutput(schSession);</span>
+                    //sessionService.closeSession(sessionLog);
+<span class="nc" id="L285">                    ApplicationKey appKey = null;</span>
+                    try {
+<span class="nc" id="L287">                        appKey = keyStoreService.getGlobalKey();</span>
+<span class="nc" id="L288">                    } catch (JSchException e) {</span>
+<span class="nc" id="L289">                        throw new RuntimeException(e);</span>
+<span class="nc" id="L290">                    } catch (IOException e) {</span>
+<span class="nc" id="L291">                        throw new RuntimeException(e);</span>
+<span class="nc" id="L292">                    }</span>
+<span class="nc" id="L293">                    fetchHostKey(selectedSystem, appKey, passphrase, password);</span>
+
+<span class="nc" id="L295">                    return openTerminal(user, sessionLog, enclave, passphrase, password, selectedSystem,</span>
+                        sessionRules, true
+                    );
+                } else {
+<span class="nc" id="L299">                    schSession.getHostSystem().setStatusCd(HostSystem.PUBLIC_KEY_FAIL_STATUS);</span>
+                }
+<span class="nc bnc" id="L301" title="All 2 branches missed.">            } else if (ex.getMessage().toLowerCase().contains(&quot;hostkey has been changed&quot;)) {</span>
+<span class="nc bnc" id="L302" title="All 2 branches missed.">                if (enclave.getConfiguration().getAutoApproveChangingHostKey()) {</span>
+                    // we need to add the host key to known hosts
+<span class="nc bnc" id="L304" title="All 2 branches missed.">                    if (!fetchedHostKey) {</span>
+<span class="nc" id="L305">                        schSession.getHostSystem().setStatusCd(HostSystem.PUBLIC_KEY_FAIL_STATUS);</span>
+<span class="nc" id="L306">                        systemRepository.save(schSession.getHostSystem());</span>
+<span class="nc" id="L307">                        log.info(&quot;Failed to connect to system: &quot; + schSession.getHostSystem().getDisplayName());</span>
+                        // remove the tracking
+<span class="nc" id="L309">                        sessionOutputService.removeOutput(schSession);</span>
+                        //sessionService.closeSession(sessionLog);
+<span class="nc" id="L311">                        ApplicationKey appKey = null;</span>
+                        try {
+<span class="nc" id="L313">                            appKey = keyStoreService.getGlobalKey();</span>
+<span class="nc" id="L314">                        } catch (JSchException e) {</span>
+<span class="nc" id="L315">                            throw new RuntimeException(e);</span>
+<span class="nc" id="L316">                        } catch (IOException e) {</span>
+<span class="nc" id="L317">                            throw new RuntimeException(e);</span>
+<span class="nc" id="L318">                        }</span>
+<span class="nc" id="L319">                        fetchHostKey(selectedSystem, appKey, passphrase, password);</span>
+
+<span class="nc" id="L321">                        return openTerminal(user, sessionLog, enclave, passphrase, password, selectedSystem,</span>
+                            sessionRules, true
+                        );
+                    } else {
+<span class="nc" id="L325">                        log.info(&quot;Host key has changed and auto approve is not enabled 2&quot;);</span>
+<span class="nc" id="L326">                        schSession.getHostSystem().setStatusCd(HostSystem.PUBLIC_KEY_FAIL_STATUS);</span>
+                    }
+                } else {
+<span class="nc" id="L329">                    log.info(&quot;Host key has changed and auto approve is not enabled&quot;);</span>
+<span class="nc" id="L330">                    schSession.getHostSystem().setStatusCd(HostSystem.PUBLIC_KEY_FAIL_STATUS);</span>
+                }
+<span class="nc bnc" id="L332" title="All 2 branches missed.">            } else if (ex.getMessage().toLowerCase().contains(&quot;unknownhostexception&quot;)) {</span>
+<span class="nc" id="L333">                schSession.getHostSystem().setErrorMsg(&quot;DNS Lookup Failed&quot;);</span>
+<span class="nc" id="L334">                schSession.getHostSystem().setStatusCd(HostSystem.HOST_FAIL_STATUS);</span>
+            } else {
+<span class="nc" id="L336">                schSession.getHostSystem().setStatusCd(HostSystem.GENERIC_FAIL_STATUS);</span>
+            }
+<span class="nc" id="L338">        }</span>
+
+        // add session to map
+<span class="nc bnc" id="L341" title="All 2 branches missed.">        if (!schSession.getHostSystem().getStatusCd().equals(HostSystem.SUCCESS_STATUS)) {</span>
+<span class="nc" id="L342">            systemRepository.save(schSession.getHostSystem());</span>
+<span class="nc" id="L343">            log.info(&quot;Failed to connect to system: &quot; + schSession.getHostSystem().getDisplayName());</span>
+            // remove the tracking
+<span class="nc" id="L345">            sessionOutputService.removeOutput(schSession);</span>
+<span class="nc" id="L346">            sessionService.closeSession(sessionLog);</span>
+           /*
+            // get the server maps for user
+            UserSchSessions userSchSessions = userSessionMap.get(sessionId);
+
+            // if no user session create a new one
+            if (userSchSessions == null) {
+                userSchSessions = new UserSchSessions();
+            }
+            Map&lt;Integer, SchSession&gt; schSessionMap = userSchSessions.getSchSessionMap();
+
+            // add server information
+            schSessionMap.put(instanceId, schSession);
+            userSchSessions.setSchSessionMap(schSessionMap);
+            // add back to map
+            userSessionMap.put(sessionId, userSchSessions);
+
+            */
+        } else {
+<span class="nc" id="L365">            log.info(&quot;Connected to system: &quot; + schSession.getHostSystem().getDisplayName());</span>
+            // add to tracking
+        }
+
+        //SystemStatusDB.updateSystemStatus(hostSystem, userId);
+        //SystemDB.updateSystem(hostSystem);
+
+<span class="nc" id="L372">        return schSession;</span>
+    }
+
+    protected void fetchHostKey(HostSystem hostSystem, ApplicationKey appKey, String passphrase, String password) {
+<span class="nc" id="L376">        Session session = null;</span>
+        try{
+<span class="nc" id="L378">                JSch jsch = new JSch();</span>
+
+                // Create a dummy session to fetch the host key
+            // add private key
+<span class="nc" id="L382">            jsch.addIdentity(</span>
+<span class="nc" id="L383">                appKey.getId().toString(),</span>
+<span class="nc" id="L384">                appKey.getPrivateKey().trim().getBytes(),</span>
+<span class="nc" id="L385">                appKey.getPublicKey().getBytes(),</span>
+<span class="nc" id="L386">                passphrase.getBytes());</span>
+
+            // create session
+
+<span class="nc" id="L390">                session =</span>
+<span class="nc" id="L391">                    jsch.getSession(hostSystem.getSshUser(), hostSystem.getHost(),</span>
+<span class="nc" id="L392">                        hostSystem.getPort());</span>
+<span class="nc" id="L393">                SchUserInfo userInfo = SchUserInfo.builder().build();</span>
+<span class="nc" id="L394">                session.setUserInfo(userInfo);</span>
+                // set password if it exists
+<span class="nc bnc" id="L396" title="All 4 branches missed.">                if (password != null &amp;&amp; !password.trim().equals(&quot;&quot;)) {</span>
+<span class="nc" id="L397">                    session.setPassword(password);</span>
+                }
+
+                // Disable authentication since we're only fetching the host key
+<span class="nc" id="L401">                session.setConfig(&quot;StrictHostKeyChecking&quot;, &quot;no&quot;);</span>
+<span class="nc" id="L402">                session.setConfig(&quot;UserKnownHostsFile&quot;, &quot;/dev/null&quot;);</span>
+
+
+
+                // Connect to fetch the host key
+<span class="nc" id="L407">                session.connect(5000); // Timeout in milliseconds</span>
+
+                // Get the host key
+<span class="nc" id="L410">                HostKey hostKey = session.getHostKey();</span>
+<span class="nc" id="L411">                log.info(&quot;Fetched Host Key:&quot;);</span>
+<span class="nc" id="L412">                log.info(&quot;Host: &quot; + hostKey.getHost());</span>
+<span class="nc" id="L413">                log.info(&quot;Type: &quot; + hostKey.getType());</span>
+<span class="nc" id="L414">                log.info(&quot;Key: &quot; + hostKey.getKey());</span>
+
+<span class="nc" id="L416">                knownHostService.saveHostKey(hostSystem.getHost(), hostKey.getType(), hostKey.getKey());</span>
+
+                // Disconnect session
+
+<span class="nc" id="L420">            } catch (JSchException e) {</span>
+<span class="nc" id="L421">                e.printStackTrace();</span>
+            } finally {
+<span class="nc bnc" id="L423" title="All 2 branches missed.">                if (session != null) {</span>
+<span class="nc" id="L424">                    session.disconnect();</span>
+                }
+        }
+<span class="nc" id="L427">    }</span>
+
+    /**
+     * distributes authorized keys for host system
+     *
+     * @param hostSystem object contains host system information
+     * @param passphrase ssh key passphrase
+     * @param password password to host system if needed
+     * @return status of key distribution
+     */
+    public HostSystem authorizePublicKey(
+        HostSystem hostSystem,HostGroup enclave, String passphrase, String password) {
+
+<span class="nc" id="L440">        JSch jsch = new JSch();</span>
+<span class="nc" id="L441">        Session session = null;</span>
+<span class="nc" id="L442">        hostSystem.setStatusCd(HostSystem.SUCCESS_STATUS);</span>
+        try {
+<span class="nc" id="L444">            ApplicationKey appKey = keyStoreService.getGlobalKey();</span>
+            // check to see if passphrase has been provided
+<span class="nc bnc" id="L446" title="All 4 branches missed.">            if (passphrase == null || passphrase.trim().equals(&quot;&quot;)) {</span>
+<span class="nc" id="L447">                passphrase = appKey.getPassphrase();</span>
+                // check for null inorder to use key without passphrase
+<span class="nc bnc" id="L449" title="All 2 branches missed.">                if (passphrase == null) {</span>
+<span class="nc" id="L450">                    passphrase = &quot;&quot;;</span>
+                }
+            }
+            // add private key
+<span class="nc" id="L454">            jsch.addIdentity(</span>
+<span class="nc" id="L455">                appKey.getId().toString(),</span>
+<span class="nc" id="L456">                appKey.getPrivateKey().trim().getBytes(),</span>
+<span class="nc" id="L457">                appKey.getPublicKey().getBytes(),</span>
+<span class="nc" id="L458">                passphrase.getBytes());</span>
+
+            // create session
+<span class="nc" id="L461">            session = jsch.getSession(hostSystem.getSshUser(), hostSystem.getHost(), hostSystem.getPort());</span>
+
+            // set password if passed in
+<span class="nc bnc" id="L464" title="All 4 branches missed.">            if (password != null &amp;&amp; !password.equals(&quot;&quot;)) {</span>
+<span class="nc" id="L465">                session.setPassword(password);</span>
+            }
+<span class="nc" id="L467">            session.setConfig(&quot;StrictHostKeyChecking&quot;, &quot;no&quot;);</span>
+<span class="nc" id="L468">            session.setConfig(&quot;PreferredAuthentications&quot;, &quot;publickey,keyboard-interactive,password&quot;);</span>
+<span class="nc" id="L469">            session.setServerAliveInterval(SESSION_TIMEOUT);</span>
+<span class="nc" id="L470">            session.connect(SESSION_TIMEOUT);</span>
+
+<span class="nc" id="L472">            addPubKey(null, enclave,hostSystem, session, appKey.getPublicKey());</span>
+
+<span class="nc" id="L474">        } catch (JSchException | GeneralSecurityException ex) {</span>
+<span class="nc" id="L475">            log.info(ex.toString(), ex);</span>
+<span class="nc" id="L476">            hostSystem.setErrorMsg(ex.getMessage());</span>
+<span class="nc bnc" id="L477" title="All 2 branches missed.">            if (ex.getMessage().toLowerCase().contains(&quot;userauth fail&quot;)) {</span>
+<span class="nc" id="L478">                hostSystem.setStatusCd(HostSystem.PUBLIC_KEY_FAIL_STATUS);</span>
+<span class="nc bnc" id="L479" title="All 2 branches missed.">            } else if (ex.getMessage().toLowerCase().contains(&quot;auth fail&quot;)</span>
+<span class="nc bnc" id="L480" title="All 2 branches missed.">                || ex.getMessage().toLowerCase().contains(&quot;auth cancel&quot;)) {</span>
+<span class="nc" id="L481">                hostSystem.setStatusCd(HostSystem.AUTH_FAIL_STATUS);</span>
+<span class="nc bnc" id="L482" title="All 2 branches missed.">            } else if (ex.getMessage().toLowerCase().contains(&quot;unknownhostexception&quot;)) {</span>
+<span class="nc" id="L483">                hostSystem.setErrorMsg(&quot;DNS Lookup Failed&quot;);</span>
+<span class="nc" id="L484">                hostSystem.setStatusCd(HostSystem.HOST_FAIL_STATUS);</span>
+            } else {
+<span class="nc" id="L486">                hostSystem.setStatusCd(HostSystem.GENERIC_FAIL_STATUS);</span>
+            }
+<span class="nc" id="L488">        } catch (IOException e) {</span>
+<span class="nc" id="L489">            throw new RuntimeException(e);</span>
+<span class="nc" id="L490">        }</span>
+
+<span class="nc bnc" id="L492" title="All 2 branches missed.">        if (session != null) {</span>
+<span class="nc" id="L493">            session.disconnect();</span>
+        }
+
+<span class="nc" id="L496">        return hostSystem;</span>
+    }
+
+    public  HostSystem addPubKey(User user, HostGroup enclave, HostSystem hostSystem, Session session,
+                                 String appPublicKey) {
+
+        try {
+<span class="nc" id="L503">            String authorizedKeys = hostSystem.getAuthorizedKeys().replaceAll(&quot;~\\/|~&quot;, &quot;&quot;);</span>
+
+<span class="nc" id="L505">            Channel channel = session.openChannel(&quot;exec&quot;);</span>
+<span class="nc" id="L506">            ((ChannelExec) channel).setCommand(&quot;cat &quot; + authorizedKeys);</span>
+<span class="nc" id="L507">            ((ChannelExec) channel).setErrStream(System.err);</span>
+<span class="nc" id="L508">            channel.setInputStream(null);</span>
+
+<span class="nc" id="L510">            InputStream in = channel.getInputStream();</span>
+<span class="nc" id="L511">            InputStreamReader is = new InputStreamReader(in);</span>
+<span class="nc" id="L512">            BufferedReader reader = new BufferedReader(is);</span>
+
+<span class="nc" id="L514">            channel.connect(CHANNEL_TIMEOUT);</span>
+
+<span class="nc" id="L516">            String appPubKey = appPublicKey.replace(&quot;\n&quot;, &quot;&quot;).trim();</span>
+<span class="nc" id="L517">            StringBuilder existingKeysBuilder = new StringBuilder();</span>
+
+            String currentKey;
+<span class="nc bnc" id="L520" title="All 2 branches missed.">            while ((currentKey = reader.readLine()) != null) {</span>
+<span class="nc" id="L521">                existingKeysBuilder.append(currentKey).append(&quot;\n&quot;);</span>
+            }
+<span class="nc" id="L523">            String existingKeys = existingKeysBuilder.toString();</span>
+<span class="nc" id="L524">            existingKeys = existingKeys.replaceAll(&quot;\\n$&quot;, &quot;&quot;);</span>
+<span class="nc" id="L525">            reader.close();</span>
+            // disconnect
+<span class="nc" id="L527">            channel.disconnect();</span>
+
+<span class="nc" id="L529">            StringBuilder newKeysBuilder = new StringBuilder();</span>
+<span class="nc bnc" id="L530" title="All 2 branches missed.">            if (systemOptions.getKeyManagementEnabled()) {</span>
+                // get keys assigned to system
+<span class="nc bnc" id="L532" title="All 2 branches missed.">                List&lt;UserPublicKey&gt; assignedKeys = null == user ? userPublicKeyService.getPublicKeysForHostGroup(</span>
+<span class="nc" id="L533">                    enclave.getId()) : userPublicKeyService.getPublicKeysForHostGroup(</span>
+<span class="nc" id="L534">                    user.getId(),</span>
+<span class="nc" id="L535">                    enclave.getId()</span>
+                );
+<span class="nc bnc" id="L537" title="All 2 branches missed.">                for (UserPublicKey pkey : assignedKeys) {</span>
+<span class="nc" id="L538">                    var key = pkey.getPublicKey();</span>
+<span class="nc" id="L539">                    newKeysBuilder.append(key.replace(&quot;\n&quot;, &quot;&quot;).trim()).append(&quot;\n&quot;);</span>
+<span class="nc" id="L540">                }</span>
+<span class="nc" id="L541">                newKeysBuilder.append(existingKeys);</span>
+<span class="nc" id="L542">                newKeysBuilder.append(appPubKey);</span>
+<span class="nc" id="L543">            } else {</span>
+<span class="nc bnc" id="L544" title="All 2 branches missed.">                if (existingKeys.indexOf(appPubKey) &lt; 0) {</span>
+<span class="nc" id="L545">                    newKeysBuilder.append(existingKeys).append(&quot;\n&quot;).append(appPubKey);</span>
+                } else {
+<span class="nc" id="L547">                    newKeysBuilder.append(existingKeys);</span>
+                }
+            }
+
+<span class="nc" id="L551">            String newKeys = newKeysBuilder.toString();</span>
+<span class="nc" id="L552">            log.info(&quot;Update Public Keys  ==&gt; &quot; + newKeys);</span>
+<span class="nc bnc" id="L553" title="All 2 branches missed.">            if (!newKeys.equals(existingKeys)) {</span>
+
+<span class="nc" id="L555">                channel = session.openChannel(&quot;exec&quot;);</span>
+<span class="nc" id="L556">                ((ChannelExec) channel)</span>
+<span class="nc" id="L557">                    .setCommand(</span>
+                        &quot;echo '&quot; + newKeys + &quot;' &gt; &quot; + authorizedKeys + &quot;; chmod 600 &quot; + authorizedKeys);
+<span class="nc" id="L559">                ((ChannelExec) channel).setErrStream(System.err);</span>
+<span class="nc" id="L560">                channel.setInputStream(null);</span>
+<span class="nc" id="L561">                channel.connect(CHANNEL_TIMEOUT);</span>
+                // disconnect
+<span class="nc" id="L563">                channel.disconnect();</span>
+            }
+
+<span class="nc" id="L566">        } catch (JSchException | IOException ex) {</span>
+<span class="nc" id="L567">            log.error(ex.toString(), ex);</span>
+<span class="nc" id="L568">        }</span>
+<span class="nc" id="L569">        return hostSystem;</span>
+    }
+
+    @PreDestroy
+    public void shutdown() {
+<span class="nc" id="L574">        sessionOutputService.shutdown();</span>
+<span class="nc" id="L575">    }</span>
+
+    public List&lt;SessionTokenEvaluator&gt; createRules(ProfileConfiguration configuration)
+        throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException,
+        IllegalAccessException {
+<span class="nc" id="L580">        List&lt;SessionTokenEvaluator&gt; rules = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L581" title="All 2 branches missed.">        for (SessionRule rule : configuration.getSessionRules()){</span>
+<span class="nc" id="L582">            var clazz = Class.forName(rule.getSessionRuleClass());</span>
+<span class="nc" id="L583">            var instance = clazz.asSubclass(SessionTokenEvaluator.class).getConstructor().newInstance();</span>
+<span class="nc" id="L584">            rules.add(instance);</span>
+<span class="nc" id="L585">        }</span>
+<span class="nc" id="L586">        return rules;</span>
+    }
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ZeroTrustAccessTokenApproval.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.model.zt</a> &gt; <span class="el_source">ZeroTrustAccessTokenApproval.java</span></div><h1>ZeroTrustAccessTokenApproval.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.model.zt;
+
+import io.sentrius.sso.core.model.users.User;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
+
+@Entity
+<span class="nc" id="L17">@Setter</span>
+@Getter
+@Table(name = &quot;ztat_approvals&quot;)
+<span class="nc" id="L20">public class ZeroTrustAccessTokenApproval {</span>
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L23">    private Long id;</span>
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;approver_id&quot;, nullable = false)
+<span class="nc" id="L27">    private User approver;</span>
+
+    @Column(name = &quot;approved&quot;, nullable = false)
+<span class="nc" id="L30">    private boolean approved;</span>
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;ztat_request_id&quot;, nullable = false)
+<span class="nc" id="L34">    private ZeroTrustAccessTokenRequest ztatRequest;</span>
+
+    @Column(name = &quot;uses&quot;, nullable = false)
+<span class="nc" id="L37">    private int uses;</span>
+
+    // Getters and setters
+}
+
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

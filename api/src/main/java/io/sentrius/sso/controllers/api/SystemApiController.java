@@ -9,21 +9,19 @@ import java.util.Map;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jcraft.jsch.JSchException;
 import io.sentrius.sso.automation.sideeffects.SideEffect;
-import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.model.dto.SystemOption;
-import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
-import io.sentrius.sso.core.security.service.CryptoService;
+import io.sentrius.sso.core.dto.SystemOption;
 import io.sentrius.sso.core.services.ConfigurationService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.ObfuscationService;
 import io.sentrius.sso.core.services.UserService;
-import io.sentrius.sso.startup.ConfigurationApplicationTask;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.core.utils.MessagingUtil;
 import io.sentrius.sso.install.configuration.InstallConfiguration;
+import io.sentrius.sso.startup.ConfigurationApplicationTask;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +43,7 @@ public class SystemApiController extends BaseController {
 
 
     final HostGroupService hostGroupService;
-    final CryptoService  cryptoService;
+    final CryptoService cryptoService;
     private final MessagingUtil messagingUtil;
     final ConfigurationService configurationService;
     final ObfuscationService obfuscationService;
@@ -56,12 +54,13 @@ public class SystemApiController extends BaseController {
         return systemOptions.getOptions().values().stream().toList();
     }
 
-    protected SystemApiController(UserService userService, SystemOptions systemOptions,
-                                  ErrorOutputService errorOutputService,
-                                  HostGroupService hostGroupService, CryptoService  cryptoService,
-                                  MessagingUtil messagingUtil, ConfigurationService configurationService,
-                                  ObfuscationService obfuscationService,
-                                  ConfigurationApplicationTask configurationApplicationTask
+    protected SystemApiController(
+        UserService userService, SystemOptions systemOptions,
+        ErrorOutputService errorOutputService,
+        HostGroupService hostGroupService, CryptoService  cryptoService,
+        MessagingUtil messagingUtil, ConfigurationService configurationService,
+        ObfuscationService obfuscationService,
+        ConfigurationApplicationTask configurationApplicationTask
     ) {
         super(userService, systemOptions, errorOutputService);
         this.hostGroupService =     hostGroupService;
@@ -73,7 +72,6 @@ public class SystemApiController extends BaseController {
     }
 
     @GetMapping("/settings/sshEnabled")
-    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<ObjectNode> getSSHEnabled() {
         ObjectNode node = JsonUtil.MAPPER.createObjectNode();
         node.put("sshEnabled", systemOptions.getSshEnabled());
@@ -81,7 +79,6 @@ public class SystemApiController extends BaseController {
     }
 
     @PutMapping("/settings/ssh/toggle")
-    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<ObjectNode> toggleSSHEnabled() {
         log.info("Toggling SSH enabled");
         ObjectNode node = JsonUtil.MAPPER.createObjectNode();
@@ -91,7 +88,6 @@ public class SystemApiController extends BaseController {
     }
 
     @PostMapping("/settings")
-    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public String setOption(HttpServletRequest request, HttpServletResponse response) throws IllegalAccessException {
         var entries = systemOptions.getOptions();
         List<Boolean> results = new ArrayList<>();

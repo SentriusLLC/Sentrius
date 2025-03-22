@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RuleService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services</a> &gt; <span class="el_source">RuleService.java</span></div><h1>RuleService.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.services;
+
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import io.sentrius.sso.core.model.hostgroup.HostGroup;
+import io.sentrius.sso.core.model.hostgroup.ProfileRule;
+import io.sentrius.sso.core.repository.RuleRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+<span class="nc" id="L16">@Slf4j</span>
+@Service
+<span class="nc" id="L18">@RequiredArgsConstructor</span>
+@Transactional
+public class RuleService {
+    private final RuleRepository ruleRepository;
+
+    @PersistenceContext
+    private final EntityManager entityManager;
+
+    @Transactional
+    public void deleteRule(ProfileRule rule) {
+<span class="nc" id="L28">        deleteRule(rule.getId());</span>
+<span class="nc" id="L29">    }</span>
+
+    @Transactional
+    public ProfileRule saveRule(ProfileRule rule) {
+        try {
+<span class="nc" id="L34">            log.info(&quot;Saving rule with id: {}&quot;, rule.getId());</span>
+<span class="nc" id="L35">            var newRule = ruleRepository.save(rule);</span>
+<span class="nc" id="L36">            log.info(&quot;Saving rule with id: {}&quot;, newRule.getId());</span>
+<span class="nc" id="L37">            return newRule;</span>
+<span class="nc" id="L38">        } catch (Exception e) {</span>
+<span class="nc" id="L39">            log.error(&quot;Error while saving Rule&quot;, e);</span>
+<span class="nc" id="L40">            throw new RuntimeException(&quot;Failed to save Rule&quot;, e);</span>
+        }
+    }
+
+    @Transactional
+    public void deleteRule(Long id) {
+        try {
+<span class="nc" id="L47">            ruleRepository.deleteById(id);</span>
+<span class="nc" id="L48">            log.info(&quot;Rule deleted with id: {}&quot;, id);</span>
+<span class="nc" id="L49">        } catch (Exception e) {</span>
+<span class="nc" id="L50">            log.error(&quot;Error while deleting Rule&quot;, e);</span>
+<span class="nc" id="L51">            throw new RuntimeException(&quot;Failed to delete Rule&quot;, e);</span>
+<span class="nc" id="L52">        }</span>
+<span class="nc" id="L53">    }</span>
+
+    @Transactional
+    public List&lt;ProfileRule&gt; getAllRules() {
+<span class="nc" id="L57">        return ruleRepository.findAll();</span>
+    }
+
+    public ProfileRule getRuleById(Long ruleId) {
+<span class="nc" id="L61">        return ruleRepository.findById(ruleId).orElse(null);</span>
+    }
+
+    @Transactional
+    public void addHostGroupsToRule(Long ruleId, List&lt;Long&gt; hostGroupIds) {
+<span class="nc" id="L66">        ProfileRule rule = entityManager.find(ProfileRule.class, ruleId);</span>
+
+<span class="nc" id="L68">        Set&lt;HostGroup&gt; hostGroups = hostGroupIds.stream()</span>
+<span class="nc" id="L69">            .map(id -&gt; entityManager.find(HostGroup.class, id))</span>
+<span class="nc" id="L70">            .collect(Collectors.toSet());</span>
+
+<span class="nc" id="L72">        rule.setHostGroups(hostGroups);</span>
+
+        // Update the owning side
+<span class="nc bnc" id="L75" title="All 2 branches missed.">        for (HostGroup hostGroup : hostGroups) {</span>
+<span class="nc" id="L76">            hostGroup.getRules().add(rule);</span>
+<span class="nc" id="L77">            entityManager.merge(hostGroup);</span>
+<span class="nc" id="L78">        }</span>
+
+<span class="nc" id="L80">        entityManager.merge(rule); // Persist the changes</span>
+<span class="nc" id="L81">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

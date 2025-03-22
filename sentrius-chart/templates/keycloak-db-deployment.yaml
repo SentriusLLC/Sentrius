@@ -26,9 +26,12 @@ spec:
               value: {{ .Values.keycloak.db.password }}
             - name: POSTGRES_DB
               value: {{ .Values.keycloak.db.database }}
+            - name: PGDATA
+              value: /mnt/keycloak-db/data
           volumeMounts:
             - name: keycloak-db-data
-              mountPath: /var/lib/postgresql/data
+              mountPath: /mnt/keycloak-db
       volumes:
         - name: keycloak-db-data
-          emptyDir: {} # Replace with persistent volume configuration if needed
+          persistentVolumeClaim:
+            claimName: keycloak-db-pvc

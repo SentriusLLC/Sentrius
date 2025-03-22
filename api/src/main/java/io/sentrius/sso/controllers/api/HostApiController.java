@@ -8,23 +8,21 @@ import java.util.List;
 import java.util.Optional;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.sentrius.sso.core.annotations.LimitAccess;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.model.HostSystem;
-import io.sentrius.sso.core.model.dto.HostSystemDTO;
+import io.sentrius.sso.core.dto.HostSystemDTO;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.model.hostgroup.ProfileConfiguration;
 import io.sentrius.sso.core.model.metadata.TerminalSessionMetadata;
-import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
-import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.services.ErrorOutputService;
+import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.SessionService;
 import io.sentrius.sso.core.services.TerminalService;
 import io.sentrius.sso.core.services.UserService;
-import io.sentrius.sso.core.services.HostGroupService;
-import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.services.metadata.TerminalSessionMetadataService;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.utils.AccessUtil;
 import io.sentrius.sso.core.utils.JsonUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -77,7 +75,6 @@ public class HostApiController extends BaseController {
     }
 
     @GetMapping("/list")
-    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_VIEW_SYSTEMS})
     public ResponseEntity<List<HostSystemDTO>> listSSHServers(HttpServletRequest request, HttpServletResponse response,
                                                               @RequestParam(name = "groupId", required = false) Long groupId) {
 
@@ -90,7 +87,7 @@ public class HostApiController extends BaseController {
         List<HostSystemDTO> hostSystemDTOS = new ArrayList<>();
         for(HostSystem hostSystem : hostSystems) {
             for(HostGroup hostGroup : hostSystem.getHostGroups()) {
-                hostSystemDTOS.add(new HostSystemDTO(hostSystem, hostGroup));
+                hostSystemDTOS.add(hostSystem.toDTO(hostGroup));
             }
 
         }
@@ -99,7 +96,6 @@ public class HostApiController extends BaseController {
 
 
     @PostMapping("/add")
-    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_EDIT_SYSTEMS})
     public ResponseEntity<HostSystemDTO> addSSHServer(HttpServletRequest request, HttpServletResponse response,
                                                          @RequestParam("enclave") String enclave,
                                                          @RequestParam("displayName") String displayName,
@@ -142,16 +138,13 @@ public class HostApiController extends BaseController {
 
         hostGroups.forEach(hostGroup -> hostGroupService.assignHostSystemToHostGroup(hostGroup.getId(), finalHostSystem.getId()));
         */
-        return ResponseEntity.ok(new HostSystemDTO(hostSystem));
+        return ResponseEntity.ok(hostSystem.toDTO());
     }
 
     @PostMapping("/delete/{enclave}/{host_id}")
-    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_DEL_SYSTEMS})
     public ResponseEntity<ObjectNode> deleteServer(HttpServletRequest request, HttpServletResponse response,
                                                        @PathVariable("enclave") Long enclaveId,
-                                                       @PathVariable("host_id") Long hostId)
-        throws SQLException, GeneralSecurityException, ClassNotFoundException, InvocationTargetException,
-        NoSuchMethodException, InstantiationException, IllegalAccessException {
+                                                       @PathVariable("host_id") Long hostId) {
 
 
         ObjectNode node = JsonUtil.MAPPER.createObjectNode();
@@ -172,7 +165,6 @@ public class HostApiController extends BaseController {
     }
 
     @GetMapping("/connect/{enclave}/{host_id}")
-    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<ObjectNode> connectSSHServer(HttpServletRequest request, HttpServletResponse response,
                                                        @PathVariable("enclave") Long enclaveId,
                                                        @PathVariable("host_id") Long hostId)

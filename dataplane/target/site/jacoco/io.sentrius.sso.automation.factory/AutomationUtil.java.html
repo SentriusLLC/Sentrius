@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AutomationUtil.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.automation.factory</a> &gt; <span class="el_source">AutomationUtil.java</span></div><h1>AutomationUtil.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.automation.factory;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableMap;
+import io.sentrius.sso.automation.AutomationConfiguration;
+import io.sentrius.sso.automation.AutomationPlugin;
+import io.sentrius.sso.callbacks.ApplicationProperty;
+
+/**
+ * Utility class for managing automation configurations and properties.
+ * Provides methods to retrieve base properties and configuration lists for automation plugins.
+ */
+<span class="nc" id="L18">public class AutomationUtil {</span>
+
+  // Cached list of automation configurations.
+<span class="nc" id="L21">  static List&lt;AutomationConfiguration&gt; configurationList = null;</span>
+  // Cached map of base properties for automation configurations.
+<span class="nc" id="L23">  static Map&lt;String, Properties&gt; basePropertiesList = null;</span>
+
+  /**
+   * Retrieves the base properties associated with a specific automation configuration.
+   *
+   * @param longName The long name of the automation configuration.
+   * @param appConfig The application property containing configurations.
+   * @return The properties associated with the given long name, or an empty Properties object if none exist.
+   * @throws ClassNotFoundException If a required class cannot be found.
+   */
+  public static Properties getBasePropertiesList(String longName, ApplicationProperty appConfig) throws ClassNotFoundException {
+<span class="nc bnc" id="L34" title="All 2 branches missed.">    if (null == basePropertiesList) {</span>
+<span class="nc" id="L35">      getConfigurationList(appConfig);</span>
+    }
+<span class="nc" id="L37">    return basePropertiesList.getOrDefault(longName, new Properties());</span>
+  }
+
+  /**
+   * Retrieves the list of automation configurations from the application property.
+   * Initializes the configuration list and base properties if not already done.
+   *
+   * @param appConfig The application property containing configurations.
+   * @return A list of automation configurations.
+   * @throws ClassNotFoundException If a required class cannot be found.
+   */
+  public static List&lt;AutomationConfiguration&gt; getConfigurationList(ApplicationProperty appConfig) throws ClassNotFoundException {
+<span class="nc bnc" id="L49" title="All 2 branches missed.">    if (null == configurationList) {</span>
+<span class="nc" id="L50">      synchronized (AutomationUtil.class) {</span>
+<span class="nc" id="L51">        configurationList = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L52">        basePropertiesList = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L53">        var configName = &quot;automation&quot;;</span>
+
+        // Load up to 10,000 automation configurations from the application properties.
+<span class="nc bnc" id="L56" title="All 2 branches missed.">        for (int i = 0; i &lt; 10000; i++) {</span>
+<span class="nc" id="L57">          String option = configName + &quot;.config.&quot; + Integer.valueOf(i).toString();</span>
+<span class="nc" id="L58">          var rule = appConfig.getProperty(option);</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">          if (null == rule) {</span>
+<span class="nc" id="L60">            break;</span>
+          }
+
+          // Parse the configuration rule.
+<span class="nc" id="L64">          String[] ruleSplit = rule.split(&quot;;&quot;);</span>
+
+<span class="nc" id="L66">          String shortName = null, longName, clazzName = null;</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">          if (ruleSplit.length &gt;= 2) {</span>
+<span class="nc" id="L68">            shortName = ruleSplit[1].trim();</span>
+<span class="nc" id="L69">            longName = ruleSplit[0].trim() + &quot;;&quot; + shortName;</span>
+<span class="nc" id="L70">            clazzName = ruleSplit[0].trim();</span>
+
+            // Parse any additional properties for the configuration.
+<span class="nc bnc" id="L73" title="All 2 branches missed.">            if (ruleSplit.length == 3) {</span>
+<span class="nc" id="L74">              String properties = ruleSplit[2].trim();</span>
+<span class="nc" id="L75">              Splitter.on(&quot;,&quot;)</span>
+<span class="nc" id="L76">                  .split(properties)</span>
+<span class="nc" id="L77">                  .forEach(</span>
+                      property -&gt; {
+<span class="nc" id="L79">                        String[] propertySplit = property.split(&quot;=&quot;);</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">                        if (propertySplit.length == 2) {</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">                          if (null == basePropertiesList.get(longName)) {</span>
+<span class="nc" id="L82">                            basePropertiesList.put(longName, new Properties());</span>
+                          }
+<span class="nc" id="L84">                          basePropertiesList</span>
+<span class="nc" id="L85">                              .get(longName)</span>
+<span class="nc" id="L86">                              .setProperty(propertySplit[0].trim(), propertySplit[1].trim());</span>
+                        }
+<span class="nc" id="L88">                      });</span>
+<span class="nc" id="L89">            }</span>
+          } else {
+<span class="nc" id="L91">            longName = null;</span>
+          }
+
+          // Add the configuration to the list if all required elements are present.
+<span class="nc bnc" id="L95" title="All 6 branches missed.">          if (null != shortName &amp;&amp; null != longName &amp;&amp; null != clazzName) {</span>
+<span class="nc" id="L96">            configurationList.add(</span>
+<span class="nc" id="L97">                AutomationConfiguration.builder()</span>
+<span class="nc" id="L98">                    .shortName(shortName)</span>
+<span class="nc" id="L99">                    .longName(longName)</span>
+<span class="nc" id="L100">                    .clazz((Class&lt;? extends AutomationPlugin&gt;) Class.forName(clazzName))</span>
+<span class="nc" id="L101">                    .build());</span>
+          }
+        }
+
+        // Make the base properties map immutable.
+<span class="nc" id="L106">        basePropertiesList = ImmutableMap.copyOf(basePropertiesList);</span>
+<span class="nc" id="L107">      }</span>
+    }
+<span class="nc" id="L109">    return configurationList;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

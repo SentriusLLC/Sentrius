@@ -3,21 +3,28 @@ package io.sentrius.sso.controllers.api;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.model.dto.JITTrackerDTO;
+import io.sentrius.sso.core.dto.JITTrackerDTO;
+import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.services.ErrorOutputService;
-import io.sentrius.sso.core.services.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.NotificationService;
 import io.sentrius.sso.core.services.UserService;
-import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.services.security.KeycloakService;
+import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import net.snowflake.client.jdbc.internal.apache.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -28,12 +35,17 @@ public class ZeroTrustATApiController extends BaseController {
 
     private final ZeroTrustAccessTokenService ztatService;
     private final NotificationService notificationService;
+    private final KeycloakService keycloakService;
 
-    protected ZeroTrustATApiController(UserService userService, SystemOptions systemOptions,
-                                       ErrorOutputService errorOutputService, ZeroTrustAccessTokenService ztatService, NotificationService notificationService) {
+    protected ZeroTrustATApiController(
+        UserService userService, SystemOptions systemOptions,
+        ErrorOutputService errorOutputService, ZeroTrustAccessTokenService ztatService, NotificationService notificationService,
+        KeycloakService keycloakService
+    ) {
         super(userService, systemOptions, errorOutputService);
         this.ztatService = ztatService;
         this.notificationService=notificationService;
+        this.keycloakService = keycloakService;
     }
 
     @GetMapping("/my/current")
@@ -94,4 +106,27 @@ public class ZeroTrustATApiController extends BaseController {
         }
     }
 
+
+    @PostMapping("/request")
+    public ResponseEntity<?> requestZtat(
+        @RequestHeader("Authorization") String token,
+        @RequestBody ZtatRequestDTO request) {
+
+        if (!keycloakService.validateJwt(token)) {
+            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+        }
+
+        // Extract agent identity from the JWT
+        String agentId = keycloakService.extractAgentId(token);
+
+        log.info("Received ZTAT request from agent: {}", agentId);
+        // Store the request in the database
+        //var ztatRequest = ztatService.createRequest(agentId, request.getCommand(), request.getCommandHash());
+
+        // Generate a Zero Trust Access Token (ZTAT)
+        //String ztatToken = ztatService.generateZtatToken(ztatRequest);
+        var ztatToken = "lskejtgsadlkjg";
+
+        return ResponseEntity.ok(Map.of("ztat_token", ztatToken));
+    }
 }

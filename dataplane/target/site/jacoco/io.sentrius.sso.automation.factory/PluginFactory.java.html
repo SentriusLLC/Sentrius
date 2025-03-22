@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PluginFactory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.automation.factory</a> &gt; <span class="el_source">PluginFactory.java</span></div><h1>PluginFactory.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.automation.factory;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Properties;
+import io.sentrius.sso.automation.AutomationPlugin;
+import io.sentrius.sso.callbacks.ApplicationProperty;
+import lombok.extern.slf4j.Slf4j;
+
+<span class="nc" id="L14">@Slf4j</span>
+<span class="nc" id="L15">public class PluginFactory {</span>
+
+  // List of script names that are not supported for instantiation.
+<span class="nc" id="L18">  static List&lt;String&gt; scriptNames = Arrays.asList(&quot;shell&quot;, &quot;script&quot;, &quot;bash&quot;);</span>
+
+  /**
+   * Creates a new instance of an AutomationPlugin given its long name.
+   *
+   * @param longName The long name of the plugin (in the format &quot;ClassName;ShortName&quot;).
+   * @return A new instance of the specified AutomationPlugin, or null if the class is a script.
+   */
+  public static AutomationPlugin createNewInstance(String longName) {
+<span class="nc" id="L27">    String[] names = longName.split(&quot;;&quot;);</span>
+<span class="nc bnc" id="L28" title="All 2 branches missed.">    if (names.length &gt; 2) {</span>
+<span class="nc" id="L29">      throw new RuntimeException(&quot;Invalid longName &quot; + longName);</span>
+    }
+<span class="nc" id="L31">    String className = names[0].trim();</span>
+
+    // Skip creating an instance if the class name matches a script type.
+<span class="nc bnc" id="L34" title="All 2 branches missed.">    if (scriptNames.contains(className.toLowerCase())) {</span>
+<span class="nc" id="L35">      return null;</span>
+    }
+
+<span class="nc" id="L38">    AutomationPlugin newInstance = null;</span>
+    try {
+      // Load the class by name and create a new instance using the default constructor.
+<span class="nc" id="L41">      Class&lt;? extends AutomationPlugin&gt; clazz =</span>
+<span class="nc" id="L42">          Class.forName(className).asSubclass(AutomationPlugin.class);</span>
+<span class="nc" id="L43">      newInstance = clazz.getConstructor().newInstance();</span>
+<span class="nc" id="L44">    } catch (ClassNotFoundException e) {</span>
+<span class="nc" id="L45">      log.error(&quot;Error with &quot; + className, e);</span>
+<span class="nc" id="L46">      throw new RuntimeException(e);</span>
+<span class="nc" id="L47">    } catch (InvocationTargetException e) {</span>
+<span class="nc" id="L48">      log.error(&quot;Error with &quot; + className, e);</span>
+<span class="nc" id="L49">      throw new RuntimeException(e);</span>
+<span class="nc" id="L50">    } catch (InstantiationException e) {</span>
+<span class="nc" id="L51">      log.error(&quot;Error with &quot; + className, e);</span>
+<span class="nc" id="L52">      throw new RuntimeException(e);</span>
+<span class="nc" id="L53">    } catch (IllegalAccessException e) {</span>
+<span class="nc" id="L54">      log.error(&quot;Error with &quot; + className, e);</span>
+<span class="nc" id="L55">      throw new RuntimeException(e);</span>
+<span class="nc" id="L56">    } catch (NoSuchMethodException e) {</span>
+<span class="nc" id="L57">      log.error(&quot;Error with &quot; + className, e);</span>
+<span class="nc" id="L58">      throw new RuntimeException(e);</span>
+<span class="nc" id="L59">    }</span>
+
+<span class="nc" id="L61">    return newInstance;</span>
+  }
+
+  /**
+   * Creates a new instance of an AutomationPlugin and configures it with the provided properties.
+   *
+   * @param appConfig The application property containing configurations.
+   * @param longName The long name of the plugin (in the format &quot;ClassName;ShortName&quot;).
+   * @param properties A string representation of properties to configure the plugin.
+   * @return A configured instance of the specified AutomationPlugin.
+   */
+  public static AutomationPlugin createNewInstance(ApplicationProperty appConfig, String longName, String properties) {
+<span class="nc" id="L73">    String[] names = longName.split(&quot;;&quot;);</span>
+<span class="nc bnc" id="L74" title="All 2 branches missed.">    if (names.length != 2) {</span>
+<span class="nc" id="L75">      throw new RuntimeException(&quot;Invalid longName &quot; + longName);</span>
+    }
+<span class="nc" id="L77">    String className = names[0];</span>
+<span class="nc" id="L78">    AutomationPlugin newInstance = null;</span>
+    try {
+      // Create a new instance of the plugin.
+<span class="nc" id="L81">      newInstance = createNewInstance(longName);</span>
+
+      // Load the base properties and add the additional properties provided.
+<span class="nc" id="L84">      Properties props = AutomationUtil.getBasePropertiesList(longName, appConfig);</span>
+<span class="nc" id="L85">      props.load(new ByteArrayInputStream(properties.getBytes(StandardCharsets.UTF_8)));</span>
+
+      // Configure the plugin with the properties.
+<span class="nc" id="L88">      newInstance.configure(props);</span>
+<span class="nc" id="L89">    } catch (ClassNotFoundException e) {</span>
+<span class="nc" id="L90">      log.error(&quot;Error with &quot; + className, e);</span>
+<span class="nc" id="L91">      throw new RuntimeException(e);</span>
+<span class="nc" id="L92">    } catch (IOException e) {</span>
+<span class="nc" id="L93">      log.error(&quot;Error with &quot; + className, e);</span>
+<span class="nc" id="L94">      throw new RuntimeException(e);</span>
+<span class="nc" id="L95">    }</span>
+
+<span class="nc" id="L97">    return newInstance;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

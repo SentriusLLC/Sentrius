@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserSettings.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.model.users</a> &gt; <span class="el_source">UserSettings.java</span></div><h1>UserSettings.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.model.users;
+
+import io.sentrius.sso.core.utils.JsonUtil;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
+
+import jakarta.persistence.*;
+
+<span class="nc" id="L12">@Builder</span>
+@Entity
+@Table(name = &quot;user_settings&quot;)
+<span class="nc bnc" id="L15" title="All 176 branches missed.">@Data</span>
+<span class="nc" id="L16">@AllArgsConstructor</span>
+<span class="nc" id="L17">@NoArgsConstructor</span>
+public class UserSettings {
+
+    @Id
+    @Column(name = &quot;user_id&quot;)
+<span class="nc" id="L22">    private Long userId;</span>
+
+    @Column(name = &quot;bg&quot;)
+<span class="nc" id="L25">    private String bg;</span>
+
+    @Column(name = &quot;fg&quot;)
+<span class="nc" id="L28">    private String fg;</span>
+
+    // Additional color columns
+    @Column(name = &quot;d1&quot;)
+<span class="nc" id="L32">    private String d1;</span>
+    @Column(name = &quot;d2&quot;)
+<span class="nc" id="L34">    private String d2;</span>
+    @Column(name = &quot;d3&quot;)
+<span class="nc" id="L36">    private String d3;</span>
+    @Column(name = &quot;d4&quot;)
+<span class="nc" id="L38">    private String d4;</span>
+    @Column(name = &quot;d5&quot;)
+<span class="nc" id="L40">    private String d5;</span>
+    @Column(name = &quot;d6&quot;)
+<span class="nc" id="L42">    private String d6;</span>
+    @Column(name = &quot;d7&quot;)
+<span class="nc" id="L44">    private String d7;</span>
+    @Column(name = &quot;d8&quot;)
+<span class="nc" id="L46">    private String d8;</span>
+    @Column(name = &quot;b1&quot;)
+<span class="nc" id="L48">    private String b1;</span>
+    @Column(name = &quot;b2&quot;)
+<span class="nc" id="L50">    private String b2;</span>
+    @Column(name = &quot;b3&quot;)
+<span class="nc" id="L52">    private String b3;</span>
+    @Column(name = &quot;b4&quot;)
+<span class="nc" id="L54">    private String b4;</span>
+    @Column(name = &quot;b5&quot;)
+<span class="nc" id="L56">    private String b5;</span>
+    @Column(name = &quot;b6&quot;)
+<span class="nc" id="L58">    private String b6;</span>
+    @Column(name = &quot;b7&quot;)
+<span class="nc" id="L60">    private String b7;</span>
+    @Column(name = &quot;b8&quot;)
+<span class="nc" id="L62">    private String b8;</span>
+
+    @Column(name = &quot;json_config&quot;, columnDefinition = &quot;TEXT&quot;) // New JSON config field
+<span class="nc" id="L65">    private String jsonConfig;</span>
+
+    @Transient
+    private UserConfig settings;
+
+    @Transient
+    private String[] colors;
+
+    public UserConfig getSettings() {
+<span class="nc bnc" id="L74" title="All 4 branches missed.">        if (settings == null &amp;&amp; StringUtils.isNotEmpty(jsonConfig)) {</span>
+            try {
+<span class="nc" id="L76">                settings = JsonUtil.MAPPER.readValue(jsonConfig, UserConfig.class);</span>
+<span class="nc" id="L77">            } catch (Exception e) {</span>
+<span class="nc" id="L78">                e.printStackTrace();</span>
+<span class="nc" id="L79">                settings = new UserConfig(); // Return an empty instance on failure</span>
+<span class="nc" id="L80">            }</span>
+        }
+<span class="nc" id="L82">        return settings;</span>
+    }
+
+    public void setSettings(UserConfig settings) {
+<span class="nc" id="L86">        this.settings = settings;</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">        if (settings != null) {</span>
+            try {
+<span class="nc" id="L89">                this.jsonConfig = JsonUtil.MAPPER.writeValueAsString(settings);</span>
+<span class="nc" id="L90">            } catch (Exception e) {</span>
+<span class="nc" id="L91">                e.printStackTrace();</span>
+<span class="nc" id="L92">                this.jsonConfig = null; // Clear JSON string on serialization failure</span>
+<span class="nc" id="L93">            }</span>
+        }
+<span class="nc" id="L95">    }</span>
+
+
+    public String[] getColors() {
+<span class="nc bnc" id="L99" title="All 2 branches missed.">        if (colors == null) {</span>
+<span class="nc" id="L100">            colors = new String[]{</span>
+                d1, d2, d3, d4, d5, d6, d7, d8,
+                b1, b2, b3, b4, b5, b6, b7, b8
+            };
+        }
+<span class="nc" id="L105">        return colors;</span>
+    }
+
+    public void setColors(String[] colors) {
+<span class="nc bnc" id="L109" title="All 4 branches missed.">        if (colors != null &amp;&amp; colors.length == 16) {</span>
+<span class="nc" id="L110">            this.d1 = colors[0];</span>
+<span class="nc" id="L111">            this.d2 = colors[1];</span>
+<span class="nc" id="L112">            this.d3 = colors[2];</span>
+<span class="nc" id="L113">            this.d4 = colors[3];</span>
+<span class="nc" id="L114">            this.d5 = colors[4];</span>
+<span class="nc" id="L115">            this.d6 = colors[5];</span>
+<span class="nc" id="L116">            this.d7 = colors[6];</span>
+<span class="nc" id="L117">            this.d8 = colors[7];</span>
+<span class="nc" id="L118">            this.b1 = colors[8];</span>
+<span class="nc" id="L119">            this.b2 = colors[9];</span>
+<span class="nc" id="L120">            this.b3 = colors[10];</span>
+<span class="nc" id="L121">            this.b4 = colors[11];</span>
+<span class="nc" id="L122">            this.b5 = colors[12];</span>
+<span class="nc" id="L123">            this.b6 = colors[13];</span>
+<span class="nc" id="L124">            this.b7 = colors[14];</span>
+<span class="nc" id="L125">            this.b8 = colors[15];</span>
+        }
+<span class="nc" id="L127">    }</span>
+
+    @Transient
+    public String getPlane() {
+<span class="nc bnc" id="L131" title="All 4 branches missed.">        if (StringUtils.isNotEmpty(bg) &amp;&amp; StringUtils.isNotEmpty(fg)) {</span>
+<span class="nc" id="L132">            return bg + &quot;,&quot; + fg;</span>
+        }
+<span class="nc" id="L134">        return null;</span>
+    }
+
+    public void setPlane(String plane) {
+<span class="nc bnc" id="L138" title="All 4 branches missed.">        if (StringUtils.isNotEmpty(plane) &amp;&amp; plane.split(&quot;,&quot;).length == 2) {</span>
+<span class="nc" id="L139">            String[] parts = plane.split(&quot;,&quot;);</span>
+<span class="nc" id="L140">            this.bg = parts[0];</span>
+<span class="nc" id="L141">            this.fg = parts[1];</span>
+        }
+<span class="nc" id="L143">    }</span>
+
+    @Transient
+    public String getTheme() {
+<span class="nc bnc" id="L147" title="All 4 branches missed.">        if (this.colors != null &amp;&amp; this.colors.length == 16) {</span>
+<span class="nc" id="L148">            return StringUtils.join(this.colors, &quot;,&quot;);</span>
+        }
+<span class="nc" id="L150">        return null;</span>
+    }
+
+    public void setTheme(String theme) {
+<span class="nc bnc" id="L154" title="All 4 branches missed.">        if (StringUtils.isNotEmpty(theme) &amp;&amp; theme.split(&quot;,&quot;).length == 16) {</span>
+<span class="nc" id="L155">            this.setColors(theme.split(&quot;,&quot;));</span>
+        }
+<span class="nc" id="L157">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

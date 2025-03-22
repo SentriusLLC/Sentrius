@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AsyncAccessTokenAuditor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.automation.auditing</a> &gt; <span class="el_source">AsyncAccessTokenAuditor.java</span></div><h1>AsyncAccessTokenAuditor.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.automation.auditing;
+
+import java.security.GeneralSecurityException;
+import java.sql.SQLException;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import io.sentrius.sso.core.model.ConnectedSystem;
+import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
+import io.sentrius.sso.core.services.terminal.SessionTrackingService;
+import lombok.extern.slf4j.Slf4j;
+
+<span class="nc" id="L15">@Slf4j</span>
+final class AsyncAccessTokenAuditor implements Runnable {
+
+    private final SessionTrackingService sessionTrackingService;
+    private final ConnectedSystem connectedSystem;
+<span class="nc" id="L20">    public AtomicBoolean running = new AtomicBoolean(false);</span>
+    private ZeroTrustAccessTokenService ztatService;
+    public final List&lt;AccessTokenEvaluator&gt; asyncRules;
+
+    LinkedBlockingDeque&lt;String&gt; stringsToReview;
+
+
+    public AsyncAccessTokenAuditor(
+        ZeroTrustAccessTokenService ztatService, List&lt;AccessTokenEvaluator&gt; asyncRules, ConnectedSystem connectedSystem,
+        SessionTrackingService sessionTrackingService
+<span class="nc" id="L30">    ) {</span>
+<span class="nc" id="L31">        this.ztatService = ztatService;</span>
+<span class="nc" id="L32">        this.stringsToReview = new LinkedBlockingDeque&lt;&gt;();</span>
+<span class="nc" id="L33">        this.asyncRules = asyncRules;</span>
+<span class="nc" id="L34">        this.connectedSystem = connectedSystem;</span>
+<span class="nc" id="L35">        this.sessionTrackingService = sessionTrackingService;</span>
+<span class="nc" id="L36">        running.set(true);</span>
+<span class="nc" id="L37">    }</span>
+
+    public void enqueue(String cstr) {
+<span class="nc" id="L40">        stringsToReview.add(cstr);</span>
+<span class="nc" id="L41">    }</span>
+
+    @Override
+    public void run() {
+<span class="nc bnc" id="L45" title="All 2 branches missed.">        while (running.get()) {</span>
+            try {
+
+<span class="nc" id="L48">                String nextstr = stringsToReview.poll(100, TimeUnit.MILLISECONDS);</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">                if (null == nextstr) {</span>
+<span class="nc" id="L50">                    continue;</span>
+                }
+<span class="nc bnc" id="L52" title="All 2 branches missed.">                for (AccessTokenEvaluator rule : asyncRules) {</span>
+<span class="nc" id="L53">                    Optional&lt;Trigger&gt; result = rule.trigger(nextstr);</span>
+<span class="nc bnc" id="L54" title="All 2 branches missed.">                    if (result.isPresent()) {</span>
+<span class="nc" id="L55">                        Trigger trg = result.get();</span>
+<span class="nc bnc" id="L56" title="All 4 branches missed.">                        switch (trg.getAction()) {</span>
+                            case PERSISTENT_MESSAGE:
+                            case PROMPT_ACTION:
+<span class="nc" id="L59">                                log.info(&quot;Adding persistent message: {}&quot;, trg.getDescription());</span>
+                            case WARN_ACTION:
+<span class="nc" id="L61">                                sessionTrackingService.addTrigger(connectedSystem, trg);</span>
+<span class="nc" id="L62">                                break;</span>
+                            case JIT_ACTION:
+<span class="nc bnc" id="L64" title="All 2 branches missed.">                                if (!ztatService.isApproved(</span>
+<span class="nc" id="L65">                                    nextstr, connectedSystem.getUser(), connectedSystem.getHostSystem())) {</span>
+<span class="nc" id="L66">                                    sessionTrackingService.addTrigger(connectedSystem, trg);</span>
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+<span class="nc" id="L73">                }</span>
+<span class="nc" id="L74">            } catch (InterruptedException | SQLException | GeneralSecurityException e) {</span>
+<span class="nc" id="L75">                throw new RuntimeException(e);</span>
+<span class="nc" id="L76">            }</span>
+        }
+<span class="nc" id="L78">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

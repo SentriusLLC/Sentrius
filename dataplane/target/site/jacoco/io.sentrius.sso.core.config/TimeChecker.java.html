@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TimeChecker.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.config</a> &gt; <span class="el_source">TimeChecker.java</span></div><h1>TimeChecker.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.config;
+
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetTime;
+import java.time.ZoneOffset;
+import java.util.Set;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import io.sentrius.sso.core.data.TimeConfig;
+import io.sentrius.sso.core.model.hostgroup.TimeConfigJson;
+
+<span class="nc" id="L12">public class TimeChecker {</span>
+
+  private static Integer convertDayOfWeek(String dow) {
+<span class="nc bnc" id="L15" title="All 8 branches missed.">    switch (dow) {</span>
+      case &quot;SUNDAY&quot;:
+<span class="nc" id="L17">        return 0;</span>
+      case &quot;MONDAY&quot;:
+<span class="nc" id="L19">        return 1;</span>
+      case &quot;TUEDAY&quot;:
+<span class="nc" id="L21">        return 2;</span>
+      case &quot;WEDNESDAY&quot;:
+<span class="nc" id="L23">        return 3;</span>
+      case &quot;THURSDAY&quot;:
+<span class="nc" id="L25">        return 4;</span>
+      case &quot;FRIDAY&quot;:
+<span class="nc" id="L27">        return 5;</span>
+      case &quot;SATURDAY&quot;:
+<span class="nc" id="L29">        return 6;</span>
+      default:
+<span class="nc" id="L31">        return -1;</span>
+    }
+  }
+
+  public static boolean isTimeWithinRange(LocalDateTime currentTime, TimeConfigJson config)
+      throws JsonProcessingException {
+<span class="nc" id="L37">    return isTimeWithinRange(currentTime, TimeConfig.convertFromHttp(config));</span>
+
+  }
+  public static boolean isTimeWithinRange(LocalDateTime currentTime, TimeConfig config) {
+    // Check if current day is within the allowed days
+<span class="nc" id="L42">    var dow = currentTime.getDayOfWeek();</span>
+
+<span class="nc bnc" id="L44" title="All 2 branches missed.">    if (null != config.getDaysOfWeek() &amp;&amp;</span>
+<span class="nc bnc" id="L45" title="All 4 branches missed.">        !config.getDaysOfWeek().isEmpty() &amp;&amp; !config.getDaysOfWeek().contains(convertDayOfWeek(dow.toString()))) {</span>
+<span class="nc" id="L46">      return false;</span>
+    }
+
+    // Create LocalTime objects for comparison
+<span class="nc" id="L50">    OffsetTime startTime = OffsetTime.of(</span>
+<span class="nc" id="L51">        config.getBeginRangeHour(), config.getBeginRangeMinute(), config.getBeginRangeSecond(),</span>
+        0,  // nanosecond
+        ZoneOffset.UTC ); // Zulu time (UTC)
+<span class="nc" id="L54">    OffsetTime endTime =</span>
+<span class="nc" id="L55">        OffsetTime.of(</span>
+<span class="nc" id="L56">            config.getEndRangeHour(), config.getEndRangeMinute(), config.getEndRangeSecond(),0,  // nanosecond</span>
+            ZoneOffset.UTC ); // Zulu time (UTC)
+<span class="nc" id="L58">    LocalTime now = currentTime.toLocalTime();</span>
+
+    // Check if the current time is between the start and end time
+<span class="nc bnc" id="L61" title="All 6 branches missed.">    return (startTime.equals(endTime) || (!now.isBefore(startTime.toLocalTime()) &amp;&amp; !now.isAfter(endTime.toLocalTime())));</span>
+  }
+
+  public static void main(String[] args) {
+    // Example usage
+    TimeConfig config =
+<span class="nc" id="L67">        TimeConfig.builder()</span>
+<span class="nc" id="L68">            .daysOfWeek(</span>
+<span class="nc" id="L69">                Set.of(1,3))</span>
+<span class="nc" id="L70">            .beginRangeHour(9)</span>
+<span class="nc" id="L71">            .beginRangeMinute(0)</span>
+<span class="nc" id="L72">            .beginRangeSecond(0)</span>
+<span class="nc" id="L73">            .endRangeHour(17)</span>
+<span class="nc" id="L74">            .endRangeMinute(0)</span>
+<span class="nc" id="L75">            .endRangeSecond(0)</span>
+<span class="nc" id="L76">            .build();</span>
+
+<span class="nc" id="L78">    LocalDateTime currentTime = LocalDateTime.now(); // Get current time and date</span>
+<span class="nc" id="L79">    boolean withinRange = isTimeWithinRange(currentTime, config);</span>
+<span class="nc" id="L80">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

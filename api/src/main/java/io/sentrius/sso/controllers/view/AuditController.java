@@ -1,16 +1,13 @@
 package io.sentrius.sso.controllers.view;
 
 import java.security.GeneralSecurityException;
-import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.model.dto.TerminalLogDTO;
-import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
-import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
-import io.sentrius.sso.core.security.service.CryptoService;
+import io.sentrius.sso.core.dto.TerminalLogDTO;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.auditing.AuditService;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -44,14 +41,12 @@ public class AuditController extends BaseController {
     }
 
     @GetMapping("/audit/list")
-    @LimitAccess(userAccess = {UserAccessEnum.CAN_MANAGE_USERS})
     public String auditUsers() {
         return "sso/sessions/audit_users";
     }
 
 
     @GetMapping("/audit/attach")
-    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public String attachSession(
         HttpServletRequest request, HttpServletResponse response,
         @RequestParam("sessionId") String sessionId, Model model) throws GeneralSecurityException {
@@ -72,10 +67,11 @@ public class AuditController extends BaseController {
 
         model.addAttribute("sessionId", sessionId);
         if ((null == logs || logs.isEmpty())){
-            model.addAttribute("sessionAudit", new TerminalLogDTO( sessionLog.get(),sessionId));
+
+            model.addAttribute("sessionAudit", sessionLog.get().toTerminalLogDTO(sessionId));
         }
         else {
-            model.addAttribute("sessionAudit", new TerminalLogDTO(logs.get(0),sessionId));
+            model.addAttribute("sessionAudit", logs.get(0).toDTO(sessionId));
         }
 
         return "sso/sessions/view_terms";

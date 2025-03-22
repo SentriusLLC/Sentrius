@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SessionService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.services</a> &gt; <span class="el_source">SessionService.java</span></div><h1>SessionService.java</h1><pre class="source lang-java linenums">
+package io.sentrius.sso.core.services;
+
+import io.sentrius.sso.core.dto.TerminalLogOutputDTO;
+import io.sentrius.sso.core.model.sessions.SessionLog;
+import io.sentrius.sso.core.model.sessions.TerminalLogs;
+import io.sentrius.sso.core.repository.SessionLogRepository;
+import io.sentrius.sso.core.repository.TerminalLogRepository;
+import lombok.NonNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+
+@Service
+<span class="nc" id="L25">public class SessionService {</span>
+
+    @Autowired
+    private SessionLogRepository sessionLogRepository;
+
+    @Autowired
+    private TerminalLogRepository terminalLogRepository;
+
+<span class="nc" id="L33">    private final Map&lt;Long, SessionLog&gt; activeSessions = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="nc" id="L34">    private final Map&lt;Long, TerminalLogs&gt; activeTerminals = new ConcurrentHashMap&lt;&gt;();</span>
+
+    @Transactional
+    public SessionLog createSession(String firstName, String lastName, String username, String ipAddress) {
+<span class="nc" id="L38">        SessionLog sessionLog = new SessionLog();</span>
+<span class="nc" id="L39">        sessionLog.setFirstName(firstName);</span>
+<span class="nc" id="L40">        sessionLog.setLastName(lastName);</span>
+<span class="nc" id="L41">        sessionLog.setUsername(username);</span>
+<span class="nc" id="L42">        sessionLog.setIpAddress(ipAddress);</span>
+<span class="nc" id="L43">        sessionLog.setSessionTm(new Timestamp(System.currentTimeMillis()));</span>
+<span class="nc" id="L44">        sessionLog.setClosed(false);</span>
+<span class="nc" id="L45">        SessionLog savedSession = sessionLogRepository.save(sessionLog);</span>
+<span class="nc" id="L46">        activeSessions.put(savedSession.getId(), savedSession);</span>
+<span class="nc" id="L47">        return savedSession;</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Optional&lt;SessionLog&gt; getSessionById(Long sessionId) {
+<span class="nc bnc" id="L52" title="All 2 branches missed.">        if (activeSessions.containsKey(sessionId)) {</span>
+<span class="nc" id="L53">            return Optional.of(activeSessions.get(sessionId));</span>
+        }
+<span class="nc" id="L55">        return sessionLogRepository.findById(sessionId);</span>
+    }
+
+    @Transactional
+    public TerminalLogs createTerminal(SessionLog session, Integer instanceId, String output, String displayNm, String username, String host, Integer port) {
+<span class="nc" id="L60">        TerminalLogs terminalLog = new TerminalLogs();</span>
+<span class="nc" id="L61">        terminalLog.setSession(session);</span>
+<span class="nc" id="L62">        terminalLog.setInstanceId(instanceId);</span>
+<span class="nc" id="L63">        terminalLog.setOutput(output);</span>
+<span class="nc" id="L64">        terminalLog.setLogTm(new Timestamp(System.currentTimeMillis()));</span>
+<span class="nc" id="L65">        terminalLog.setDisplayNm(displayNm);</span>
+<span class="nc" id="L66">        terminalLog.setUsername(username);</span>
+<span class="nc" id="L67">        terminalLog.setHost(host);</span>
+<span class="nc" id="L68">        terminalLog.setPort(port);</span>
+<span class="nc" id="L69">        TerminalLogs savedTerminal = terminalLogRepository.save(terminalLog);</span>
+<span class="nc" id="L70">        activeTerminals.put(savedTerminal.getId(), savedTerminal);</span>
+<span class="nc" id="L71">        return savedTerminal;</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;TerminalLogs&gt; getTerminalsBySessionId(Long sessionId) {
+<span class="nc" id="L76">        return terminalLogRepository.findBySessionId(sessionId);</span>
+    }
+
+    @Transactional
+    public void closeSession(Long sessionId) {
+<span class="nc" id="L81">        Optional&lt;SessionLog&gt; sessionLogOptional = getSessionById(sessionId);</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">        if (sessionLogOptional.isPresent()) {</span>
+<span class="nc" id="L83">            SessionLog sessionLog = sessionLogOptional.get();</span>
+<span class="nc" id="L84">            sessionLog.setClosed(true);</span>
+<span class="nc" id="L85">            sessionLogRepository.save(sessionLog);</span>
+<span class="nc" id="L86">            activeSessions.remove(sessionId);</span>
+            // Remove associated terminals from activeTerminals
+<span class="nc" id="L88">            activeTerminals.entrySet().removeIf(entry -&gt; entry.getValue().getSession().getId().equals(sessionId));</span>
+<span class="nc" id="L89">        } else {</span>
+<span class="nc" id="L90">            throw new RuntimeException(&quot;Session not found&quot;);</span>
+        }
+<span class="nc" id="L92">    }</span>
+
+    @Transactional
+<span class="nc bnc" id="L95" title="All 2 branches missed.">    public void closeSession(@NonNull SessionLog sessionLog) {</span>
+<span class="nc" id="L96">        sessionLog.setClosed(true);</span>
+<span class="nc" id="L97">        sessionLogRepository.save(sessionLog);</span>
+<span class="nc" id="L98">        activeSessions.remove(sessionLog.getId());</span>
+        // Remove associated terminals from activeTerminals
+<span class="nc" id="L100">        activeTerminals.entrySet().removeIf(entry -&gt; entry.getValue().getSession().getId().equals(sessionLog.getId()));</span>
+
+<span class="nc" id="L102">    }</span>
+
+    @Transactional
+    public List&lt;TerminalLogOutputDTO&gt; getLogOutputSummary(String username) {
+<span class="nc" id="L106">        return terminalLogRepository.findOutputSizeByUserOrAll(username);</span>
+    }
+
+    public List&lt;Map&lt;String, Object&gt;&gt; getSessionDurationData(String username) {
+<span class="nc" id="L110">        List&lt;SessionLog&gt; sessionLogs = sessionLogRepository.findByUsername(username);</span>
+<span class="nc" id="L111">        List&lt;Map&lt;String, Object&gt;&gt; sessionDurations = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L113" title="All 2 branches missed.">        for (SessionLog sessionLog : sessionLogs) {</span>
+<span class="nc" id="L114">            List&lt;Object[]&gt; minMaxLogTm = terminalLogRepository.findMinAndMaxLogTmBySessionLogId(sessionLog.getId());</span>
+
+<span class="nc bnc" id="L116" title="All 6 branches missed.">            if (!minMaxLogTm.isEmpty() &amp;&amp; minMaxLogTm.get(0)[0] != null &amp;&amp; minMaxLogTm.get(0)[1] != null) {</span>
+<span class="nc" id="L117">                Timestamp minTimestamp = (Timestamp) minMaxLogTm.get(0)[0];</span>
+<span class="nc" id="L118">                Timestamp maxTimestamp = (Timestamp) minMaxLogTm.get(0)[1];</span>
+
+<span class="nc" id="L120">                LocalDateTime minLogTm = minTimestamp.toLocalDateTime();</span>
+<span class="nc" id="L121">                LocalDateTime maxLogTm = maxTimestamp.toLocalDateTime();</span>
+<span class="nc" id="L122">                long durationMinutes = ChronoUnit.MINUTES.between(minLogTm, maxLogTm);</span>
+
+<span class="nc" id="L124">                sessionDurations.add(Map.of(</span>
+<span class="nc" id="L125">                    &quot;sessionId&quot;, sessionLog.getId(),</span>
+<span class="nc" id="L126">                    &quot;durationMinutes&quot;, durationMinutes</span>
+                ));
+            }
+<span class="nc" id="L129">        }</span>
+
+<span class="nc" id="L131">        return sessionDurations;</span>
+    }
+
+    public Map&lt;String, Integer&gt; getGraphData(String username) {
+<span class="nc" id="L135">        List&lt;Map&lt;String, Object&gt;&gt; sessionDurations = getSessionDurationData(username);</span>
+
+<span class="nc" id="L137">        Map&lt;String, Integer&gt; graphData = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L138">        graphData.put(&quot;0-5 min&quot;, 0);</span>
+<span class="nc" id="L139">        graphData.put(&quot;5-15 min&quot;, 0);</span>
+<span class="nc" id="L140">        graphData.put(&quot;15-30 min&quot;, 0);</span>
+<span class="nc" id="L141">        graphData.put(&quot;30+ min&quot;, 0);</span>
+
+<span class="nc bnc" id="L143" title="All 2 branches missed.">        for (Map&lt;String, Object&gt; session : sessionDurations) {</span>
+<span class="nc" id="L144">            long durationMinutes = (long) session.get(&quot;durationMinutes&quot;);</span>
+
+<span class="nc bnc" id="L146" title="All 2 branches missed.">            if (durationMinutes &lt;= 5) {</span>
+<span class="nc" id="L147">                graphData.put(&quot;0-5 min&quot;, graphData.get(&quot;0-5 min&quot;) + 1);</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">            } else if (durationMinutes &lt;= 15) {</span>
+<span class="nc" id="L149">                graphData.put(&quot;5-15 min&quot;, graphData.get(&quot;5-15 min&quot;) + 1);</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">            } else if (durationMinutes &lt;= 30) {</span>
+<span class="nc" id="L151">                graphData.put(&quot;15-30 min&quot;, graphData.get(&quot;15-30 min&quot;) + 1);</span>
+            } else {
+<span class="nc" id="L153">                graphData.put(&quot;30+ min&quot;, graphData.get(&quot;30+ min&quot;) + 1);</span>
+            }
+<span class="nc" id="L155">        }</span>
+
+<span class="nc" id="L157">        return graphData;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

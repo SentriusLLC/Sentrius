@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BaseController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.controllers</a> &gt; <span class="el_source">BaseController.java</span></div><h1>BaseController.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.controllers;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.services.ErrorOutputService;
+import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.utils.MessagingUtil;
+import io.sentrius.sso.core.utils.UIMessaging;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestParam;
+
+<span class="nc" id="L19">@Slf4j</span>
+public abstract class BaseController {
+
+
+    protected final UserService userService;
+
+    protected final SystemOptions systemOptions;
+
+    protected final ErrorOutputService errorOutputService;
+
+<span class="nc" id="L29">    protected UIMessaging messaging = new UIMessaging();</span>
+
+<span class="nc" id="L31">    protected Map&lt;String, String&gt; fieldErrors = new HashMap&lt;&gt;();</span>
+
+    @Autowired  // Ensures Spring injects dependencies here
+<span class="nc" id="L34">    protected BaseController(UserService userService, SystemOptions systemOptions, ErrorOutputService errorOutputService) {</span>
+<span class="nc" id="L35">        this.userService = userService;</span>
+<span class="nc" id="L36">        this.systemOptions = systemOptions;</span>
+<span class="nc" id="L37">        this.errorOutputService = errorOutputService;</span>
+<span class="nc" id="L38">        this.fieldErrors = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L39">    }</span>
+
+    @ModelAttribute(&quot;userMessage&quot;)
+    public UIMessaging getUserMessage(HttpServletRequest request,
+                                      @RequestParam(name = &quot;message&quot;, required = false) String message,
+                                      @RequestParam(name = &quot;errorId&quot;, required = false) String errorMessageId) {
+<span class="nc bnc" id="L45" title="All 2 branches missed.">        if (null != message){</span>
+<span class="nc" id="L46">            var msg = MessagingUtil.getMessageFromId(message);</span>
+<span class="nc bnc" id="L47" title="All 2 branches missed.">            if (null != msg){</span>
+<span class="nc" id="L48">                messaging = UIMessaging.builder().messageToUser(msg).build();</span>
+            }
+<span class="nc bnc" id="L50" title="All 2 branches missed.">        } else if (null != errorMessageId){</span>
+
+<span class="nc" id="L52">            var msg = MessagingUtil.getMessageFromId(errorMessageId);</span>
+<span class="nc" id="L53">            log.info(&quot;Error message id: {} is {}&quot;, errorMessageId, msg);</span>
+<span class="nc bnc" id="L54" title="All 2 branches missed.">            if (null != msg){</span>
+<span class="nc" id="L55">                messaging = UIMessaging.builder().errorToUser(msg).build();</span>
+            }
+<span class="nc" id="L57">        } else {</span>
+<span class="nc" id="L58">            messaging = UIMessaging.builder().build();</span>
+        }
+<span class="nc" id="L60">        return messaging;</span>
+    }
+
+
+    @ModelAttribute(&quot;systemOptions&quot;)
+    public SystemOptions getSystemOptions() {
+<span class="nc" id="L66">        return systemOptions;</span>
+    }
+
+    @ModelAttribute(&quot;errors&quot;)
+    public List&lt;String&gt; getErrors(HttpServletRequest request) {
+<span class="nc bnc" id="L71" title="All 2 branches missed.">        return  null != messaging.errorToUser ? List.of( messaging.errorToUser) : List.of();</span>
+    }
+
+    @ModelAttribute(&quot;authenticated&quot;)
+    public boolean isAuthenticated(HttpServletRequest request, HttpServletResponse response) {
+        try {
+<span class="nc" id="L77">            var operatingUser = userService.getOperatingUser(request, response, getUserMessage(request, null, null));</span>
+<span class="nc bnc" id="L78" title="All 2 branches missed.">            if (null == operatingUser) {</span>
+<span class="nc" id="L79">                return false;</span>
+            }
+<span class="nc" id="L81">            return true;</span>
+<span class="nc" id="L82">        }catch(Exception e){</span>
+<span class="nc" id="L83">            return false;</span>
+        }
+    }
+
+    @ModelAttribute(&quot;operatingUser&quot;)
+    public User getOperatingUser(HttpServletRequest request, HttpServletResponse response) {
+        // Logic to retrieve the operating user, e.g., from a JWT token
+        try {
+<span class="nc" id="L91">            return userService.getOperatingUser(request, response, getUserMessage(request, null, null));</span>
+<span class="nc" id="L92">        }catch(Exception e){</span>
+<span class="nc" id="L93">            return null;</span>
+        }
+    }
+
+    @ModelAttribute(&quot;fieldErrors&quot;)
+    public Map&lt;String,String&gt; getFieldErrors(HttpServletRequest request) {
+<span class="nc" id="L99">        return fieldErrors;</span>
+    }
+
+
+    /*
+    @ModelAttribute(&quot;selectedHostGroup&quot;)
+    public HostGroup getSelectedHostGroup(HttpServletRequest request) {
+        // Logic to retrieve the selected host group based on the session or other criteria
+        return hostGroupService.getSelectedHostGroup(request);
+    }
+
+    /**
+    Message management
+     */
+
+
+    /**
+     * can access functions
+     */
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

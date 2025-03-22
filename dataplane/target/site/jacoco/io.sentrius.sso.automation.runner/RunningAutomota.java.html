@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RunningAutomota.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.automation.runner</a> &gt; <span class="el_source">RunningAutomota.java</span></div><h1>RunningAutomota.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.automation.runner;
+
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import io.sentrius.sso.automation.sideeffects.SideEffect;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Getter
+<span class="nc bnc" id="L13" title="All 22 branches missed.">@Data</span>
+<span class="nc" id="L14">@AllArgsConstructor</span>
+<span class="nc" id="L15">@NoArgsConstructor</span>
+public class RunningAutomota extends Automota {
+
+<span class="nc" id="L18">  AutomationRunner runner;</span>
+<span class="nc" id="L19">  Future&lt;List&lt;SideEffect&gt;&gt; future;</span>
+
+  public boolean isDone() throws ExecutionException, InterruptedException {
+<span class="nc bnc" id="L22" title="All 2 branches missed.">    if (null != future) {</span>
+<span class="nc" id="L23">      var res = future.isDone();</span>
+<span class="nc bnc" id="L24" title="All 2 branches missed.">      if (res) {</span>
+<span class="nc" id="L25">        future.get();</span>
+<span class="nc" id="L26">        return true;</span>
+      }
+<span class="nc" id="L28">      return false;</span>
+    }
+<span class="nc" id="L30">    throw new RuntimeException(&quot;Cannot determine if future is done&quot;);</span>
+  }
+
+  public static Builder createBuilderFrom(Automota other) {
+<span class="nc" id="L34">    return (Builder) RunningAutomota.builder()</span>
+<span class="nc" id="L35">        .asUser(other.getAsUser())</span>
+<span class="nc" id="L36">        .identifier(other.getIdentifier())</span>
+<span class="nc" id="L37">        .systems(other.getSystems())</span>
+<span class="nc" id="L38">        .instanceIdentifier(other.getInstanceIdentifier())</span>
+<span class="nc" id="L39">        .sideEffects(other.getSideEffects());</span>
+  }
+
+<span class="nc" id="L42">  public static class Builder extends Automota.Builder {</span>
+    private AutomationRunner runner;
+    private Future&lt;List&lt;SideEffect&gt;&gt; future;
+
+    public Builder runner(AutomationRunner runner) {
+<span class="nc" id="L47">      this.runner = runner;</span>
+<span class="nc" id="L48">      return this;</span>
+    }
+
+    public Builder future(Future&lt;List&lt;SideEffect&gt;&gt; future) {
+<span class="nc" id="L52">      this.future = future;</span>
+<span class="nc" id="L53">      return this;</span>
+    }
+
+    @Override
+    public RunningAutomota build() {
+<span class="nc" id="L58">      RunningAutomota runningAutomota = new RunningAutomota();</span>
+      // Set parent class properties
+<span class="nc" id="L60">      runningAutomota.databaseId = this.databaseId;</span>
+<span class="nc" id="L61">      runningAutomota.asUser = this.asUser;</span>
+<span class="nc" id="L62">      runningAutomota.identifier = this.identifier;</span>
+<span class="nc" id="L63">      runningAutomota.systems = this.systems;</span>
+<span class="nc" id="L64">      runningAutomota.instanceIdentifier = this.instanceIdentifier;</span>
+<span class="nc" id="L65">      runningAutomota.sideEffects = this.sideEffects;</span>
+      // Set RunningAutomota-specific properties
+<span class="nc" id="L67">      runningAutomota.runner = this.runner;</span>
+<span class="nc" id="L68">      runningAutomota.future = this.future;</span>
+<span class="nc" id="L69">      return runningAutomota;</span>
+    }
+  }
+
+  // Convenience static method to start building
+  public static Builder builder() {
+<span class="nc" id="L75">    return new Builder();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,7 +1,5 @@
 package io.sentrius.sso.install.configuration.dtos;
 
-import java.util.List;
-import io.sentrius.sso.core.model.hostgroup.ProfileConfiguration;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;

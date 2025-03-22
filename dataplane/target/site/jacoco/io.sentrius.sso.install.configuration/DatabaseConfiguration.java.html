@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DatabaseConfiguration.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.install.configuration</a> &gt; <span class="el_source">DatabaseConfiguration.java</span></div><h1>DatabaseConfiguration.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.install.configuration;
+
+import lombok.extern.slf4j.Slf4j;
+
+<span class="nc" id="L5">@Slf4j</span>
+<span class="nc" id="L6">public class DatabaseConfiguration {</span>
+
+  /*
+  private final InstallConfiguration installConfiguration;
+
+  public DatabaseConfiguration(InputStream inputStream) throws IOException {
+    this.installConfiguration = InstallConfiguration.fromYaml(inputStream);
+  }
+
+  public void initialize(Connection connection)
+      throws SQLException,
+          ConfigurationException,
+          GeneralSecurityException,
+          JSchException,
+          IOException {
+    try {
+      createStaticType(UserType.createSuperUser());
+      createStaticType(UserType.createSystemAdmin());
+      createStaticType(UserType.createUnknownUser());
+    } catch (Exception e) {
+      // ignore
+    }
+
+    var initialized = AppConfig.decryptProperty(&quot;initialized&quot;);
+
+    if (null != initialized) {
+      // cannot achieve a desired state. This is a one time operation
+      System.out.println(&quot;System already initialized&quot;);
+      return;
+    }
+
+    // first we create the admin user, then the user types followed by all users
+    createAdminUser(connection);
+
+    createSystemUser(connection);
+
+    var userTypes = createUserTypes();
+
+    // now it is time to configure the systems
+
+    createSystems();
+
+    // create profiles and assign systems
+
+    var profiles = createProfiles();
+
+    createUsers(userTypes, profiles);
+
+    createKeys(connection);
+
+    // create automation
+
+    createAutomation();
+
+    // create automation assignments
+
+    AppConfig.encryptProperty(&quot;initialized&quot;, Instant.now().toString());
+  }
+
+  private void createAutomation() throws SQLException, GeneralSecurityException, IOException {
+
+    List&lt;Automation&gt; configuredAutomations = installConfiguration.getAutomation();
+    Map&lt;String, Automation&gt; automationRef = new HashMap&lt;&gt;();
+    for (var automation : configuredAutomations) {
+      String[] nameSplit = automation.getType().split(&quot;;&quot;);
+      if (nameSplit.length != 2 &amp;&amp; !automation.getType().equals(&quot;script&quot;)) {
+        automation.setType(automation.getType() + &quot;;&quot; + automation.getDisplayNm());
+      }
+
+      if (automation.getType().equals(&quot;script&quot;)) {
+
+      } else {
+        Properties props = new Properties();
+        automation
+            .getAutomationOptions()
+            .forEach(
+                (k, v) -&gt; {
+                  props.put(k, v);
+                });
+
+        StringWriter writer = new StringWriter();
+        props.store(writer, null);
+
+        automation.setScript(writer.toString());
+      }
+      ScriptDB.insertScript(automation, installConfiguration.getAdminUser().getId());
+      automationRef.put(automation.getDisplayNm(), automation);
+    }
+
+    List&lt;ScriptAssignment&gt; assignments = installConfiguration.getAutomationAssignments();
+
+    for (var assignment : assignments) {
+      Automation automation = automationRef.get(assignment.getScript().getDisplayNm());
+      if (null == automation) {
+        log.error(
+            &quot;Automation reference invalid, skipping assignment of &quot;
+                + assignment.getScript().getDisplayNm());
+        continue;
+      }
+      List&lt;Long&gt; systemIds = new ArrayList&lt;&gt;();
+      for (String systemName : assignment.getSystems()) {
+        for (HostSystem system : installConfiguration.getSystems()) {
+          if (system.getDisplayNm().equals(systemName)) {
+            systemIds.add(system.getId());
+          }
+        }
+      }
+      assignment.setSystemIds(systemIds);
+
+      ScriptDB.insertAssignments(automation, assignment, assignment.getCron());
+
+      List&lt;Long&gt; userIds = new ArrayList&lt;&gt;();
+      for (String userName : assignment.getUsers()) {
+        for (User user : installConfiguration.getUsers()) {
+          if (user.getUsername().equals(userName)) {
+            userIds.add(user.getId());
+          }
+        }
+        if (!userIds.isEmpty()) {
+          ScriptDB.shareSript(automation, userIds);
+        }
+      }
+
+      // get users
+      // get systems
+
+    }
+  }
+
+  private List&lt;Profile&gt; createProfiles()
+      throws SQLException, GeneralSecurityException, IOException {
+    List&lt;Profile&gt; profiles = new ArrayList&lt;&gt;();
+    if (null != installConfiguration.getManagementGroups()) {
+      for (Profile profile : installConfiguration.getManagementGroups()) {
+        profile.setId(ProfileDB.insertProfile(profile));
+        if (null != profile.getConfiguration()) {
+          ProfileDB.saveConfiguration(profile.getConfiguration());
+        }
+        profiles.add(profile);
+        if (null != profile.getHostSystemList()) {
+          List&lt;Long&gt; systems = new ArrayList&lt;&gt;();
+          for (var system : profile.getHostSystemList()) {
+            for (var hostSystem : installConfiguration.getSystems()) {
+              if (hostSystem.getDisplayNm().equals(system.getDisplayNm())) {
+                systems.add(hostSystem.getId());
+                break;
+              }
+            }
+          }
+          if (!systems.isEmpty()) {
+            ProfileSystemsDB.setSystemsForProfile(profile.getId(), systems);
+          }
+        }
+      }
+    }
+    return profiles;
+  }
+
+  private void createKeys(Connection connection)
+      throws JSchException,
+          SQLException,
+          ConfigurationException,
+          GeneralSecurityException,
+          IOException {
+    DBInitializer.regenerateKeys(connection);
+  }
+
+  private void createSystems() throws SQLException, GeneralSecurityException {
+    if (null != installConfiguration.getSystems()) {
+      for (var system : installConfiguration.getSystems()) {
+        system.setId(SystemDB.insertSystem(system));
+        if (null != system.getProxies()) {
+          var proxies = new ArrayList&lt;ProxyHost&gt;();
+          for (var proxy : system.getProxies()) {
+            proxies.add(ProxyDB.addProxyHost(proxy, system));
+          }
+          system.setProxies(proxies);
+        }
+      }
+    }
+  }
+
+  protected List&lt;UserType&gt; createUserTypes() throws SQLException, GeneralSecurityException {
+    List&lt;UserType&gt; types = new ArrayList&lt;&gt;();
+    if (null != installConfiguration.getUserTypes()) {
+      for (UserType type : installConfiguration.getUserTypes()) {
+        type.setId(UserDB.insertType(type));
+        types.add(type);
+      }
+    }
+    return types;
+  }
+
+  protected List&lt;User&gt; createUsers(List&lt;UserType&gt; userTypes, List&lt;Profile&gt; profiles)
+      throws SQLException, GeneralSecurityException {
+    List&lt;User&gt; users = new ArrayList&lt;&gt;();
+    Map&lt;Long, Set&lt;Long&gt;&gt; assignments = new HashMap&lt;&gt;();
+    if (null != installConfiguration.getUsers()) {
+      for (User user : installConfiguration.getUsers()) {
+
+        // set the UserType from the configuration
+        if (null != user.getAuthorizationType()) {
+          for (UserType type : userTypes) {
+            if (type.getUserTypeName().equals(user.getAuthorizationType().getUserTypeName())) {
+              user.setAuthorizationType(type);
+              break;
+            }
+          }
+        } else {
+          user.setAuthorizationType(UserType.createSystemAdmin());
+        }
+
+        user.setId(UserDB.insertUser(user));
+        users.add(user);
+
+        if (null != user.getProfileList()) {
+          for (Profile profile : user.getProfileList()) {
+            for (Profile profile1 : profiles) {
+              if (profile1.getNm().equals(profile.getNm())) {
+                createOrUpdate(assignments, profile1.getId(), user.getId());
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    for (var entry : assignments.entrySet()) {
+      UserProfileDB.setUsersForProfile(entry.getKey(), entry.getValue());
+    }
+    return users;
+  }
+
+  static void createOrUpdate(Map&lt;Long, Set&lt;Long&gt;&gt; assignments, Long profileId, Long userId) {
+    var set = assignments.computeIfAbsent(profileId, id -&gt; new HashSet&lt;&gt;());
+    set.add(userId);
+  }
+
+  protected void createAdminUser(Connection connection)
+      throws SQLException, GeneralSecurityException, ConfigurationException {
+
+    User user = installConfiguration.getAdminUser();
+
+    if (null == user) {
+      throw new IllegalStateException(&quot;Admin user not found in configuration&quot;);
+    }
+
+    String salt = EncryptionUtil.generateSalt();
+
+    String defaultPassword = EncryptionUtil.hash(user.getPassword() + salt);
+
+    String initialPassword = AppConfig.getProperty(&quot;initialPassword&quot;);
+
+    if (null != initialPassword &amp;&amp; !AppConfig.isPropertyEncrypted(&quot;initialPassword&quot;)) {
+      defaultPassword = EncryptionUtil.hash(initialPassword + salt);
+      AppConfig.encryptProperty(&quot;initialPassword&quot;, AppConfig.getProperty(&quot;initialPassword&quot;));
+    }
+
+    // insert default admin user
+    user.setUserType(User.MANAGER);
+    user.setAuthorizationType(UserType.createSuperUser());
+    try {
+      user.setId(UserDB.insertUser(connection, user));
+    } catch (Exception e) {
+      log.error(&quot;Error creating admin user. Likely a duplicate&quot;, e);
+    }
+
+    user = UserDB.getUser(1L);
+  }
+
+  protected void createSystemUser(Connection connection)
+      throws SQLException, GeneralSecurityException, ConfigurationException {
+
+    User user = User.builder()
+        .id(0L)
+        .authorizationType(UserType.createSuperUser())
+        .username(&quot;SYSTEM&quot;)
+        .password(UUID.randomUUID().toString() + &quot;.&quot; + UUID.randomUUID().toString())
+        .build();
+
+    if (null == user) {
+      throw new IllegalStateException(&quot;Admin user not found in configuration&quot;);
+    }
+
+    String salt = EncryptionUtil.generateSalt();
+
+    String defaultPassword = EncryptionUtil.hash(user.getPassword() + salt);
+
+    user.setPassword(defaultPassword);
+    user.setId(-1L);
+    // insert default admin user
+    user.setUserType(User.MANAGER);
+    user.setAuthorizationType(UserType.createSuperUser());
+    try {
+      user.setId(UserDB.insertDefinedUser(connection, user));
+    } catch (Exception e) {
+      log.error(&quot;Error creating admin user. Likely a duplicate&quot;, e);
+    }
+
+  }
+
+   */
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

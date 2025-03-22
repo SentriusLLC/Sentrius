@@ -1,13 +1,11 @@
 package io.sentrius.sso.controllers.view;
 
-import io.sentrius.sso.core.annotations.LimitAccess;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.model.dto.HostGroupDTO;
-import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
+import io.sentrius.sso.core.dto.HostGroupDTO;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.UserService;
-import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.utils.MessagingUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,8 +23,9 @@ public class EnclaveController extends BaseController {
 
     final HostGroupService hostGroupService;
 
-    public EnclaveController(UserService userService, SystemOptions systemOptions,
-                             ErrorOutputService errorOutputService, HostGroupService hostGroupService) {
+    public EnclaveController(
+        UserService userService, SystemOptions systemOptions,
+        ErrorOutputService errorOutputService, HostGroupService hostGroupService) {
         super(userService, systemOptions, errorOutputService);
         this.hostGroupService = hostGroupService;
     }
@@ -34,13 +33,12 @@ public class EnclaveController extends BaseController {
 
 
     @GetMapping("/assign")
-    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_EDIT_SYSTEMS})
     public String assignEnclave(
         HttpServletRequest request,
         HttpServletResponse response,
         @RequestParam(name = "groupId") Long groupId, Model model) {
 
-        var resp = new HostGroupDTO(hostGroupService.getHostGroup(groupId),true);
+        var resp = hostGroupService.getHostGroup(groupId).toDTO(true);
         model.addAttribute("hostGroup", resp);
 
         model.addAttribute("groupId", groupId);
@@ -50,7 +48,6 @@ public class EnclaveController extends BaseController {
     }
 
     @GetMapping("/edit")
-    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_EDIT_SYSTEMS})
     public String editEnclave(
         HttpServletRequest request,
         HttpServletResponse response,
@@ -62,7 +59,7 @@ public class EnclaveController extends BaseController {
             return "redirect:/sso/v1/ssh/servers/list?errorId=" + MessagingUtil.getMessageId(MessagingUtil.DO_NOT_HAVE_ACCESS);
         }
         log.info("configuration {}", hg.get().getConfigurationJson());
-        model.addAttribute("hostGroup", new HostGroupDTO(hg.get()));
+        model.addAttribute("hostGroup", hg.get().toDTO());
         return "sso/enclaves/edit_enclave";
     }
 

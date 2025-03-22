@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SessionIdentifier.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.core.model.sessions</a> &gt; <span class="el_source">SessionIdentifier.java</span></div><h1>SessionIdentifier.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.core.model.sessions;
+
+import io.sentrius.sso.core.model.ConnectedSystem;
+import io.sentrius.sso.core.model.users.User;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+<span class="nc" id="L12">@Builder</span>
+@Getter
+<span class="nc bnc" id="L14" title="All 46 branches missed.">@EqualsAndHashCode</span>
+<span class="nc" id="L15">@NoArgsConstructor</span>
+<span class="nc" id="L16">@AllArgsConstructor</span>
+<span class="nc" id="L17">@ToString</span>
+public class SessionIdentifier {
+
+<span class="nc" id="L20">    Long sessionId;</span>
+
+<span class="nc" id="L22">    Long instanceId;</span>
+
+<span class="nc" id="L24">    String username;</span>
+
+<span class="nc" id="L26">    String host;</span>
+
+<span class="nc" id="L28">    Integer port;</span>
+
+    public static SessionIdentifier from(User user, SessionOutput sessionOutput) {
+<span class="nc" id="L31">        return SessionIdentifier.builder()</span>
+<span class="nc" id="L32">            .sessionId(sessionOutput.getSessionId())</span>
+<span class="nc" id="L33">            .instanceId(Long.valueOf(sessionOutput.getSessionId()))</span>
+<span class="nc" id="L34">            .username(user.getUsername())</span>
+<span class="nc" id="L35">            .host(sessionOutput.getConnectedSystem().getHostSystem().getHost())</span>
+<span class="nc" id="L36">            .port(sessionOutput.getConnectedSystem().getHostSystem().getPort())</span>
+<span class="nc" id="L37">            .build();</span>
+    }
+
+    public static SessionIdentifier from(
+        ConnectedSystem connectedSystem) {
+<span class="nc" id="L42">        return SessionIdentifier.builder()</span>
+<span class="nc" id="L43">            .sessionId(connectedSystem.getSession().getId())</span>
+<span class="nc" id="L44">            .instanceId(connectedSystem.getSession().getId())</span>
+<span class="nc" id="L45">            .username(connectedSystem.getUser().getUsername())</span>
+<span class="nc" id="L46">            .host(connectedSystem.getHostSystem().getHost())</span>
+<span class="nc" id="L47">            .port(connectedSystem.getHostSystem().getPort())</span>
+<span class="nc" id="L48">            .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
