@@ -528,7 +528,6 @@ b
                             '&height=' + height,
                         cache: false
                     });
-//                    $('#terminal .terminal').toggleClass('fullscreen');
                     fitMap[id].fit();
                 }
 
@@ -799,22 +798,7 @@ b
             function setTerminalEvents(element, id) {
                 // Ensure `element` is a jQuery object
                 const $element = $(element);
-                /*
-                $element.mousedown(function (event) {
-                    event.preventDefault(); // Prevent default mousedown behavior
 
-                    // Dynamically get the correct helper textarea for the given terminal instance
-                    const helperTextarea = document.querySelector(`#sentrius_term_${id} .xterm-helper-textarea`);
-
-                    if (helperTextarea) {
-                        helperTextarea.focus(); // Explicitly focus the terminal input field
-                    } else {
-                        console.warn("Helper textarea not found for terminal ID:", id);
-                    }
-
-                    console.log("mousedown on terminal", id);
-                });
-                */
 
             }
 
