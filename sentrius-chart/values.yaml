@@ -24,6 +24,7 @@ sentrius:
     tag: tag
     pullPolicy: IfNotPresent
   port: 8080
+  serviceType: ClusterIP
   ssh:
     port: 22
   env:
@@ -56,8 +57,8 @@ sentriusagent:
   port: 8080
   oauth2:
     client_id: java-agents
-    client_secret: KLJMLKSDJGlkj23@#jasdlkjg@#dsagsagdsag
-    authorization_grant_type: authorization_code
+    client_secret: e4WgJovH8MzcAvRnFg3rROAbeDIwiYmx
+    authorization_grant_type: client_credentials
     redirect-uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     scope: openid,profile,email
     issuer-uri: http://keycloak.{{ .Values.subdomain }}/realms/sentrius
@@ -147,6 +148,7 @@ keycloak:
   host: keycloak.default.svc.cluster.local
   adminUser: admin
   adminPassword: nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0@1
+  serviceType: ClusterIP
   port: 8081
   clientId: sentrius-api
   clientSecret: nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0

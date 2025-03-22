@@ -89,7 +89,7 @@ if $update_sentrius_keycloak; then
 fi
 
 if $update_sentrius_agent; then
-    cp java-agent/target/java-agent-*.jar docker/sentrius-agent/agent.jar
+    cp analytics/target/analytics-*.jar docker/sentrius-agent/agent.jar
     SENTRIUS_AGENT_VERSION=$(increment_patch_version $SENTRIUS_AGENT_VERSION)
     build_and_push_image "sentrius-agent" "$SENTRIUS_AGENT_VERSION" "./docker/sentrius-agent"
     rm docker/sentrius-agent/agent.jar
@@ -98,7 +98,7 @@ fi
 
 if $update_sentrius_ai_agent; then
     cp ai-agent/target/ai-agent-*.jar docker/sentrius-ai-agent/agent.jar
-    $SENTRIUS_AI_AGENT_VERSION=$(increment_patch_version $SENTRIUS_AI_AGENT_VERSION)
+    SENTRIUS_AI_AGENT_VERSION=$(increment_patch_version $SENTRIUS_AI_AGENT_VERSION)
     build_image "sentrius-ai-agent" "$SENTRIUS_AI_AGENT_VERSION" "./docker/sentrius-ai-agent"
     rm docker/sentrius-ai-agent/agent.jar
     update_env_var "SENTRIUS_AI_AGENT_VERSION" "$SENTRIUS_AI_AGENT_VERSION"

@@ -8,7 +8,7 @@
   </parent>
 
   <groupId>analysis</groupId>
-  <artifactId>java-agent</artifactId>
+  <artifactId>analytics</artifactId>
   <version>1.0-SNAPSHOT</version>
 
   <name>java-agent</name>

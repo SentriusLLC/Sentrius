@@ -20,11 +20,14 @@ metadata:
     release: {{ .Release.Name }}
 
 spec:
-  type: ClusterIP
+  type: {{ .Values.keycloak.serviceType }}
   ports:
     - name: http
       port: {{ .Values.keycloak.port }}
       targetPort: {{ .Values.keycloak.port }} # Replace with the internal port Keycloak listens to
+      {{- if eq .Values.keycloak.serviceType "NodePort" }}
+      nodePort: {{ .Values.keycloak.nodePort | default 30081  }}
+      {{- end }}
   selector:
     app: keycloak
     release: {{ .Release.Name }}

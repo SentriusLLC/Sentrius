@@ -32,6 +32,7 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set sentriusDomain="http://sentrius:8080" \
     --set sentrius.image.repository="sentrius" \
     --set sentrius.image.pullPolicy="Never" \
+    --set keycloak.image.pullPolicy="Never" \
     --set ssh.image.pullPolicy="Never" \
     --set sentrius.image.tag=${SENTRIUS_VERSION} \
     --set ssh.image.tag=${SENTRIUS_SSH_VERSION} \

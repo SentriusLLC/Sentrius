@@ -6,7 +6,6 @@ metadata:
     {{- include "sentrius.labels" . | nindent 4 }}
 data:
   ai-agent-application.properties: |
-
     spring.main.web-application-type=servlet
     spring.thymeleaf.enabled=true
     spring.freemarker.enabled=false

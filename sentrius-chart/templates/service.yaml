@@ -18,10 +18,13 @@ metadata:
   labels:
     app: sentrius
 spec:
-  type: ClusterIP
+  type: {{ .Values.sentrius.serviceType }}
   ports:
     - name: http
       port: {{ .Values.sentrius.port }}
       targetPort: {{ .Values.sentrius.port }} # Port used inside the container
+      {{- if eq .Values.sentrius.serviceType "NodePort" }}
+      nodePort: {{ .Values.sentrius.nodePort | default 30080  }}
+      {{- end }}
   selector:
     app: sentrius
