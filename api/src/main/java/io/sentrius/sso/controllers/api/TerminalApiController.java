@@ -59,13 +59,12 @@ public class TerminalApiController extends BaseController {
     public ResponseEntity<String> resize(@RequestParam("sessionId") String sessionId, @RequestParam("width") double cols,
     @RequestParam(
         "height") double rows) throws GeneralSecurityException {
-        log.info("resize");
         var sessionIdStr = cryptoService.decrypt(sessionId);
         var sessionIdLong = Long.parseLong(sessionIdStr);
 
         sessionTrackingService.resize(sessionIdLong, cols, rows);
 
-        return ResponseEntity.ok(sessionId);
+        return ResponseEntity.ok("resized");
     }
 
     @GetMapping("/list")
