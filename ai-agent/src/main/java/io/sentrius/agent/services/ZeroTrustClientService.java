@@ -28,6 +28,11 @@ public class ZeroTrustClientService {
         return keycloakService.getKeycloakToken();
     }
 
+    public String getUsername() {
+        return keycloakService.extractUsername(getKeycloakToken());
+    }
+
+
     /**
      * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
      */

@@ -29,7 +29,7 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set keycloakSubdomain="sentrius-keycloak" \
     --set keycloakHostname="sentrius-keycloak:8081" \
     --set keycloakDomain="http://sentrius-keycloak:8081" \
-    --set sentriusDomain="http://sentrius:8080" \
+    --set sentriusDomain="http://sentrius-sentrius:8080" \
     --set sentrius.image.repository="sentrius" \
     --set sentrius.image.pullPolicy="Never" \
     --set keycloak.image.pullPolicy="Never" \

@@ -7,6 +7,7 @@ import io.sentrius.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
 import io.sentrius.sso.core.model.security.enums.RuleAccessEnum;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
+import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.utils.AccessUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,6 +32,7 @@ import java.sql.SQLException;
 public class AccessControlAspect {
 
     private final UserService userService;
+    private final ATPLPolicyService atplPolicyService;
 
 
     //@Before("@annotation(io.sentrius.core.security.access.LimitAccess)")
@@ -43,6 +45,42 @@ public class AccessControlAspect {
         LimitAccess accessAnnotation = limitAccess;
         var operatingUser = userService.getOperatingUser(getCurrentHttpRequest(),getCurrentHttpResponse(),null);
         if (accessAnnotation != null) {
+            if (operatingUser.getIdentityType() == IdentityType.NON_PERSON_ENTITY) {
+                var policy = atplPolicyService.getPolicy(operatingUser);
+                if (policy.isEmpty()) {
+                    log.info("Access Denied to {} at {}", operatingUser, accessAnnotation);
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Policy is required ");
+                }
+                var endpoint = getCurrentHttpRequest().getRequestURI();
+                if (atplPolicyService.allowsEndpoint(policy.get(), endpoint)) {
+                    // now check the trust score, if it is below the threshold, deny access
+                    switch ( atplPolicyService.evaluateScore(policy.get(), operatingUser) ){
+                        case SUCCESS:
+                            if (policy.get().getActions().getOnSuccess().equals("allow")) {
+
+                                return;
+                            }
+                            break;
+                        case MARGINAL:
+                            if (policy.get().getActions().getOnMarginal().getAction().contains("ztat")) {
+                                // inform the agent they can return after they get an approval of some sort, whether
+                                // from a human or from an agent
+                                throw new ResponseStatusException(HttpStatus.PRECONDITION_REQUIRED, "ZTAT Required");
+                            } else if (policy.get().getActions().getOnMarginal().getAction().contains("allow")) {
+                                    return;
+                            }
+                            else {
+                                log.info("Access Denied to {} at {}", operatingUser, accessAnnotation);
+                                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied to ");
+                            }
+                        case FAILURE:
+                            log.info("Access Denied to {} at {}", operatingUser, accessAnnotation);
+                            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied");
+                    }
+                    log.info("Access Denied to {} at {}", operatingUser, accessAnnotation);
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied to ");
+                }
+            }
             // Get the required roles from the annotation
             for (var userAccess : accessAnnotation.userAccess()) {
                 if (!canAccess(operatingUser, userAccess)) {
@@ -60,7 +98,7 @@ public class AccessControlAspect {
             }
 
             if (!canAccess) {
-
+                log.info("Access Denied....");
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied to ");
             }
         }

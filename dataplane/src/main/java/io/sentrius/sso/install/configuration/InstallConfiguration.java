@@ -12,6 +12,7 @@ import io.sentrius.sso.core.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.security.enums.CertKeyConfiguration;
 import io.sentrius.sso.core.model.security.enums.SystemKeyConfiguration;
+import io.sentrius.sso.core.trust.ATPLPolicy;
 import io.sentrius.sso.install.configuration.dtos.HostGroupConfigurationDTO;
 import io.sentrius.sso.install.configuration.dtos.RuleDTO;
 import lombok.AccessLevel;
@@ -46,6 +47,9 @@ public class InstallConfiguration {
   @Builder.Default private List<UserTypeDTO> userTypes = new ArrayList<>();
 
   @Builder.Default private List<HostGroupConfigurationDTO> managementGroups = new ArrayList<>();
+
+  @Builder.Default
+  private List<ATPLPolicy> atplDefinitions = new ArrayList<>();
 
   private List<SystemKeyConfiguration> systemKeyConfigurations;
 

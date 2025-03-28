@@ -7,10 +7,12 @@ import java.util.Map;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.model.DataTableResponse;
 import io.sentrius.sso.core.model.ErrorOutput;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.NotificationService;
@@ -86,6 +88,7 @@ public class NotificationApiController extends BaseController {
 
 
     @PostMapping("/errors/clear")
+    @LimitAccess(applicationAccess ={ ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<String> clearLogs() {
 
         log.info("clear");

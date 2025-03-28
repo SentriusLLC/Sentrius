@@ -11,7 +11,7 @@ public enum ZeroTrustAccessTokenEnum {
 
   CAN_DENY_ZTATS(7),
 
-  CAN_MANAGE_ZTATS(15);
+  CAN_MANAGE_ZTATS(15), CAN_REQUEST_ZTAT(0);
 
   private final int value;
 

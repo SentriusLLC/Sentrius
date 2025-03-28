@@ -16,11 +16,13 @@ metadata:
     {{- end }}
     {{- end }}
 spec:
-  type: NodePort
+  type: {{ .Values.sentriusaiagent.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.sentriusaiagent.port }}
+      targetPort: {{ .Values.sentriusaiagent.port }} # Port used inside the container
+      {{- if eq .Values.sentriusaiagent.service.type "NodePort" }}
+      nodePort: {{ .Values.sentriusaiagent.nodePort | default 30085 }}
+      {{- end }}
   selector:
     app: sentriusaiagent
-  ports:
-    - protocol: TCP
-      port: 80        # Port exposed to the outside world
-      targetPort: {{ .Values.sentriusaiagent.port }} # Port used inside the container
-      nodePort: {{ .Values.sentriusaiagent.service.nodePort | default 30085 }} # NodePort range: 30000-32767

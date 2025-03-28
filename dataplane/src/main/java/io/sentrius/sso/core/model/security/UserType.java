@@ -153,12 +153,12 @@ public class UserType {
         return UserType.builder()
             .id(-4L)
             .userTypeName("Default User")
-            .ruleAccess(null)
-            .automationAccess(null)
+            .ruleAccess(RuleAccessEnum.CANNOT_VIEW_RULES)
+            .automationAccess(AutomationAccessEnum.CANNOT_VIEW_AUTOMATION)
             .systemAccess(SSHAccessEnum.CAN_VIEW_SYSTEMS)
-            .userAccess(null)
+            .userAccess(UserAccessEnum.NOT_AUTHORIZED_USER)
             .applicationAccess(ApplicationAccessEnum.CAN_LOG_IN)
-            .ztAccessTokenAccess(null)
+            .ztAccessTokenAccess(ZeroTrustAccessTokenEnum.CAN_REQUEST_ZTAT)
             .build();
     }
 
@@ -166,12 +166,12 @@ public class UserType {
         return UserType.builder()
             .id(-3L)
             .userTypeName("Unknown User")
-            .ruleAccess(null)
-            .automationAccess(null)
-            .systemAccess(null)
-            .userAccess(null)
-            .applicationAccess(null)
-            .ztAccessTokenAccess(null)
+            .ruleAccess(RuleAccessEnum.CANNOT_VIEW_RULES)
+            .automationAccess(AutomationAccessEnum.CANNOT_VIEW_AUTOMATION)
+            .systemAccess(SSHAccessEnum.CANNOT_VIEW_SYSTEMS)
+            .userAccess(UserAccessEnum.NOT_AUTHORIZED_USER)
+            .applicationAccess(ApplicationAccessEnum.CANNOT_LOG_IN)
+            .ztAccessTokenAccess(ZeroTrustAccessTokenEnum.CAN_REQUEST_ZTAT)
             .build();
     }
 
@@ -243,7 +243,7 @@ public class UserType {
 
     public UserTypeDTO toDTO() {
         var builder =
-            UserTypeDTO.builder().dtoId(getId().toString()).userTypeName(getUserTypeName()).automationAccess(getAutomationAccess().name());
+            UserTypeDTO.builder().id(getId()).dtoId(getId().toString()).userTypeName(getUserTypeName()).automationAccess(getAutomationAccess().name());
         builder =
             builder.systemAccess(getSystemAccess().name()).ruleAccess(getRuleAccess().name()).userAccess(getUserAccess().name());
         builder =

@@ -12,7 +12,7 @@ public enum UserAccessEnum {
 
   CAN_DEL_USERS(8),
 
-  CAN_MANAGE_USERS(15);
+  CAN_MANAGE_USERS(15), NOT_AUTHORIZED_USER(0);
 
   private final int value;
 

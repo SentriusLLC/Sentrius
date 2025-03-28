@@ -87,6 +87,25 @@ public class ZeroTrustAccessTokenService {
     return request;
   }
 
+  public OpsZeroTrustAcessTokenRequest createAgentRequest(
+      @NonNull String agentId,
+      @NonNull String summary,
+      @NonNull String command,
+      @NonNull ZeroTrustAccessTokenReason reason,
+      @NonNull User user){
+
+    OpsZeroTrustAcessTokenRequest request =
+        OpsZeroTrustAcessTokenRequest.builder()
+            .command(command)
+            .ztatReason(reason)
+            .user(user)
+            .commandHash(ZTATUtils.getCommandHash(command))
+            .summary(summary)
+            .lastUpdated(new Timestamp(System.currentTimeMillis()))
+            .build();
+    return request;
+  }
+
 
 
   public boolean isApproved(

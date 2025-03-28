@@ -3,14 +3,19 @@ package io.sentrius.sso.core.model.users;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
+import com.jcraft.jsch.Identity;
 import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.actors.PrincipalEntity;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
+import io.sentrius.sso.core.model.security.IdentityType;
 import io.sentrius.sso.core.model.security.UserType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
@@ -41,7 +46,8 @@ public class User extends PrincipalEntity {
     private String username;
 
     @Column(name = "password")
-    private String password;
+    @Builder.Default
+    private String password = UUID.randomUUID().toString(); // if empty we require another form of validation
 
     @Column(name = "email_address")
     private String emailAddress;
@@ -52,6 +58,11 @@ public class User extends PrincipalEntity {
 
     @Column(name = "team")
     private String team;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private IdentityType identityType = IdentityType.USER; // HUMAN or AGENT
 
     @ManyToMany
     @JoinTable(
@@ -91,14 +102,14 @@ public class User extends PrincipalEntity {
         return builder.build();
     }
 
-    public static User from(UserDTO dto){
+    public static User from(UserDTO dto, UserType userType){
         return User.builder().id(dto.getId())
             .username(dto.getUsername())
             .userId(dto.getUserId())
             .name(dto.getName())
             .password(dto.getPassword())
             .emailAddress(dto.getEmailAddress())
-            .authorizationType(UserType.builder().id(dto.getAuthorizationType().getId()).build())
+            .authorizationType(userType)
             .team(dto.getTeam())
             .build();
     }

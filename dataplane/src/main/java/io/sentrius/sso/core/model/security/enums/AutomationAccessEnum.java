@@ -13,7 +13,7 @@ public enum AutomationAccessEnum {
 
   CAN_RUN_AUTOMATION(9),
 
-  CAN_MANAGE_AUTOMATION(15);
+  CAN_MANAGE_AUTOMATION(15), CANNOT_VIEW_AUTOMATION(0);
 
   private final int value;
 

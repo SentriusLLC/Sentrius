@@ -31,6 +31,7 @@ CREATE TABLE users (
                        image_url VARCHAR(255),
                        role_id BIGINT,
                        team VARCHAR(255),
+                       identityType VARCHAR(20) NOT NULL DEFAULT 'USER',   -- 'HUMAN' or 'AGENT'
                        FOREIGN KEY (role_id) REFERENCES usertypes(id)
 );
 

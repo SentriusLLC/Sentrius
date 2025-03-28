@@ -1,9 +1,12 @@
 package io.sentrius.sso.controllers.view;
 
 import java.security.GeneralSecurityException;
+import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.TerminalLogDTO;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.auditing.AuditService;
@@ -47,6 +50,7 @@ public class AuditController extends BaseController {
 
 
     @GetMapping("/audit/attach")
+    @LimitAccess(sshAccess ={ SSHAccessEnum.CAN_MANAGE_SYSTEMS})
     public String attachSession(
         HttpServletRequest request, HttpServletResponse response,
         @RequestParam("sessionId") String sessionId, Model model) throws GeneralSecurityException {

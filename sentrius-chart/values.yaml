@@ -27,10 +27,6 @@ sentrius:
   serviceType: ClusterIP
   ssh:
     port: 22
-  env:
-    SPRING_DATASOURCE_USERNAME: admin
-    SPRING_DATASOURCE_PASSWORD: password
-    KEYSTORE_PASSWORD: sentrius
   resources: {}
   oauth2:
     client_id: sentrius-api
@@ -64,10 +60,6 @@ sentriusagent:
     issuer-uri: http://keycloak.{{ .Values.subdomain }}/realms/sentrius
   ssh:
     port: 22
-  env:
-    SPRING_DATASOURCE_USERNAME: admin
-    SPRING_DATASOURCE_PASSWORD: password
-    KEYSTORE_PASSWORD: sentrius
   resources: {}
   config:
     application: |
@@ -96,10 +88,6 @@ sentriusaiagent:
     issuer-uri: http://keycloak.{{ .Values.subdomain }}/realms/sentrius
   ssh:
     port: 22
-  env:
-    SPRING_DATASOURCE_USERNAME: admin
-    SPRING_DATASOURCE_PASSWORD: password
-    KEYSTORE_PASSWORD: sentrius
   resources: {}
   config:
     application: |
@@ -120,8 +108,6 @@ postgres:
   port: 5432
   storageSize: 10Gi
   env:
-    POSTGRES_USER: admin
-    POSTGRES_PASSWORD: password
     POSTGRES_DB: sentrius
 
 ssh:
@@ -129,10 +115,6 @@ ssh:
     repository: sentrius-ssh
     pullPolicy: IfNotPresent
   port: 22
-  env:
-    POSTGRES_USER: admin
-    POSTGRES_PASSWORD: password
-    POSTGRES_DB: sentrius
 
 # Secrets
 secrets:

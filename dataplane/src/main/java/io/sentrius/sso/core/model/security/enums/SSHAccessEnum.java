@@ -11,6 +11,8 @@ public enum SSHAccessEnum {
   // _ 1 1 1 = 7
   // 1 1 1 1 = 15
   // 1 _ _ _ = 8
+  CANNOT_VIEW_SYSTEMS(0),
+
   CAN_VIEW_SYSTEMS(1),
 
   CAN_EDIT_SYSTEMS(7),

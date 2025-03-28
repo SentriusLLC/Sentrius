@@ -9,9 +9,12 @@ import java.util.Map;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jcraft.jsch.JSchException;
 import io.sentrius.sso.automation.sideeffects.SideEffect;
+import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.SystemOption;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.model.security.enums.SystemOperationsEnum;
 import io.sentrius.sso.core.services.ConfigurationService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.HostGroupService;
@@ -79,6 +82,7 @@ public class SystemApiController extends BaseController {
     }
 
     @PutMapping("/settings/ssh/toggle")
+    @LimitAccess(applicationAccess ={ ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<ObjectNode> toggleSSHEnabled() {
         log.info("Toggling SSH enabled");
         ObjectNode node = JsonUtil.MAPPER.createObjectNode();
@@ -151,6 +155,7 @@ public class SystemApiController extends BaseController {
     }
 
     @PostMapping(value = "/settings/upload", consumes = "multipart/form-data")
+    @LimitAccess(applicationAccess ={ ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<ObjectNode> uploadConfig(
         HttpServletRequest request, HttpServletResponse response,
         @RequestParam("configFile") MultipartFile file) {
@@ -176,6 +181,7 @@ public class SystemApiController extends BaseController {
     }
 
     @PostMapping("/settings/apply")
+    @LimitAccess(applicationAccess ={ ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<Map<String, Object>> applySettings(@RequestParam("id") String id)
         throws GeneralSecurityException, IOException, JSchException, SQLException {
         // Perform validation or logic with the ID
@@ -197,7 +203,6 @@ public class SystemApiController extends BaseController {
             log.info("no side effects?");
             return ResponseEntity.ok(Map.of("id", id));
         }
-log.info("wut");
 
         return ResponseEntity.badRequest().body(Map.of("error", "ID cannot be empty"));
         // Respond with success and an ID for redirection

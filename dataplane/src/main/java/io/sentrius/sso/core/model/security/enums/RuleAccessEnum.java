@@ -6,6 +6,8 @@ import java.util.Set;
 
 public enum RuleAccessEnum {
 
+  CANNOT_VIEW_RULES(0),
+
   CAN_VIEW_RULES(1),
 
   CAN_EDIT_RULES(3),

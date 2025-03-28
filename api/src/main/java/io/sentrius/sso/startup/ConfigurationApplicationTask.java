@@ -41,6 +41,7 @@ import io.sentrius.sso.core.repository.HostGroupRepository;
 import io.sentrius.sso.core.repository.SystemRepository;
 import io.sentrius.sso.core.repository.UserRepository;
 import io.sentrius.sso.core.repository.UserTypeRepository;
+import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.RuleService;
 import io.sentrius.sso.core.services.UserService;
@@ -79,6 +80,8 @@ public class ConfigurationApplicationTask {
     private final HostGroupService hostGroupService;
 
     final CryptoService cryptoService;
+
+    final ATPLPolicyService atplPolicyService;
 
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
@@ -206,8 +209,21 @@ public class ConfigurationApplicationTask {
 
         //AppConfig.encryptProperty("initialized", Instant.now().toString());
 
+        // get the policies
+        createPolicies(installConfiguration, action);
+
         return sideEffects;
     }
+
+    private void createPolicies(InstallConfiguration installConfiguration, boolean action) {
+
+            installConfiguration.getAtplDefinitions().forEach( policy -> {
+                atplPolicyService.savePolicy(policy);
+
+            });
+
+    }
+
     @Transactional
     protected Map<String,ProfileRule> createRules(
         List<SideEffect> sideEffects, InstallConfiguration installConfiguration,
@@ -387,8 +403,9 @@ public class ConfigurationApplicationTask {
                         },
                         () -> {
                             if (action){
-                            newType.setId( userTypeRepository.save(newType).getId() );
+                                newType.setId( userTypeRepository.save(newType).getId() );
                             }
+                            log.info("Creating user type {}, with id {}", type.getUserTypeName(), newType.getId());
                             sideEffects.add(
                                 SideEffect.builder().sideEffectDescription("Creating user type " + type.getUserTypeName()).type(
                                     SideEffectType.UPDATE_DATABASE).asset("UserTypes").build()
@@ -424,7 +441,12 @@ public class ConfigurationApplicationTask {
                     userDTO.setAuthorizationType( UserType.createSystemAdmin().toDTO());
                 }
 
-                User user = User.from(userDTO);
+                log.info("Retrieving user type {}, id {}", userDTO.getAuthorizationType().getUserTypeName(),
+                    userDTO.getAuthorizationType().getId());
+                var type =
+                    userService.getUserType(UserType.builder().id(userDTO.getAuthorizationType().getId()).build());
+
+                User user = User.from(userDTO, type.get());
                 User finalUser = user;
                 userService.findByUsername(user.getUsername()).ifPresentOrElse(
                     user1 -> {
@@ -526,7 +548,10 @@ public class ConfigurationApplicationTask {
                         user.setPassword(userService.encodePassword(user.getPassword()));
                         user.setAuthorizationType(UserType.createSuperUser().toDTO());
 
-                        userService.addUscer(User.from(user));
+                        var type =
+                            userService.getUserType(UserType.createSuperUser());
+
+                        userService.addUscer(User.from(user, type.get()));
                     } catch (NoSuchAlgorithmException e) {
                         throw new RuntimeException(e);
                     }

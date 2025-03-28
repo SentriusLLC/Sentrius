@@ -6,6 +6,8 @@ import java.util.Set;
 
 public enum ApplicationAccessEnum {
 
+  CANNOT_LOG_IN(0),
+
   CAN_LOG_IN(1),
 
   CAN_EDIT_ACCESS_TYPES(3),

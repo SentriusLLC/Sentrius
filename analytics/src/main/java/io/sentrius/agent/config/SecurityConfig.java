@@ -83,7 +83,7 @@ public class SecurityConfig {
 
             log.info("Extracted User Info: userId={}, username={}, email={}", userId, username, email);
 
-            User user = userService.getUserWithDetails(userId);
+            User user = userService.getUserWithDetails(username);
             if (user == null) {
                 user = User.builder()
                     .username(username)

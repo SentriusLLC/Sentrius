@@ -27,6 +27,7 @@ public class KeycloakService {
 
 
     public String getKeycloakToken() {
+        log.info("Getting Keycloak token");
         return keycloak.getKeycloak().tokenManager().getAccessTokenString();
     }
 
@@ -52,6 +53,7 @@ public class KeycloakService {
                 .parseClaimsJws(token);
             return true;
         } catch (Exception e) {
+            e.printStackTrace();
             return false;
         }
     }
@@ -71,5 +73,19 @@ public class KeycloakService {
             .getBody();
 
         return claims.get("client_id", String.class); // Extracts agent identity
+    }
+
+    public String extractUsername(String token) {
+        var kid = JwtUtil.extractKid(token);
+        Objects.requireNonNull(kid, "No 'kid' found in JWT header");
+        var publicKey = keycloak.getPublicKey(kid);
+        Objects.requireNonNull(publicKey, "No public key found for 'kid': " + kid);
+        var claims = Jwts.parser()
+            .setSigningKey(publicKey)
+            .build()
+            .parseClaimsJws(token)
+            .getBody();
+
+        return claims.get("preferred_username", String.class); // Extracts agent identity
     }
 }

@@ -112,12 +112,16 @@ public class ZeroTrustATApiController extends BaseController {
         @RequestHeader("Authorization") String token,
         @RequestBody ZtatRequestDTO request) {
 
-        if (!keycloakService.validateJwt(token)) {
+        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+
+        if (!keycloakService.validateJwt(compactJwt)) {
+            log.warn("Invalid Keycloak token");
             return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
         }
 
         // Extract agent identity from the JWT
-        String agentId = keycloakService.extractAgentId(token);
+        String agentId = keycloakService.extractAgentId(compactJwt);
 
         log.info("Received ZTAT request from agent: {}", agentId);
         // Store the request in the database

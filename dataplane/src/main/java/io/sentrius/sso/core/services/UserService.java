@@ -8,6 +8,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.dto.UserTypeDTO;
+import io.sentrius.sso.core.model.actors.PrincipalEntity;
 import io.sentrius.sso.core.repository.ProfileRepository;
 import io.sentrius.sso.core.repository.UserRepository;
 import io.sentrius.sso.core.model.users.User;
@@ -63,8 +64,8 @@ public class UserService {
     }
 
     public User getOperatingUser(HttpServletRequest request,
-                                 HttpServletResponse response,
-                                 UIMessaging userMessage
+                                            HttpServletResponse response,
+                                            UIMessaging userMessage
                                  ) {
         var jwt = JwtUtil.getJWT();
         Optional<String> userIdStr = JwtUtil.getUserId(jwt);
@@ -253,5 +254,9 @@ public class UserService {
 
     public User getUserById(Long id) {
         return UserDB.getById(id);
+    }
+
+    public Optional<UserType> getUserType(UserType baseUser) {
+        return userTypeRepository.findById(baseUser.getId());
     }
 }
