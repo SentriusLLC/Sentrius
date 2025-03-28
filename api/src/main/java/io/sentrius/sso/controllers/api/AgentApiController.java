@@ -89,8 +89,8 @@ public class AgentApiController extends BaseController {
         var ztatRequest = ztatService.createAgentRequest(agentId, "registration", "register",
             ZeroTrustAccessTokenReason.builder().build(),   operatingUser);
 
-        if (
-        ztatService.approveOpsAccessToken(ztatRequest, User.);
+
+        //ztatService.approveOpsAccessToken(ztatRequest, User.);
         // Generate a Zero Trust Access Token (ZTAT)
         //String ztatToken = ztatService.generateZtatToken(ztatRequest);
         var ztatToken = "lskejtgsadlkjg";

@@ -8,7 +8,7 @@ import lombok.Getter;
 @Builder
 @Data
 @Getter
-class AgentContext {
+public class AgentContext {
     private String agentId;
     private Set<String> tags;
     private String identityIssuer;
