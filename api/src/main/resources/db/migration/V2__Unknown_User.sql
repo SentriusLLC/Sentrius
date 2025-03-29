@@ -32,3 +32,5 @@ ALTER TABLE users
 ADD CONSTRAINT check_identity_type CHECK (identity_type IN ('USER','NON_PERSON_ENTITY'));
 
 ALTER TABLE ztat_approvals ADD COLUMN token UUID UNIQUE NOT NULL;
+
+ALTER TABLE ops_approvals ADD COLUMN token UUID UNIQUE NOT NULL;

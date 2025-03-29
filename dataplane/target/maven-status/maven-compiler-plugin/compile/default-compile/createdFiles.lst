@@ -223,6 +223,7 @@ io/sentrius/sso/core/utils/terminal/UserSessionsOutput.class
 io/sentrius/sso/core/repository/UserPublicKeyRepository.class
 io/sentrius/sso/core/model/AgentPolicyAssignment.class
 io/sentrius/sso/core/services/ObfuscationService.class
+io/sentrius/sso/core/model/zt/OpsApproval$OpsApprovalBuilder.class
 io/sentrius/sso/core/repository/automation/ScriptExecutionRepository.class
 io/sentrius/sso/core/model/ApplicationKey$ApplicationKeyBuilder.class
 io/sentrius/sso/core/model/users/User$UserBuilder.class

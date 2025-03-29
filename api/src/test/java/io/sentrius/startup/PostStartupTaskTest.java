@@ -3,6 +3,7 @@ package io.sentrius.startup;
 import com.jcraft.jsch.JSchException;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.ConfigurationOption;
+import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.repository.*;
 import io.sentrius.sso.core.services.HostGroupService;
@@ -78,6 +79,8 @@ class PostStartupTaskTest {
 
         Mockito.when(configurationOptionRepository.findLatestByConfigurationName("yamlConfigurationFileHash"))
             .thenReturn(Optional.of(mockConfigOption));
+        
+        Mockito.when(userService.getUserType(ArgumentMatchers.any(UserType.class))).thenReturn(Optional.of( UserType.createSuperUser()));
 
         Mockito.when(userService.addUscer(ArgumentMatchers.any(User.class))).thenReturn(User.builder().id(1L).name("name").build());
         // Call the method

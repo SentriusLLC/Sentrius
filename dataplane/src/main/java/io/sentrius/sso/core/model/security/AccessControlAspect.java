@@ -9,6 +9,8 @@ import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
+import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.utils.AccessUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -32,6 +34,8 @@ import java.sql.SQLException;
 public class AccessControlAspect {
 
     private final UserService userService;
+    private final ZeroTrustAccessTokenService zeroTrustAccessTokenService;
+    private final ZeroTrustRequestService zeroTrustRequestService;
     private final ATPLPolicyService atplPolicyService;
 
 
@@ -50,6 +54,17 @@ public class AccessControlAspect {
                 if (policy.isEmpty()) {
                     log.info("Access Denied to {} at {}", operatingUser, accessAnnotation);
                     throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Policy is required ");
+                }
+
+                var token = getCurrentHttpRequest().getHeader("ZTAT_TOKEN");
+                if (null == token) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Registration Required");
+                } else {
+                    // validate the token
+                    var opsApproval = zeroTrustRequestService.getOpsTokenStatus(token);
+                    if (opsApproval.isEmpty() || !opsApproval.get().isApproved())  {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Registration Required");
+                    }
                 }
                 var endpoint = getCurrentHttpRequest().getRequestURI();
                 if (atplPolicyService.allowsEndpoint(policy.get(), endpoint)) {

@@ -1,6 +1,7 @@
 package io.sentrius.sso.controllers.api;
 
 import java.security.GeneralSecurityException;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -10,17 +11,20 @@ import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.SessionLogDTO;
 import io.sentrius.sso.core.dto.TerminalLogDTO;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
+import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.model.sessions.SessionLog;
 import io.sentrius.sso.core.model.sessions.TerminalLogs;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
+import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.auditing.AuditService;
 import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
+import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -44,7 +48,9 @@ public class AgentApiController extends BaseController {
     final CryptoService cryptoService;
     final SessionTrackingService sessionTrackingService;
     final KeycloakService keycloakService;
-    private final ZeroTrustAccessTokenService ztatService;
+    final ATPLPolicyService atplPolicyService;
+    final ZeroTrustAccessTokenService ztatService;
+    final ZeroTrustRequestService ztrService;
 
     public AgentApiController(
         UserService userService,
@@ -52,14 +58,17 @@ public class AgentApiController extends BaseController {
         ErrorOutputService errorOutputService,
         AuditService auditService,
         CryptoService cryptoService, SessionTrackingService sessionTrackingService, KeycloakService keycloakService,
-        ZeroTrustAccessTokenService ztatService
+        ATPLPolicyService atplPolicyService,
+        ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
         this.cryptoService = cryptoService;
         this.sessionTrackingService = sessionTrackingService;
         this.keycloakService = keycloakService;
+        this.atplPolicyService = atplPolicyService;
         this.ztatService = ztatService;
+        this.ztrService = ztrService;
     }
 
     public SessionLog createSession(@RequestParam String username, @RequestParam String ipAddress) {
@@ -69,7 +78,7 @@ public class AgentApiController extends BaseController {
     @PostMapping("/register")
     public ResponseEntity<?> requestRegistration(
         @RequestHeader("Authorization") String token,
-        HttpServletRequest request, HttpServletResponse response) {
+        HttpServletRequest request, HttpServletResponse response) throws SQLException, GeneralSecurityException {
 
         String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
 
@@ -88,14 +97,22 @@ public class AgentApiController extends BaseController {
         // Store the request in the database
         var ztatRequest = ztatService.createAgentRequest(agentId, "registration", "register",
             ZeroTrustAccessTokenReason.builder().build(),   operatingUser);
+        ztatRequest = ztrService.addJITRequest(ztatRequest);
+
+        // Approve the request if the agent has an active policy ( and it is known and allowed ).
+        if (atplPolicyService.getPolicy(operatingUser).isPresent()) {
+            var admin = userService.getUser(UserType.createSystemAdmin().getId());
+            var approval = ztatService.approveOpsAccessToken(ztatRequest, admin);
+
+            return ResponseEntity.ok(Map.of("ztat_token", approval.getToken().toString()));
+
+        } else {
+            log.warn("No active policy found for agent: {}", agentId);
+            return ResponseEntity.ok(Map.of("ztat_request", ztatRequest.getId()));
+        }
 
 
-        //ztatService.approveOpsAccessToken(ztatRequest, User.);
-        // Generate a Zero Trust Access Token (ZTAT)
-        //String ztatToken = ztatService.generateZtatToken(ztatRequest);
-        var ztatToken = "lskejtgsadlkjg";
 
-        return ResponseEntity.ok(Map.of("ztat_token", ztatToken));
     }
 
 

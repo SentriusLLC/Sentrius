@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -550,6 +551,9 @@ public class ConfigurationApplicationTask {
 
                         var type =
                             userService.getUserType(UserType.createSuperUser());
+                        if (type.isEmpty()){
+                            type = Optional.of( userService.saveUserType(UserType.createSuperUser()) );
+                        }
 
                         userService.addUscer(User.from(user, type.get()));
                     } catch (NoSuchAlgorithmException e) {

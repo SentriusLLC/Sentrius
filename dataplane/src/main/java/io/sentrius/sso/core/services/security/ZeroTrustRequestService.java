@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -143,6 +144,19 @@ public class ZeroTrustRequestService {
         }
     }
 
+    @Transactional
+    public OpsZeroTrustAcessTokenRequest addJITRequest(OpsZeroTrustAcessTokenRequest ztatRequest) {
+        try {
+            ztatRequest.setZtatReason( ztatReasonRepository.save(ztatRequest.getZtatReason()) );
+            OpsZeroTrustAcessTokenRequest savedRequest = opsJITRequestRepository.save(ztatRequest);
+            log.info("JITRequest added: {}", savedRequest);
+            return savedRequest;
+        } catch (Exception e) {
+            log.error("Error while adding JITRequest", e);
+            throw new RuntimeException("Failed to add JITRequest", e);
+        }
+    }
+
 
     @Transactional(readOnly = true)
     public List<ZeroTrustAccessTokenRequest> getAccessTokenRequests(String command, User user, HostSystem system) {
@@ -163,6 +177,10 @@ public class ZeroTrustRequestService {
         }
     }
 
+    public Optional<OpsApproval> getOpsTokenStatus(String token ) {
+        return opsApprovalRepository.findByToken(UUID.fromString(token));
+    }
+
     public Optional<ZeroTrustAccessTokenApproval> getAccessTokenStatus(ZeroTrustAccessTokenRequest request) {
         var approvals = request.getApprovals();
         if (!approvals.isEmpty()) {
@@ -174,7 +192,7 @@ public class ZeroTrustRequestService {
     }
 
     @Transactional
-    public void setOpsAccessTokenStatus(OpsZeroTrustAcessTokenRequest reqeust, User user, boolean approval) {
+    public OpsApproval setOpsAccessTokenStatus(OpsZeroTrustAcessTokenRequest reqeust, User user, boolean approval) {
         opsApprovalRepository.deleteByZtatRequestId(reqeust.getId());
 
         OpsApproval opsApproval = new OpsApproval();
@@ -182,7 +200,7 @@ public class ZeroTrustRequestService {
         opsApproval.setApproved(approval);
         opsApproval.setZtatRequest(reqeust);
         opsApproval.setUses(0);
-        opsApprovalRepository.save(opsApproval);
+        return opsApprovalRepository.save(opsApproval);
     }
 
     @Transactional

@@ -11,6 +11,7 @@ import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.dto.JITTrackerDTO;
 import io.sentrius.sso.core.model.HostSystem;
 import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.model.zt.OpsApproval;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenApproval;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenRequest;
@@ -100,7 +101,7 @@ public class ZeroTrustAccessTokenService {
             .ztatReason(reason)
             .user(user)
             .commandHash(ZTATUtils.getCommandHash(command))
-            .summary(summary)
+            .summary(summary + " for agent: " + agentId)
             .lastUpdated(new Timestamp(System.currentTimeMillis()))
             .build();
     return request;
@@ -206,9 +207,9 @@ public class ZeroTrustAccessTokenService {
     ztatRequestService.getAccessTokenStatus(request, user, true);
   }
 
-  public void approveOpsAccessToken(@NonNull OpsZeroTrustAcessTokenRequest request, @NonNull User user)
+  public OpsApproval approveOpsAccessToken(@NonNull OpsZeroTrustAcessTokenRequest request, @NonNull User user)
       throws SQLException, GeneralSecurityException {
-    ztatRequestService.setOpsAccessTokenStatus(request, user, true);
+    return ztatRequestService.setOpsAccessTokenStatus(request, user, true);
   }
 
   @Transactional
