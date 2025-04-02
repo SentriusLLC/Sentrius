@@ -42,6 +42,8 @@ analytics/target/**
 analytics/target/
 dataplane/target/**
 dataplane/target/
+openai-proxy/target/**
+openai-proxy/target/
 node/*
 node_modules/*
 api/node_modules/*

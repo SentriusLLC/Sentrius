@@ -36,6 +36,28 @@ public class ZeroTrustClientService {
     /**
      * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
      */
+    public String registerAgent(UserDTO user) {
+        String keycloakJwt = getKeycloakToken();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(keycloakJwt);
+
+        HttpEntity<ZtatRequestDTO> requestEntity = new HttpEntity<>(headers);
+
+        String url = agentApiUrl + "/api/v1/agent/register";
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
+
+        if (response.getStatusCode() == HttpStatus.OK) {
+            return response.getBody(); // This is the ZTAT (JWT or opaque token)
+        } else {
+            throw new RuntimeException("Failed to obtain ZTAT: " + response.getStatusCode());
+        }
+    }
+
+    /**
+     * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
+     */
     public String requestZtatToken(UserDTO user, String command) {
         String keycloakJwt = getKeycloakToken();
 

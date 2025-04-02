@@ -79,7 +79,7 @@ class PostStartupTaskTest {
 
         Mockito.when(configurationOptionRepository.findLatestByConfigurationName("yamlConfigurationFileHash"))
             .thenReturn(Optional.of(mockConfigOption));
-        
+
         Mockito.when(userService.getUserType(ArgumentMatchers.any(UserType.class))).thenReturn(Optional.of( UserType.createSuperUser()));
 
         Mockito.when(userService.addUscer(ArgumentMatchers.any(User.class))).thenReturn(User.builder().id(1L).name("name").build());

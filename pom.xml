@@ -10,6 +10,7 @@
     <module>core</module>
     <module>dataplane</module>
     <module>api</module>
+    <module>openai-proxy</module>
     <module>analytics</module>
     <module>ai-agent</module>
   </modules>

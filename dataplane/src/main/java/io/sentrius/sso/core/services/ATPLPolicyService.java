@@ -99,4 +99,26 @@ public class ATPLPolicyService {
     public TrustScoreResult evaluateScore(ATPLPolicy atplPolicy, User operatingUser) {
         return TrustScoreResult.SUCCESS;
     }
+
+    public List<ATPLPolicyEntity> findAll() {
+        return repository.findAll();
+    }
+
+    public ATPLPolicy getPolicy(String policyId) {
+        return repository.findAllByPolicyId(policyId).stream()
+            .max(Comparator.comparingInt(entity -> {
+                String v = entity.getVersion();
+                return v != null && v.startsWith("v")
+                    ? Integer.parseInt(v.substring(1))
+                    : 0;
+            }))
+            .map(entity -> {
+                try {
+                    return yamlMapper.readValue(entity.getYaml(), ATPLPolicy.class);
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to deserialize ATPL policy", e);
+                }
+            })
+            .orElse(null);
+    }
 }

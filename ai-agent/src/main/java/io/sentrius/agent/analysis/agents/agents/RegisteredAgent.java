@@ -22,8 +22,6 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
     @Override
     public void onApplicationEvent(final ApplicationReadyEvent event) {
 
-
-
         // get username from token
         UserDTO user = UserDTO.builder()
             .username(zeroTrustClientService.getUsername())
@@ -35,8 +33,8 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
         log.info("Registering v1.0.2 agent...");
 
         // register
-        zeroTrustClientService.requestZtatToken(user, command);
-        log.info("Registered agent is running");
+        var register = zeroTrustClientService.registerAgent(user);
+        log.info("Registered agent is running {} ", register);
         return;
     }
 

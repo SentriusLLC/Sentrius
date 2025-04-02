@@ -6,14 +6,13 @@ import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.IdClass;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Getter
 @Setter
@@ -35,6 +34,7 @@ public class AgentPolicyAssignment {
     @JoinColumn(name = "policy_id", nullable = false)
     private ATPLPolicyEntity policy;
 
-    @Column(name = "assigned_at", nullable = false, columnDefinition = "timestamp default current_timestamp")
+    @CreationTimestamp
+    @Column(name = "assigned_at", nullable = false, updatable = false)
     private Instant assignedAt;
 }

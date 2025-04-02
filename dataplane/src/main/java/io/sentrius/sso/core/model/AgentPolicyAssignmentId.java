@@ -5,14 +5,14 @@ import java.util.Objects;
 import java.util.UUID;
 
 public class AgentPolicyAssignmentId implements Serializable {
-    private Long agent;
-    private UUID policy;
+    private Long userId;
+    private UUID policyId;
 
     public AgentPolicyAssignmentId() {}
 
     public AgentPolicyAssignmentId(Long agent, UUID policy) {
-        this.agent = agent;
-        this.policy = policy;
+        this.userId = agent;
+        this.policyId = policy;
     }
 
     // equals and hashCode
@@ -21,11 +21,11 @@ public class AgentPolicyAssignmentId implements Serializable {
         if (this == o) return true;
         if (!(o instanceof AgentPolicyAssignmentId)) return false;
         AgentPolicyAssignmentId that = (AgentPolicyAssignmentId) o;
-        return Objects.equals(agent, that.agent) && Objects.equals(policy, that.policy);
+        return Objects.equals(userId, that.userId) && Objects.equals(policyId, that.policyId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(agent, policy);
+        return Objects.hash(userId, policyId);
     }
 }

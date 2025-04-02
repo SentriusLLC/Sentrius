@@ -68,7 +68,6 @@ public class GenerativeAPI {
      * @return ChatCompletionResponseBody
      */
     public String sample(final ApiEndPointRequest apiRequest) throws HttpException {
-        log.info("is this null? {}", (apiRequest==null));
         Objects.requireNonNull(apiRequest);
         log.info("making request to {}", apiRequest.getEndpoint());
         RequestBody body = RequestBody.create(buildRequestBody(apiRequest), MediaType.get("application/json; charset=utf-8"));

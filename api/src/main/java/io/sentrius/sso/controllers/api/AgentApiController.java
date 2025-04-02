@@ -4,7 +4,9 @@ import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
+import io.sentrius.sso.config.ApiPaths;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
@@ -42,7 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/agent")
+@RequestMapping(ApiPaths.API_V1 + "/agent")
 public class AgentApiController extends BaseController {
     private final AuditService auditService;
     final CryptoService cryptoService;
@@ -93,10 +95,18 @@ public class AgentApiController extends BaseController {
         // Extract agent identity from the JWT
         String agentId = keycloakService.extractAgentId(compactJwt);
 
-        log.info("Received registration request from agent: {}", agentId);
+        if (null == operatingUser) {
+            log.warn("No operating user found for agent: {}", agentId);
+            var username = keycloakService.extractUsername(compactJwt);
+            operatingUser = userService.getUserWithDetails(username);
+
+        }
+
+        log.info("Received registration request from agent: {} {}", agentId, operatingUser);
         // Store the request in the database
         var ztatRequest = ztatService.createAgentRequest(agentId, "registration", "register",
-            ZeroTrustAccessTokenReason.builder().build(),   operatingUser);
+            ZeroTrustAccessTokenReason.builder().commandNeed("registration call").reasonIdentifier(UUID.randomUUID().toString()).build(),
+            operatingUser);
         ztatRequest = ztrService.addJITRequest(ztatRequest);
 
         // Approve the request if the agent has an active policy ( and it is known and allowed ).

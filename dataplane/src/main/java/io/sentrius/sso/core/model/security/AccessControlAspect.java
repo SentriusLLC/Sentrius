@@ -43,11 +43,14 @@ public class AccessControlAspect {
     //public void checkAccess(ProceedingJoinPoint joinPoint) throws Throwable {
     @Before("@annotation(limitAccess)")
     public void checkLimitAccess(LimitAccess limitAccess) throws SQLException, GeneralSecurityException {
-        //MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        //Method method = signature.getMethod();
+        var endpoint = getCurrentHttpRequest().getRequestURI();
+
         boolean canAccess = true;
         LimitAccess accessAnnotation = limitAccess;
         var operatingUser = userService.getOperatingUser(getCurrentHttpRequest(),getCurrentHttpResponse(),null);
+        if (null != operatingUser) {
+            log.info("Checking whether {} has access for {}", operatingUser, endpoint);
+        }
         if (accessAnnotation != null) {
             if (operatingUser.getIdentityType() == IdentityType.NON_PERSON_ENTITY) {
                 var policy = atplPolicyService.getPolicy(operatingUser);
@@ -66,13 +69,12 @@ public class AccessControlAspect {
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Registration Required");
                     }
                 }
-                var endpoint = getCurrentHttpRequest().getRequestURI();
+
                 if (atplPolicyService.allowsEndpoint(policy.get(), endpoint)) {
                     // now check the trust score, if it is below the threshold, deny access
                     switch ( atplPolicyService.evaluateScore(policy.get(), operatingUser) ){
                         case SUCCESS:
                             if (policy.get().getActions().getOnSuccess().equals("allow")) {
-
                                 return;
                             }
                             break;
