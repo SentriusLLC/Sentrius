@@ -25,12 +25,29 @@ public class IntegrationSecurityTokenService {
 
     @Transactional(readOnly = true)
     public List<IntegrationSecurityToken> findAll() {
-        return repository.findAll();
+        return repository.findAll().stream().map(token -> {
+            try {
+                // decrypt the connecting info
+                token.setConnectionInfo(cryptoService.decrypt(token.getConnectionInfo()));
+            } catch (GeneralSecurityException e) {
+                throw new RuntimeException(e);
+            }
+            return token;
+        }).toList();
     }
 
     @Transactional(readOnly = true)
     public Optional<IntegrationSecurityToken> findById(Long id) {
-        return repository.findById(id);
+        var token = repository.findById(id);
+        if (token.isPresent()) {
+            try {
+                // decrypt the connecting info
+                token.get().setConnectionInfo(cryptoService.decrypt(token.get().getConnectionInfo()));
+            } catch (GeneralSecurityException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return token;
     }
 
     @Transactional

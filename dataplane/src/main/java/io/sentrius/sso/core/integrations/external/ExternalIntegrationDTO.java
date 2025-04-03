@@ -8,11 +8,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Data
 @Builder
 @Getter
 @AllArgsConstructor
+@Slf4j
 @NoArgsConstructor
 public class ExternalIntegrationDTO {
     @Builder.Default
@@ -31,6 +33,7 @@ public class ExternalIntegrationDTO {
     }
 
     public ExternalIntegrationDTO(IntegrationSecurityToken token, boolean includeToken) throws JsonProcessingException {
+        log.info("ExternalIntegrationDTO: {}", token);
         var dto = JsonUtil.MAPPER.readValue(token.getConnectionInfo(), ExternalIntegrationDTO.class);
         this.id = token.getId();
         this.name = dto.getName();

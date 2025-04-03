@@ -118,7 +118,7 @@ public class AgentApiController extends BaseController {
 
         } else {
             log.warn("No active policy found for agent: {}", agentId);
-            return ResponseEntity.ok(Map.of("ztat_request", ztatRequest.getId()));
+            return ResponseEntity.status(428).body(Map.of("ztat_request", ztatRequest.getId()));
         }
 
 

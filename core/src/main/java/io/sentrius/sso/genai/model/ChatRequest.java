@@ -6,7 +6,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.sentrius.sso.genai.Message;
 import io.sentrius.sso.genai.api.BaseGenerativeRequest;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
@@ -22,6 +24,8 @@ import lombok.experimental.SuperBuilder;
  */
 @Data
 @SuperBuilder(toBuilder = true)
+@NoArgsConstructor
+@AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ChatRequest extends BaseGenerativeRequest {
     /**

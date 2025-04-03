@@ -40,6 +40,7 @@
     <keycloak-version>25.0.3</keycloak-version>
     <caffeine-version>3.2.0</caffeine-version>
     <snowflake-ingest-version>3.0.1</snowflake-ingest-version>
+    <classgraph.version>4.8.179</classgraph.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -93,6 +94,11 @@
         <groupId>io.hypersistence</groupId>
         <artifactId>hypersistence-utils-hibernate-60</artifactId>
         <version>${hypersistence-utils-hibernate-60.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.github.classgraph</groupId>
+        <artifactId>classgraph</artifactId>
+        <version>${classgraph.version}</version>
       </dependency>
       <dependency>
         <groupId>org.springframework.boot</groupId>

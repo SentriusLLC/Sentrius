@@ -29,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.snowflake.client.jdbc.internal.apache.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -36,7 +37,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/openai")
+@RequestMapping("/api/v1/chat")
 @Slf4j
 public class OpenAIProxyController extends BaseController {
 
@@ -65,9 +66,8 @@ public class OpenAIProxyController extends BaseController {
         this.integrationSecurityTokenService = integrationSecurityTokenService;
     }
 
-    @PostMapping("/chat")
+    @PostMapping("/completions")
     // require a registered user with an active ztat
-    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<?> chat(@RequestHeader("Authorization") String token,
                                   HttpServletRequest request, HttpServletResponse response,
                                   @RequestBody String rawBody) throws JsonProcessingException, HttpException {
@@ -113,8 +113,8 @@ public class OpenAIProxyController extends BaseController {
 
         GenerativeAPI endpoint = new GenerativeAPI(key);
 
+        log.info("Chat request: {}", rawBody);
         ChatRequest chatRequest = JsonUtil.MAPPER.readValue(rawBody, ChatRequest.class);
-
 
         var resp = endpoint.sample(RawConversationRequest.builder().request(chatRequest).build());
 

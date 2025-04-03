@@ -27,23 +27,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Throwable.class) // Catches all unhandled exceptions
     public String handleAllExceptions(Throwable ex, RedirectAttributes redirectAttributes) {
         // Add a general message ID, or customize based on exception type
-        String messageId = "generalError";
-
-        String message = "Received Error Message: " + ex.getCause();
-        ErrorOutput errorOutput = ErrorOutput.builder()
-                .errorType(ex.getClass().getName())
-                .errorLocation(ex.getStackTrace()[0].toString())
-                .errorHash(createErrorHash(ex.getStackTrace(), ex.getMessage()))
-                .errorLogs(message)
-                .build();
-        errorOutputService.saveErrorOutput(errorOutput);
-
-
-        // Add messageId as a redirect attribute
-        redirectAttributes.addAttribute("errorId", MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR));
-
-        // Redirect to "/mydashboard" with the messageId parameter
-        return "redirect:/sso/v1/dashboard";
+        ex.printStackTrace();
+       return "";
     }
 
 

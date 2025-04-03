@@ -64,7 +64,6 @@ public class JwtUtil {
     public static Optional<String> getUsername(ObjectNode jwt) {
 
         var claims = jwt.get("claims");
-        log.info("Claims: {}", claims);
         if (claims != null) {
             var userId = claims.get("preferred_username"); // change to sub for a user id
             if (null != userId){

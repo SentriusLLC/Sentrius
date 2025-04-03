@@ -89,6 +89,11 @@
       <artifactId>snowflake-ingest-sdk</artifactId>
       <version>${snowflake-ingest-version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.github.classgraph</groupId>
+      <artifactId>classgraph</artifactId>
+      <version>${classgraph.version}</version>
+    </dependency>
   </dependencies>
 
   <build>
