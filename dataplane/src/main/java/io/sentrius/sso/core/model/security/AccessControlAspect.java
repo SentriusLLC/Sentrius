@@ -9,6 +9,7 @@ import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.utils.AccessUtil;
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -26,6 +28,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
+import java.util.Base64;
 
 @Aspect
 @Component
@@ -34,6 +37,7 @@ import java.sql.SQLException;
 public class AccessControlAspect {
 
     private final UserService userService;
+    final KeycloakService keycloakService;
     private final ZeroTrustAccessTokenService zeroTrustAccessTokenService;
     private final ZeroTrustRequestService zeroTrustRequestService;
     private final ATPLPolicyService atplPolicyService;
@@ -52,6 +56,20 @@ public class AccessControlAspect {
             log.info("Checking whether {} has access for {}", operatingUser, endpoint);
         }
         if (accessAnnotation != null) {
+            if (null == operatingUser) {
+                String token = getCurrentHttpRequest().getHeader("Authorization");
+                if (null == token) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Registration Required");
+                }
+                String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+                if (!keycloakService.validateJwt(compactJwt)) {
+                    log.warn("Invalid Keycloak token");
+                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Registration Required");
+                }
+                var username = keycloakService.extractUsername(compactJwt);
+                operatingUser = userService.getUserWithDetails(username);
+            }
             if (operatingUser.getIdentityType() == IdentityType.NON_PERSON_ENTITY) {
                 var policy = atplPolicyService.getPolicy(operatingUser);
                 if (policy.isEmpty()) {
@@ -59,10 +77,11 @@ public class AccessControlAspect {
                     throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Policy is required ");
                 }
 
-                var token = getCurrentHttpRequest().getHeader("ZTAT_TOKEN");
+                var token = getCurrentHttpRequest().getHeader("ztat_token");
                 if (null == token) {
                     throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Registration Required");
                 } else {
+                    log.info("token is {} ", token);
                     // validate the token
                     var opsApproval = zeroTrustRequestService.getOpsTokenStatus(token);
                     if (opsApproval.isEmpty() || !opsApproval.get().isApproved())  {
@@ -96,6 +115,8 @@ public class AccessControlAspect {
                     }
                     log.info("Access Denied to {} at {}", operatingUser, accessAnnotation);
                     throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied to ");
+                } else {
+                    log.info("Endpoint {} not allowed by policy {}", endpoint, policy.get());
                 }
             }
             // Get the required roles from the annotation

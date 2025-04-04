@@ -19,6 +19,8 @@ public class ZeroTrustClientService {
     @Value("${agent.api.url:http://localhost:8080}")
     private String agentApiUrl;
 
+    private String ztatToken = "";
+
     private final RestTemplate restTemplate = new RestTemplate();
 
     public ZeroTrustClientService(KeycloakService keycloakService) {
@@ -46,6 +48,7 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
+        headers.set("ztat_token", ztatToken);
 
         HttpEntity<ZtatRequestDTO> requestEntity = new HttpEntity<>(headers);
 
@@ -72,6 +75,7 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
+        headers.set("ztat_token", ztatToken);
 
         log.info("Sending {}", body.toString());
         HttpEntity<T> requestEntity = new HttpEntity<>(body, headers);
@@ -108,6 +112,7 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
+        headers.set("ztat_token", ztatToken);
 
         HttpEntity<T> requestEntity = new HttpEntity<>(headers);
         if (!apiEndpoint.startsWith("/")) {
@@ -139,6 +144,7 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
+        headers.set("ztat_token", ztatToken);
 
         ZtatRequestDTO requestPayload = new ZtatRequestDTO(user, command);
         HttpEntity<ZtatRequestDTO> requestEntity = new HttpEntity<>(requestPayload, headers);
@@ -151,5 +157,9 @@ public class ZeroTrustClientService {
         } else {
             throw new RuntimeException("Failed to obtain ZTAT: " + response.getStatusCode());
         }
+    }
+
+    public void setZtat(String ztatToken) {
+        this.ztatToken = ztatToken;
     }
 }

@@ -1,9 +1,15 @@
 package io.sentrius.agent.analysis.agents.agents;
 
+import java.lang.reflect.Method;
 import java.util.Map;
+import lombok.Builder;
+import lombok.Getter;
 
-public interface AgentVerb {
-    String name();
-    String description();
-    Object execute(Map<String, Object> params) throws Exception;
+@Builder
+@Getter
+
+public class AgentVerb {
+    private String name;
+    private String description;
+    private Method method;
 }

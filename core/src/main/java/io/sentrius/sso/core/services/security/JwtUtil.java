@@ -99,9 +99,7 @@ public class JwtUtil {
             }
 
             var part = parts[0].trim();
-            log.info("Part: {}", part);
             String headerJson = new String(Base64.getDecoder().decode(part));
-            log.info("Header: {} from {}", headerJson, part);
             var headerNode = JsonUtil.MAPPER.readTree(headerJson);
 
             return headerNode.has("kid") ? headerNode.get("kid").asText() : null;

@@ -68,6 +68,7 @@ public class OpenAIProxyController extends BaseController {
 
     @PostMapping("/completions")
     // require a registered user with an active ztat
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<?> chat(@RequestHeader("Authorization") String token,
                                   HttpServletRequest request, HttpServletResponse response,
                                   @RequestBody String rawBody) throws JsonProcessingException, HttpException {

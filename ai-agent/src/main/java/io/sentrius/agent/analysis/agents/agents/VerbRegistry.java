@@ -21,7 +21,7 @@ public class VerbRegistry {
 
     private final ApplicationContext applicationContext;
 
-    private final Map<String, Method> verbs = new HashMap<>();
+    private final Map<String, AgentVerb> verbs = new HashMap<>();
     private final Map<String, Object> instances = new HashMap<>();
 
     public void scanClasspath() {
@@ -46,7 +46,12 @@ public class VerbRegistry {
                                 log.info("Found verb: {} in class: {}", name, clazz.getName());
                                 if (annotation.isAiCallable()) {
                                     log.info("Registering verb: {} in class: {}", name, clazz.getName());
-                                    verbs.put(name, method);
+                                    AgentVerb verb = AgentVerb.builder()
+                                        .name(name)
+                                        .description(annotation.description())
+                                        .method(method)
+                                        .build();
+                                    verbs.put(name, verb);
                                     instances.put(name, instance);
                                 }
                             }
@@ -61,7 +66,7 @@ public class VerbRegistry {
 
     public Object execute(String verb, Map<String, Object> args) {
         synchronized (this) {
-            Method method = verbs.get(verb);
+            Method method = verbs.get(verb).getMethod();
             Object instance = instances.get(verb);
             if (method == null) {
                 throw new IllegalArgumentException("Unknown verb: " + verb);
@@ -75,7 +80,7 @@ public class VerbRegistry {
         }
     }
 
-    public Map<String, Method> getVerbs() {
+    public Map<String, AgentVerb> getVerbs() {
         return new HashMap<>(verbs);
     }
 }

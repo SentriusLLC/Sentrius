@@ -2,12 +2,16 @@ package io.sentrius.agent.analysis.agents.agents;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.jsonwebtoken.lang.Maps;
 import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
 import io.sentrius.sso.core.exceptions.ZtatException;
+import io.sentrius.sso.core.model.security.Ztat;
 import io.sentrius.sso.core.services.agents.LLMService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.dto.UserDTO;
+import io.sentrius.sso.core.utils.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -57,10 +61,13 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
             var register = zeroTrustClientService.registerAgent(user);
             log.info("Registered agent is running {} ", register);
 
+            var ztat = JsonUtil.MAPPER.readValue(register, Ztat.class);
 
+            zeroTrustClientService.setZtat(ztat.getZtatToken());
             //while(true){
 
                 try {
+
                     // this phase is called "prompting"
                     var response = agentVerbs.promptAgent(null);
                     log.info("got " + response);
@@ -83,7 +90,7 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
                 Thread.sleep(5000);
          //  }
 
-        } catch (InterruptedException e) {
+        } catch (InterruptedException | JsonProcessingException e) {
             throw new RuntimeException(e);
         }
     }

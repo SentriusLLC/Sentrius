@@ -38,9 +38,10 @@ public class PromptBuilder {
             "}\n" );
         prompt.append("Available Verbs:\n");
 
-        verbRegistry.getVerbs().forEach((name, method) -> {
+        verbRegistry.getVerbs().forEach((name, verb) -> {
             prompt.append("- ").append(name);
-            prompt.append(" (").append(buildMethodSignature(method)).append(")\n");
+            prompt.append(" (").append(buildMethodSignature(verb.getMethod())).append(") - ");
+            prompt.append(verb.getDescription()).append(")\n");
         });
 
         return prompt.toString();

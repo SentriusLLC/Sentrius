@@ -32,8 +32,6 @@ public class TerminalVerbs {
     @Verb(name = "list_open_terminals", description = "Retrieves a list of currently open terminals.")
     public String listTerminals(Map<String, Object> args) {
         try {
-            // Replace with your API URL
-            String apiUrl = "http://localhost:8080/api/v1/ssh/terminal/list";
 
             var response = zeroTrustClientService.callGetOnApi("/ssh/terminal/list");
 /*
