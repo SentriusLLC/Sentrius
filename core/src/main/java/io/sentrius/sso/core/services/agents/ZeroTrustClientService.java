@@ -92,7 +92,7 @@ public class ZeroTrustClientService {
             return response.getBody(); // This is the ZTAT (JWT or opaque token)
         } else if (response.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
             // we need to get
-            throw new ZtatException("ZTAT Required");
+            throw new ZtatException(response.getBody());
 
         } else {
             throw new RuntimeException("Failed to obtain ZTAT: " + response.getStatusCode());
@@ -128,7 +128,7 @@ public class ZeroTrustClientService {
             return response.getBody(); // This is the ZTAT (JWT or opaque token)
         } else if (response.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
             // we need to get
-            throw new ZtatException("ZTAT Required");
+            throw new ZtatException(response.getBody());
 
         } else {
             throw new RuntimeException("Failed to obtain ZTAT: " + response.getStatusCode());

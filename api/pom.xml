@@ -189,6 +189,31 @@
             <version>3.20.0</version>
             <scope>compile</scope>
         </dependency>
+        <!-- OpenTelemetry API + SDK -->
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+            <version>${opentelem}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk</artifactId>
+            <version>${opentelem}</version>
+        </dependency>
+
+        <!-- OpenTelemetry instrumentation for Spring Boot -->
+        <dependency>
+            <groupId>io.opentelemetry.instrumentation</groupId>
+            <artifactId>opentelemetry-spring-boot-starter</artifactId>
+            <version>${opentelem-springboot}</version>
+        </dependency>
+
+        <!-- Export to OTLP (OpenTelemetry Protocol) -->
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-otlp</artifactId>
+            <version>${opentelem}</version>
+        </dependency>
     </dependencies>
 
     <build>

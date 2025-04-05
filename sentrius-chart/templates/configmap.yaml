@@ -34,6 +34,13 @@ data:
     spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakDomain }}/realms/sentrius
     spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakDomain }}/realms/sentrius
     agents.ai.registered.agent.enabled=true
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.exporter.otlp.endpoint=http://jaeger:4317
+    otel.resource.attributes=service.name=ai-agent
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
   analysis-agent-application.properties: |
     keystore.file=sso.jceks
     keystore.password=${KEYSTORE_PASSWORD}
@@ -141,6 +148,13 @@ data:
     server.forward-headers-strategy=framework
     https.redirect.enabled=true
     https.required={{ .Values.certificates.enabled }}
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.exporter.otlp.endpoint=http://jaeger:4317
+    otel.resource.attributes=service.name=ai-agent|
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
   dynamic.properties: |
     auditorClass=io.sentrius.sso.automation.auditing.AccessTokenAuditor
     twopartyapproval.option.LOCKING_SYSTEMS=true

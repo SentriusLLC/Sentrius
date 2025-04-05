@@ -42,8 +42,8 @@ analytics/target/**
 analytics/target/
 dataplane/target/**
 dataplane/target/
-openai-proxy/target/**
-openai-proxy/target/
+llm-proxy/target/**
+llm-proxy/target/
 node/*
 node_modules/*
 api/node_modules/*
@@ -58,4 +58,4 @@ api/node_modules/*
 
 .settings/*
 .env.bak
-.gcp.env.bak
+cp.env.bak

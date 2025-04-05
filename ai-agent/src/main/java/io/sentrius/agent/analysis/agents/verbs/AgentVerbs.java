@@ -65,4 +65,24 @@ public class AgentVerbs {
 
             return llmService.askQuestion(chatRequest);
     }
+
+    @Verb(name = "justify_operations", description = "Chats with an agent to justify operations.", isAiCallable = false)
+    public String justifyAgent(Map<String, Object> args) throws ZtatException, IOException {
+        InputStream is = getClass().getClassLoader().getResourceAsStream("agent-config.yaml");
+        if (is == null) {
+            throw new RuntimeException("agent-config.yaml not found on classpath");
+        }
+        AgentConfig config = new ObjectMapper(new YAMLFactory()).readValue(is, AgentConfig.class);
+
+        log.info("Agent config loaded: {}", config);
+        PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
+        var prompt = promptBuilder.buildPrompt();
+        List<Message> messages = new ArrayList<>();
+
+        messages.add(Message.builder().role("system").content(prompt).build());
+
+        ChatRequest chatRequest = ChatRequest.builder().model("gpt-3.5-turbo").messages(messages).build();
+
+        return llmService.askQuestion(chatRequest);
+    }
 }

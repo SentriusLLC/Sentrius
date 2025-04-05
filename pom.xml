@@ -10,7 +10,7 @@
     <module>core</module>
     <module>dataplane</module>
     <module>api</module>
-    <module>openai-proxy</module>
+    <module>llm-proxy</module>
     <module>analytics</module>
     <module>ai-agent</module>
   </modules>
@@ -41,6 +41,8 @@
     <caffeine-version>3.2.0</caffeine-version>
     <snowflake-ingest-version>3.0.1</snowflake-ingest-version>
     <classgraph.version>4.8.179</classgraph.version>
+    <opentelem>1.49.0</opentelem>
+    <opentelem-springboot>2.14.0</opentelem-springboot>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -316,6 +318,32 @@
         <groupId>net.snowflake</groupId>
         <artifactId>snowflake-ingest-sdk</artifactId>
         <version>${snowflake-ingest-version}</version>
+      </dependency>
+
+      <!-- OpenTelemetry API + SDK -->
+      <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-api</artifactId>
+        <version>${opentelem}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-sdk</artifactId>
+        <version>${opentelem}</version>
+      </dependency>
+
+      <!-- OpenTelemetry instrumentation for Spring Boot -->
+      <dependency>
+        <groupId>io.opentelemetry.instrumentation</groupId>
+        <artifactId>opentelemetry-spring-boot-starter</artifactId>
+        <version>${opentelem-springboot}</version>
+      </dependency>
+
+      <!-- Export to OTLP (OpenTelemetry Protocol) -->
+      <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-exporter-otlp</artifactId>
+        <version>${opentelem}</version>
       </dependency>
 
     </dependencies>

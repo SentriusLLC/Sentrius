@@ -182,3 +182,50 @@ healthCheck:
     readinessPath: "/health/ready"
     livenessPath: "/health/live"
     port: 8081
+
+version: '3.7'
+
+jaeger:
+  enabled: true
+  provisionDataStore:
+    cassandra: false
+
+  storage:
+    type: memory   # (easy for dev/test)
+
+  collector:
+    enabled: true
+    service:
+      otlp:
+        grpc:
+          enabled: true
+          port: 4317
+        http:
+          enabled: true
+          port: 4318
+
+  agent:
+    enabled: true
+
+  query:
+    enabled: true
+    service:
+      type: ClusterIP
+      ports:
+        - name: http-query
+          port: 16686
+          targetPort: 16686
+
+  ingress:
+    enabled: true
+    host: jaeger.{{ .Values.subdomain }}
+    annotations:
+      kubernetes.io/ingress.class: nginx
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi

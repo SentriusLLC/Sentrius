@@ -14,6 +14,7 @@ import io.sentrius.sso.core.dto.SessionLogDTO;
 import io.sentrius.sso.core.dto.TerminalLogDTO;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.model.security.UserType;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.model.sessions.SessionLog;
 import io.sentrius.sso.core.model.sessions.TerminalLogs;
@@ -125,5 +126,56 @@ public class AgentApiController extends BaseController {
 
     }
 
+
+    @PostMapping("/justify")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
+    public ResponseEntity<?> justifyOperations(
+        @RequestHeader("Authorization") String token,
+        @RequestParam("agentId") String agentId,
+        @RequestParam("jusitificationId") String jusitificationId,
+        HttpServletRequest request, HttpServletResponse response) throws SQLException, GeneralSecurityException {
+
+        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+
+        if (!keycloakService.validateJwt(compactJwt)) {
+            log.warn("Invalid Keycloak token");
+            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+        }
+
+        var operatingUser = getOperatingUser(request, response );
+
+        // Extract agent identity from the JWT
+       // String agentId = keycloakService.extractAgentId(compactJwt);
+
+        if (null == operatingUser) {
+            log.warn("No operating user found for agent: {}", agentId);
+            var username = keycloakService.extractUsername(compactJwt);
+            operatingUser = userService.getUserWithDetails(username);
+
+        }
+
+        log.info("Received registration request from agent: {} {}", agentId, operatingUser);
+        // Store the request in the database
+        var ztatRequest = ztatService.createAgentRequest(agentId, "registration", "register",
+            ZeroTrustAccessTokenReason.builder().commandNeed("registration call").reasonIdentifier(UUID.randomUUID().toString()).build(),
+            operatingUser);
+        ztatRequest = ztrService.addJITRequest(ztatRequest);
+
+        // Approve the request if the agent has an active policy ( and it is known and allowed ).
+        if (atplPolicyService.getPolicy(operatingUser).isPresent()) {
+            var admin = userService.getUser(UserType.createSystemAdmin().getId());
+            var approval = ztatService.approveOpsAccessToken(ztatRequest, admin);
+
+            return ResponseEntity.ok(Map.of("ztat_token", approval.getToken().toString()));
+
+        } else {
+            log.warn("No active policy found for agent: {}", agentId);
+            return ResponseEntity.status(428).body(Map.of("ztat_request", ztatRequest.getId()));
+        }
+
+
+
+    }
 
 }

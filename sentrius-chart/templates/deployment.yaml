@@ -57,6 +57,9 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-db-secret
                   key: keystore-password
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.jaeger.ingress.host }}
+
       volumes:
         - name: config-volume
           configMap:

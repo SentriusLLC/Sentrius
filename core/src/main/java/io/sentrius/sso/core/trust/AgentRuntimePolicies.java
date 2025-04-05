@@ -28,4 +28,7 @@ public class AgentRuntimePolicies {
     @Builder.Default
     private boolean verifiedAtBoot = false;
 
+    @JsonProperty("allow_drift")
+    @Builder.Default
+    private boolean allowDrift = false;
 }
