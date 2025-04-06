@@ -57,12 +57,10 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
-      <version>${spring.boot.version}</version>
     </dependency>
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
-      <version>${postgresql-version}</version>
     </dependency>
     <dependency>
       <groupId>org.flywaydb</groupId>
@@ -71,11 +69,6 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>net.snowflake</groupId>
-      <artifactId>snowflake-ingest-sdk</artifactId>
-      <version>${snowflake-ingest-version}</version>
     </dependency>
     <dependency>
       <groupId>io.sentrius</groupId>

@@ -59,6 +59,7 @@ update_sentrius_ssh=false
 update_sentrius_keycloak=false
 update_sentrius_agent=false
 update_sentrius_ai_agent=false
+update_llmproxy=false
 no_cache=false  # Default: use cache
 
 
@@ -69,7 +70,8 @@ while [[ "$#" -gt 0 ]]; do
         --sentrius-keycloak) update_sentrius_keycloak=true ;;
         --sentrius-agent) update_sentrius_agent=true ;;
         --sentrius-ai-agent) update_sentrius_ai_agent=true ;;
-        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true ;;
+        --sentrius-llmproxy) update_llmproxy=true ;;
+        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_llmproxy=true ;;
         --no-cache) no_cache=true ;;  # Set no_cache to true if the flag is passed
         *) echo "Unknown flag: $1"; exit 1 ;;
     esac
@@ -127,5 +129,18 @@ if $update_sentrius_ai_agent; then
     docker tag sentrius-ai-agent:$SENTRIUS_AI_AGENT_VERSION sentrius-ai-agent:latest
     echo "Loading image into minikube"
     #minikube image load sentrius-ai-agent:$SENTRIUS_AI_AGENT_VERSION
+    #minikube image load sentrius-ai-agent:latest
+fi
+
+if $update_llmproxy; then
+    cp llm-proxy/target/sentrius-llm-proxy-*.jar docker/llmproxy/llmproxy.jar
+    LLMPROXY_VERSION=$(increment_patch_version $LLMPROXY_VERSION)
+    build_image "sentrius-llmproxy" "$LLMPROXY_VERSION" "./docker/llmproxy"
+    rm docker/llmproxy/llmproxy.jar
+    update_env_var "LLMPROXY_VERSION" "$LLMPROXY_VERSION"
+    ## for local, replace minikube with docker
+    docker tag sentrius-llmproxy:$LLMPROXY_VERSION sentrius-llmproxy:latest
+    echo "Loading image into minikube"
+    #minikube image load sentrius-ai-agent:LLMPROXY_VERSION
     #minikube image load sentrius-ai-agent:latest
 fi

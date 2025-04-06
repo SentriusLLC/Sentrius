@@ -16,10 +16,10 @@
   </modules>
   <properties>
     <java.version>17</java.version>
-    <spring-boot.version>3.3.5</spring-boot.version>
+    <spring-boot.version>3.4.4</spring-boot.version>
     <lombok.version>1.18.30</lombok.version>
-    <hypersistence-utils-hibernate-60.version>1.7.5</hypersistence-utils-hibernate-60.version>
-    <flyway.version>10.20.1</flyway.version>
+    <hypersistence-utils-hibernate-60.version>3.9.4</hypersistence-utils-hibernate-60.version>
+    <flyway.version>11.6.0</flyway.version>
     <commons-lang3>3.14.0</commons-lang3>
     <spring-data-jpa.version>3.3.5</spring-data-jpa.version>
     <spring.boot.version>3.3.5</spring.boot.version>
@@ -39,13 +39,16 @@
     <mockito.version>5.10.0</mockito.version>
     <keycloak-version>25.0.3</keycloak-version>
     <caffeine-version>3.2.0</caffeine-version>
-    <snowflake-ingest-version>3.0.1</snowflake-ingest-version>
     <classgraph.version>4.8.179</classgraph.version>
     <opentelem>1.49.0</opentelem>
-    <opentelem-springboot>2.14.0</opentelem-springboot>
+    <opentelem-springboot>2.12.0</opentelem-springboot>
+    <spring-boot-starter-test.version>3.4.4</spring-boot-starter-test.version>
+    <h2.version>2.3.232</h2.version>
+    <flyway-postgres.version>11.6.0</flyway-postgres.version>
   </properties>
   <dependencyManagement>
     <dependencies>
+
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-lang3</artifactId>
@@ -105,10 +108,12 @@
       <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-web</artifactId>
+        <version>${spring.boot.version}</version>
       </dependency>
       <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-devtools</artifactId>
+        <version>${spring.boot.version}</version>
         <optional>true</optional>
       </dependency>
       <dependency>
@@ -119,6 +124,7 @@
       <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-test</artifactId>
+        <version>${spring-boot-starter-test.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -147,13 +153,6 @@
         <groupId>jakarta.persistence</groupId>
         <artifactId>jakarta.persistence-api</artifactId>
         <version>3.1.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-dependencies</artifactId>
-        <type>pom</type>
-        <version>${spring.boot.version}</version>
-        <scope>import</scope>
       </dependency>
       <dependency>
         <groupId>org.springframework.boot</groupId>
@@ -205,7 +204,7 @@
       <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-mail</artifactId>
-        <version>${spring-boot-starter-mail.version}</version>
+        <version>${spring.boot.version}</version>
       </dependency>
       <dependency>
         <groupId>org.springframework.boot</groupId>
@@ -313,41 +312,25 @@
         <artifactId>keycloak-spring-boot-starter</artifactId>
         <version>${keycloak-version}</version>
       </dependency>
-      <!-- https://mvnrepository.com/artifact/net.snowflake/snowflake-ingest-sdk -->
-      <dependency>
-        <groupId>net.snowflake</groupId>
-        <artifactId>snowflake-ingest-sdk</artifactId>
-        <version>${snowflake-ingest-version}</version>
-      </dependency>
-
-      <!-- OpenTelemetry API + SDK -->
       <dependency>
         <groupId>io.opentelemetry</groupId>
-        <artifactId>opentelemetry-api</artifactId>
-        <version>${opentelem}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.opentelemetry</groupId>
-        <artifactId>opentelemetry-sdk</artifactId>
-        <version>${opentelem}</version>
+        <artifactId>opentelemetry-bom</artifactId>
+        <version>${opentelem}</version> <!-- lock SDK, API, exporter to 1.34.1 -->
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
 
-      <!-- OpenTelemetry instrumentation for Spring Boot -->
       <dependency>
         <groupId>io.opentelemetry.instrumentation</groupId>
-        <artifactId>opentelemetry-spring-boot-starter</artifactId>
+        <artifactId>opentelemetry-instrumentation-bom</artifactId>
         <version>${opentelem-springboot}</version>
-      </dependency>
-
-      <!-- Export to OTLP (OpenTelemetry Protocol) -->
-      <dependency>
-        <groupId>io.opentelemetry</groupId>
-        <artifactId>opentelemetry-exporter-otlp</artifactId>
-        <version>${opentelem}</version>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
 
     </dependencies>
   </dependencyManagement>
+
   <build>
     <plugins>
       <plugin>

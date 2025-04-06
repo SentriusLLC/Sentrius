@@ -40,18 +40,15 @@
     <dependency>
       <groupId>io.jsonwebtoken</groupId>
       <artifactId>jjwt-api</artifactId>
-      <version>${jjwt-version}</version>
     </dependency>
     <dependency>
       <groupId>io.jsonwebtoken</groupId>
       <artifactId>jjwt-impl</artifactId>
-      <version>${jjwt-version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>io.jsonwebtoken</groupId>
       <artifactId>jjwt-jackson</artifactId> <!-- or jjwt-gson -->
-      <version>${jjwt-version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
@@ -69,12 +66,10 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
-      <version>${spring.boot.version}</version>
     </dependency>
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
-      <version>${postgresql-version}</version>
     </dependency>
     <dependency>
       <groupId>org.flywaydb</groupId>
@@ -85,14 +80,29 @@
       <artifactId>lombok</artifactId>
     </dependency>
     <dependency>
-      <groupId>net.snowflake</groupId>
-      <artifactId>snowflake-ingest-sdk</artifactId>
-      <version>${snowflake-ingest-version}</version>
-    </dependency>
-    <dependency>
       <groupId>io.github.classgraph</groupId>
       <artifactId>classgraph</artifactId>
-      <version>${classgraph.version}</version>
+    </dependency>
+    <!-- OpenTelemetry API + SDK -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk</artifactId>
+    </dependency>
+
+    <!-- OpenTelemetry instrumentation for Spring Boot -->
+    <dependency>
+      <groupId>io.opentelemetry.instrumentation</groupId>
+      <artifactId>opentelemetry-spring-boot-starter</artifactId>
+    </dependency>
+
+    <!-- Export to OTLP (OpenTelemetry Protocol) -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-exporter-otlp</artifactId>
     </dependency>
   </dependencies>
 

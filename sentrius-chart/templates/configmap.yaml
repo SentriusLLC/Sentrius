@@ -5,6 +5,42 @@ metadata:
   labels:
     {{- include "sentrius.labels" . | nindent 4 }}
 data:
+  llmproxy-application.properties: |
+    spring.main.web-application-type=servlet
+    spring.thymeleaf.enabled=true
+    spring.freemarker.enabled=false
+    #flyway configuration
+    spring.flyway.enabled=false
+    #spring.datasource.url=jdbc:h2:mem:testdb
+    logging.level.org.springframework.web=INFO
+    logging.level.org.springframework.security=INFO
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    dynamic.properties.path=/config/dynamic.properties
+    keycloak.realm=sentrius
+    keycloak.base-url={{ .Values.keycloakDomain }}
+    agent.api.url={{ .Values.sentriusDomain }}
+    # Keycloak configuration
+    spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.sentriusagent.oauth2.client_id }}
+    spring.security.oauth2.client.registration.keycloak.client-secret={{ .Values.sentriusagent.oauth2.client_secret }}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.sentriusagent.oauth2.authorization_grant_type }}
+    spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
+    spring.security.oauth2.client.registration.keycloak.scope={{ .Values.sentriusagent.oauth2.scope }}
+    spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakDomain }}/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakDomain }}/realms/sentrius
+    agents.ai.registered.agent.enabled=true
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.exporter.otlp.endpoint=http://jaeger:4317
+    otel.resource.attributes=service.name=ai-agent
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
   ai-agent-application.properties: |
     spring.main.web-application-type=servlet
     spring.thymeleaf.enabled=true
@@ -93,6 +129,13 @@ data:
     spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakDomain }}/realms/sentrius
     spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakDomain }}/realms/sentrius
     agents.session-analytics.enabled=true
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.exporter.otlp.endpoint=http://jaeger:4317
+    otel.resource.attributes=service.name=ai-agent|
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
   api-application.properties: |
     keystore.file=sso.jceks
     keystore.password=${KEYSTORE_PASSWORD}
