@@ -17,7 +17,7 @@ public interface HostGroupRepository extends JpaRepository<HostGroup, Long>, Jpa
     @Query("SELECT hg FROM HostGroup hg LEFT JOIN FETCH hg.users WHERE hg.id = :id")
     Optional<HostGroup> findByIdWithUsers(@Param("id") Long id);
 
-    @Query("SELECT hg FROM HostGroup hg LEFT JOIN FETCH hg.hostSystemList WHERE hg.id = :hostGroupId")
+    @Query("SELECT hg FROM HostGroup hg LEFT JOIN FETCH hg.hostSystems WHERE hg.id = :hostGroupId")
     HostGroup findHostGroupWithHostSystemsById(@Param("hostGroupId") Long hostGroupId);
 
     List<HostGroup> findByName(String name);

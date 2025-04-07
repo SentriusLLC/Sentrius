@@ -13,7 +13,7 @@ public interface OpsJITRequestRepository extends JpaRepository<OpsZeroTrustAcess
 
     @Query("SELECT j FROM OpsZeroTrustAcessTokenRequest j " +
         "LEFT JOIN FETCH j.ztatReason r " +
-        "WHERE NOT EXISTS (SELECT a FROM ZeroTrustAccessTokenApproval a WHERE a.ztatRequest.id = j.id) " +
+        "WHERE NOT EXISTS (SELECT a FROM OpsApproval a WHERE a.ztatRequest.id = j.id) " +
         "AND (:user IS NULL OR j.user = :user)")
     List<OpsZeroTrustAcessTokenRequest> findOpenOpsJITRequests(@Param("user") User user);
 

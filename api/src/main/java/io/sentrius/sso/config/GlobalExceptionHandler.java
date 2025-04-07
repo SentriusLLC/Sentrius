@@ -5,10 +5,12 @@ import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.utils.MessagingUtil;
 import io.sentrius.sso.core.utils.ZTATUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+@Slf4j
 @ControllerAdvice
 @RequiredArgsConstructor
 public class GlobalExceptionHandler {
@@ -42,6 +44,8 @@ public class GlobalExceptionHandler {
         // Add messageId as a redirect attribute
         redirectAttributes.addAttribute("errorId", MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR));
 
+        ex.printStackTrace();
+        log.info("ahhasldigjudaslkgj");
         // Redirect to "/mydashboard" with the messageId parameter
         return "redirect:/sso/v1/dashboard";
     }

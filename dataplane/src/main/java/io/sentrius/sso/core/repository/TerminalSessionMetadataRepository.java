@@ -16,4 +16,6 @@ public interface TerminalSessionMetadataRepository extends JpaRepository<Termina
 
 
     List<TerminalSessionMetadata> findSessionsBySessionStatus(String state);
+
+    void deleteByHostSystemId(Long hostId);
 }

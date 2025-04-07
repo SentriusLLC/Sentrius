@@ -4,8 +4,10 @@ import java.util.Map;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.model.verbs.Verb;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class TerminalVerbs {
 
@@ -34,6 +36,7 @@ public class TerminalVerbs {
         try {
 
             var response = zeroTrustClientService.callGetOnApi("/ssh/terminal/list");
+            log.info("Terminal list response: {}", response);
 /*
             URL url = new URL(apiUrl);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();

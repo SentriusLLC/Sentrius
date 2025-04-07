@@ -300,7 +300,7 @@ public class ZeroTrustRequestService {
 
     public List<JITTrackerDTO> getApprovedOpsAccessTokenRequests(@NonNull User currentUser) {
         List<OpsZeroTrustAcessTokenRequest> openRequests = opsJITRequestRepository.findAllApprovedRequests(null);
-
+        log.info("Approved Ops Access Token Requests: {}", openRequests.size());
         List<JITTrackerDTO> ztatTrackerList = new ArrayList<>();
         for (var request : openRequests) {
             var dto = convertToDTO(request);

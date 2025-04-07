@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.zip.ZipFile;
+import io.sentrius.sso.core.model.ProxyHost;
 import io.sentrius.sso.core.repository.HostGroupRepository;
+import io.sentrius.sso.core.repository.TerminalSessionMetadataRepository;
 import io.sentrius.sso.core.repository.UserRepository;
 import io.sentrius.sso.core.repository.SystemRepository;
 import io.sentrius.sso.core.data.specification.HostGroupSpecification;
@@ -12,12 +14,12 @@ import io.sentrius.sso.core.model.HostSystem;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -31,6 +33,10 @@ public class HostGroupService {
 
     @Autowired
     private UserRepository userRepository;
+
+
+    @Autowired
+    private TerminalSessionMetadataRepository terminalSessionMetadataRepository;
 
     @Transactional
     public HostGroup getHostGroup(Long hostGroupId) {
@@ -52,15 +58,20 @@ public class HostGroupService {
         if (!userIsMember) {
             return Optional.empty();
         }
-        hostGroup.getHostSystemList().size(); // Forces initialization of the hostSystemList
+        hostGroup.getHostSystems().size(); // Forces initialization of the hostSystemList
 
         return Optional.of(hostGroup);
     }
 
 
-    @Transactional
+    @Transactional(readOnly = true)
     public Optional<HostSystem> getHostSystem(Long hostId) {
-        return systemRepository.findById(hostId);
+        var hostSystem = systemRepository.findById(hostId);
+        if (hostSystem.isPresent()) {
+            Hibernate.initialize(hostSystem.get().getHostGroups());
+            Hibernate.initialize(hostSystem.get().getPublicKeyList());
+        }
+        return hostSystem;
     }
 
     @Transactional
@@ -71,14 +82,14 @@ public class HostGroupService {
             HostGroup sys = hostGroupRepository.findById(hostGroup.getId())
                 .orElseThrow(() -> new EntityNotFoundException("Host Enclave not found"));
             log.info("HostGroup: {}", sys.getId());
-            if (null != sys && null != sys.getHostSystemList()) {
-                Hibernate.initialize(sys.getHostSystemList());
+            if (null != sys && null != sys.getHostSystems()) {
+                Hibernate.initialize(sys.getHostSystems());
 
-                for(HostSystem system : sys.getHostSystemList()) {
+                for(HostSystem system : sys.getHostSystems()) {
                     log.info("HostSystem: {}", system);
                 }
-                log.info("Adding to Systems HostGroup: {}", sys.getHostSystemList());
-                systems.addAll(sys.getHostSystemList());
+                log.info("Adding to Systems HostGroup: {}", sys.getHostSystems());
+                systems.addAll(sys.getHostSystems());
             }
         });
 
@@ -95,14 +106,14 @@ public class HostGroupService {
             HostGroup sys = hostGroupRepository.findById(hostGroup.getId())
                 .orElseThrow(() -> new EntityNotFoundException("Host Enclave not found"));
             log.info("HostGroup: {}", sys.getId());
-            if (null != sys && null != sys.getHostSystemList()) {
-                Hibernate.initialize(sys.getHostSystemList());
+            if (null != sys && null != sys.getHostSystems()) {
+                Hibernate.initialize(sys.getHostSystems());
 
-                for (HostSystem system : sys.getHostSystemList()) {
+                for (HostSystem system : sys.getHostSystems()) {
                     log.info("HostSystem: {}", system);
                 }
-                log.info("Adding to Systems HostGroup: {}", sys.getHostSystemList());
-                systems.addAll(sys.getHostSystemList());
+                log.info("Adding to Systems HostGroup: {}", sys.getHostSystems());
+                systems.addAll(sys.getHostSystems());
             }
         });
 
@@ -208,8 +219,38 @@ public class HostGroupService {
         return hostGroupRepository.findAll(spec);
     }
 
-    public void deleteHostSystem(User user, HostSystem hostSystem) {
-        systemRepository.delete(hostSystem);
+    @Transactional
+    public void deleteHostSystem(User user, Long hostId) {
+        HostSystem attachedHostSystem = systemRepository.findById(hostId)
+            .orElseThrow(() -> new EntityNotFoundException("Host system not found"));
+
+        // Force-load
+        attachedHostSystem.getProxies().size();
+        attachedHostSystem.getHostGroups().size();
+
+        // Sever proxies
+        for (ProxyHost proxy : attachedHostSystem.getProxies()) {
+            proxy.setHostSystem(null);
+        }
+        attachedHostSystem.getProxies().clear();
+
+        // Sever host groups
+        for (HostGroup group : attachedHostSystem.getHostGroups()) {
+            group.getHostSystems().remove(attachedHostSystem);
+        }
+        attachedHostSystem.getHostGroups().clear();
+
+        // Save decoupled HostSystem
+        systemRepository.saveAndFlush(attachedHostSystem);
+
+        // DELETE terminal session metadata linked to this host
+        terminalSessionMetadataRepository.deleteByHostSystemId(hostId);
+
+
+        // Now safe to delete
+        systemRepository.delete(attachedHostSystem);
+
+        log.info("Deleted HostSystem {} for User {}", attachedHostSystem.getId(), user.getId());
     }
 
 /*

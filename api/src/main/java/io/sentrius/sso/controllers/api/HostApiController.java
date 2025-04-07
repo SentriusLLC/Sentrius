@@ -155,11 +155,9 @@ public class HostApiController extends BaseController {
         // operating user
         var user = getOperatingUser(request, response);
 
-        var hostSystem = hostGroupService.getHostSystem(hostId);
+        hostGroupService.deleteHostSystem(user, hostId);
 
-        hostGroupService.deleteHostSystem(user, hostSystem.get());
-
-        node.put("deletedSystemId", hostSystem.get().getId());
+        node.put("deletedSystemId", hostId);
 
         return ResponseEntity.ok(node);
     }

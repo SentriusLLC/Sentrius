@@ -4,11 +4,14 @@ import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.JITTrackerDTO;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.NotificationService;
 import io.sentrius.sso.core.services.UserService;
@@ -110,7 +113,7 @@ public class ZeroTrustATApiController extends BaseController {
     @PostMapping("/request")
     public ResponseEntity<?> requestZtat(
         @RequestHeader("Authorization") String token,
-        @RequestBody ZtatRequestDTO request) {
+        @RequestBody ZtatRequestDTO ztatRequest, HttpServletRequest request, HttpServletResponse response) {
 
         String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
 
@@ -121,16 +124,90 @@ public class ZeroTrustATApiController extends BaseController {
         }
 
         // Extract agent identity from the JWT
+        var operatingUser = getOperatingUser(request, response );
+
+        // Extract agent identity from the JWT
         String agentId = keycloakService.extractAgentId(compactJwt);
+
+        if (null == operatingUser) {
+            log.warn("No operating user found for agent: {}", agentId);
+            var username = keycloakService.extractUsername(compactJwt);
+            operatingUser = userService.getUserWithDetails(username);
+
+        }
 
         log.info("Received ZTAT request from agent: {}", agentId);
         // Store the request in the database
-        //var ztatRequest = ztatService.createRequest(agentId, request.getCommand(), request.getCommandHash());
+        ZeroTrustAccessTokenReason reason = ztatService.createReason(ztatRequest.getJustification(), "", ztatRequest.getCommand());
+        var submittedZtatRequest = ztatService.createOpsRequest(ztatRequest.getCommand(), ztatRequest.getCommand(),
+            reason, operatingUser);
+        submittedZtatRequest = ztatService.addJITRequest(submittedZtatRequest);
 
-        // Generate a Zero Trust Access Token (ZTAT)
-        //String ztatToken = ztatService.generateZtatToken(ztatRequest);
-        var ztatToken = "lskejtgsadlkjg";
-
-        return ResponseEntity.ok(Map.of("ztat_token", ztatToken));
+        return ResponseEntity.ok(Map.of("ztat_request", submittedZtatRequest.getId()));
     }
+
+    @GetMapping("/status/{type}")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
+    public ResponseEntity<?> getRequest(HttpServletRequest request, HttpServletResponse response,
+                                             @RequestHeader("Authorization") String token,
+                                             @PathVariable("type") String type,
+                                             @RequestParam("ztatId") Long ztatId) throws SQLException, GeneralSecurityException {
+        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+
+        log.info("Received ZTAT request from agent: {}", compactJwt);
+        if (!keycloakService.validateJwt(compactJwt)) {
+            log.warn("Invalid Keycloak token");
+            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+        }
+
+        // Extract agent identity from the JWT
+        var operatingUser = getOperatingUser(request, response );
+
+        // Extract agent identity from the JWT
+        String agentId = keycloakService.extractAgentId(compactJwt);
+
+        if (null == operatingUser) {
+            log.warn("No operating user found for agent: {}", agentId);
+            var username = keycloakService.extractUsername(compactJwt);
+            operatingUser = userService.getUserWithDetails(username);
+
+        }
+
+        if (null != type ){
+            switch(type){
+                case "terminal":
+                    var terminalJIT = ztatService.getZtatRequest(ztatId);
+                    if (terminalJIT.getUser().getId() == operatingUser.getId()){
+                        if ( terminalJIT.getApprovals().size() > 0 && terminalJIT.getApprovals().get(0).isApproved() ) {
+                            return ResponseEntity.ok(Map.of("status", "approved", "ztat_token", terminalJIT.getApprovals().get(0).getToken()));
+                        }
+                        else {
+                            log.info("User {} is not the owner of the request {}", operatingUser.getId(), ztatId);
+                            return ResponseEntity.ok(Map.of("status", "unknown"));
+                        }
+                    } else {
+                        log.info("User {} is not the owner of the request {}", operatingUser.getId(), ztatId);
+                        return ResponseEntity.ok(Map.of("status", "unknown"));
+                    }
+                case "ops":
+                    var opsJit = ztatService.getOpsJITRequest(ztatId);
+                    if (opsJit.getUser().getId() == operatingUser.getId()){
+                        if ( ztatService.isApproved(opsJit) ) {
+                            return ResponseEntity.ok(Map.of("status", "approved", "ztat_token", opsJit.getApprovals().get(0).getToken()));
+                        }
+                        else {
+                            return ResponseEntity.ok(Map.of("status", "unknown"));
+                        }
+                    } else {
+                        return ResponseEntity.ok(Map.of("status", "unknown"));
+                    }
+
+                default:
+
+            }
+        }
+        return ResponseEntity.ok(Map.of("status", "unknown"));
+    }
+
 }

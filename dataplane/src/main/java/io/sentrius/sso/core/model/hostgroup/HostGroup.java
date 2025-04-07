@@ -58,13 +58,14 @@ public class HostGroup {
 
   @Column(name = "description")
   private String description;
+  /*
   @ManyToMany(fetch = FetchType.EAGER)
   @JoinTable(
       name = "hostgroup_hostsystems",
       joinColumns = @JoinColumn(name = "hostgroup_id"),
       inverseJoinColumns = @JoinColumn(name = "host_system_id")
   )
-  private List<HostSystem> hostSystemList;
+  private List<HostSystem> hostSystemList;*/
 
   @Column(name = "configuration", columnDefinition = "TEXT")
   @Builder.Default
@@ -82,9 +83,19 @@ public class HostGroup {
   )
   private List<User> users;
 
+  /*
   @ManyToMany(mappedBy = "hostGroups", fetch = FetchType.LAZY)
   @JsonManagedReference
+  private List<HostSystem> hostSystems;*/
+  @ManyToMany(fetch = FetchType.LAZY)
+  @JoinTable(
+      name = "hostgroup_hostsystems",
+      joinColumns = @JoinColumn(name = "hostgroup_id"),
+      inverseJoinColumns = @JoinColumn(name = "host_system_id")
+  )
+  @JsonManagedReference
   private List<HostSystem> hostSystems;
+
 
   @ManyToMany
   @JoinTable(
@@ -99,15 +110,6 @@ public class HostGroup {
   @JoinColumn(name = "application_key_id", referencedColumnName = "id", unique = true)
   private ApplicationKey applicationKey;
 
-  public void setSystems(Collection<String> systems) {
-    hostSystemList = new java.util.ArrayList<>();
-    systems.forEach(
-        system -> {
-          HostSystem hostSystem = new HostSystem();
-          hostSystem.setDisplayName(system);
-          hostSystemList.add(hostSystem);
-        });
-  }
 
   public ProfileConfiguration getConfiguration() {
     ObjectMapper objectMapper = new ObjectMapper();
@@ -140,7 +142,7 @@ public class HostGroup {
     builder.groupId(this.getId());
     builder.displayName(this.getName());
     builder.description(this.getDescription());
-    builder.hostCount(this.getHostSystemList().size());
+    builder.hostCount(this.getHostSystems().size());
     builder.configuration(this.getConfiguration());
     if (setUsers){
       builder.users(this.getUsers().stream().map(x -> x.toDto()).toList());

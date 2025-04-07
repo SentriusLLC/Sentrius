@@ -1,5 +1,6 @@
 package io.sentrius.sso.core.model.security;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.opentelemetry.api.GlobalOpenTelemetry;
@@ -7,6 +8,7 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import io.sentrius.sso.core.annotations.LimitAccess;
+import io.sentrius.sso.core.dto.ztat.EndpointRequest;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
@@ -36,7 +38,9 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 
 @Aspect
 @Component
@@ -49,8 +53,21 @@ public class AccessControlAspect {
     private final ZeroTrustAccessTokenService zeroTrustAccessTokenService;
     private final ZeroTrustRequestService zeroTrustRequestService;
     private final ATPLPolicyService atplPolicyService;
+    static List<String> allowedEndpoints = new ArrayList<>();
+    static {
+        allowedEndpoints.add("/api/v1/zerotrust/accesstoken/status");
+    }
 
     Tracer tracer = GlobalOpenTelemetry.getTracer("io.sentrius.sso");
+
+    private boolean isAllowedEndpoint(String endpoint) {
+        for (String allowedEndpoint : allowedEndpoints) {
+            if (endpoint.startsWith(allowedEndpoint)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     //@Before("@annotation(io.sentrius.core.security.access.LimitAccess)")
     //public void checkAccess(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -61,6 +78,7 @@ public class AccessControlAspect {
 
         boolean canAccess = true;
         LimitAccess accessAnnotation = limitAccess;
+        log.info("Checking access for {}", endpoint);
         try (Scope scope = span.makeCurrent()) {
             var operatingUser = userService.getOperatingUser(getCurrentHttpRequest(), getCurrentHttpResponse(), null);
             if (null != operatingUser) {
@@ -91,7 +109,7 @@ public class AccessControlAspect {
                         log.info("Access Denied to {} at {}", operatingUser, accessAnnotation);
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Policy is required ");
                     }
-
+                    EndpointRequest endpointRequest = null;
                     var token = getCurrentHttpRequest().getHeader("ztat_token");
                     if (null == token) {
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Registration Required");
@@ -102,9 +120,26 @@ public class AccessControlAspect {
                         if (opsApproval.isEmpty() || !opsApproval.get().isApproved()) {
                             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Registration Required");
                         }
+                        var command = opsApproval.get().getZtatRequest().getCommand();
+                        log.info("Command is {} ", command);
+
+                        try {
+                            endpointRequest = JsonUtil.MAPPER.readValue(command, EndpointRequest.class);
+                            log.info("EndpointRequest is {} ", endpointRequest);
+                        } catch (JsonProcessingException e) {
+                            endpointRequest = null;
+                        }
+
                     }
 
-                    if (atplPolicyService.allowsEndpoint(policy.get(), endpoint)) {
+                    if (isAllowedEndpoint(endpoint)) {
+                        log.info("Access Granted to {} at {}", operatingUser, accessAnnotation);
+                        return;
+                    } else if (null != endpointRequest && endpointRequest.contains(endpoint)) {
+                        // this endpoint is approved for use.
+                        return;
+                    }
+                    else if (atplPolicyService.allowsEndpoint(policy.get(), endpoint)) {
                         // now check the trust score, if it is below the threshold, deny access
                         switch (atplPolicyService.evaluateScore(policy.get(), operatingUser)) {
                             case SUCCESS:

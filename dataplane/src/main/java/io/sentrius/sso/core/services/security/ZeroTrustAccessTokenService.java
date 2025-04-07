@@ -107,6 +107,12 @@ public class ZeroTrustAccessTokenService {
     return request;
   }
 
+  public boolean isApproved(
+      @NonNull OpsZeroTrustAcessTokenRequest request) {
+
+    var opsApprovals =  request.getApprovals();
+    return opsApprovals.size() > 0 && opsApprovals.stream().anyMatch(approval -> approval.isApproved());
+  }
 
 
   public boolean isApproved(
@@ -250,6 +256,10 @@ public class ZeroTrustAccessTokenService {
   }
 
   public ZeroTrustAccessTokenRequest addJITRequest(ZeroTrustAccessTokenRequest request) {
+    return ztatRequestService.addJITRequest(request);
+  }
+
+  public OpsZeroTrustAcessTokenRequest addJITRequest(OpsZeroTrustAcessTokenRequest request) {
     return ztatRequestService.addJITRequest(request);
   }
 

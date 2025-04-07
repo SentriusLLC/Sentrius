@@ -93,7 +93,7 @@ public class HostSystem implements Host {
     @Column(name = "locked")
     private boolean locked = false;
 
-    @OneToMany(mappedBy = "hostSystem", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "hostSystem", cascade = CascadeType.ALL,orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ProxyHost> proxies;
 
     @ManyToMany(fetch = FetchType.LAZY)
