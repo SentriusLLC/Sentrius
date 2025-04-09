@@ -58,6 +58,7 @@ public class TerminalApiController extends BaseController {
     }
 
     @GetMapping("/resize")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN}, sshAccess = {SSHAccessEnum.CAN_VIEW_SYSTEMS})
     public ResponseEntity<String> resize(@RequestParam("sessionId") String sessionId, @RequestParam("width") double cols,
     @RequestParam(
         "height") double rows) throws GeneralSecurityException {

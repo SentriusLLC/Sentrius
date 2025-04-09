@@ -198,6 +198,10 @@ public class AccessControlAspect {
                         log.info("Endpoint {} not allowed by policy {}", endpoint, policy.get());
                     }
                     throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied");
+                }else {
+                    span.setAttribute("user.id", operatingUser.getUsername());
+                    span.setAttribute("endpoint", endpoint);
+                    span.setAttribute("access.limit", limitAccess.toString());
                 }
                 // Get the required roles from the annotation
                 for (var userAccess : accessAnnotation.userAccess()) {

@@ -3,12 +3,17 @@ package io.sentrius.sso;
 import io.sentrius.sso.core.repository.automation.ScriptAssignmentRepository;
 import io.sentrius.sso.core.repository.automation.ScriptCronEntryRepository;
 import io.sentrius.sso.core.utils.ScriptCronTask;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.quartz.*;
+import org.quartz.CronExpression;
+import org.quartz.CronTrigger;
+import org.quartz.JobDataMap;
+import org.quartz.JobDetail;
+import org.quartz.Scheduler;
+import org.quartz.SchedulerException;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.PostConstruct;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -52,7 +57,7 @@ public class ServerCronService {
     }
   }
 
-  private String sanitizeCronExpression(String expr) {
+  String sanitizeCronExpression(String expr) {
     String[] splitOnSpace = expr.split(" ");
     if (splitOnSpace.length == 5) {
       if (splitOnSpace[4].equals("*") && splitOnSpace[2].equals("*")) {

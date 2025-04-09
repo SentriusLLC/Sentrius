@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.sentrius.sso.core.dto.HostSystemDTO;
-import io.sentrius.sso.core.model.verbs.InputInterpreterIfc;
 import io.sentrius.sso.core.model.verbs.ListInterpreter;
 import io.sentrius.sso.core.model.verbs.VerbResponse;
 import io.sentrius.sso.core.model.verbs.OutputInterpreterIfc;

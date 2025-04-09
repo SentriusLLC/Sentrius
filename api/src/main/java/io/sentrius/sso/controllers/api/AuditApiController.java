@@ -55,6 +55,7 @@ public class AuditApiController extends BaseController {
     }
 
     @GetMapping("/list")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN}, sshAccess = {SSHAccessEnum.CAN_VIEW_SYSTEMS})
     public List<TerminalLogDTO> listOpenSessions(HttpServletRequest request, HttpServletResponse response) {
         return sessionTrackingService.getConnectedSession().stream().map(
             x -> {
@@ -67,6 +68,7 @@ public class AuditApiController extends BaseController {
     }
 
     @GetMapping("/audit/list")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN}, sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
     public List<SessionLogDTO> listSessions(HttpServletRequest request, HttpServletResponse response) {
         return auditService.listUniqueSessions().stream().map(
             x -> {

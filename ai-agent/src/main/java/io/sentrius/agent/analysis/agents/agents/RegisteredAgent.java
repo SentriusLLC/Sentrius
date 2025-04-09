@@ -107,7 +107,7 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
 
                     // Sleep between prompts
                     log.info("Sleeping for 60 seconds");
-                    Thread.sleep(60_000);
+                    Thread.sleep(10_000);
                 }
 
             } catch (Exception e) {
