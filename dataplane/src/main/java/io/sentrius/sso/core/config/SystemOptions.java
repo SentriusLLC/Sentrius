@@ -2,7 +2,10 @@ package io.sentrius.sso.core.config;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import io.sentrius.sso.core.annotations.RequiresRestart;
 import io.sentrius.sso.core.annotations.Updatable;
@@ -15,6 +18,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.ReflectionUtils;
 
 /** Purpose: Centralizes a POJO for options with sensible defaults. */
 @Slf4j
@@ -29,14 +33,20 @@ public class SystemOptions {
   @Autowired
   private ThreadSafeDynamicPropertiesService dynamicPropertiesService;
 
+
+  @Updatable(description = "This is the name of the system, next to the logo on the top left.")
   @Builder.Default public String systemLogoName = "Sentrius";
 
+  @Updatable(description = "System logo path.")
   @Builder.Default public String systemLogoPathSmall = "/images/sentrius_small.png";
 
+  @Updatable(description = "System logo path.")
   @Builder.Default public String systemLogoPathLarge = "/images/sentrius_large.jpg";
 
+  @Updatable(description = "Banner Text at the top of the screen. If empty it will not be displayed.")
   @Builder.Default public String systemTopBanner = "";
 
+  @Updatable(description = "Banner Text at the top of the screen. If empty it will not be displayed.")
   @Builder.Default public String systemTopBannerClass = "";
 
   /** Full admin can login. */
@@ -46,6 +56,7 @@ public class SystemOptions {
 
   @Builder.Default public Integer approvedJITPeriod = 60;
 
+  @Updatable(description = "Defined whether or not proxied are allowed.")
   @Builder.Default public Boolean allowProxies = true;
 
   @Builder.Default public String auditorClass = "io.sentrius.sso.automation.auditing.RuleAlertAuditor";
@@ -56,33 +67,45 @@ public class SystemOptions {
 
   @Builder.Default public Boolean allowInsecureCookies = false;
 
+  @Updatable
   @Builder.Default public Boolean requireProfileForLogin = true;
 
+  @Updatable
   @Builder.Default public Integer maxJitUses = 1;
 
   /**
    * This is how long before a ztat request ( that has been denied or approved ) can last.
    */
+  @Updatable(description = "This is how long before a ztat request ( that has been denied or approved ) can last.")
+  @RequiresRestart
   @Builder.Default public Integer maxJitDurationMs = (1440 * 1000); // 60 min * 24 hrs * 1000 ms
 
   @Builder.Default public int sessionLogThreadPoolSize = 1;
 
+  @Updatable
+  @RequiresRestart
   @Builder.Default public Boolean enableInternalAudit = true;
 
+  @Updatable(description = "This is the interval in milliseconds that the audit log will be flushed to the database.")
+  @RequiresRestart
   @Builder.Default public Integer auditFlushIntervalMs = 5000;
 
+  @Updatable
   @Builder.Default
   public String knownHostsPath = System.getProperty("user.home") + "/.ssh/known_hosts";
 
+  @Updatable(description = "This is the default settings for terminals to open in a new tab. Users can override")
   @Builder.Default public Boolean terminalsInNewTab = true;
 
   @Builder.Default public Boolean testMode = false;
 
+  @Updatable(description = "This is the default user type new users are assigned if not passed in via jwt.")
   @Builder.Default public String defaultUserTypeName = "";
 
   @Builder.Default
   public Integer globalCacheExpirationMinutes = 1440; // 24 hours
 
+  @Updatable
   public String systemBanner = "";
 
   public Boolean agentForwarding = false;
@@ -97,24 +120,31 @@ public class SystemOptions {
 
   public Boolean allowUploadSystemConfiguration = false;
 
+  @Updatable(description = "Allows LLM to ask questions of the user")
   public Boolean enableLLMQuestions = false;
 
 
   public Boolean sshEnabled = true;
 
+  @Updatable(description = "AI risk score before user sessions are halted. Changes won't apply to currently running " +
+      "sessions")
   public Double aiRiskThreshold = 0.8;
 
+  @Updatable(description = "This is the number of commands to buffer for AI monitoring.")
   public Integer commandsToBuffer = 10;
 
-    public Integer commandsToEvaluate = 5;
+  @Updatable(description = "This is the number of commands to evaluate for AI monitoring.")
+  public Integer commandsToEvaluate = 5;
 
   /**
    * Purely for testing mode
    */
+  @Updatable(description = "Allows admins to view and approve their own ZTAT ( Zero Trust Access Token) requests.")
   public Boolean canApproveOwnZtat = false;
 
 
   // the default path may be sufficient
+  @Updatable(description = "This is the path where uploaded files will be stored before distributed to remote systems.")
   public String uploadPath;
   public String sshKeyType = "rsa";
 
@@ -130,7 +160,7 @@ public class SystemOptions {
 
   @PostConstruct
   private void init() throws IllegalAccessException {
-    Field[] fields = getClass().getDeclaredFields();
+    List<Field> fields =  getAllInstanceFields();
     for (Field field : fields) {
       field.setAccessible(true); // Allow access to private fields
       // Only process fields with non-null defaults or initialize with a default if null
@@ -158,7 +188,7 @@ public class SystemOptions {
    * @return true if the field was successfully updated, false otherwise.
    */
   public boolean setValue(String fieldName, Object fieldValue, boolean save){
-    Field[] fields = this.getClass().getDeclaredFields();
+    List<Field> fields =  getAllInstanceFields();
     for (var field : fields) {
       if (field.getName().equalsIgnoreCase(fieldName)) {
         log.debug("Setting field {} to {}", fieldName, fieldValue);
@@ -194,7 +224,8 @@ public class SystemOptions {
    */
   public Map<String, SystemOption> getOptions() throws IllegalAccessException {
     // Retrieve all fields from the system options class
-    Field[] fields = getClass().getDeclaredFields();
+    List<Field> fields =  getAllInstanceFields();
+    log.info("Fields: {}", fields);
 
     // Map to store the updatable fields with their respective SystemOption objects
     Map<String, SystemOption> entries = new HashMap<>();
@@ -211,7 +242,7 @@ public class SystemOptions {
         String fieldName = field.getName();
         Object fieldValue = field.get(this);
 
-        log.trace("Field: {} Value: {}", fieldName, fieldValue);
+        log.info("Field: {} Value: {}", fieldName, fieldValue);
 
         // Create a SystemOption object with the field details
         var sysOpt = SystemOption.builder()
@@ -232,8 +263,29 @@ public class SystemOptions {
 
         // Add the field to the map of system options
         entries.put(fieldName, sysOpt.build());
+      } else {
+        log.info("Field {} is not updatable", field.getName());
       }
     }
     return entries;
+  }
+
+  private List<Field> getAllInstanceFields() {
+    List<Field> fields = new ArrayList<>();
+
+    // Walk the real class hierarchy
+    Class<?> targetClass = this.getClass();
+    if (targetClass.getName().contains("$$")) {
+      targetClass = targetClass.getSuperclass(); // CGLIB proxy detected, get real class
+    }
+
+    ReflectionUtils.doWithFields(targetClass, field -> {
+      // Ignore static fields like 'log'
+      if (!java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+        fields.add(field);
+      }
+    });
+
+    return fields;
   }
 }

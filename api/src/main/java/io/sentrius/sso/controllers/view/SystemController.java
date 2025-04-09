@@ -2,8 +2,10 @@ package io.sentrius.sso.controllers.view;
 
 import java.util.List;
 import io.sentrius.sso.automation.sideeffects.SideEffect;
+import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.ObfuscationService;
 import io.sentrius.sso.core.services.UserService;
@@ -68,9 +70,11 @@ public class SystemController extends BaseController {
 
     @ModelAttribute("systemSettings")
     public List<SystemOption> getSystemSettings() throws IllegalAccessException {
+        log.info("SystemSettings: {}", systemOptions.getOptions());
         return systemOptions.getOptions().values().stream().toList();
     }
     @GetMapping("/settings")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public String displaySettings() {
 
 
