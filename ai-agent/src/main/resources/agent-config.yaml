@@ -1,3 +1,13 @@
 description: "Agent that handles logs and OpenAI access."
 context: |
   Your job is to fetch logs for currently open terminals and assess if the user is performing risky behavior.
+  Risk should be defined in a json response of the form:
+  {
+    "assessments": [
+        {
+        "sessionId": "<id>",
+        "risk": "<low|medium|high>",
+        "description": "<why they received the risk>"
+        }
+    ]
+  }

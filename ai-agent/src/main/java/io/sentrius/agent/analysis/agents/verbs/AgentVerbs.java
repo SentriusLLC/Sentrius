@@ -13,6 +13,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.sentrius.agent.analysis.agents.agents.AgentConfig;
 import io.sentrius.agent.analysis.agents.agents.PromptBuilder;
 import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
+import io.sentrius.agent.analysis.agents.interpreters.ObjectListInterpreter;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.verbs.Verb;
 import io.sentrius.sso.core.services.agents.LLMService;
@@ -50,7 +51,9 @@ public class AgentVerbs {
     }
 
 
-    @Verb(name = "prompt_agent", description = "Prompts for agent workload.", isAiCallable = false)
+    @Verb(name = "prompt_agent",returnType = ArrayNode.class, description = "Prompts for agent workload.",
+        isAiCallable =
+        false)
     public ArrayNode promptAgent(Map<String, Object> args) throws ZtatException, IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream("agent-config.yaml");
         if (is == null) {
@@ -105,4 +108,39 @@ public class AgentVerbs {
 
         return llmService.askQuestion(chatRequest);
     }
+
+    @Verb(name = "assess_data",returnType = ArrayNode.class, description = "Accepts data based on the plan and seeks " +
+        "to perform the assessment outlined by the context.", inputInterpreter = ObjectListInterpreter.class)
+    public ArrayNode assessData(List<?> objectList) throws ZtatException, IOException {
+        InputStream is = getClass().getClassLoader().getResourceAsStream("agent-config.yaml");
+        if (is == null) {
+            throw new RuntimeException("agent-config.yaml not found on classpath");
+        }
+        AgentConfig config = new ObjectMapper(new YAMLFactory()).readValue(is, AgentConfig.class);
+
+        log.info("Agent config loaded: {}", config);
+
+        log.info("Object list is {}", objectList);
+        for(var obj : objectList){
+
+            List<Message> messages = new ArrayList<>();
+            var context = config.getContext();
+
+            messages.add(Message.builder().role("user").content(obj.toString()).build());
+            messages.add(Message.builder().role("system").content(context).build());
+
+            ChatRequest chatRequest = ChatRequest.builder().model("gpt-3.5-turbo").messages(messages).build();
+            var resp = llmService.askQuestion(chatRequest);
+            Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
+            log.info("Response is {}", resp);
+            for (Response.Choice choice : response.getChoices()) {
+                var content = choice.getMessage().getContent();
+                log.info("content is {}", content);
+            }
+            log.info("Object is {}", obj);
+        }
+        return JsonUtil.MAPPER.createArrayNode();
+    }
+
+
 }

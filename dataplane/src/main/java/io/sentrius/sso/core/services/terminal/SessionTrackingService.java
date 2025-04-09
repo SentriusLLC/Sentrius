@@ -332,6 +332,10 @@ public class SessionTrackingService implements PluggableServices {
     return connectedSystems;
   }
 
+  public List<ConnectedSystem> getAllOpenSessions() {
+    return userConnectionMap.values().stream().toList();
+  }
+
   public void flushSessionOutput(ConnectedSystem sessionIdLong) {
     sessionAuditService.flushLogs(sessionIdLong);
   }

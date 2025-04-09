@@ -4,10 +4,13 @@ import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.SessionLogDTO;
 import io.sentrius.sso.core.dto.TerminalLogDTO;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.model.sessions.SessionLog;
 import io.sentrius.sso.core.model.sessions.TerminalLogs;
 import io.sentrius.sso.core.services.ErrorOutputService;
@@ -76,6 +79,7 @@ public class AuditApiController extends BaseController {
     }
 
     @GetMapping("/audit/attach")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION}, sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
     public ResponseEntity<String> getTerminalOutput(HttpServletRequest request, HttpServletResponse response, @RequestParam("sessionId") String sessionId)
         throws GeneralSecurityException {
         var sessionIdStr = cryptoService.decrypt(sessionId);

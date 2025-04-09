@@ -41,8 +41,13 @@ public class IntegrationSecurityTokenService {
         var token = repository.findById(id);
         if (token.isPresent()) {
             try {
+                IntegrationSecurityToken unmanaged = IntegrationSecurityToken.builder()
+                    .id(token.get().getId())
+                    .connectionType(token.get().getConnectionType())
+                    .connectionInfo(cryptoService.decrypt(token.get().getConnectionInfo()))
+                    .build();
                 // decrypt the connecting info
-                token.get().setConnectionInfo(cryptoService.decrypt(token.get().getConnectionInfo()));
+                return Optional.of(unmanaged);
             } catch (GeneralSecurityException e) {
                 throw new RuntimeException(e);
             }
@@ -66,11 +71,15 @@ public class IntegrationSecurityTokenService {
         return repository.findByConnectionType(connectionType).stream().map(token -> {
             try {
                 // decrypt the connecting info
-                token.setConnectionInfo(cryptoService.decrypt(token.getConnectionInfo()));
+                IntegrationSecurityToken unmanaged = IntegrationSecurityToken.builder()
+                    .id(token.getId())
+                    .connectionType(token.getConnectionType())
+                    .connectionInfo(cryptoService.decrypt(token.getConnectionInfo()))
+                    .build();
+                return unmanaged;
             } catch (GeneralSecurityException e) {
                 throw new RuntimeException(e);
             }
-            return token;
         }).toList();
     }
 }

@@ -1,6 +1,7 @@
 package io.sentrius.agent.analysis.agents.agents;
 
-import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -8,16 +9,17 @@ import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.security.Ztat;
+import io.sentrius.sso.core.model.verbs.VerbResponse;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.utils.JsonUtil;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.HttpClientErrorException;
 
 @Slf4j
 @Component
@@ -31,7 +33,8 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
     final VerbRegistry verbRegistry;
     final AgentVerbs agentVerbs;
 
-
+    private volatile boolean running = true;
+    private Thread workerThread;
 
     public ArrayNode promptAgent(UserDTO user) {
         ArrayNode response = null;
@@ -61,73 +64,69 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
         return response;
     }
 
-
     @Override
     public void onApplicationEvent(final ApplicationReadyEvent event) {
 
         verbRegistry.scanClasspath();
 
-        // Load agent config
+        workerThread = new Thread(() -> {
+            try {
+                UserDTO user = UserDTO.builder()
+                    .username(zeroTrustClientService.getUsername())
+                    .build();
 
+                log.info("Username: {}", user.getUsername());
+                log.info("Registering v1.0.2 agent...");
 
+                var register = zeroTrustClientService.registerAgent(user);
+                log.info("Registered agent response: {}", register);
 
-        try {
+                var ztat = JsonUtil.MAPPER.readValue(register, Ztat.class);
+                zeroTrustClientService.setZtat(ztat.getZtatToken());
 
+                while (running) {
+                    try {
+                        var response = promptAgent(user);
+                        log.info("Got response: {}", response);
 
+                        VerbResponse priorResponse = null;
+                        Map<String, Object> args = new HashMap<>();
 
-            // get username from token
-            UserDTO user = UserDTO.builder()
-                .username(zeroTrustClientService.getUsername())
-                .build();
-
-            log.info(zeroTrustClientService.getUsername());
-
-            log.info("Registering v1.0.2 agent...");
-
-            // register
-
-            var register = zeroTrustClientService.registerAgent(user);
-            log.info("Registered agent is running {} ", register);
-
-            var ztat = JsonUtil.MAPPER.readValue(register, Ztat.class);
-
-            //while(true){
-            // get ztat token
-                try {
-
-
-
-                    zeroTrustClientService.setZtat(ztat.getZtatToken());
-
-                    // this phase is called "prompting"
-                    var response = promptAgent(user);
-                    for(var node : response){
-                        if (node.get("verb") != null){
-                            var verb =  node.get("verb").asText();
-                            log.info("executing verb is {}", verb);
-                            verbRegistry.execute(verb, null);
+                        for (var node : response) {
+                            if (node.get("verb") != null) {
+                                var verb = node.get("verb").asText();
+                                log.info("Executing verb: {}", verb);
+                                priorResponse = verbRegistry.execute(user, priorResponse, verb, args);
+                            }
+                            log.info("Node: {}", node);
                         }
-                        log.info("node {}", node);
+
+                    } catch (Exception e) {
+                        log.error("Exception in agent loop", e);
                     }
-                    log.info("got " + response);
-                } catch (HttpClientErrorException e){
-                    log.info("oh boy");
+
+                    // Sleep between prompts
+                    log.info("Sleeping for 60 seconds");
+                    Thread.sleep(60_000);
                 }
 
-            // execute command
-//                var result = verbRegistry.execute(command, null);
-                //log.info("Command executed: {}", result);
+            } catch (Exception e) {
+                log.error("Fatal error in RegisteredAgent", e);
+            } catch (ZtatException e) {
+                throw new RuntimeException(e);
+            }
+        });
 
+        workerThread.setName("RegisteredAgent-Worker");
+        workerThread.start();
+    }
 
-
-                // sleep for 5 seconds
-                Thread.sleep(5000);
-         //  }
-
-        } catch (InterruptedException | JsonProcessingException e) {
-            throw new RuntimeException(e);
-        } catch (ZtatException e) {
-            throw new RuntimeException(e);
+    @PreDestroy
+    public void shutdown() {
+        log.info("Shutting down RegisteredAgent...");
+        running = false;
+        if (workerThread != null) {
+            workerThread.interrupt();
         }
     }
 

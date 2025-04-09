@@ -10,6 +10,9 @@ import java.lang.annotation.Target;
 public @interface Verb {
     String name();
     String description() default "";
+    Class<?> returnType() default String.class;
+    Class<? extends OutputInterpreterIfc> outputInterpreter() default DefaultInterpreter.class;
+    Class<? extends InputInterpreterIfc> inputInterpreter() default DefaultInterpreter.class;
     String[] paramDescriptions() default {};
     // if set to true, this verb will be callable by AI agents
     boolean isAiCallable() default true;

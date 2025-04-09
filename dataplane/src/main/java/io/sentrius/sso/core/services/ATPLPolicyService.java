@@ -15,9 +15,11 @@ import io.sentrius.sso.core.repository.AgentPolicyAssignmentRepository;
 import io.sentrius.sso.core.trust.ATPLPolicy;
 import io.sentrius.sso.core.trust.TrustScoreResult;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ATPLPolicyService {
@@ -86,7 +88,10 @@ public class ATPLPolicyService {
 
     public boolean allowsEndpoint(ATPLPolicy policy, String endpoint) {
         var f =  policy.getCapabilities().getPrimitives().stream()
-            .filter(p -> p.getEndpoint().contains(endpoint))
+            .filter(p -> {
+                log.info("Checking if {} contains {}", p.getEndpoint(), endpoint);
+                return p.getEndpoint().contains(endpoint);
+            })
             .findFirst();
 
         if (f.isPresent()){

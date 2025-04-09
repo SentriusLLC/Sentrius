@@ -3,11 +3,13 @@ package io.sentrius.sso.controllers.api;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
+import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.HostSystemDTO;
 import io.sentrius.sso.core.dto.TerminalLogOutputDTO;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.SessionService;
@@ -72,6 +74,26 @@ public class TerminalApiController extends BaseController {
     public ResponseEntity<List<HostSystemDTO>> listTerminal(HttpServletRequest request, HttpServletResponse response) throws GeneralSecurityException {
         var user= getOperatingUser(request,response);
         var connectedSystems = sessionTrackingService.getOpenSessions(user);
+        List<HostSystemDTO> dtos = new ArrayList<>();
+        connectedSystems.stream().map(connectedSystem -> {
+            try {
+                var encryptedSessionId = cryptoService.encrypt(connectedSystem.getSession().getId().toString());
+                var dto = connectedSystem.toHostSystemDTO(encryptedSessionId);
+                return dto;
+            } catch (GeneralSecurityException e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+        }).forEach(dtos::add);
+        return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/list/all")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION}, sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<List<HostSystemDTO>> listAllTerminal(HttpServletRequest request,
+                                                             HttpServletResponse response) throws GeneralSecurityException {
+        var user= getOperatingUser(request,response);
+        var connectedSystems = sessionTrackingService.getAllOpenSessions();
         List<HostSystemDTO> dtos = new ArrayList<>();
         connectedSystems.stream().map(connectedSystem -> {
             try {
