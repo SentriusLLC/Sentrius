@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -89,6 +90,7 @@ public abstract class BaseController {
         // Logic to retrieve the operating user, e.g., from a JWT token
         try {
             return userService.getOperatingUser(request, response, getUserMessage(request, null, null));
+
         }catch(Exception e){
             return null;
         }

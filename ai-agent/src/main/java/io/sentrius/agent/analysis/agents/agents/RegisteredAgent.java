@@ -3,13 +3,13 @@ package io.sentrius.agent.analysis.agents.agents;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.security.Ztat;
 import io.sentrius.sso.core.model.verbs.VerbResponse;
+import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.utils.JsonUtil;
@@ -29,7 +29,7 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
 
 
     final ZeroTrustClientService zeroTrustClientService;
-
+    final AgentClientService agentClientService;
     final VerbRegistry verbRegistry;
     final AgentVerbs agentVerbs;
 
@@ -69,20 +69,40 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
 
         verbRegistry.scanClasspath();
 
-        workerThread = new Thread(() -> {
+        final UserDTO user = UserDTO.builder()
+            .username(zeroTrustClientService.getUsername())
+            .build();
+        try {
+            agentClientService.heartbeat(zeroTrustClientService.getUsername());
+        } catch (ZtatException e) {
+            throw new RuntimeException(e);
+        }
+        while(running) {
             try {
-                UserDTO user = UserDTO.builder()
-                    .username(zeroTrustClientService.getUsername())
-                    .build();
-
-                log.info("Username: {}", user.getUsername());
-                log.info("Registering v1.0.2 agent...");
-
                 var register = zeroTrustClientService.registerAgent(user);
                 log.info("Registered agent response: {}", register);
 
                 var ztat = JsonUtil.MAPPER.readValue(register, Ztat.class);
                 zeroTrustClientService.setZtat(ztat.getZtatToken());
+                break;
+            }catch (Exception | ZtatException e) {
+                log.error(e.getMessage());
+                log.info("Registering v1.0.2 agent failed. Retrying in 10 seconds...");
+                try {
+                    Thread.sleep(10_000);
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        }
+
+        workerThread = new Thread(() -> {
+            try {
+
+                log.info("Username: {}", user.getUsername());
+                log.info("Registering v1.0.2 agent...");
+
+
 
                 while (running) {
                     try {
@@ -112,8 +132,6 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
 
             } catch (Exception e) {
                 log.error("Fatal error in RegisteredAgent", e);
-            } catch (ZtatException e) {
-                throw new RuntimeException(e);
             }
         });
 

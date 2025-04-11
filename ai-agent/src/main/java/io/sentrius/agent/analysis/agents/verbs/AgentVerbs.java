@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -14,8 +15,11 @@ import io.sentrius.agent.analysis.agents.agents.AgentConfig;
 import io.sentrius.agent.analysis.agents.agents.PromptBuilder;
 import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
 import io.sentrius.agent.analysis.agents.interpreters.ObjectListInterpreter;
+import io.sentrius.sso.core.dto.JITTrackerDTO;
+import io.sentrius.sso.core.dto.ztat.AtatRequest;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.verbs.Verb;
+import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.LLMService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.utils.JsonUtil;
@@ -23,6 +27,7 @@ import io.sentrius.sso.genai.Message;
 import io.sentrius.sso.genai.Response;
 import io.sentrius.sso.genai.model.ChatRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.glassfish.jaxb.core.v2.model.core.TypeRef;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -38,6 +43,7 @@ public class AgentVerbs {
     final ZeroTrustClientService zeroTrustClientService;
     final LLMService llmService;
     final VerbRegistry verbRegistry;
+    final AgentClientService agentClientService;
 
     @Value("${agent.ai.config:assessor-config.yaml}")
     private String agentConfigFile;
@@ -52,10 +58,13 @@ public class AgentVerbs {
      * @param verbRegistry The registry containing available verbs and their metadata.
      * @throws JsonProcessingException If there is an error processing JSON during initialization.
      */
-    public AgentVerbs(ZeroTrustClientService zeroTrustClientService, LLMService llmService, VerbRegistry verbRegistry) throws JsonProcessingException {
+    public AgentVerbs(ZeroTrustClientService zeroTrustClientService, LLMService llmService, VerbRegistry verbRegistry,
+                      AgentClientService agentService
+    ) throws JsonProcessingException {
         this.zeroTrustClientService = zeroTrustClientService;
         this.llmService = llmService;
         this.verbRegistry = verbRegistry;
+        this.agentClientService = agentService;
 
         log.info("Loading agent config from {}", agentConfigFile);
     }
@@ -169,5 +178,29 @@ public class AgentVerbs {
             log.info("Object is {}", obj);
         }
         return JsonUtil.MAPPER.createArrayNode();
+    }
+
+    @Verb(name = "get_work_requests", returnType = ArrayNode.class, description = "Queries the API for work " +
+        "interacting with another agent")
+    public List<AtatRequest> getWork() throws ZtatException, IOException {
+        List<AtatRequest> requests = new ArrayList<>();
+
+        var atatRequests = agentClientService.getAtatRequests();
+        List<JITTrackerDTO> dtos =  JsonUtil.MAPPER.readValue(atatRequests, new TypeReference<>() {
+        });
+        /*
+        for (var dto : dtos) {
+            var request = new AtatRequest();
+            request.setRequestId(dto.getId().toString());
+            request.set
+            request.setStatus(dto.getStatus());
+            request.setCreatedAt(dto.getCreatedAt());
+            request.setUpdatedAt(dto.getUpdatedAt());
+            request.setAgentId(dto.getAgentId());
+            requests.add(request);
+        }*/
+
+
+        return requests;
     }
 }

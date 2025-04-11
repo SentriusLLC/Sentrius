@@ -9,6 +9,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import io.sentrius.sso.core.data.EndpointThreat;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
 import io.sentrius.sso.core.model.security.enums.RuleAccessEnum;
@@ -33,5 +34,7 @@ public @interface LimitAccess {
   SystemOperationsEnum[] systemOperations() default {};
 
   ZeroTrustAccessTokenEnum[] ztatAccess() default {};
+
+  EndpointThreat endpointThreat() default EndpointThreat.NONE;
 
 }

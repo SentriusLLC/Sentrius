@@ -2,6 +2,7 @@ package io.sentrius.sso.controllers.api;
 
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import io.sentrius.sso.core.annotations.LimitAccess;
@@ -40,6 +41,7 @@ public class ZeroTrustATApiController extends BaseController {
     private final NotificationService notificationService;
     private final KeycloakService keycloakService;
 
+
     protected ZeroTrustATApiController(
         UserService userService, SystemOptions systemOptions,
         ErrorOutputService errorOutputService, ZeroTrustAccessTokenService ztatService, NotificationService notificationService,
@@ -52,6 +54,7 @@ public class ZeroTrustATApiController extends BaseController {
     }
 
     @GetMapping("/my/current")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<List<JITTrackerDTO>> getCurrentJit(HttpServletRequest request, HttpServletResponse response) {
 
         var operatingUser = getOperatingUser(request, response);
@@ -146,6 +149,19 @@ public class ZeroTrustATApiController extends BaseController {
         return ResponseEntity.ok(Map.of("ztat_request", submittedZtatRequest.getId()));
     }
 
+    /**
+     * Get the status of a ZTAT request
+     *
+     * @param request
+     * @param response
+     * @param token
+     * @param type
+     * @param ztatId
+     * @return
+     * @throws SQLException
+     * @throws GeneralSecurityException
+     */
+
     @GetMapping("/status/{type}")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<?> getRequest(HttpServletRequest request, HttpServletResponse response,
@@ -210,4 +226,38 @@ public class ZeroTrustATApiController extends BaseController {
         return ResponseEntity.ok(Map.of("status", "unknown"));
     }
 
+    @GetMapping("/list/{type}")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<List<JITTrackerDTO>> listZtatRequests(@PathVariable("type") String type,
+                                                                HttpServletRequest request, HttpServletResponse response) {
+        List<JITTrackerDTO> ztatTracker = new ArrayList<JITTrackerDTO>();
+        switch(type){
+            case "terminal":
+                ztatTracker = ztatService.getOpenJITRequests(null);
+                break;
+            case "ops":
+                ztatTracker = ztatService.getOpenOpsRequests(null);
+                break;
+            case "atat":
+                ztatTracker = ztatService.getOpenOpsRequests(null);
+                ztatTracker = ztatTracker.stream().filter(dto -> {
+                  if (dto.getCommand().equals("register")) {
+                        return false;
+                  }
+                    try {
+                        if (userService.isNPE(dto.getUserName())){
+                            return true;
+                        }
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                    return false;
+                }).toList();
+                break;
+            default:
+                log.warn("Invalid type: {}", type);
+        }
+        ztatService.getOpenOpsRequests(null);
+        return ResponseEntity.ok(ztatTracker);
+    }
 }

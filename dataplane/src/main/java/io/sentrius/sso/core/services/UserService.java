@@ -6,9 +6,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import com.google.common.cache.CacheLoader;
 import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.actors.PrincipalEntity;
+import io.sentrius.sso.core.model.security.IdentityType;
 import io.sentrius.sso.core.repository.ProfileRepository;
 import io.sentrius.sso.core.repository.UserRepository;
 import io.sentrius.sso.core.model.users.User;
@@ -20,6 +22,7 @@ import io.sentrius.sso.core.services.security.AuthService;
 import io.sentrius.sso.core.services.security.CookieService;
 import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.security.JwtUtil;
+import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.utils.ByteUtils;
 import io.sentrius.sso.core.utils.UIMessaging;
 import jakarta.servlet.http.HttpServletRequest;
@@ -51,6 +54,15 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserTypeRepository userTypeRepository;
     private final CryptoService cryptoService;
+    private final KeycloakService keycloakService;
+
+    private final CacheLoader<String,Boolean> isNpe = new CacheLoader<>() {
+        @Override
+        public Boolean load(String username) {
+            var user = UserDB.findByUsername(username);
+            return user.filter(value -> value.getIdentityType() == IdentityType.NON_PERSON_ENTITY).isPresent();
+        }
+    };
 
     @Transactional
     public User getUserWithDetails(String userName) {
@@ -61,6 +73,10 @@ public class UserService {
         // Initialize lazy-loaded associations while the session is still active
         Hibernate.initialize(user.get().getAuthorizationType());
         return user.get();
+    }
+
+    public boolean isNPE(String username) throws Exception {
+        return isNpe.load(username);
     }
 
     public User getOperatingUser(HttpServletRequest request,
@@ -172,6 +188,7 @@ public class UserService {
                     selectedProfile = null;
                     cookieService.setEncryptedCookie(request, response, CookieService.SELECTED_PROFILE, null, 0);
                 }
+                operatingUser.setPassword("");
                 return operatingUser;
             } catch (IllegalArgumentException e) {
                 return null;

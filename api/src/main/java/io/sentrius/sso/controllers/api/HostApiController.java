@@ -8,13 +8,16 @@ import java.util.List;
 import java.util.Optional;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.data.EndpointThreat;
 import io.sentrius.sso.core.model.HostSystem;
 import io.sentrius.sso.core.dto.HostSystemDTO;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.model.hostgroup.ProfileConfiguration;
 import io.sentrius.sso.core.model.metadata.TerminalSessionMetadata;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.HostGroupService;
@@ -68,6 +71,7 @@ public class HostApiController extends BaseController {
     }
 
     @GetMapping("/shutdown")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS}, endpointThreat = EndpointThreat.HIGH)
     public String shutdown() {
         log.info("Shutting down the server");
         terminalService.shutdown();

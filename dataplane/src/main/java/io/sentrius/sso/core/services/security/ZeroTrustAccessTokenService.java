@@ -282,4 +282,5 @@ public class ZeroTrustAccessTokenService {
   public ZeroTrustAccessTokenRequest getZtatRequest(Long ztatId) {
     return ztatRequestService.getAccessTokenRequestById(ztatId);
   }
+
 }

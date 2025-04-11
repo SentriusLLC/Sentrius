@@ -5,7 +5,24 @@ metadata:
   labels:
     {{- include "sentrius.labels" . | nindent 4 }}
 data:
+  assessor-config.yaml: |
+    description: "Agent that handles logs and OpenAI access."
+    context: |
+      Your job is to fetch logs for currently open terminals and assess if the user is performing risky behavior.
+      Risk should be defined in a json response of the form:
+      {
+        "assessments": [
+            {
+            "sessionId": "<id>",
+            "risk": "<low|medium|high>",
+            "description": "<why they received the risk>"
+            }
+        ]
+      }
   llmproxy-application.properties: |
+    keystore.file=sso.jceks
+    keystore.password=${KEYSTORE_PASSWORD}
+    keystore.alias=KEYBOX-ENCRYPTION_KEY
     spring.main.web-application-type=servlet
     spring.thymeleaf.enabled=true
     spring.freemarker.enabled=false
@@ -33,14 +50,14 @@ data:
     spring.security.oauth2.client.registration.keycloak.scope={{ .Values.sentriusagent.oauth2.scope }}
     spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakDomain }}/realms/sentrius
     spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakDomain }}/realms/sentrius
-    agents.ai.registered.agent.enabled=true
     # OTEL settings
     otel.traces.exporter=otlp
     otel.metrics.exporter=none
-    otel.exporter.otlp.endpoint=http://jaeger:4317
-    otel.resource.attributes=service.name=ai-agent
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.resource.attributes.service.name=llm-proxy
     otel.traces.sampler=always_on
     otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
   ai-agent-application.properties: |
     spring.main.web-application-type=servlet
     spring.thymeleaf.enabled=true
@@ -73,10 +90,15 @@ data:
     # OTEL settings
     otel.traces.exporter=otlp
     otel.metrics.exporter=none
-    otel.exporter.otlp.endpoint=http://jaeger:4317
-    otel.resource.attributes=service.name=ai-agent
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.resource.attributes.service.name=ai-agent
     otel.traces.sampler=always_on
     otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
+    management.endpoints.web.exposure.include=health
+    management.endpoint.health.show-details=always
+    agent.open.ai.endpoint=http://llmproxy:8080/
+    agent.ai.config=assessor-config.yaml
   analysis-agent-application.properties: |
     keystore.file=sso.jceks
     keystore.password=${KEYSTORE_PASSWORD}
@@ -132,10 +154,11 @@ data:
     # OTEL settings
     otel.traces.exporter=otlp
     otel.metrics.exporter=none
-    otel.exporter.otlp.endpoint=http://jaeger:4317
-    otel.resource.attributes=service.name=ai-agent|
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.resource.attributes.service.name=ai-agent
     otel.traces.sampler=always_on
     otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
   api-application.properties: |
     keystore.file=sso.jceks
     keystore.password=${KEYSTORE_PASSWORD}
@@ -194,10 +217,11 @@ data:
     # OTEL settings
     otel.traces.exporter=otlp
     otel.metrics.exporter=none
-    otel.exporter.otlp.endpoint=http://jaeger:4317
-    otel.resource.attributes=service.name=ai-agent|
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.resource.attributes.service.name=sentrius-api
     otel.traces.sampler=always_on
     otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
   dynamic.properties: |
     auditorClass=io.sentrius.sso.automation.auditing.AccessTokenAuditor
     twopartyapproval.option.LOCKING_SYSTEMS=true

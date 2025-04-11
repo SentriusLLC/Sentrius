@@ -78,8 +78,6 @@ public class IntegrationApiController extends BaseController {
                                                                     @RequestBody ExternalIntegrationDTO integrationDTO)
         throws JsonProcessingException, GeneralSecurityException {
 
-        log.info("ahh");
-
         var json = JsonUtil.MAPPER.writeValueAsString(integrationDTO);
         IntegrationSecurityToken token = IntegrationSecurityToken.builder()
             .connectionType("openai")

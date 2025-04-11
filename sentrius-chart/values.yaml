@@ -10,7 +10,6 @@ keycloakSubdomain: keycloak.{{ .Values.subdomain }}
 keycloakHostname: "{{ .Values.keycloakSubdomain }}"
 keycloakDomain: https://{{ .Values.keycloakSubdomain }}
 sentriusDomain: https://{{ .Values.subdomain }}
-llmproxyDomain: https://llmproxy.{{ .Values.subdomain }}
 
 
 certificates:

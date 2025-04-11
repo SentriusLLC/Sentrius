@@ -1,6 +1,10 @@
 package io.sentrius.sso.controllers.api;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
@@ -9,6 +13,7 @@ import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
 import io.sentrius.sso.core.services.security.KeycloakService;
@@ -44,13 +49,16 @@ public class OpenAIProxyController extends BaseController {
     final ZeroTrustAccessTokenService ztatService;
     final ZeroTrustRequestService ztrService;
     final IntegrationSecurityTokenService integrationSecurityTokenService;
+    final AgentService agentService;
+
+    Tracer tracer = GlobalOpenTelemetry.getTracer("io.sentrius.sso");
 
     protected OpenAIProxyController(
         UserService userService, SystemOptions systemOptions,
         ErrorOutputService errorOutputService, CryptoService cryptoService,
         SessionTrackingService sessionTrackingService, KeycloakService keycloakService,
         ATPLPolicyService atplPolicyService, ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService,
-        IntegrationSecurityTokenService integrationSecurityTokenService
+        IntegrationSecurityTokenService integrationSecurityTokenService, AgentService agentService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.cryptoService = cryptoService;
@@ -60,6 +68,7 @@ public class OpenAIProxyController extends BaseController {
         this.ztatService = ztatService;
         this.ztrService = ztrService;
         this.integrationSecurityTokenService = integrationSecurityTokenService;
+        this.agentService = agentService;
     }
 
     @PostMapping("/completions")
@@ -70,6 +79,7 @@ public class OpenAIProxyController extends BaseController {
                                   @RequestBody String rawBody) throws JsonProcessingException, HttpException {
 
         String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
 
 
         if (!keycloakService.validateJwt(compactJwt)) {
@@ -88,7 +98,6 @@ public class OpenAIProxyController extends BaseController {
             operatingUser = userService.getUserWithDetails(username);
 
         }
-
 
         // we've reached this point, so we can assume the user is allowed to access OpenAI
 
@@ -113,9 +122,27 @@ public class OpenAIProxyController extends BaseController {
         log.info("Chat request: {}", rawBody);
         ChatRequest chatRequest = JsonUtil.MAPPER.readValue(rawBody, ChatRequest.class);
 
-        var resp = endpoint.sample(RawConversationRequest.builder().request(chatRequest).build());
 
-        return ResponseEntity.ok(resp);
+        var comm = agentService.saveCommunication(
+            operatingUser.getUsername(),
+            "SYSTEM",
+            "chat_request",
+            rawBody
+        );
+
+
+        Span span = tracer.spanBuilder("AgentToAgentCommunication").startSpan();
+        try (Scope scope = span.makeCurrent()) {
+            var resp = endpoint.sample(RawConversationRequest.builder().request(chatRequest).build());
+            span.setAttribute("communication.id", comm.getId().toString());
+            span.setAttribute("source.agent", operatingUser.getUsername());
+                span.setAttribute("target.agent", "SYSTEM");
+            span.setAttribute("message.type", "interpretation_request");
+            return ResponseEntity.ok(resp);
+        } finally {
+            span.end();
+        }
+
 
     }
 }

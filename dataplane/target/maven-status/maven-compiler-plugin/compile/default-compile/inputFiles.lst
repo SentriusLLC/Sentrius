@@ -53,6 +53,7 @@
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/services/RuleService.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/automation/runner/AutomationTracker.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/automation/AutomationCronEntry.java
+/mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/services/agents/AgentService.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/security/enums/UserAccessEnum.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/services/security/AuthService.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/automation/auditing/rules/RuleConfiguration.java
@@ -68,6 +69,7 @@
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/services/metadata/UserExperienceMetricsService.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/services/ConfigurationService.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/AgentPolicyAssignmentId.java
+/mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/repository/AgentCommunicationRepository.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/automation/auditing/BaseAccessTokenAuditor.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/services/ATPLPolicyService.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/ProxyHost.java
@@ -118,6 +120,7 @@
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/sessions/TerminalLogs.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/automation/auditing/rules/SudoPrevention.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/automation/AutomationExecution.java
+/mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/AgentHeartbeat.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/automation/auditing/rules/CommandEvaluator.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/security/zt/JITRequestLink.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/services/SessionService.java
@@ -175,10 +178,12 @@
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/automation/Automation.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/automation/factory/PluginFactory.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/services/metadata/TerminalCommandService.java
+/mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/chat/AgentCommunication.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/security/enums/SystemOperationsEnum.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/services/ApplicationKeyService.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/install/Configuration.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/services/terminal/SessionTrackingService.java
+/mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/repository/AgentHeartbeatRepository.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/security/zt/JITStatus.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/automation/runner/RunningAutomota.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/services/metadata/TerminalBehaviorMetricsService.java

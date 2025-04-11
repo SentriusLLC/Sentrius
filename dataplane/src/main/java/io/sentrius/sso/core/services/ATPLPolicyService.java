@@ -5,10 +5,13 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.model.ATPLPolicyEntity;
 import io.sentrius.sso.core.model.AgentPolicyAssignment;
+import io.sentrius.sso.core.model.AgentPolicyAssignmentId;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.repository.ATPLPolicyRepository;
 import io.sentrius.sso.core.repository.AgentPolicyAssignmentRepository;
@@ -101,7 +104,7 @@ public class ATPLPolicyService {
         }
     }
 
-    public TrustScoreResult evaluateScore(ATPLPolicy atplPolicy, User operatingUser) {
+    public TrustScoreResult evaluateScore(LimitAccess limitAccess, ATPLPolicy atplPolicy, String endpoint, User operatingUser) {
         return TrustScoreResult.SUCCESS;
     }
 
@@ -125,5 +128,63 @@ public class ATPLPolicyService {
                 }
             })
             .orElse(null);
+    }
+
+    public Optional<String> getPolicyYaml(User operatingUser) {
+        List<AgentPolicyAssignment> assignments = agentPolicyAssignmentRepository.findByUserUsername(operatingUser.getUsername());
+
+        if (assignments.isEmpty()) {
+            return Optional.empty();
+        }
+
+        var assignment = assignments.stream()
+            .filter(a -> a.getPolicy() != null && a.getPolicy().getYaml() != null)
+            .max((a1, a2) -> {
+                int version1 = extractVersionFromYaml(a1.getPolicy().getYaml());
+                int version2 = extractVersionFromYaml(a2.getPolicy().getYaml());
+                log.info("Comparing versions: {} vs {}", version1, version2);
+                return Integer.compare(version1, version2);
+            });
+        return assignment.map(agentPolicyAssignment -> agentPolicyAssignment.getPolicy().getYaml());
+    }
+
+    private int extractVersionFromYaml(String yaml) {
+        try {
+            var mapper = new com.fasterxml.jackson.dataformat.yaml.YAMLMapper();
+            var root = mapper.readTree(yaml);
+            if (root.has("version")){
+                try {
+                    return Integer.parseInt( root.get("version").asText());
+                } catch (Exception e) {
+                    var version = root.get("version").asText("v0");
+                    if (version.startsWith("v")){
+                        return Integer.parseInt(version.substring(1));
+                    } else {
+                        return Integer.parseInt(version);
+                    }
+                }
+            }
+            return 0;
+        } catch (Exception e) {
+            // Handle bad YAML safely
+            return 0;
+        }
+    }
+
+    @Transactional
+    public Optional<ATPLPolicy> createPolicy(User operatingUser, String yaml) throws JsonProcessingException {
+
+        ATPLPolicy policy = yamlMapper.readValue(yaml, ATPLPolicy.class);
+        log.info("Saving policy {}", policy.getPolicyId());
+        var entity = savePolicy(policy);
+        AgentPolicyAssignment assignment = new AgentPolicyAssignment();
+        assignment.setPolicy(entity);
+        log.info("Saving policy {}", policy.getPolicyId());
+        log.info("Saving assignment {}", assignment.getPolicy().getPolicyId());
+        assignment.setId(AgentPolicyAssignmentId.builder().userId(operatingUser.getId()).policyId(entity.getId()).build());
+        assignment.setUser(operatingUser);
+        agentPolicyAssignmentRepository.save(assignment);
+
+        return Optional.of(policy);
     }
 }

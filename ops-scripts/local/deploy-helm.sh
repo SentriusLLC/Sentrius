@@ -30,10 +30,13 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set keycloakHostname="sentrius-keycloak:8081" \
     --set keycloakDomain="http://sentrius-keycloak:8081" \
     --set sentriusDomain="http://sentrius-sentrius:8080" \
+    --set llmproxy.image.repository="sentrius-llmproxy" \
+    --set llmproxy.image.pullPolicy="Never" \
     --set sentrius.image.repository="sentrius" \
     --set sentrius.image.pullPolicy="Never" \
     --set keycloak.image.pullPolicy="Never" \
     --set ssh.image.pullPolicy="Never" \
+    --set llmproxy.image.tag=${LLMPROXY_VERSION} \
     --set sentrius.image.tag=${SENTRIUS_VERSION} \
     --set ssh.image.tag=${SENTRIUS_SSH_VERSION} \
     --set keycloak.image.tag=${SENTRIUS_KEYCLOAK_VERSION} \

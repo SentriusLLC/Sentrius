@@ -7,8 +7,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.data.EndpointThreat;
 import io.sentrius.sso.core.dto.ProfileRuleDTO;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.model.hostgroup.ProfileRule;
@@ -99,6 +101,7 @@ public class RuleApiController extends BaseController {
     }
 
     @DeleteMapping(path="/delete/{ruleId}")
+    @LimitAccess(ruleAccess = {RuleAccessEnum.CAN_MANAGE_RULES}, endpointThreat = EndpointThreat.MARGINAL)
     public ResponseEntity<String> deleteRule
         (
          @PathVariable String ruleId) {

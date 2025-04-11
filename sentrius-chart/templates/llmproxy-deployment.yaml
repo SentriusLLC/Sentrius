@@ -21,7 +21,7 @@ spec:
           done;' ]
       containers:
         - name: llmproxy
-          image: "{{ .Values.llmproxy.image.repository }}:{{ .Values.sentrius.image.tag }}"
+          image: "{{ .Values.llmproxy.image.repository }}:{{ .Values.llmproxy.image.tag }}"
           imagePullPolicy: {{ .Values.sentrius.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.sentrius.port }}
@@ -58,8 +58,6 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-db-secret
                   key: keystore-password
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: {{ .Values.jaeger.ingress.host }}
 
       volumes:
         - name: config-volume

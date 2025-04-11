@@ -49,6 +49,7 @@ io/sentrius/sso/core/model/zt/OpsZeroTrustAcessTokenRequest$OpsZeroTrustAcessTok
 io/sentrius/sso/automation/auditing/rules/OpenAISessionRule.class
 io/sentrius/sso/automation/auditing/AccessTokenAuditor.class
 io/sentrius/sso/core/services/TaskService$1.class
+io/sentrius/sso/core/model/AgentPolicyAssignmentId$AgentPolicyAssignmentIdBuilder.class
 io/sentrius/sso/core/services/openai/OpenAITerminalService.class
 io/sentrius/sso/core/services/auditing/AuditService.class
 io/sentrius/sso/core/model/ProxyHost$ProxyHostBuilder.class
@@ -58,6 +59,7 @@ io/sentrius/sso/core/integrations/external/ExternalIntegrationDTO.class
 io/sentrius/sso/core/services/TwoPartyApprovalConfigService.class
 io/sentrius/sso/core/model/security/AccessControl$AccessControlBuilder.class
 io/sentrius/sso/core/repository/ZeroTrustAccessTokenRequestRepository.class
+io/sentrius/sso/core/repository/AgentCommunicationRepository.class
 io/sentrius/sso/core/model/sessions/AuditOutput$AuditOutputBuilder.class
 io/sentrius/sso/core/model/security/zt/JITRequestLink.class
 io/sentrius/sso/core/model/security/enums/SSHAccessEnum.class
@@ -114,6 +116,7 @@ io/sentrius/sso/core/repository/NotificationRepository.class
 io/sentrius/sso/core/services/metadata/TerminalSessionMetadataService.class
 io/sentrius/sso/automation/auditing/AllowedExecution.class
 io/sentrius/sso/core/model/auditing/Rule.class
+io/sentrius/sso/core/repository/AgentHeartbeatRepository.class
 io/sentrius/sso/core/model/zt/ZeroTrustAccessTokenRequest.class
 io/sentrius/sso/core/integrations/ticketing/TicketService.class
 io/sentrius/sso/config/security/KeycloakUserSyncFilter.class
@@ -157,6 +160,7 @@ io/sentrius/sso/automation/auditing/AccessTokenEvaluator.class
 io/sentrius/sso/core/model/security/enums/SystemKeyConfiguration$SystemKeyConfigurationBuilder.class
 io/sentrius/sso/core/repository/ErrorOutputRepository.class
 io/sentrius/sso/automation/auditing/rules/SudoPrevention.class
+io/sentrius/sso/core/model/AgentHeartbeat.class
 io/sentrius/sso/config/audting/AuditingConfigProvider.class
 io/sentrius/sso/core/repository/automation/ScriptAssignmentRepository.class
 io/sentrius/sso/core/services/security/CookieService.class
@@ -211,6 +215,7 @@ io/sentrius/sso/core/model/security/enums/TwoPartyApprovalConfig.class
 io/sentrius/sso/core/model/metadata/UserExperienceMetrics.class
 io/sentrius/sso/core/model/security/zt/JITStatus$JITStatusBuilder.class
 io/sentrius/sso/core/services/UserCustomizationService.class
+io/sentrius/sso/core/services/agents/AgentService.class
 io/sentrius/sso/core/config/SystemOptions$SystemOptionsBuilder.class
 io/sentrius/sso/core/model/HostSystem$HostSystemBuilder.class
 io/sentrius/sso/core/services/metadata/TerminalCommandService.class
@@ -239,6 +244,7 @@ io/sentrius/sso/core/services/metadata/UserExperienceMetricsService.class
 io/sentrius/sso/core/repository/ATPLPolicyRepository.class
 io/sentrius/sso/core/repository/JITReasonRepository.class
 io/sentrius/sso/core/repository/TimeConfigRepository.class
+io/sentrius/sso/core/model/chat/AgentCommunication$AgentCommunicationBuilder.class
 io/sentrius/sso/core/model/users/UserSettings$UserSettingsBuilder.class
 io/sentrius/sso/core/model/users/User.class
 io/sentrius/sso/core/model/hostgroup/TimeConfigJson$TimeConfigJsonBuilderImpl.class
@@ -247,6 +253,7 @@ io/sentrius/sso/core/model/automation/Automation.class
 io/sentrius/sso/core/model/ServletResponseType.class
 io/sentrius/sso/core/data/TimeConfig$TimeConfigBuilder.class
 io/sentrius/sso/core/security/CustomAuthenticationSuccessHandler.class
+io/sentrius/sso/core/model/chat/AgentCommunication.class
 io/sentrius/sso/automation/auditing/rules/DeletePrevention.class
 io/sentrius/sso/core/repository/ConfigurationOptionRepository.class
 io/sentrius/sso/core/model/zt/ZTATRequestBase$ZTATRequestBaseBuilder.class
@@ -288,6 +295,7 @@ io/sentrius/sso/automation/AutomationConfiguration.class
 io/sentrius/sso/core/model/ConfigurationOption$ConfigurationOptionBuilder.class
 io/sentrius/sso/core/model/sessions/SessionIdentifier.class
 io/sentrius/sso/core/model/NotificationRecipient.class
+io/sentrius/sso/core/services/UserService$1.class
 io/sentrius/sso/automation/auditing/Recorder.class
 io/sentrius/sso/core/services/openai/OpenAITwoPartyMonitorService.class
 io/sentrius/sso/core/model/ATPLPolicyEntity$ATPLPolicyEntityBuilder.class

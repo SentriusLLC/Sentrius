@@ -2,12 +2,15 @@ package io.sentrius.sso.controllers.api;
 
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import io.sentrius.sso.config.ApiPaths;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.model.chat.AgentCommunication;
 import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.sessions.SessionLog;
@@ -15,6 +18,7 @@ import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.services.auditing.AuditService;
 import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.security.KeycloakService;
@@ -26,10 +30,14 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
@@ -43,6 +51,7 @@ public class AgentApiController extends BaseController {
     final ATPLPolicyService atplPolicyService;
     final ZeroTrustAccessTokenService ztatService;
     final ZeroTrustRequestService ztrService;
+    final AgentService agentService;
 
     public AgentApiController(
         UserService userService,
@@ -51,7 +60,7 @@ public class AgentApiController extends BaseController {
         AuditService auditService,
         CryptoService cryptoService, SessionTrackingService sessionTrackingService, KeycloakService keycloakService,
         ATPLPolicyService atplPolicyService,
-        ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService
+        ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService, AgentService agentService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
@@ -61,11 +70,51 @@ public class AgentApiController extends BaseController {
         this.atplPolicyService = atplPolicyService;
         this.ztatService = ztatService;
         this.ztrService = ztrService;
+        this.agentService = agentService;
     }
 
     public SessionLog createSession(@RequestParam String username, @RequestParam String ipAddress) {
         return auditService.createSession(username, ipAddress);
     }
+
+    @PostMapping("/heartbeat")
+    public ResponseEntity<?> heartbeat(
+        @RequestHeader("Authorization") String token,
+        @RequestParam("name") String name,
+        @RequestParam("status") String status,
+        HttpServletRequest request, HttpServletResponse response) throws SQLException, GeneralSecurityException {
+
+        if (name == null || name.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.SC_BAD_REQUEST).body("Agent name is empty. We need to know what " +
+                "to call you!");
+        }
+        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+        if (!keycloakService.validateJwt(compactJwt)) {
+            log.warn("Invalid Keycloak token");
+            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+        }
+
+        var operatingUser = getOperatingUser(request, response );
+
+        // Extract agent identity from the JWT
+        String agentId = keycloakService.extractAgentId(compactJwt);
+
+        if (null == operatingUser) {
+            log.warn("No operating user found for agent: {}", agentId);
+            var username = keycloakService.extractUsername(compactJwt);
+            operatingUser = userService.getUserWithDetails(username);
+        }
+        log.info("Received heartbeat from agent: {} {}", agentId, operatingUser);
+        if (status == null || status.isEmpty()) {
+            log.warn("Heartbeat status is empty");
+            return ResponseEntity.status(HttpStatus.SC_BAD_REQUEST).body("Heartbeat status is empty");
+        }
+        agentService.recordHeartbeat(operatingUser.getUsername(),name, status);
+        log.info("Heartbeat status recorded for agent: {} {}", agentId, status);
+        return ResponseEntity.ok(Map.of("status", "success"));
+    }
+
 
     @PostMapping("/register")
     public ResponseEntity<?> requestRegistration(
@@ -108,13 +157,28 @@ public class AgentApiController extends BaseController {
 
         } else {
             log.warn("No active policy found for agent: {}", agentId);
-            return ResponseEntity.status(428).body(Map.of("ztat_request", ztatRequest.getId()));
+            return ResponseEntity.status(org.springframework.http.HttpStatus.PRECONDITION_REQUIRED).body(Map.of("ztat_request",
+                ztatRequest.getId()));
         }
 
 
 
     }
 
+
+    @GetMapping("/list")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<?> listAgents(HttpServletRequest request, HttpServletResponse response){
+        var operatingUser = getOperatingUser(request, response );
+        if (null == operatingUser) {
+            log.warn("No operating user found");
+            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("No operating user found");
+        }
+        log.info("Received list request from user: {} {}", operatingUser.getUsername(), operatingUser);
+        var agents = agentService.getAllAgents(true);
+        return ResponseEntity.ok(agents);
+
+    }
 
     @PostMapping("/justify")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
@@ -165,6 +229,37 @@ public class AgentApiController extends BaseController {
 
 
 
+    }
+
+    @GetMapping("/policy")
+    @ResponseBody
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<String> getAgentPolicy(@RequestParam String agentId) throws GeneralSecurityException {
+        //return agentService.getPolicyYamlForAgent(agentId); // returns YAML string
+        var agent = cryptoService.decrypt(agentId);
+        var operatingUser = userService.getUserWithDetails(agent);
+        var policy = atplPolicyService.getPolicyYaml(operatingUser);
+        return ResponseEntity.of(policy);
+    }
+
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    @PostMapping("/policy/update")
+    public ResponseEntity<Void> updatePolicy(@RequestParam String agentId, @RequestBody String newPolicy)
+        throws GeneralSecurityException, JsonProcessingException {
+        var agent = cryptoService.decrypt(agentId);
+        var operatingUser = userService.getUserWithDetails(agent);
+        atplPolicyService.createPolicy(operatingUser, newPolicy);
+
+        //agentService.updatePolicy(agentId, newPolicy);  // Save it to DB, or file, or Kubernetes configmap etc
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/communications")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<List<AgentCommunication>> getAgentComms(@RequestParam String sourceAgent, @RequestParam String targetAgent) throws GeneralSecurityException {
+        //return agentService.getPolicyYamlForAgent(agentId); // returns YAML string
+
+        return ResponseEntity.ok( agentService.getCommunications(sourceAgent, targetAgent) );
     }
 
 }

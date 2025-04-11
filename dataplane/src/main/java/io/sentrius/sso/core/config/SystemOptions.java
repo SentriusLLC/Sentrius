@@ -225,7 +225,6 @@ public class SystemOptions {
   public Map<String, SystemOption> getOptions() throws IllegalAccessException {
     // Retrieve all fields from the system options class
     List<Field> fields =  getAllInstanceFields();
-    log.info("Fields: {}", fields);
 
     // Map to store the updatable fields with their respective SystemOption objects
     Map<String, SystemOption> entries = new HashMap<>();
@@ -242,7 +241,7 @@ public class SystemOptions {
         String fieldName = field.getName();
         Object fieldValue = field.get(this);
 
-        log.info("Field: {} Value: {}", fieldName, fieldValue);
+        log.debug("Field: {} Value: {}", fieldName, fieldValue);
 
         // Create a SystemOption object with the field details
         var sysOpt = SystemOption.builder()
@@ -263,8 +262,6 @@ public class SystemOptions {
 
         // Add the field to the map of system options
         entries.put(fieldName, sysOpt.build());
-      } else {
-        log.info("Field {} is not updatable", field.getName());
       }
     }
     return entries;

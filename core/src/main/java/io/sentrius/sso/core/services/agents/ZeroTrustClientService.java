@@ -74,9 +74,15 @@ public class ZeroTrustClientService {
                 throw new RuntimeException("Failed to obtain ZTAT: " + response.getStatusCode());
             }
         } catch (HttpClientErrorException e){
+            if (e.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
+                // we need to get
+                throw new ZtatException(e.getResponseBodyAsString(), url);
 
-            log.info("Error: {}", e.getResponseBodyAsString());
-            throw new ZtatException(e.getResponseBodyAsString(), url);
+            } else {
+                log.info("Error: {}", e.getResponseBodyAsString());
+                throw new RuntimeException("Failed to obtain ZTAT: " + e.getStatusCode());
+            }
+
         }
     }
 

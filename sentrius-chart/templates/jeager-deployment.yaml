@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jaeger
+  name: {{ .Release.Name }}-jaeger
   namespace: {{ .Values.tenant }}
   labels:
     app: jaeger

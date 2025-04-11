@@ -171,7 +171,7 @@ public class ChatListenerService {
                 "history of your chat with the user. We have another AI agent that asks security related questions. " +
                 "If these come they will be sent to you as well along with their response. Ensure that the person " +
                 "answers the question, if they do not or you assess that they are being evasive, send a json field " +
-                "named alert as a boolean value of true." );
+                "named alert as a boolean value of true. Again, always respond with a json response" );
             try {
                 var chatMessageResponse = chatConversation.generate(convo);
                 ChatLog userChat =
