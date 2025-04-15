@@ -7,6 +7,7 @@ import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
+import io.sentrius.sso.config.ApplicationConfig;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.dto.ztat.EndpointRequest;
 import io.sentrius.sso.core.model.users.User;
@@ -17,6 +18,7 @@ import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
@@ -53,6 +55,8 @@ public class AccessControlAspect {
     private final ZeroTrustAccessTokenService zeroTrustAccessTokenService;
     private final ZeroTrustRequestService zeroTrustRequestService;
     private final ATPLPolicyService atplPolicyService;
+    private final AgentService agentService;
+    private final ApplicationConfig applicationConfig;
     static List<String> allowedEndpoints = new ArrayList<>();
     static {
         allowedEndpoints.add("/api/v1/zerotrust/accesstoken/status");
@@ -100,6 +104,8 @@ public class AccessControlAspect {
                     operatingUser = userService.getUserWithDetails(username);
                 }
                 if (operatingUser.getIdentityType() == IdentityType.NON_PERSON_ENTITY) {
+                    agentService.saveCommunication(operatingUser.getUsername(), applicationConfig.getServiceName(),
+                        "intercept", endpoint);
                     span.setAttribute("agent.id", operatingUser.getUsername());
                     span.setAttribute("endpoint", endpoint);
                     span.setAttribute("agent.identityType", operatingUser.getIdentityType().toString());
@@ -158,7 +164,7 @@ public class AccessControlAspect {
                                     ArrayNode issuers = JsonUtil.MAPPER.createArrayNode();
                                     ztatPolicy.getApprovedIssuers().stream().forEach(
                                         i -> {
-                                            issuers.add(i);
+                                                issuers.add(i);
                                         });
                                     node.put("mechanism", issuers);
 
@@ -274,7 +280,6 @@ public class AccessControlAspect {
         }
         return null;
     }
-
 
 
 }

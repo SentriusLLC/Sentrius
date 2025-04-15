@@ -33,7 +33,8 @@
     "chart.js": "^4.4.6",
     "jointjs": "^3.7.7",
     "lodash": "^4.17.21",
-    "backbone": "^1.6.0"
+    "backbone": "^1.6.0",
+    "cytoscape": "^3.31.2"
   },
   "devDependencies": {
     "grunt": "^1.6.1",

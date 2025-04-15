@@ -91,7 +91,6 @@ public class NotificationApiController extends BaseController {
     @LimitAccess(applicationAccess ={ ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<String> clearLogs() {
 
-        log.info("clear");
         errorOutputService.clear();
 
         return ResponseEntity.ok("");

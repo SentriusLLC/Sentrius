@@ -78,32 +78,7 @@ public class SessionAnalyticsAgent {
 
         log.info("Finished processing {} sessions ", count);
     }
-/* TODO - Implement this
-    @Scheduled(fixedDelay = 60000) // Waits 60 seconds after the previous run completes
-    @Transactional
-    public void processTerminalCommands() {
-        log.info("Processing terminal commands...");
 
-        var openaiService = integrationSecurityTokenService.findByConnectionType("openai").stream().findFirst().orElse(null);
-
-        if (null != openaiService){
-            log.info("OpenAI service is available");
-            ExternalIntegrationDTO externalIntegrationDTO = null;
-            try {
-                externalIntegrationDTO = JsonUtil.MAPPER.readValue(openAiToken.getConnectionInfo(),
-                    ExternalIntegrationDTO.class);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
-            ApiKey key =
-                ApiKey.builder().apiKey(externalIntegrationDTO.getApiToken()).principal(externalIntegrationDTO.getUsername()).build();
-
-        } else {
-            log.info("OpenAI service is not enabled");
-        }
-
-        log.info("Finished processing terminal commands");
-    }*/
 
     private void processSession(TerminalSessionMetadata session) {
 

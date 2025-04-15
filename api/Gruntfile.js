@@ -42,6 +42,16 @@ module.exports = function(grunt) {
                         expand: true,
                         flatten: true,
                         src: [
+                            '<%= node %>/cytoscape/dist/cytoscape.min.js',
+                            '<%= node %>/cytoscape.js/dist/cytoscape.umd.js',
+                        ],
+                        dest: '<%= destJs %>/cytoscape.js/',
+                        filter: 'isFile'
+                    },
+                    {
+                        expand: true,
+                        flatten: true,
+                        src: [
                             '<%= node %>/chart.js/dist/chart.js',
                             '<%= node %>/chart.js/dist/chart.umd.js',
                         ],

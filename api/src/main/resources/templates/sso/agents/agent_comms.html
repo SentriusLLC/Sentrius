@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta th:replace="~{fragments/header}" />
+    <title>Agent Communications</title>
+
+    <!-- Cytoscape.js -->
+    <script th:src="@{/node/js/cytoscape.js/cytoscape.min.js}"></script>
+
+    <style>
+        body { background-color: #121212; color: #eaeaea; }
+        .container { margin-top: 20px; }
+
+        /* New wrapper for constraining the graph */
+        .graph-container {
+            max-width: 1000px;
+            margin: 30px auto;
+            background: #1e1e1e;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        #cy {
+            height: 500px;
+            width: 100%;
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+        }
+
+        table {
+            margin-top: 20px;
+            color: #eaeaea;
+        }
+
+        pre {
+            background-color: #222;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #00ff00;
+        }
+    </style>
+
+</head>
+
+<body>
+
+<div id="csrf-token" style="display: none;" th:text="${_csrf.token}"></div>
+
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+
+        <div class="col py-4">
+            <div class="graph-container">
+                <div th:replace="~{fragments/alerts}"></div>
+
+                <h2 class="toast-header">Agent Communications</h2>
+
+                <div id="cy"></div>
+
+                <h3 class="toast-header mt-4">Communication Logs</h3>
+                <table id="comm-log" class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th>Source</th>
+                        <th>Target</th>
+                        <th>Type</th>
+                        <th>Timestamp</th>
+                    </tr>
+                    </thead>
+                    <tbody id="comm-log-body">
+                    <!-- Dynamically populated -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Viewing Communication -->
+<div class="modal fade" id="commModal" tabindex="-1" aria-labelledby="commModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-header">
+                <h5 class="modal-title" id="commModalLabel">Communication Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="commModalBody">
+                <!-- Details will be injected here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script to load graph and handle clicks -->
+<script th:inline="javascript">
+
+    function formatJson(payload) {
+        try {
+            const obj = JSON.parse(payload);
+            return JSON.stringify(obj, null, 2); // Pretty print with 2 spaces
+        } catch (e) {
+            // Not valid JSON, return raw
+            return payload;
+        }
+    }
+
+
+    const agentId = /*[[${agentId}]]*/ '';
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch(`/api/v1/agent/connections?agentId=${encodeURIComponent(agentId)}`)
+            .then(response => response.json())
+            .then(data => {
+                const cy = cytoscape({
+                    container: document.getElementById('cy'),
+                    elements: [
+                        ...data.flatMap(comm => [
+                            { data: { id: comm.sourceAgent }, classes: 'agent' },
+                            { data: { id: comm.targetAgent }, classes: 'agent' },
+                            {
+                                data: {
+                                    id: `${comm.sourceAgent}-${comm.targetAgent}-${comm.createdAt}`,
+                                    source: comm.sourceAgent,
+                                    target: comm.targetAgent,
+                                    label: comm.messageType,
+                                    full: comm
+                                },
+                                classes: 'communication'
+                            }
+                        ])
+                    ],
+                    style: [
+                        {
+                            selector: 'node',
+                            style: {
+                                'background-color': '#007bff',
+                                'label': 'data(id)',
+                                'text-valign': 'center',
+                                'color': '#fff',
+                                'text-outline-width': 2,
+                                'text-outline-color': '#007bff'
+                            }
+                        },
+                        {
+                            selector: 'edge',
+                            style: {
+                                'width': 2,
+                                'line-color': '#ccc',
+                                'target-arrow-color': '#ccc',
+                                'target-arrow-shape': 'triangle',
+                                'curve-style': 'bezier',
+                                'label': 'data(label)',
+                                'font-size': '8px',
+                                'text-background-color': '#222',
+                                'text-background-opacity': 1,
+                                'text-background-padding': '2px',
+                                'text-rotation': 'autorotate'
+                            }
+                        }
+                    ],
+                    layout: {
+                        name: 'cose',
+                        animate: true
+                    }
+                });
+
+                // Populate Communication Table
+                const tbody = document.getElementById('comm-log-body');
+                data.forEach(comm => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${comm.sourceAgent}</td>
+                        <td>${comm.targetAgent}</td>
+                        <td>${comm.messageType}</td>
+                        <td>${comm.createdAt}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                // Add click event for edges
+                cy.on('tap', 'edge', function(evt){
+                    const edge = evt.target;
+                    const fullComm = edge.data('full');
+                    showCommModal(fullComm);
+                });
+
+                function showCommModal(comm) {
+                    const modalBody = document.getElementById('commModalBody');
+                    modalBody.innerHTML = `
+                        <p><strong>Source:</strong> ${comm.sourceAgent}</p>
+                        <p><strong>Target:</strong> ${comm.targetAgent}</p>
+                        <p><strong>Type:</strong> ${comm.messageType}</p>
+                        <p><strong>Timestamp:</strong> ${comm.createdAt}</p>
+                        ${comm.payload ? `<p><strong>Payload:</strong><pre>${formatJson(comm.payload)}</pre></p>` : ''}
+                    `;
+                    const modal = new bootstrap.Modal(document.getElementById('commModal'));
+                    modal.show();
+                }
+            });
+    });
+</script>
+
+</body>
+</html>
+

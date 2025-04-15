@@ -48,4 +48,12 @@ public class AgentController extends BaseController {
         return "sso/agents/list_agents";
     }
 
+    @GetMapping("/connections")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public String listConnections(Model m, @RequestParam("agentId") String agentId) throws GeneralSecurityException {
+        var decrypted = cryptoService.decrypt(agentId);
+        m.addAttribute("agentId",agentId);
+        return "sso/agents/agent_comms";
+    }
+
 }

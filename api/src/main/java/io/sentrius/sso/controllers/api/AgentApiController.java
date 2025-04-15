@@ -33,6 +33,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -77,7 +78,8 @@ public class AgentApiController extends BaseController {
         return auditService.createSession(username, ipAddress);
     }
 
-    @PostMapping("/heartbeat")
+    @PutMapping("/heartbeat")
+    // no LimitAccess
     public ResponseEntity<?> heartbeat(
         @RequestHeader("Authorization") String token,
         @RequestParam("name") String name,
@@ -117,6 +119,7 @@ public class AgentApiController extends BaseController {
 
 
     @PostMapping("/register")
+    // no LimitAccess
     public ResponseEntity<?> requestRegistration(
         @RequestHeader("Authorization") String token,
         HttpServletRequest request, HttpServletResponse response) throws SQLException, GeneralSecurityException {
@@ -176,6 +179,18 @@ public class AgentApiController extends BaseController {
         }
         log.info("Received list request from user: {} {}", operatingUser.getUsername(), operatingUser);
         var agents = agentService.getAllAgents(true);
+        return ResponseEntity.ok(agents);
+
+    }
+
+    @GetMapping("/connections")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
+    public ResponseEntity<?> getConnections(@RequestParam String agentId,
+        HttpServletRequest request, HttpServletResponse response) throws GeneralSecurityException {
+        var agent = cryptoService.decrypt(agentId);
+        var operatingUser = userService.getUserWithDetails(agent);
+
+        var agents = agentService.getCommunications(operatingUser.getUsername());
         return ResponseEntity.ok(agents);
 
     }

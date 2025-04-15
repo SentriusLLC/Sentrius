@@ -2,8 +2,10 @@ package io.sentrius.sso.core.model.chat;
 
 
 
+import jakarta.persistence.Basic;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -32,10 +34,11 @@ public class AgentCommunication {
     private String targetAgent;
     private String messageType;
 
-    @Lob
+    @Basic(fetch = FetchType.EAGER)
     @Column(name = "payload", columnDefinition = "TEXT", nullable = false)
     private String payload;
 
+    @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
     @Builder.Default
     private java.time.Instant createdAt = java.time.Instant.now();
 }

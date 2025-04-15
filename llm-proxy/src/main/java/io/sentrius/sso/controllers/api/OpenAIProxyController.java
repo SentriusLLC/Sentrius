@@ -1,5 +1,6 @@
 package io.sentrius.sso.controllers.api;
 
+import java.util.concurrent.ExecutionException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
@@ -134,11 +135,13 @@ public class OpenAIProxyController extends BaseController {
         Span span = tracer.spanBuilder("AgentToAgentCommunication").startSpan();
         try (Scope scope = span.makeCurrent()) {
             var resp = endpoint.sample(RawConversationRequest.builder().request(chatRequest).build());
-            span.setAttribute("communication.id", comm.getId().toString());
+            span.setAttribute("communication.id", comm.get().getId().toString());
             span.setAttribute("source.agent", operatingUser.getUsername());
                 span.setAttribute("target.agent", "SYSTEM");
             span.setAttribute("message.type", "interpretation_request");
             return ResponseEntity.ok(resp);
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e);
         } finally {
             span.end();
         }

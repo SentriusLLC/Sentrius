@@ -104,8 +104,9 @@
                         <td>${agent.lastHeartbeat}</td>
                         <td>${agent.registered ? 'Yes' : 'No'}</td>
                         <td>
-                        <button class="btn btn-secondary view-policy-btn" data-agent-id="${agent.agentId}">View</button>
-                        <button class="btn btn-primary edit-policy-btn" data-agent-id="${agent.agentId}">Edit</button>
+                        <button class="btn btn-secondary view-policy-btn" data-agent-id="${agent.agentId}">View Policy</button>
+                        <button class="btn btn-primary edit-policy-btn" data-agent-id="${agent.agentId}">Edit Policy</button>
+                        <button class="btn btn-primary audit-agent-btn" data-agent-id="${agent.agentId}">Audit</button>
                     </td>
                     `;
 
@@ -129,6 +130,14 @@
                                     console.error('Failed to fetch policy:', err);
                                     document.getElementById('policyContent').textContent = 'Failed to load policy.';
                                 });
+                        });
+                    });
+
+                    document.querySelectorAll('.audit-agent-btn').forEach(btn => {
+                        btn.addEventListener('click', function () {
+                            const agentId = encodeURIComponent(this.getAttribute('data-agent-id'));
+                            const url = `/sso/v1/agent/connections?agentId=${agentId}`;
+                            window.open(url, '_blank');
                         });
                     });
 

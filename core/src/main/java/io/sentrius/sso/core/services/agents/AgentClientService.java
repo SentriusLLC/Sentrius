@@ -1,5 +1,7 @@
 package io.sentrius.sso.core.services.agents;
 
+import java.util.List;
+import com.google.common.collect.Maps;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import lombok.extern.slf4j.Slf4j;
@@ -25,9 +27,10 @@ public class AgentClientService {
      */
     public String heartbeat(String name) throws ZtatException {
 
-        String url =  "/agent/heartbeat?status=heartbeat&name=" + name;
+        String url =  "/agent/heartbeat";
 
-        return zeroTrustClientService.callGetOnApi(url);
+        return zeroTrustClientService.callPutOnApi(url, Maps.immutableEntry("status", List.of("heartbeat")), Maps.immutableEntry(
+            "name", List.of(name)));
 
     }
 

@@ -3,6 +3,7 @@ package io.sentrius.sso.core.services.agents;
 import java.security.GeneralSecurityException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import io.sentrius.sso.core.dto.AgentDTO;
 import io.sentrius.sso.core.model.AgentHeartbeat;
 import io.sentrius.sso.core.model.chat.AgentCommunication;
@@ -12,7 +13,7 @@ import io.sentrius.sso.core.repository.AgentHeartbeatRepository;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.security.CryptoService;
-import org.aspectj.weaver.loadtime.Agent;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -83,14 +84,16 @@ public class AgentService {
 
     }
 
-    public AgentCommunication saveCommunication(String sourceAgent, String targetAgent, String messageType, String payload) {
+    @Async
+    public CompletableFuture<AgentCommunication> saveCommunication(String sourceAgent, String targetAgent, String messageType, String payload) {
         AgentCommunication communication = AgentCommunication.builder()
             .sourceAgent(sourceAgent)
             .targetAgent(targetAgent)
             .messageType(messageType)
             .payload(payload)
             .build();
-        return agentCommunicationRepository.save(communication);
+        return CompletableFuture.completedFuture(agentCommunicationRepository.save(communication));
+
     }
 
     public AgentCommunication getCommunication(Long id) {

@@ -45,7 +45,7 @@ public class AgentVerbs {
     final VerbRegistry verbRegistry;
     final AgentClientService agentClientService;
 
-    @Value("${agent.ai.config:assessor-config.yaml}")
+    @Value("${agent.ai.config}")
     private String agentConfigFile;
 
     final ObjectMapper mapper = new ObjectMapper(new YAMLFactory()); // Jackson ObjectMapper for YAML parsing
@@ -81,7 +81,7 @@ public class AgentVerbs {
     public ArrayNode promptAgent(Map<String, Object> args) throws ZtatException, IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream(agentConfigFile);
         if (is == null) {
-            throw new RuntimeException("assessor-config.yaml not found on classpath");
+            throw new RuntimeException(agentConfigFile +  " not found on classpath");
         }
         AgentConfig config = new ObjectMapper(new YAMLFactory()).readValue(is, AgentConfig.class);
 
@@ -149,7 +149,8 @@ public class AgentVerbs {
      * @throws ZtatException If there is an error during the operation.
      * @throws IOException If there is an error reading the configuration file.
      */
-    @Verb(name = "assess_data", returnType = ArrayNode.class, description = "Accepts data based on the plan and seeks to perform the assessment outlined by the context.", inputInterpreter = ObjectListInterpreter.class)
+    @Verb(name = "assess_data", returnType = ArrayNode.class, description = "Accepts data based on the plan and seeks" +
+        " to perform the assessment outlined by the context Can be used to assess data or request information.", inputInterpreter = ObjectListInterpreter.class)
     public ArrayNode assessData(List<?> objectList) throws ZtatException, IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream(agentConfigFile);
         if (is == null) {
@@ -180,9 +181,9 @@ public class AgentVerbs {
         return JsonUtil.MAPPER.createArrayNode();
     }
 
-    @Verb(name = "get_work_requests", returnType = ArrayNode.class, description = "Queries the API for work " +
-        "interacting with another agent")
-    public List<AtatRequest> getWork() throws ZtatException, IOException {
+    @Verb(name = "get_work_requests", returnType = ArrayNode.class, description = "Queries zero trust access token " +
+        "requests to approve or disapprove.")
+    public List<AtatRequest> getWork(Map<String,Object> args) throws ZtatException, IOException {
         List<AtatRequest> requests = new ArrayList<>();
 
         var atatRequests = agentClientService.getAtatRequests();
@@ -203,4 +204,5 @@ public class AgentVerbs {
 
         return requests;
     }
+
 }
