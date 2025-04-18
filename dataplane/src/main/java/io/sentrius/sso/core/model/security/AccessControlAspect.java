@@ -80,6 +80,7 @@ public class AccessControlAspect {
         Span span = tracer.spanBuilder("Check Access").startSpan();
         var endpoint = getCurrentHttpRequest().getRequestURI();
 
+
         boolean canAccess = true;
         LimitAccess accessAnnotation = limitAccess;
         log.debug("Checking access for {}", endpoint);
@@ -103,8 +104,16 @@ public class AccessControlAspect {
                     var username = keycloakService.extractUsername(compactJwt);
                     operatingUser = userService.getUserWithDetails(username);
                 }
-                if (operatingUser.getIdentityType() == IdentityType.NON_PERSON_ENTITY) {
-                    agentService.saveCommunication(operatingUser.getUsername(), applicationConfig.getServiceName(),
+                if (operatingUser.getIdentityType() == IdentityType.NON_PERSON_ENTITY ) {
+
+                    var communicationId = getCurrentHttpRequest().getHeader("communication_id");
+                    if (null == communicationId) {
+                        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Registration Required to provide " +
+                            "communication_id");
+                    }
+
+                    agentService.saveCommunication(communicationId, operatingUser.getUsername(),
+                        applicationConfig.getServiceName(),
                         "intercept", endpoint);
                     span.setAttribute("agent.id", operatingUser.getUsername());
                     span.setAttribute("endpoint", endpoint);
@@ -115,6 +124,7 @@ public class AccessControlAspect {
                         log.debug("Access Denied to {} at {}", operatingUser, accessAnnotation);
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Policy is required ");
                     }
+                    log.info("Found policy {} for {}", policy.get().getPolicyId(), operatingUser.getUsername());
                     EndpointRequest endpointRequest = null;
                     var token = getCurrentHttpRequest().getHeader("ztat_token");
                     if (null == token) {

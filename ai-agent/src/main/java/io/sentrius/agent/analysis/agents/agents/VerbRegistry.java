@@ -2,7 +2,7 @@ package io.sentrius.agent.analysis.agents.agents;
 
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ScanResult;
-import io.sentrius.sso.core.dto.UserDTO;
+import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.verbs.OutputInterpreterIfc;
@@ -59,6 +59,8 @@ public class VerbRegistry {
                                         .name(name)
                                         .description(annotation.description())
                                         .method(method)
+                                        .requiresTokenManagement(annotation.requiresTokenManagement())
+                                        .returnType(annotation.returnType())
                                         .outputInterpreter(annotation.outputInterpreter())
                                         .inputInterpreter(annotation.inputInterpreter())
                                         .build();
@@ -75,7 +77,8 @@ public class VerbRegistry {
         }
     }
 
-    public VerbResponse execute(UserDTO asUser, VerbResponse priorResponse, String verb, Map<String, Object> args)
+    public VerbResponse execute(AgentExecution agentExecution, VerbResponse priorResponse, String verb,
+                                Map<String, Object> args)
         throws Exception {
         synchronized (this) {
             Map<String, Object> newArgs = new HashMap<>();
@@ -85,6 +88,10 @@ public class VerbRegistry {
             var returnType = verbs.get(verb).getReturnType();
             if (null != priorResponse ) {
                 Class<? extends OutputInterpreterIfc> interpreter = priorResponse.getOutputInterpreter();
+                log.info("Interpreting prior response for verb: {}", verb);
+                log.info("Interpreting prior response with: {}", interpreter.getName());
+                log.info("Interpreting prior response: {}", priorResponse.getReturnType());
+                log.info("New response return type: {}", returnType);
                 newArgs.putAll(interpreter.getConstructor().newInstance().interpret(priorResponse));
             }
             Method method = verbs.get(verb).getMethod();
@@ -103,7 +110,9 @@ public class VerbRegistry {
                 var interpretedInput = interpreterInstance.interpret(newArgs);
 
                 return VerbResponse.builder()
-                    .response(method.invoke(instance, interpretedInput))
+                    .response(verbs.get(verb).isRequiresTokenManagement() ?
+                        method.invoke(instance,agentExecution, interpretedInput) :
+                        method.invoke(instance, interpretedInput))
                     .returnType(returnType)
                     .outputInterpreter(verbs.get(verb).getOutputInterpreter())
                     .build();
@@ -113,20 +122,24 @@ public class VerbRegistry {
                         log.info("Mechanisms {}" , ztatEx.getMechanisms());
                         var endpoint = zeroTrustClientService.createEndPoingRequest("prompt_agent`", ztatEx.getEndpoint());
                         ZtatRequestDTO ztatRequestDTO = ZtatRequestDTO.builder()
-                            .user(asUser)
+                            .user(agentExecution.getUser())
                             .command(endpoint.toString())
                             .justification("Registered Agent requires ability to prompt LLM endpoints to begin operations")
                             .summary("Registered Agent requires ability to prompt LLM endpoints to begin operations")
                             .build();
-                        var request = zeroTrustClientService.requestZtatToken(asUser,ztatRequestDTO);
+                        var request = zeroTrustClientService.requestZtatToken(agentExecution, agentExecution.getUser()
+                            ,ztatRequestDTO);
 
-                        var token = zeroTrustClientService.awaitZtatToken(asUser, request, 60, TimeUnit.MINUTES);
-                        zeroTrustClientService.setZtat(token);
+                        var token = zeroTrustClientService.awaitZtatToken(agentExecution, agentExecution.getUser(),
+                            request, 60, TimeUnit.MINUTES);
+                        agentExecution.setZtatToken(token);
 
                         var interpretedInput = interpreterInstance.interpret(newArgs);
 
                         return VerbResponse.builder()
-                            .response(method.invoke(instance, interpretedInput))
+                            .response(verbs.get(verb).isRequiresTokenManagement() ?
+                                method.invoke(instance,agentExecution, interpretedInput) :
+                                method.invoke(instance, interpretedInput))
                             .returnType(returnType)
                             .outputInterpreter(verbs.get(verb).getOutputInterpreter())
                             .build();

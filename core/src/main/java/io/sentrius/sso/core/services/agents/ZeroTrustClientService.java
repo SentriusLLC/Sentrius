@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.dto.ztat.EndpointRequest;
+import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.services.security.KeycloakService;
@@ -31,7 +32,6 @@ public class ZeroTrustClientService {
     @Value("${agent.api.url:http://localhost:8080}")
     private String agentApiUrl;
 
-    private String ztatToken = "";
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -55,13 +55,13 @@ public class ZeroTrustClientService {
     /**
      * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
      */
-    public String registerAgent(UserDTO user) throws ZtatException {
+    public String registerAgent(@NonNull TokenDTO token) throws ZtatException {
         String keycloakJwt = getKeycloakToken();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", ztatToken);
+        headers.set("ztat_token", token.getZtatToken());
 
         HttpEntity<ZtatRequestDTO> requestEntity = new HttpEntity<>(headers);
 
@@ -90,8 +90,8 @@ public class ZeroTrustClientService {
     /**
      * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
      */
-    public <T> String callPostOnApi(@NonNull String apiEndpoint, T body) throws ZtatException {
-        return callPostOnApi(agentApiUrl, apiEndpoint, body);
+    public <T> String callPostOnApi(@NonNull TokenDTO token,@NonNull String apiEndpoint, T body) throws ZtatException {
+        return callPostOnApi(token, agentApiUrl, apiEndpoint, body);
     }
 
     /**
@@ -99,14 +99,16 @@ public class ZeroTrustClientService {
      */
     @SafeVarargs
     public final <T> String callPutOnApi(
+        @NonNull TokenDTO token,
         @NonNull String apiEndpoint,
         Map.Entry<String, List<String>>... params
     ) throws ZtatException {
-        return callPutOnApi(agentApiUrl, apiEndpoint, params);
+        return callPutOnApi(token, agentApiUrl, apiEndpoint, params);
     }
 
     @SafeVarargs
     final <T> String callPutOnApi(
+        @NonNull TokenDTO token,
         String endpoint, @NonNull String apiEndpoint,
         Map.Entry<String, List<String>>... params
     ) throws ZtatException {
@@ -114,7 +116,7 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", ztatToken);
+        headers.set("ztat_token", token.getZtatToken());
 
         HttpEntity<T> requestEntity = new HttpEntity<>(headers);
         if (!apiEndpoint.startsWith("/")) {
@@ -158,12 +160,13 @@ public class ZeroTrustClientService {
             .build();
     }
 
-    <T> String callPostOnApi(String endpoint, @NonNull String apiEndpoint, T body) throws ZtatException {
+    <T> String callPostOnApi(@NonNull TokenDTO token, String endpoint, @NonNull String apiEndpoint, T body) throws ZtatException {
         String keycloakJwt = getKeycloakToken();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", ztatToken);
+        headers.set("ztat_token", token.getZtatToken());
+        headers.set("communication_id", token.getCommunicationId());
 
         log.info("Sending {}", body.toString());
         HttpEntity<T> requestEntity = new HttpEntity<>(body, headers);
@@ -198,16 +201,17 @@ public class ZeroTrustClientService {
      * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
      */
     @SafeVarargs
-    public final <T> String callGetOnApi(
-        @NonNull String apiEndpoint, Map.Entry<String, List<String>> param,
+    public final <T> String callGetOnApi(@NonNull TokenDTO token,
+                                         @NonNull String apiEndpoint, Map.Entry<String, List<String>> param,
         Map.Entry<String, List<String>>... params
     ) throws ZtatException {
-        return callGetOnApi(agentApiUrl, apiEndpoint, param, params);
+        return callGetOnApi(token, agentApiUrl, apiEndpoint, param, params);
     }
 
 
     @SafeVarargs
     final <T> String callGetOnApi(
+        @NonNull TokenDTO token,
         String endpoint, @NonNull String apiEndpoint, Map.Entry<String, List<String>> param,
         Map.Entry<String, List<String>>... params
     ) throws ZtatException {
@@ -215,7 +219,8 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", ztatToken);
+        headers.set("ztat_token", token.getZtatToken());
+        headers.set("communication_id", token.getCommunicationId());
 
         HttpEntity<T> requestEntity = new HttpEntity<>(headers);
         if (!apiEndpoint.startsWith("/")) {
@@ -255,17 +260,18 @@ public class ZeroTrustClientService {
     /**
      * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
      */
-    public <T> String callGetOnApi(@NonNull String apiEndpoint) throws ZtatException {
-        return callGetOnApi(agentApiUrl, apiEndpoint);
+    public <T> String callGetOnApi(@NonNull TokenDTO token, @NonNull String apiEndpoint) throws ZtatException {
+        return callGetOnApi(token, agentApiUrl, apiEndpoint);
     }
 
 
-    <T> String callGetOnApi(String endpoint, @NonNull String apiEndpoint) throws ZtatException {
+    <T> String callGetOnApi(@NonNull TokenDTO token, String endpoint, @NonNull String apiEndpoint) throws ZtatException {
         String keycloakJwt = getKeycloakToken();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", ztatToken);
+        headers.set("ztat_token", token.getZtatToken());
+        headers.set("communication_id", token.getCommunicationId());
 
         HttpEntity<T> requestEntity = new HttpEntity<>(headers);
         if (!apiEndpoint.startsWith("/")) {
@@ -297,13 +303,14 @@ public class ZeroTrustClientService {
     /**
      * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
      */
-    public String requestZtatToken(UserDTO user, String command) {
+    public String requestZtatToken(TokenDTO token, UserDTO user, String command) {
         String keycloakJwt = getKeycloakToken();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", ztatToken);
+        headers.set("ztat_token", token.getZtatToken());
+        headers.set("communication_id", token.getCommunicationId());
 
         ZtatRequestDTO requestPayload = ZtatRequestDTO.builder().user(user).command(command).build();
         HttpEntity<ZtatRequestDTO> requestEntity = new HttpEntity<>(requestPayload, headers);
@@ -329,13 +336,14 @@ public class ZeroTrustClientService {
         }
     }
 
-    public String requestZtatToken(UserDTO user, ZtatRequestDTO requestPayload) {
+    public String requestZtatToken(TokenDTO token, UserDTO user, ZtatRequestDTO requestPayload) {
         String keycloakJwt = getKeycloakToken();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", ztatToken);
+        headers.set("ztat_token", token.getZtatToken());
+        headers.set("communication_id", token.getCommunicationId());
 
         HttpEntity<ZtatRequestDTO> requestEntity = new HttpEntity<>(requestPayload, headers);
 
@@ -360,19 +368,15 @@ public class ZeroTrustClientService {
         }
     }
 
-
-
-    public void setZtat(@NonNull String ztatToken) {
-        this.ztatToken = ztatToken;
-    }
-
-    public ObjectNode getTokenStatus(UserDTO user, String requestId) throws ZtatException, JsonProcessingException {
+    public ObjectNode getTokenStatus(TokenDTO token, UserDTO user, String requestId) throws ZtatException,
+        JsonProcessingException {
         String keycloakJwt = getKeycloakToken();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", ztatToken);
+        headers.set("ztat_token", token.getZtatToken());
+        headers.set("communication_id", token.getCommunicationId());
 
         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
@@ -391,12 +395,12 @@ public class ZeroTrustClientService {
     }
 
 
-    public String awaitZtatToken(UserDTO user, String requestId, long maxWait, TimeUnit timeunit) {
+    public String awaitZtatToken(TokenDTO token, UserDTO user, String requestId, long maxWait, TimeUnit timeunit) {
 
         try {
             long waitTime = timeunit.toMillis(maxWait);
             do {
-                var status = getTokenStatus(user, requestId);
+                var status = getTokenStatus(token, user, requestId);
                 log.info("Status: {} for {} ", status, requestId);
                 if ("approved".equals(status.get("status").asText())) {
                     return status.get("ztat_token").asText();

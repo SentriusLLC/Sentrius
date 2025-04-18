@@ -42,7 +42,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @Slf4j
 @Controller
-@RequestMapping("/api/v1/ssh/servers")
+@RequestMapping("/api/v1/enclaves/hosts")
 public class HostApiController extends BaseController {
 
 

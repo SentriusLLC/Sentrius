@@ -228,18 +228,40 @@ public class ZeroTrustATApiController extends BaseController {
 
     @GetMapping("/list/{type}")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
-    public ResponseEntity<List<JITTrackerDTO>> listZtatRequests(@PathVariable("type") String type,
+    public ResponseEntity<?> listZtatRequests(@RequestHeader("Authorization") String token,
+        @PathVariable("type") String type,
                                                                 HttpServletRequest request, HttpServletResponse response) {
+        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+
+        log.info("Received ZTAT request from agent: {}", compactJwt);
+        if (!keycloakService.validateJwt(compactJwt)) {
+            log.warn("Invalid Keycloak token");
+            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+        }
+
+        // Extract agent identity from the JWT
+        var operatingUser = getOperatingUser(request, response );
+
+        // Extract agent identity from the JWT
+        String agentId = keycloakService.extractAgentId(compactJwt);
+
+        if (null == operatingUser) {
+            log.warn("No operating user found for agent: {}", agentId);
+            var username = keycloakService.extractUsername(compactJwt);
+            operatingUser = userService.getUserWithDetails(username);
+
+        }
         List<JITTrackerDTO> ztatTracker = new ArrayList<JITTrackerDTO>();
         switch(type){
             case "terminal":
-                ztatTracker = ztatService.getOpenJITRequests(null);
+                ztatTracker = ztatService.getOpenJITRequests(operatingUser);
                 break;
             case "ops":
-                ztatTracker = ztatService.getOpenOpsRequests(null);
+                ztatTracker = ztatService.getOpenOpsRequests(operatingUser);
                 break;
             case "atat":
-                ztatTracker = ztatService.getOpenOpsRequests(null);
+                ztatTracker = ztatService.getOpenOpsRequests(operatingUser);
                 ztatTracker = ztatTracker.stream().filter(dto -> {
                   if (dto.getCommand().equals("register")) {
                         return false;
@@ -257,7 +279,6 @@ public class ZeroTrustATApiController extends BaseController {
             default:
                 log.warn("Invalid type: {}", type);
         }
-        ztatService.getOpenOpsRequests(null);
         return ResponseEntity.ok(ztatTracker);
     }
 }

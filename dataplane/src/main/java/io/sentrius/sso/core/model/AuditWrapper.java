@@ -1,8 +1,3 @@
-/**
- * Copyright (C) 2015 Loophole, LLC
- *
- * <p>Licensed under The Prosperity Public License 3.0.0
- */
 package io.sentrius.sso.core.model;
 
 import io.sentrius.sso.core.model.sessions.SessionOutput;

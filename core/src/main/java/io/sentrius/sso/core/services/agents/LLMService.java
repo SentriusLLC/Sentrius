@@ -1,5 +1,6 @@
 package io.sentrius.sso.core.services.agents;
 
+import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -19,8 +20,8 @@ public class LLMService {
     /**
      * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
      */
-    public <T> String askQuestion(T body) throws ZtatException {
-        return zeroTrustClientService.callPostOnApi(openAiEndpoint, "/chat/completions", body);
+    public <T> String askQuestion(TokenDTO dto, T body) throws ZtatException {
+        return zeroTrustClientService.callPostOnApi(dto, openAiEndpoint, "/chat/completions", body);
     }
 
 }

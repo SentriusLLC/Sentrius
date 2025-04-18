@@ -16,6 +16,7 @@ import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenApproval;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenRequest;
 import io.sentrius.sso.core.model.zt.OpsZeroTrustAcessTokenRequest;
+import io.sentrius.sso.core.repository.OpsJITRequestRepository;
 import io.sentrius.sso.core.utils.ZTATUtils;
 import jakarta.transaction.Transactional;
 import lombok.NonNull;
@@ -29,6 +30,7 @@ import org.springframework.stereotype.Service;
 public class ZeroTrustAccessTokenService {
 
   private final SystemOptions systemOptions;
+  private final OpsJITRequestRepository opsJITRequestRepository;
   MessageDigest digest;
 
   private final ZeroTrustRequestService ztatRequestService;
@@ -276,6 +278,10 @@ public class ZeroTrustAccessTokenService {
   }
 
   public OpsZeroTrustAcessTokenRequest getOpsJITRequest(Long ztatId) {
+    return ztatRequestService.getOpsAccessTokenRequestById(ztatId);
+  }
+
+  public OpsZeroTrustAcessTokenRequest getOpsZtatRequest(Long ztatId) {
     return ztatRequestService.getOpsAccessTokenRequestById(ztatId);
   }
 

@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -39,9 +40,9 @@ class TerminalVerbsTest {
     @Test
     void listTerminalsReturnsArrayNodeWhenApiCallSucceeds() throws Exception, ZtatException {
         String mockResponse = "[{\"id\":1,\"name\":\"Terminal1\"},{\"id\":2,\"name\":\"Terminal2\"}]";
-        when(zeroTrustClientService.callGetOnApi("/ssh/terminal/list/all")).thenReturn(mockResponse);
 
-        ArrayNode result = terminalVerbs.listTerminals(new HashMap<>());
+        when(zeroTrustClientService.callGetOnApi(isNull(), "/ssh/terminal/list/all")).thenReturn(mockResponse);
+        ArrayNode result = terminalVerbs.listTerminals(null, new HashMap<>());
 
         assertNotNull(result);
         assertEquals(2, result.size());
@@ -50,9 +51,9 @@ class TerminalVerbsTest {
 
     @Test
     void listTerminalsThrowsRuntimeExceptionWhenApiCallFails() throws ZtatException {
-        when(zeroTrustClientService.callGetOnApi("/ssh/terminal/list/all")).thenThrow(new RuntimeException("API error"));
+        when(zeroTrustClientService.callGetOnApi(isNull(), "/ssh/terminal/list/all")).thenThrow(new RuntimeException("API error"));
 
-        assertThrows(RuntimeException.class, () -> terminalVerbs.listTerminals(new HashMap<>()));
+        assertThrows(RuntimeException.class, () -> terminalVerbs.listTerminals(null, new HashMap<>()));
     }
 
     @Test
@@ -63,9 +64,10 @@ class TerminalVerbsTest {
         List<HostSystemDTO> dtos = List.of(dto);
 
         String mockResponse = "Terminal output logs";
-        when(zeroTrustClientService.callGetOnApi(eq("/sessions/audit/attach"), ArgumentMatchers.any(Map.Entry.class))).thenReturn(mockResponse);
+        when(zeroTrustClientService.callGetOnApi(isNull(),eq("/sessions/audit/attach"),
+            ArgumentMatchers.any(Map.Entry.class))).thenReturn(mockResponse);
 
-        List<ObjectNode> result = terminalVerbs.fetchTerminalOutput(dtos);
+        List<ObjectNode> result = terminalVerbs.fetchTerminalOutput(null, dtos);
 
         assertNotNull(result);
         assertEquals(1, result.size());
@@ -75,7 +77,7 @@ class TerminalVerbsTest {
 
     @Test
     void fetchTerminalOutputHandlesEmptyDtosList() throws Exception, ZtatException {
-        List<ObjectNode> result = terminalVerbs.fetchTerminalOutput(new ArrayList<>());
+        List<ObjectNode> result = terminalVerbs.fetchTerminalOutput(null, new ArrayList<>());
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
@@ -88,9 +90,10 @@ class TerminalVerbsTest {
         dto.setHostConnection("connection1");
         List<HostSystemDTO> dtos = List.of(dto);
 
-        when(zeroTrustClientService.callGetOnApi(eq("/sessions/audit/attach"), ArgumentMatchers.any(Map.Entry.class))).thenThrow(new RuntimeException(
+        when(zeroTrustClientService.callGetOnApi(isNull(), eq("/sessions/audit/attach"),
+            ArgumentMatchers.any(Map.Entry.class))).thenThrow(new RuntimeException(
             "API error"));
 
-        assertThrows(RuntimeException.class, () -> terminalVerbs.fetchTerminalOutput(dtos));
+        assertThrows(RuntimeException.class, () -> terminalVerbs.fetchTerminalOutput(null, dtos));
     }
 }

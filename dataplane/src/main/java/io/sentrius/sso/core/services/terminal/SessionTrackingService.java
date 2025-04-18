@@ -1,8 +1,3 @@
-/**
- * Copyright (C) 2013 Loophole, LLC
- *
- * <p>Licensed under The Prosperity Public License 3.0.0
- */
 package io.sentrius.sso.core.services.terminal;
 
 import java.sql.SQLException;
@@ -305,6 +300,13 @@ public class SessionTrackingService implements PluggableServices {
   public void shutdown() {
     for(ConnectedSystem connectedSystem : userConnectionMap.values()){
       log.trace("Closing " + connectedSystem.getSession().getId());
+      closeSession(connectedSystem);
+    }
+  }
+
+  public void killSession(long sessionIdLong) {
+    var connectedSystem = userConnectionMap.get(sessionIdLong);
+    if (null != connectedSystem){
       closeSession(connectedSystem);
     }
   }

@@ -2,6 +2,7 @@ package io.sentrius.sso.core.model.chat;
 
 
 
+import java.util.UUID;
 import jakarta.persistence.Basic;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -33,6 +34,11 @@ public class AgentCommunication {
     private String sourceAgent;
     private String targetAgent;
     private String messageType;
+
+    @Column(name = "communication_id", nullable = false)
+    @Builder.Default
+    private UUID communicationId = UUID.randomUUID();
+
 
     @Basic(fetch = FetchType.EAGER)
     @Column(name = "payload", columnDefinition = "TEXT", nullable = false)

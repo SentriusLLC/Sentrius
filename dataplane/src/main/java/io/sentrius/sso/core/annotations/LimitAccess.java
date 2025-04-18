@@ -1,15 +1,12 @@
-/**
- * Copyright (C) 2018 Loophole, LLC
- *
- * <p>Licensed under The Prosperity Public License 3.0.0
- */
 package io.sentrius.sso.core.annotations;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.List;
 import io.sentrius.sso.core.data.EndpointThreat;
+import io.sentrius.sso.core.model.security.IdentityType;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
 import io.sentrius.sso.core.model.security.enums.RuleAccessEnum;
@@ -22,6 +19,9 @@ import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
 public @interface LimitAccess {
 
   String notificationMessage() default "";
+
+  IdentityType[] allowedIdentityTypes() default {IdentityType.USER,
+      IdentityType.NON_PERSON_ENTITY, IdentityType.APPLICATION};
 
   UserAccessEnum[] userAccess() default {};
 

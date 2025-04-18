@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -15,8 +16,11 @@ import io.sentrius.agent.analysis.agents.agents.AgentConfig;
 import io.sentrius.agent.analysis.agents.agents.PromptBuilder;
 import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
 import io.sentrius.agent.analysis.agents.interpreters.ObjectListInterpreter;
+import io.sentrius.agent.analysis.agents.interpreters.ZtatOutputInterpreter;
 import io.sentrius.sso.core.dto.JITTrackerDTO;
+import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.AtatRequest;
+import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.verbs.Verb;
 import io.sentrius.sso.core.services.agents.AgentClientService;
@@ -27,7 +31,6 @@ import io.sentrius.sso.genai.Message;
 import io.sentrius.sso.genai.Response;
 import io.sentrius.sso.genai.model.ChatRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.glassfish.jaxb.core.v2.model.core.TypeRef;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -77,8 +80,10 @@ public class AgentVerbs {
      * @throws ZtatException If there is an error during the operation.
      * @throws IOException If there is an error reading the configuration file.
      */
-    @Verb(name = "prompt_agent", returnType = ArrayNode.class, description = "Prompts for agent workload.", isAiCallable = false)
-    public ArrayNode promptAgent(Map<String, Object> args) throws ZtatException, IOException {
+    @Verb(name = "prompt_agent", returnType = ArrayNode.class, description = "Prompts for agent workload.",
+        isAiCallable = false, requiresTokenManagement = true)
+    public ArrayNode promptAgent(AgentExecution execution, Map<String, Object> args) throws ZtatException,
+        IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream(agentConfigFile);
         if (is == null) {
             throw new RuntimeException(agentConfigFile +  " not found on classpath");
@@ -92,15 +97,19 @@ public class AgentVerbs {
 
         messages.add(Message.builder().role("system").content(prompt).build());
 
-        ChatRequest chatRequest = ChatRequest.builder().model("gpt-3.5-turbo").messages(messages).build();
-        var resp = llmService.askQuestion(chatRequest);
+        ChatRequest chatRequest = ChatRequest.builder().model("gpt-4o").messages(messages).build();
+        var resp = llmService.askQuestion(execution, chatRequest);
+        execution.addMessages( messages );
         Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
         log.info("Response is {}", resp);
         for (Response.Choice choice : response.getChoices()) {
             var content = choice.getMessage().getContent();
+            if (content.startsWith("```json")) {
+                content = content.substring(7, content.length() - 3);
+            }
             log.info("content is {}", content);
             if (null != content && !content.isEmpty()) {
-                JsonNode node = JsonUtil.MAPPER.readTree(content);
+                JsonNode node = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readTree(content);
                 log.info("Node is {}", node);
                 if (node.get("plan") != null) {
                     ArrayNode plan = (ArrayNode) node.get("plan");
@@ -116,13 +125,14 @@ public class AgentVerbs {
     /**
      * Chats with an agent to justify operations based on the provided arguments.
      *
-     * @param args A map of arguments to customize the justification process.
      * @return A string response from the agent.
      * @throws ZtatException If there is an error during the operation.
      * @throws IOException If there is an error reading the configuration file.
      */
-    @Verb(name = "justify_operations", description = "Chats with an agent to justify operations.", isAiCallable = false)
-    public String justifyAgent(Map<String, Object> args) throws ZtatException, IOException {
+    @Verb(name = "justify_operations", description = "Chats with an agent to justify operations.", isAiCallable =
+        false, requiresTokenManagement = true)
+    public String justifyAgent(AgentExecution execution, String ztatRequest, String reason) throws ZtatException,
+        IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream(agentConfigFile);
         if (is == null) {
             throw new RuntimeException("assessor-config.yaml not found on classpath");
@@ -138,7 +148,8 @@ public class AgentVerbs {
 
         ChatRequest chatRequest = ChatRequest.builder().model("gpt-4o").messages(messages).build();
 
-        return llmService.askQuestion(chatRequest);
+        return null;
+        //   return llmService.askQuestion(chatRequest);
     }
 
     /**
@@ -149,9 +160,12 @@ public class AgentVerbs {
      * @throws ZtatException If there is an error during the operation.
      * @throws IOException If there is an error reading the configuration file.
      */
-    @Verb(name = "assess_data", returnType = ArrayNode.class, description = "Accepts data based on the plan and seeks" +
-        " to perform the assessment outlined by the context Can be used to assess data or request information.", inputInterpreter = ObjectListInterpreter.class)
-    public ArrayNode assessData(List<?> objectList) throws ZtatException, IOException {
+    @Verb(name = "assess_data", returnType = ArrayNode.class, description = "Accepts api server data based on the " +
+        "context and seeks" +
+        " to perform the assessment by prompting the LLM. Can be used to assess data or request information from users and/or agents.",
+        inputInterpreter =
+        ObjectListInterpreter.class, requiresTokenManagement = true)
+    public ArrayNode assessData(AgentExecution execution, List<?> objectList) throws ZtatException, IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream(agentConfigFile);
         if (is == null) {
             throw new RuntimeException("assessor-config.yaml not found on classpath");
@@ -160,6 +174,7 @@ public class AgentVerbs {
 
         log.info("Agent config loaded: {}", config);
 
+        var responses = JsonUtil.MAPPER.createArrayNode();
         log.info("Object list is {}", objectList);
         for (var obj : objectList) {
             List<Message> messages = new ArrayList<>();
@@ -169,37 +184,45 @@ public class AgentVerbs {
             messages.add(Message.builder().role("system").content(context).build());
 
             ChatRequest chatRequest = ChatRequest.builder().model("gpt-4o").messages(messages).build();
-            var resp = llmService.askQuestion(chatRequest);
+            execution.addMessages( messages );
+            var resp = llmService.askQuestion(execution, chatRequest);
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             log.info("Response is {}", resp);
             for (Response.Choice choice : response.getChoices()) {
                 var content = choice.getMessage().getContent();
+                if (content.startsWith("```json")) {
+                    content = content.substring(7, content.length() - 3);
+                }
+                responses.add(JsonUtil.MAPPER.readTree(content));
                 log.info("content is {}", content);
             }
             log.info("Object is {}", obj);
         }
-        return JsonUtil.MAPPER.createArrayNode();
+        return responses;
     }
 
-    @Verb(name = "get_work_requests", returnType = ArrayNode.class, description = "Queries zero trust access token " +
-        "requests to approve or disapprove.")
-    public List<AtatRequest> getWork(Map<String,Object> args) throws ZtatException, IOException {
+    @Verb(name = "list_ztat_requests", returnType = ArrayNode.class, description = "Lists zero trust access tokens to" +
+        " review. Does not review access token requests.", outputInterpreter = ZtatOutputInterpreter.class, requiresTokenManagement = true )
+    public List<AtatRequest> getWork(TokenDTO token, Map<String,Object> args) throws ZtatException, IOException {
         List<AtatRequest> requests = new ArrayList<>();
 
-        var atatRequests = agentClientService.getAtatRequests();
+        var atatRequests = agentClientService.getAtatRequests(token);
         List<JITTrackerDTO> dtos =  JsonUtil.MAPPER.readValue(atatRequests, new TypeReference<>() {
         });
-        /*
+
         for (var dto : dtos) {
             var request = new AtatRequest();
             request.setRequestId(dto.getId().toString());
-            request.set
+            // for each request7
+            /*request.set
             request.setStatus(dto.getStatus());
             request.setCreatedAt(dto.getCreatedAt());
             request.setUpdatedAt(dto.getUpdatedAt());
             request.setAgentId(dto.getAgentId());
             requests.add(request);
-        }*/
+            *
+             */
+        }
 
 
         return requests;

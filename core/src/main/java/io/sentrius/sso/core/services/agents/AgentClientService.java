@@ -2,6 +2,7 @@ package io.sentrius.sso.core.services.agents;
 
 import java.util.List;
 import com.google.common.collect.Maps;
+import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import lombok.extern.slf4j.Slf4j;
@@ -25,11 +26,12 @@ public class AgentClientService {
     /**
      * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
      */
-    public String heartbeat(String name) throws ZtatException {
+    public String heartbeat(TokenDTO token, String name) throws ZtatException {
 
         String url =  "/agent/heartbeat";
 
-        return zeroTrustClientService.callPutOnApi(url, Maps.immutableEntry("status", List.of("heartbeat")), Maps.immutableEntry(
+        return zeroTrustClientService.callPutOnApi(token, url, Maps.immutableEntry("status", List.of("heartbeat")),
+            Maps.immutableEntry(
             "name", List.of(name)));
 
     }
@@ -38,11 +40,11 @@ public class AgentClientService {
     /**
      * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
      */
-    public String getAtatRequests() throws ZtatException {
+    public String getAtatRequests(TokenDTO token) throws ZtatException {
 
         String url =  "/zerotrust/accesstoken/list/atat";
 
-        return zeroTrustClientService.callGetOnApi(url);
+        return zeroTrustClientService.callGetOnApi(token, url);
 
     }
 

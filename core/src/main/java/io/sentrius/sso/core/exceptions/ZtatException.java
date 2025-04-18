@@ -13,15 +13,22 @@ public class ZtatException extends Throwable {
 
     private List<String> mechanisms = new ArrayList<>();
     private String endpoint;
+    private String ztatRequestId;
 
     public ZtatException(String ztatRequired, String endpoint) {
         try {
             ObjectNode node = (ObjectNode) JsonUtil.MAPPER.readTree(ztatRequired);
-            JsonNode message = node.get("message");
-            ArrayNode mechanism = (ArrayNode) message.get("mechanism");
-            mechanisms = new ArrayList<>();
-            for (JsonNode m : mechanism) {
-                mechanisms.add(m.asText());
+            if (node.has("message")) {
+                JsonNode message = node.get("message");
+                ArrayNode mechanism = (ArrayNode) message.get("mechanism");
+                mechanisms = new ArrayList<>();
+                for (JsonNode m : mechanism) {
+                    mechanisms.add(m.asText());
+                }
+            }
+            if (node.has("ztat_request")) {
+                // contains an ATAT request
+                ztatRequestId = node.get("ztat_request").asText();
             }
 
         } catch (JsonProcessingException ex) {
@@ -36,5 +43,9 @@ public class ZtatException extends Throwable {
 
     public String getEndpoint(){
         return endpoint;
+    }
+
+    public String getZtatRequestId(){
+        return ztatRequestId;
     }
 }

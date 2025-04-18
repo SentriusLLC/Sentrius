@@ -15,4 +15,6 @@ import lombok.NoArgsConstructor;
 public class Ztat {
     @JsonProperty("ztat_token")
     private String ztatToken;
+    @JsonProperty("communication_id")
+    private String communicationId;
 }

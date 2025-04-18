@@ -55,7 +55,37 @@
         <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
 
         <div class="col py-4">
+            <div class="row mb-3 justify-content-center">
+                <div class="col-md-3">
+                    <label for="startDate" class="form-label">Start Time</label>
+                    <input type="date" id="startDate" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="endDate" class="form-label">End Time</label>
+                    <input type="date" id="endDate" class="form-control">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" id="filterBtn">Filter</button>
+                </div>
+            </div>
+
             <div class="graph-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <label for="limitSelect">Show:</label>
+                        <select id="limitSelect" class="form-select form-select-sm d-inline-block" style="width: auto;">
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="-1">All</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button id="prevPage" class="btn btn-sm btn-secondary">Prev</button>
+                        <span id="pageIndicator">Page 1</span>
+                        <button id="nextPage" class="btn btn-sm btn-secondary">Next</button>
+                    </div>
+                </div>
                 <div th:replace="~{fragments/alerts}"></div>
 
                 <h2 class="toast-header">Agent Communications</h2>
@@ -98,6 +128,13 @@
 
 <!-- Script to load graph and handle clicks -->
 <script th:inline="javascript">
+    let currentPage = 0;
+    let limit = 25;
+    let cy;
+
+    function formatDateToInputValue(date) {
+        return date.toISOString().split('T')[0]; // yyyy-mm-dd
+    }
 
     function formatJson(payload) {
         try {
@@ -112,11 +149,73 @@
 
     const agentId = /*[[${agentId}]]*/ '';
 
-    document.addEventListener('DOMContentLoaded', function() {
-        fetch(`/api/v1/agent/connections?agentId=${encodeURIComponent(agentId)}`)
+    function loadWithDate(){
+        const start = document.getElementById('startDate').value;
+        const end = document.getElementById('endDate').value;
+
+        const startDateTime = `${start}T00:00:00`;
+        const endDateTime = `${end}T23:59:59`; // Optional: include full day
+
+        loadData(startDateTime, endDateTime);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const now = new Date();
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(now.getDate() - 7);
+
+        document.getElementById('startDate').value = formatDateToInputValue(oneWeekAgo);
+        document.getElementById('endDate').value = formatDateToInputValue(now);
+
+        document.getElementById('filterBtn').addEventListener('click', () => {
+            loadWithDate();
+        });
+
+        // Optional: auto-load on page init
+        document.getElementById('filterBtn').click();
+    });
+
+    document.getElementById('limitSelect').addEventListener('change', (e) => {
+        limit = parseInt(e.target.value);
+        currentPage = 0;
+        loadWithDate();
+    });
+
+    document.getElementById('nextPage').addEventListener('click', () => {
+        currentPage++;
+        loadWithDate();
+    });
+
+    document.getElementById('prevPage').addEventListener('click', () => {
+            if (currentPage > 0) {
+                currentPage--;
+                loadWithDate();
+            }
+        }
+    );
+
+
+    function loadData(startTime = null, endTime = null) {
+        const url = new URL(`/api/v1/agent/connections`, window.location.origin);
+        url.searchParams.append("agentId", agentId);
+        if (startTime) url.searchParams.append("start", startTime);
+        if (endTime) url.searchParams.append("end", endTime);
+
+        if (limit > 0) {
+            url.searchParams.append("limit", limit);
+            url.searchParams.append("page", currentPage);
+        }
+        //fetch(`/api/v1/agent/connections?agentId=${encodeURIComponent(agentId)}`)
+        fetch(url)
             .then(response => response.json())
-            .then(data => {
-                const cy = cytoscape({
+            .then(content => {
+                data = content.content;
+                console.log(data);
+                if (cy) {
+                    cy.destroy();
+                }
+                document.getElementById("pageIndicator").innerText = `Page ${currentPage + 1}`;
+                cy = cytoscape({
                     container: document.getElementById('cy'),
                     elements: [
                         ...data.flatMap(comm => [
@@ -171,6 +270,7 @@
 
                 // Populate Communication Table
                 const tbody = document.getElementById('comm-log-body');
+                tbody.innerHTML = '';
                 data.forEach(comm => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
@@ -202,7 +302,9 @@
                     modal.show();
                 }
             });
-    });
+    }
+
+
 </script>
 
 </body>

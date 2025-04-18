@@ -11,7 +11,7 @@ import org.springframework.data.repository.query.Param;
 public interface AgentPolicyAssignmentRepository extends JpaRepository<AgentPolicyAssignment, AgentPolicyAssignmentId> {
     // Add custom queries here if needed
 
-    List<AgentPolicyAssignment> findByUserUsername(String username);
+    List<AgentPolicyAssignment> findByUserUsernameOrderByAssignedAtDesc(String username);
 
     @Query("SELECT a FROM AgentPolicyAssignment a WHERE a.user.id = :userId ORDER BY a.assignedAt DESC")
     Optional<AgentPolicyAssignment> findMostRecentByUserId(@Param("userId") Long userId);

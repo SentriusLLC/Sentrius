@@ -73,16 +73,21 @@ public class ATPLPolicyService {
     }
 
     public Optional<ATPLPolicy> getPolicy(User operatingUser) {
-        List<AgentPolicyAssignment> assignments = agentPolicyAssignmentRepository.findByUserUsername(operatingUser.getUsername());
+        List<AgentPolicyAssignment> assignments = agentPolicyAssignmentRepository.findByUserUsernameOrderByAssignedAtDesc(operatingUser.getUsername());
 
         if (assignments.isEmpty()) {
             return Optional.empty();
         }
 
         for(AgentPolicyAssignment assignment : assignments) {
-            Optional<ATPLPolicy> policy = getLatestPolicy(assignment.getPolicy().getPolicyId());
-            if(policy.isPresent()) {
-                return policy;
+            log.info("Assignment policy id {} for {}", assignment.getPolicy().getPolicyId(),
+                assignment.getUser().getUsername());
+        }
+
+        for(AgentPolicyAssignment assignment : assignments) {
+            ATPLPolicy policy = getPolicy(assignment.getPolicy());
+            if (null != policy){
+                return Optional.of(policy);
             }
         }
 
@@ -112,6 +117,16 @@ public class ATPLPolicyService {
         return repository.findAll();
     }
 
+    public ATPLPolicy getPolicy(ATPLPolicyEntity entity) {
+
+                try {
+                    return yamlMapper.readValue(entity.getYaml(), ATPLPolicy.class);
+                } catch (Exception e) {
+                    return null;
+                }
+
+    }
+
     public ATPLPolicy getPolicy(String policyId) {
         return repository.findAllByPolicyId(policyId).stream()
             .max(Comparator.comparingInt(entity -> {
@@ -131,7 +146,7 @@ public class ATPLPolicyService {
     }
 
     public Optional<String> getPolicyYaml(User operatingUser) {
-        List<AgentPolicyAssignment> assignments = agentPolicyAssignmentRepository.findByUserUsername(operatingUser.getUsername());
+        List<AgentPolicyAssignment> assignments = agentPolicyAssignmentRepository.findByUserUsernameOrderByAssignedAtDesc(operatingUser.getUsername());
 
         if (assignments.isEmpty()) {
             return Optional.empty();

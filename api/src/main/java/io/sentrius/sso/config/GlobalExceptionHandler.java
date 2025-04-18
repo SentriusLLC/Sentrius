@@ -45,7 +45,7 @@ public class GlobalExceptionHandler {
         redirectAttributes.addAttribute("errorId", MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR));
 
         ex.printStackTrace();
-        log.info("ahhasldigjudaslkgj");
+        log.info("ahhasldigjudaslkgj {}", ex.getMessage());
         // Redirect to "/mydashboard" with the messageId parameter
         return "redirect:/sso/v1/dashboard";
     }

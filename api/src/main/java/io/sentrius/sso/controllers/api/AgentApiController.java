@@ -2,6 +2,7 @@ package io.sentrius.sso.controllers.api;
 
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -11,6 +12,7 @@ import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.model.chat.AgentCommunication;
+import io.sentrius.sso.core.model.security.IdentityType;
 import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.sessions.SessionLog;
@@ -29,9 +31,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -144,6 +149,7 @@ public class AgentApiController extends BaseController {
 
         }
 
+        var communicationId = UUID.randomUUID().toString();
         log.info("Received registration request from agent: {} {}", agentId, operatingUser);
         // Store the request in the database
         var ztatRequest = ztatService.createAgentRequest(agentId, "registration", "register",
@@ -156,10 +162,11 @@ public class AgentApiController extends BaseController {
             var admin = userService.getUser(UserType.createSystemAdmin().getId());
             var approval = ztatService.approveOpsAccessToken(ztatRequest, admin);
 
-            return ResponseEntity.ok(Map.of("ztat_token", approval.getToken().toString()));
+            return ResponseEntity.ok(Map.of("ztat_token", approval.getToken().toString(), "communication_id",communicationId ));
 
         } else {
             log.warn("No active policy found for agent: {}", agentId);
+            ztatService.denyOpsAccessToken(ztatRequest, operatingUser);
             return ResponseEntity.status(org.springframework.http.HttpStatus.PRECONDITION_REQUIRED).body(Map.of("ztat_request",
                 ztatRequest.getId()));
         }
@@ -183,28 +190,20 @@ public class AgentApiController extends BaseController {
 
     }
 
-    @GetMapping("/connections")
-    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
-    public ResponseEntity<?> getConnections(@RequestParam String agentId,
-        HttpServletRequest request, HttpServletResponse response) throws GeneralSecurityException {
-        var agent = cryptoService.decrypt(agentId);
-        var operatingUser = userService.getUserWithDetails(agent);
-
-        var agents = agentService.getCommunications(operatingUser.getUsername());
-        return ResponseEntity.ok(agents);
-
-    }
-
     @PostMapping("/justify")
-    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN}, allowedIdentityTypes = {IdentityType.NON_PERSON_ENTITY})
     public ResponseEntity<?> justifyOperations(
         @RequestHeader("Authorization") String token,
-        @RequestParam("agentId") String agentId,
-        @RequestParam("jusitificationId") String jusitificationId,
+        @RequestHeader("communication_id") String communicationId,
+        @RequestParam("requestId") String requestId,
         HttpServletRequest request, HttpServletResponse response) throws SQLException, GeneralSecurityException {
 
         String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
 
+        if (null == communicationId ){
+            log.warn("No communication id found");
+            return ResponseEntity.status(HttpStatus.SC_BAD_REQUEST).body("No communication id found");
+        }
 
         if (!keycloakService.validateJwt(compactJwt)) {
             log.warn("Invalid Keycloak token");
@@ -217,33 +216,37 @@ public class AgentApiController extends BaseController {
        // String agentId = keycloakService.extractAgentId(compactJwt);
 
         if (null == operatingUser) {
-            log.warn("No operating user found for agent: {}", agentId);
             var username = keycloakService.extractUsername(compactJwt);
             operatingUser = userService.getUserWithDetails(username);
 
         }
 
-        log.info("Received registration request from agent: {} {}", agentId, operatingUser);
-        // Store the request in the database
-        var ztatRequest = ztatService.createAgentRequest(agentId, "registration", "register",
-            ZeroTrustAccessTokenReason.builder().commandNeed("registration call").reasonIdentifier(UUID.randomUUID().toString()).build(),
-            operatingUser);
-        ztatRequest = ztrService.addJITRequest(ztatRequest);
+        var ztat = ztatService.getOpsZtatRequest(Long.valueOf(requestId));
 
-        // Approve the request if the agent has an active policy ( and it is known and allowed ).
-        if (atplPolicyService.getPolicy(operatingUser).isPresent()) {
-            var admin = userService.getUser(UserType.createSystemAdmin().getId());
-            var approval = ztatService.approveOpsAccessToken(ztatRequest, admin);
-
-            return ResponseEntity.ok(Map.of("ztat_token", approval.getToken().toString()));
-
-        } else {
-            log.warn("No active policy found for agent: {}", agentId);
-            return ResponseEntity.status(428).body(Map.of("ztat_request", ztatRequest.getId()));
-        }
+        // communicationId should exist
 
 
+        return null;
 
+
+    }
+
+    @GetMapping("/connections")
+    public ResponseEntity<?> getConnections(
+        @RequestParam String agentId,
+        @RequestParam(required = false) Integer limit,
+        @RequestParam(required = false) Integer page,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end
+    ) throws GeneralSecurityException {
+        Pageable pageable = (limit != null && page != null)
+            ? PageRequest.of(page, limit, Sort.by("createdAt").descending())
+            : Pageable.unpaged();
+        var agent = cryptoService.decrypt(agentId);
+        var operatingUser = userService.getUserWithDetails(agent);
+
+        var agents = agentService.getCommunications(operatingUser.getUsername(), start, end, pageable);
+        return ResponseEntity.ok(agents);
     }
 
     @GetMapping("/policy")

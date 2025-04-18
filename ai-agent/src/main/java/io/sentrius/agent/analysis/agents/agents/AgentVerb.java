@@ -14,6 +14,8 @@ public class AgentVerb {
     private String description;
     private Method method;
     @Builder.Default
+    private boolean requiresTokenManagement = false;
+    @Builder.Default
     private Class<?> returnType =  String.class;
     @Builder.Default
     Class<? extends OutputInterpreterIfc> outputInterpreter = DefaultInterpreter.class;

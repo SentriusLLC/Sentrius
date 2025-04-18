@@ -1,8 +1,11 @@
 package io.sentrius.sso.core.services.agents;
 
 import java.security.GeneralSecurityException;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import io.sentrius.sso.core.dto.AgentDTO;
 import io.sentrius.sso.core.model.AgentHeartbeat;
@@ -13,6 +16,8 @@ import io.sentrius.sso.core.repository.AgentHeartbeatRepository;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.security.CryptoService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -85,11 +90,13 @@ public class AgentService {
     }
 
     @Async
-    public CompletableFuture<AgentCommunication> saveCommunication(String sourceAgent, String targetAgent, String messageType, String payload) {
+    public CompletableFuture<AgentCommunication> saveCommunication(String communicationId, String sourceAgent,
+                                                                   String targetAgent, String messageType, String payload) {
         AgentCommunication communication = AgentCommunication.builder()
             .sourceAgent(sourceAgent)
             .targetAgent(targetAgent)
             .messageType(messageType)
+            .communicationId(UUID.fromString(communicationId))
             .payload(payload)
             .build();
         return CompletableFuture.completedFuture(agentCommunicationRepository.save(communication));
@@ -100,11 +107,23 @@ public class AgentService {
         return agentCommunicationRepository.findById(id).orElseThrow(() -> new RuntimeException("Communication not found: " + id));
     }
 
+    public List<AgentCommunication> getCommunications(UUID communicationId) {
+        return agentCommunicationRepository.findBySourceAgent(communicationId.toString());
+    }
+
+
     public List<AgentCommunication> getCommunications(String sourceAgent) {
         return agentCommunicationRepository.findBySourceAgent(sourceAgent);
     }
 
     public List<AgentCommunication> getCommunications(String sourceAgent, String targetAgent) {
         return agentCommunicationRepository.findBySourceAgent(sourceAgent);
+    }
+
+    public Page<AgentCommunication> getCommunications(String sourceAgent, LocalDateTime start, LocalDateTime end,
+                                                      Pageable pageable) {
+        Instant startInstant = start.atZone(ZoneId.systemDefault()).toInstant();
+        Instant endInstant = end.atZone(ZoneId.systemDefault()).toInstant();
+        return agentCommunicationRepository.findBySourceAgentAndCreatedAtBetween(sourceAgent, startInstant, endInstant, pageable);
     }
 }

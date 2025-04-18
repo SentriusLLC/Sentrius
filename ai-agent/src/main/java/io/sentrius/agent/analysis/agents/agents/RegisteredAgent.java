@@ -5,11 +5,13 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
+import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.security.Ztat;
 import io.sentrius.sso.core.model.verbs.VerbResponse;
 import io.sentrius.sso.core.services.agents.AgentClientService;
+import io.sentrius.sso.core.services.agents.AgentExecutionService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.utils.JsonUtil;
@@ -32,36 +34,35 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
     final AgentClientService agentClientService;
     final VerbRegistry verbRegistry;
     final AgentVerbs agentVerbs;
+    final AgentExecutionService agentExecutionService;
 
     private volatile boolean running = true;
     private Thread workerThread;
 
-    public ArrayNode promptAgent(UserDTO user) {
-        ArrayNode response = null;
-        while(null== response || response.isEmpty()){
+    public ArrayNode promptAgent(AgentExecution execution) throws ZtatException {
+        while(true){
             try {
                 log.info("Prompting agent...");
-                response = agentVerbs.promptAgent(null);
-                return response;
+                return agentVerbs.promptAgent(execution,null);
             } catch (ZtatException e) {
                 log.info("Mechanisms {}" , e.getMechanisms());
                 var endpoint = zeroTrustClientService.createEndPoingRequest("prompt_agent", e.getEndpoint());
                 ZtatRequestDTO ztatRequestDTO = ZtatRequestDTO.builder()
-                    .user(user)
+                    .user(execution.getUser())
                     .command(endpoint.toString())
                     .justification("Registered Agent requires ability to prompt LLM endpoints to begin operations")
                     .summary("Registered Agent requires ability to prompt LLM endpoints to begin operations")
                     .build();
-                var request = zeroTrustClientService.requestZtatToken(user,ztatRequestDTO);
+                var request = zeroTrustClientService.requestZtatToken(execution, execution.getUser(),ztatRequestDTO);
 
-                var token = zeroTrustClientService.awaitZtatToken(user, request, 60, TimeUnit.MINUTES);
-                zeroTrustClientService.setZtat(token);
+                var token = zeroTrustClientService.awaitZtatToken(execution, execution.getUser(), request, 60,
+                    TimeUnit.MINUTES);
+                execution.setZtatToken(token);
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error(e.getMessage());
                 throw new RuntimeException(e);
             }
         }
-        return response;
     }
 
     @Override
@@ -72,20 +73,24 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
         final UserDTO user = UserDTO.builder()
             .username(zeroTrustClientService.getUsername())
             .build();
+        var execution = agentExecutionService.getAgentExecution(user);
         try {
-            agentClientService.heartbeat(zeroTrustClientService.getUsername());
+            agentClientService.heartbeat(execution, execution.getUser().getUsername());
         } catch (ZtatException e) {
             throw new RuntimeException(e);
         }
         while(running) {
+
             try {
-                var register = zeroTrustClientService.registerAgent(user);
+                var register = zeroTrustClientService.registerAgent(execution);
                 log.info("Registered agent response: {}", register);
 
                 var ztat = JsonUtil.MAPPER.readValue(register, Ztat.class);
-                zeroTrustClientService.setZtat(ztat.getZtatToken());
+                execution.setZtatToken(ztat.getZtatToken());
+                execution.setCommunicationId(ztat.getCommunicationId());
                 break;
             }catch (Exception | ZtatException e) {
+
                 log.error(e.getMessage());
                 log.info("Registering v1.0.2 agent failed. Retrying in 10 seconds...");
                 try {
@@ -106,7 +111,8 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
 
                 while (running) {
                     try {
-                        var response = promptAgent(user);
+                        var agentExecution = agentExecutionService.getAgentExecution(user);
+                        var response = promptAgent(agentExecution);
                         log.info("Got response: {}", response);
 
                         VerbResponse priorResponse = null;
@@ -116,13 +122,15 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
                             if (node.get("verb") != null) {
                                 var verb = node.get("verb").asText();
                                 log.info("Executing verb: {}", verb);
-                                priorResponse = verbRegistry.execute(user, priorResponse, verb, args);
+                                priorResponse = verbRegistry.execute(agentExecution, priorResponse, verb, args);
                             }
                             log.info("Node: {}", node);
                         }
 
                     } catch (Exception e) {
                         log.error("Exception in agent loop", e);
+                    } catch (ZtatException e) {
+                        throw new RuntimeException(e);
                     }
 
                     // Sleep between prompts

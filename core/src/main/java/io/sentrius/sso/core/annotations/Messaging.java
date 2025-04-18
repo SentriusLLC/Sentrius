@@ -1,8 +1,3 @@
-/**
- * Copyright (C) 2018 Loophole, LLC
- *
- * <p>Licensed under The Prosperity Public License 3.0.0
- */
 package io.sentrius.sso.core.annotations;
 
 import java.lang.annotation.ElementType;

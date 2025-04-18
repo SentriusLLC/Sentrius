@@ -16,4 +16,5 @@ public @interface Verb {
     String[] paramDescriptions() default {};
     // if set to true, this verb will be callable by AI agents
     boolean isAiCallable() default true;
+    boolean requiresTokenManagement() default false;
 }

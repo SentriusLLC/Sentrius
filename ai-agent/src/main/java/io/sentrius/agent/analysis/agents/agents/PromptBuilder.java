@@ -34,14 +34,14 @@ public class PromptBuilder {
         StringBuilder prompt = new StringBuilder();
 
         // Append roles to the prompt
-        prompt.append("Roles: ").append(String.join(", ", agentConfig.getRoles())).append("\n");
+        //        prompt.append("Roles: ").append(String.join(", ", agentConfig.getRoles())).append("\n");
 
         // Append context to the prompt
         prompt.append("Context: ").append(agentConfig.getContext()).append("\n\n");
 
         // Append instructions for using the JSON format
         prompt.append("Instructions: ").append("Respond using this JSON format. Only use verbs provided in " +
-            "Available Verbs:\n" +
+            "Available Verbs. Formulate a complete plan with all possible steps.:\n" +
             "\n" +
             "{\n" +
             "  \"plan\": [\n" +
