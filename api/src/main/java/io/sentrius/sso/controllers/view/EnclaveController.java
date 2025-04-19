@@ -56,7 +56,7 @@ public class EnclaveController extends BaseController {
         var hg = hostGroupService.getHostGroupWithHostSystems(user, groupId);
         if (hg.isEmpty()) {
             log.info("User {} does not have access to group {}", user.getUsername(), groupId);
-            return "redirect:/sso/v1/ssh/servers/list?errorId=" + MessagingUtil.getMessageId(MessagingUtil.DO_NOT_HAVE_ACCESS);
+            return "redirect:/sso/v1/enclaves/hosts/list?errorId=" + MessagingUtil.getMessageId(MessagingUtil.DO_NOT_HAVE_ACCESS);
         }
         log.info("configuration {}", hg.get().getConfigurationJson());
         model.addAttribute("hostGroup", hg.get().toDTO());

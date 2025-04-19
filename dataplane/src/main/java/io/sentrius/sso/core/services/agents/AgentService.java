@@ -5,23 +5,37 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.sentrius.sso.core.dto.AgentDTO;
+import io.sentrius.sso.core.dto.UserDTO;
+import io.sentrius.sso.core.dto.UserTypeDTO;
+import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.model.AgentHeartbeat;
+import io.sentrius.sso.core.model.AgentStatus;
 import io.sentrius.sso.core.model.chat.AgentCommunication;
 import io.sentrius.sso.core.model.security.UserType;
+import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.repository.AgentCommunicationRepository;
 import io.sentrius.sso.core.repository.AgentHeartbeatRepository;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.security.CryptoService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 @Service
+@Slf4j
 public class AgentService {
 
     private final AgentCommunicationRepository agentCommunicationRepository;
@@ -29,6 +43,12 @@ public class AgentService {
     private final UserService userService;
     private final ATPLPolicyService policyService;
     private final CryptoService cryptoService;
+
+    private final Cache<String, AgentStatus> pingCache =
+        Caffeine.newBuilder()
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .build();
+
 
     public AgentService(
         AgentCommunicationRepository agentCommunicationRepository, AgentHeartbeatRepository repository, UserService userService, ATPLPolicyService policyService,
@@ -60,7 +80,7 @@ public class AgentService {
     public List<AgentDTO> getAllAgents(boolean encryptId) {
         return repository.findAll().stream()
             .map(heartbeat -> {
-                var user = userService.getUserWithDetails(heartbeat.getAgentId());
+                var user = userService.getUserByUsername(heartbeat.getAgentId());
 
                 var dtoBuilder = AgentDTO.builder();
                 if (null != user && user.getAuthorizationType() != UserType.createUnknownUser()){
@@ -73,12 +93,13 @@ public class AgentService {
                     }
                     if (encryptId){
                         try {
-                            dtoBuilder.agentId(cryptoService.encrypt(user.getUsername()));
+                            // this is obfuscation of something known, let's use a real id of some kind
+                            dtoBuilder.agentId(cryptoService.encrypt(user.getUserId()));
                         } catch (GeneralSecurityException e) {
                             throw new RuntimeException(e);
                         }
                     } else {
-                        dtoBuilder.agentId(user.getUsername());
+                        dtoBuilder.agentId(user.getUserId());
                     }
                 }
 
@@ -125,5 +146,46 @@ public class AgentService {
         Instant startInstant = start.atZone(ZoneId.systemDefault()).toInstant();
         Instant endInstant = end.atZone(ZoneId.systemDefault()).toInstant();
         return agentCommunicationRepository.findBySourceAgentAndCreatedAtBetween(sourceAgent, startInstant, endInstant, pageable);
+    }
+
+    public Optional<AgentStatus> getPing(User user) {
+        return Optional.ofNullable(pingCache.getIfPresent(user.getUserId()));
+    }
+
+    public void setPing(User user, AgentStatus status) {
+        pingCache.put(user.getUserId(), status);
+    }
+
+    @Async
+    public void ping(User user) {
+        AgentStatus status = pingCache.getIfPresent(user.getUserId());
+        if (status == null) {
+            var heartbeat = getHeartbeat(user.getUserId());
+            var url = heartbeat.getAgentUrl();
+            if (url == null) {
+                throw new RuntimeException("Agent URL not found");
+            }
+
+
+            if (url.startsWith("http")) {
+                RestTemplate restTemplate = new RestTemplate();
+                try {
+                    ResponseEntity<AgentStatus> response = restTemplate.getForEntity(url, AgentStatus.class);
+                    if (response.getStatusCode().is2xxSuccessful() && null != response.getBody()) {
+                        log.info("Ping successful for URL: {}", url);
+                        pingCache.put(user.getUserId(), response.getBody());
+                    } else {
+                        log.warn("Ping failed for URL: {} with status code: {}", url, response.getStatusCode());
+                    }
+                } catch (Exception e) {
+                    log.error("Error while pinging URL: {}", url, e);
+                }
+            }
+
+        }
+    }
+
+    public boolean isAgent(UserTypeDTO userDto) {
+        return true;
     }
 }

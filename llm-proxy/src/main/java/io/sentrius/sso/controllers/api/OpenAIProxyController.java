@@ -104,7 +104,7 @@ public class OpenAIProxyController extends BaseController {
         if (null == operatingUser) {
             log.warn("No operating user found for agent: {}", agentId);
             var username = keycloakService.extractUsername(compactJwt);
-            operatingUser = userService.getUserWithDetails(username);
+            operatingUser = userService.getUserByUsername(username);
 
         }
 
@@ -182,7 +182,7 @@ public class OpenAIProxyController extends BaseController {
         if (null == operatingUser) {
             log.warn("No operating user found for agent: {}", agentId);
             var username = keycloakService.extractUsername(compactJwt);
-            operatingUser = userService.getUserWithDetails(username);
+            operatingUser = userService.getUserByUsername(username);
 
         }
 

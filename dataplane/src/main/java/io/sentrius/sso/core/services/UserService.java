@@ -9,7 +9,6 @@ import java.util.stream.Collectors;
 import com.google.common.cache.CacheLoader;
 import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.dto.UserTypeDTO;
-import io.sentrius.sso.core.model.actors.PrincipalEntity;
 import io.sentrius.sso.core.model.security.IdentityType;
 import io.sentrius.sso.core.repository.ProfileRepository;
 import io.sentrius.sso.core.repository.UserRepository;
@@ -65,8 +64,19 @@ public class UserService {
     };
 
     @Transactional
-    public User getUserWithDetails(String userName) {
+    public User getUserByUsername(String userName) {
         var user = UserDB.findByUsername(userName);
+        if (user.isEmpty()) {
+            return null;
+        }
+        // Initialize lazy-loaded associations while the session is still active
+        Hibernate.initialize(user.get().getAuthorizationType());
+        return user.get();
+    }
+
+    @Transactional
+    public User getUserByUserid(String userId) {
+        var user = UserDB.findByUserId(userId);
         if (user.isEmpty()) {
             return null;
         }
@@ -103,6 +113,7 @@ public class UserService {
                     }
                     operatingUser = User.builder()
                         .username(usernameStr.get())
+                        .name(usernameStr.get())
                         .emailAddress(email.get())
                         .password(UUID.randomUUID().toString())
                         .userId(userIdStr.get())
@@ -208,14 +219,21 @@ public class UserService {
     }
 
     @Transactional
-    public List<UserDTO> getAllUsers() {
-        List<User> users = userRepository.findAllWithAuthorizationType();
+    public List<UserDTO> getAllUsers(String identityType) {
+        List<User> users = userRepository.findAllWithAuthorizationType( IdentityType.fromString(identityType) );
         // Initialize the lazy-loaded field to avoid LazyInitializationException
         users.forEach(user -> Hibernate.initialize(user.getAuthorizationType()));
 
         return users.stream().map(x -> x.toDto()).map(userDTO -> {
             try {
-                userDTO.setUserId(cryptoService.encrypt(userDTO.getId().toString()));
+                log.info("get all users {}, {}", userDTO.getUserId(), userDTO.getIdentityType());
+                if (userDTO.getIdentityType().equalsIgnoreCase("NON_PERSON_ENTITY")) {
+                    userDTO.setUserId(cryptoService.encrypt(userDTO.getUserId()));
+
+                }
+                else {
+                    userDTO.setUserId(cryptoService.encrypt(userDTO.getId().toString()));
+                }
             } catch (GeneralSecurityException e) {
                 throw new RuntimeException(e);
             }

@@ -31,4 +31,7 @@ public class AgentHeartbeat {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "agent_url")
+    private String agentUrl;
 }

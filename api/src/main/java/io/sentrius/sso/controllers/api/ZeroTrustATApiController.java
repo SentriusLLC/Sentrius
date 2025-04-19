@@ -135,7 +135,7 @@ public class ZeroTrustATApiController extends BaseController {
         if (null == operatingUser) {
             log.warn("No operating user found for agent: {}", agentId);
             var username = keycloakService.extractUsername(compactJwt);
-            operatingUser = userService.getUserWithDetails(username);
+            operatingUser = userService.getUserByUsername(username);
 
         }
 
@@ -186,7 +186,7 @@ public class ZeroTrustATApiController extends BaseController {
         if (null == operatingUser) {
             log.warn("No operating user found for agent: {}", agentId);
             var username = keycloakService.extractUsername(compactJwt);
-            operatingUser = userService.getUserWithDetails(username);
+            operatingUser = userService.getUserByUsername(username);
 
         }
 
@@ -249,7 +249,7 @@ public class ZeroTrustATApiController extends BaseController {
         if (null == operatingUser) {
             log.warn("No operating user found for agent: {}", agentId);
             var username = keycloakService.extractUsername(compactJwt);
-            operatingUser = userService.getUserWithDetails(username);
+            operatingUser = userService.getUserByUsername(username);
 
         }
         List<JITTrackerDTO> ztatTracker = new ArrayList<JITTrackerDTO>();

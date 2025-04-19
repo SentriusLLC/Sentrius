@@ -1,5 +1,7 @@
 package io.sentrius.sso.controllers.api;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
@@ -110,7 +112,7 @@ public class AgentApiController extends BaseController {
         if (null == operatingUser) {
             log.warn("No operating user found for agent: {}", agentId);
             var username = keycloakService.extractUsername(compactJwt);
-            operatingUser = userService.getUserWithDetails(username);
+            operatingUser = userService.getUserByUsername(username);
         }
         log.info("Received heartbeat from agent: {} {}", agentId, operatingUser);
         if (status == null || status.isEmpty()) {
@@ -145,7 +147,7 @@ public class AgentApiController extends BaseController {
         if (null == operatingUser) {
             log.warn("No operating user found for agent: {}", agentId);
             var username = keycloakService.extractUsername(compactJwt);
-            operatingUser = userService.getUserWithDetails(username);
+            operatingUser = userService.getUserByUsername(username);
 
         }
 
@@ -217,7 +219,48 @@ public class AgentApiController extends BaseController {
 
         if (null == operatingUser) {
             var username = keycloakService.extractUsername(compactJwt);
-            operatingUser = userService.getUserWithDetails(username);
+            operatingUser = userService.getUserByUsername(username);
+
+        }
+
+        var ztat = ztatService.getOpsZtatRequest(Long.valueOf(requestId));
+
+        // communicationId should exist
+
+
+        return null;
+
+
+    }
+
+    @PostMapping("/identity/validate")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN}, allowedIdentityTypes = {IdentityType.NON_PERSON_ENTITY})
+    public ResponseEntity<?> justifyAccess(
+        @RequestHeader("Authorization") String token,
+        @RequestHeader("communication_id") String communicationId,
+        @RequestParam("requestId") String requestId,
+        HttpServletRequest request, HttpServletResponse response) throws SQLException, GeneralSecurityException {
+
+        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+        if (null == communicationId ){
+            log.warn("No communication id found");
+            return ResponseEntity.status(HttpStatus.SC_BAD_REQUEST).body("No communication id found");
+        }
+
+        if (!keycloakService.validateJwt(compactJwt)) {
+            log.warn("Invalid Keycloak token");
+            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+        }
+
+        var operatingUser = getOperatingUser(request, response );
+
+        // Extract agent identity from the JWT
+        // String agentId = keycloakService.extractAgentId(compactJwt);
+
+        if (null == operatingUser) {
+            var username = keycloakService.extractUsername(compactJwt);
+            operatingUser = userService.getUserByUsername(username);
 
         }
 
@@ -242,8 +285,12 @@ public class AgentApiController extends BaseController {
         Pageable pageable = (limit != null && page != null)
             ? PageRequest.of(page, limit, Sort.by("createdAt").descending())
             : Pageable.unpaged();
-        var agent = cryptoService.decrypt(agentId);
-        var operatingUser = userService.getUserWithDetails(agent);
+
+        var aid = URLDecoder.decode(agentId, StandardCharsets.UTF_8);
+        log.info("Received policy request from agent: {} {} ",aid, agentId);
+        var agent = cryptoService.decrypt(aid);
+        var operatingUser = userService.getUserByUserid(agent);
+        log.info("Received policy request from agent: {} {} {} {}",agent, aid, agentId, operatingUser);
 
         var agents = agentService.getCommunications(operatingUser.getUsername(), start, end, pageable);
         return ResponseEntity.ok(agents);
@@ -254,8 +301,10 @@ public class AgentApiController extends BaseController {
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<String> getAgentPolicy(@RequestParam String agentId) throws GeneralSecurityException {
         //return agentService.getPolicyYamlForAgent(agentId); // returns YAML string
-        var agent = cryptoService.decrypt(agentId);
-        var operatingUser = userService.getUserWithDetails(agent);
+        var aid = URLDecoder.decode(agentId, StandardCharsets.UTF_8);
+        var agent = cryptoService.decrypt(aid);
+        var operatingUser = userService.getUserByUserid(agent);
+        log.info("Received policy request from agent: {} {} {} {}",agent, aid, agentId, operatingUser);
         var policy = atplPolicyService.getPolicyYaml(operatingUser);
         return ResponseEntity.of(policy);
     }
@@ -264,8 +313,9 @@ public class AgentApiController extends BaseController {
     @PostMapping("/policy/update")
     public ResponseEntity<Void> updatePolicy(@RequestParam String agentId, @RequestBody String newPolicy)
         throws GeneralSecurityException, JsonProcessingException {
-        var agent = cryptoService.decrypt(agentId);
-        var operatingUser = userService.getUserWithDetails(agent);
+        var aid = URLDecoder.decode(agentId, StandardCharsets.UTF_8);
+        var agent = cryptoService.decrypt(aid);
+        var operatingUser = userService.getUserByUserid(agent);
         atplPolicyService.createPolicy(operatingUser, newPolicy);
 
         //agentService.updatePolicy(agentId, newPolicy);  // Save it to DB, or file, or Kubernetes configmap etc
@@ -278,6 +328,39 @@ public class AgentApiController extends BaseController {
         //return agentService.getPolicyYamlForAgent(agentId); // returns YAML string
 
         return ResponseEntity.ok( agentService.getCommunications(sourceAgent, targetAgent) );
+    }
+
+    @PostMapping("/ping")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<?> ping(@RequestParam String sourceAgent,
+                                                      @RequestParam String agentId) throws GeneralSecurityException {
+        //return agentService.getPolicyYamlForAgent(agentId); // returns YAML string
+
+        var aid = URLDecoder.decode(agentId, StandardCharsets.UTF_8);
+        var agent = cryptoService.decrypt(aid);
+        var operatingUser = userService.getUserByUserid(agent);
+        agentService.ping(operatingUser);
+
+
+        return ResponseEntity.ok( agentId );
+    }
+
+    @GetMapping("/ping")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<?> getPing(@RequestParam String sourceAgent,
+                                  @RequestParam String agentId) throws GeneralSecurityException {
+        //return agentService.getPolicyYamlForAgent(agentId); // returns YAML string
+
+        var aid = URLDecoder.decode(agentId, StandardCharsets.UTF_8);
+        var agent = cryptoService.decrypt(aid);
+        var operatingUser = userService.getUserByUserid(agent);
+        var ping = agentService.getPing(operatingUser);
+        if (ping.isPresent())
+        {
+            return ResponseEntity.ok( ping.get());
+        } else {
+            return ResponseEntity.status(HttpStatus.SC_NOT_FOUND).body("Ping not found");
+        }
     }
 
 }

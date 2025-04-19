@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @Slf4j
 @Controller
-@RequestMapping("/sso/v1/ssh/servers")
+@RequestMapping("/sso/v1/enclaves/hosts")
 public class HostController extends BaseController {
 
     final HostGroupService hostGroupService;
@@ -192,7 +192,7 @@ public class HostController extends BaseController {
         var user = getOperatingUser(request, response);
 
         if (myConnectedSystem == null || !myConnectedSystem.getUser().getId().equals(user.getId())) {
-            return "redirect:/sso/v1/ssh/servers/list";
+            return "redirect:/sso/v1/enclaves/hosts/list";
         }
 
         this.connectedSystem = myConnectedSystem;
@@ -221,7 +221,7 @@ public class HostController extends BaseController {
 
         if (myConnectedSystem == null ||
             !myConnectedSystem.getUser().getId().equals(user.getId())) {
-            return "redirect:/sso/v1/ssh/servers/list";
+            return "redirect:/sso/v1/enclaves/hosts/list";
         }
 
         this.connectedSystem = myConnectedSystem;

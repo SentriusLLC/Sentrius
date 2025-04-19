@@ -3,6 +3,7 @@ package io.sentrius.sso.core.repository;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import io.sentrius.sso.core.model.security.IdentityType;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -24,10 +25,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.authorizationType")
     List<User> findAllWithAuthorizationType();
 
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.authorizationType WHERE u.identityType = :identityType")
+    List<User> findAllWithAuthorizationType(@Param("identityType") IdentityType identityType);
+
     @Query("SELECT COUNT(u) > 0 FROM User u JOIN u.hostGroups hg WHERE u.id = :userId AND hg.id IN :hostGroupIds")
     boolean isAssignedToHostGroups(@Param("userId") Long userId, @Param("hostGroupIds") List<Long> hostGroupIds);
 
     User getByUsername(String userIdStr);
 
     User getByUserId(String userIdStr);
+
+    Optional<User> findByUserId(String userId);
 }

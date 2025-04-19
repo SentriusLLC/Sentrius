@@ -31,7 +31,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -41,7 +40,6 @@ import org.springframework.http.HttpStatus;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 
 @Aspect
@@ -102,7 +100,7 @@ public class AccessControlAspect {
                         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Registration Required");
                     }
                     var username = keycloakService.extractUsername(compactJwt);
-                    operatingUser = userService.getUserWithDetails(username);
+                    operatingUser = userService.getUserByUsername(username);
                 }
                 if (operatingUser.getIdentityType() == IdentityType.NON_PERSON_ENTITY ) {
 

@@ -17,6 +17,8 @@ public class UserDTO {
     public String name;
     public String emailAddress;
     public UserTypeDTO authorizationType;
+    public String identityType;
+    public String lastSeen;
 
     public String team;
     public String password;

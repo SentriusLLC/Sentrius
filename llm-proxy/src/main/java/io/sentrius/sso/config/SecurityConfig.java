@@ -82,7 +82,7 @@ public class SecurityConfig {
 
             log.info("Extracted User Info: userId={}, username={}, email={}", userId, username, email);
 
-            User user = userService.getUserWithDetails(username);
+            User user = userService.getUserByUsername(username);
             if (user == null) {
                 var type = userService.getUserType(
                     UserType.createUnknownUser());

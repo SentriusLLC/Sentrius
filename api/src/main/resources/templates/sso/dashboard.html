@@ -291,14 +291,14 @@
                 var id = encodeURIComponent(terminal.hostConnection);
                 return `
             <div style="width: 100%;">
-                <a href="/sso/v1/ssh/servers/attach?sessionId=${id}">
+                <a href="/sso/v1/enclaves/hosts/attach?sessionId=${id}">
                     <table style="width: 100%; border-collapse: collapse; text-align: center; margin: 10px 0;">
                         <tr>
                             <td style="border: none; padding: 10px; background-color: #1b1f23;">
                                 <i class="fas fa-terminal"></i>
                             </td>
                             <td style="border: none; padding: 10px;">
-                                <a href="/sso/v1/ssh/servers/attach?sessionId=${id}" style="font-weight: bold; font-size: 1.2em; color: #FFFFFF; text-decoration: none;">
+                                <a href="/sso/v1/enclaves/hosts/attach?sessionId=${id}" style="font-weight: bold; font-size: 1.2em; color: #FFFFFF; text-decoration: none;">
                                     Terminal: ${terminal.displayName}
                                 </a>
                             </td>
@@ -382,9 +382,9 @@
                             <div class="card-body">
                                 <!-- Buttons -->
                                 <div class="mb-4 d-flex justify-content-center gap-2">
-                                    <a href="/api/v1/ssh/servers/shutdown" class="btn btn-danger">Kill Sessions</a>
+                                    <a href="/api/v1/enclaves/hosts/shutdown" class="btn btn-danger">Kill Sessions</a>
                                     <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#hostFormModal">Add Hosts</a>
-                                    <a href="/sso/v1/ssh/servers/list" class="btn btn-primary">Open Session</a>
+                                    <a href="/sso/v1/enclaves/hosts/list" class="btn btn-primary">Open Session</a>
                                 </div>
                             </div>
                         </div>
@@ -441,7 +441,7 @@
                         </div>
                     </div>
                     <hr class="my-4">
-                    <h3>Terminal Stats</h3>
+                    <h3>Host Stats</h3>
                     <div id="suggestion-section" class="d-flex flex-column gap-4">
                         <!-- First Row -->
                         <div class="d-flex justify-content-between gap-4 flex-wrap">
@@ -474,7 +474,7 @@
 
                             <div class="card small-card" style="max-width: 400px;">
                                 <div class="card-header">
-                                    <h5 class="card-title">Terminal Activity</h5>
+                                    <h5 class="card-title">Host Activity</h5>
                                 </div>
                                 <div class="card-content">
                                     <canvas id="outputSizeChart" width="400" height="200" style="width: 100%; height:

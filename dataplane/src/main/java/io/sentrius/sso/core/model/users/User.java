@@ -97,7 +97,7 @@ public class User extends PrincipalEntity {
 
     public  UserDTO toDto(){
         var builder = UserDTO.builder();
-        builder.id(getId()).username(username).userId(userId).name(name).password(password).emailAddress(emailAddress).authorizationType(authorizationType.toDTO()).team(team);
+        builder.id(getId()).username(username).userId(userId).name(name).password(password).emailAddress(emailAddress).authorizationType(authorizationType.toDTO()).team(team).identityType(getIdentityType().toString());
 
         return builder.build();
     }

@@ -13,7 +13,7 @@
                 </a>
             </li>
             <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_SYSTEMS')}">
-                <a href="/sso/v1/ssh/servers/list" class="nav-link px-0 align-middle">
+                <a href="/sso/v1/enclaves/hosts/list" class="nav-link px-0 align-middle">
                     <i class="fas fa-server"></i> <span class="ms-1 d-none d-sm-inline">SSH Servers</span>
                 </a>
             </li>
@@ -33,7 +33,7 @@
                 </a>
             </li>
             <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_SYSTEMS')}">
-                <a href="/sso/v1/ssh/servers/list" class="nav-link px-0 align-middle">
+                <a href="/sso/v1/enclaves/hosts/list" class="nav-link px-0 align-middle">
                     <i class="fas fa-network-wired"></i> <span class="ms-1 d-none d-sm-inline">Host Enclaves</span>
                 </a>
             </li>
@@ -48,9 +48,9 @@
                     <i class="fa-solid fa-ticket"></i> <span class="ms-1 d-none d-sm-inline">System Integrations</span>
                 </a>
             </li>
-            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
-                <a href="/sso/v1/agent/list" class="nav-link px-0 align-middle">
-                    <i class="fa-solid fa-pager"></i> <span class="ms-1 d-none d-sm-inline">Agent Management</span>
+            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_USERS')}">
+                <a href="/sso/v1/users/list" class="nav-link px-0 align-middle">
+                    <i class="fa-solid fa-user"></i> <span class="ms-1 d-none d-sm-inline">Manage Agent/Users</span>
                 </a>
             </li>
         </ul>

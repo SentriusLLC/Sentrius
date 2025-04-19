@@ -24,7 +24,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 
         // Example: Adding custom data to the session
 
-        var user  = userService.getUserWithDetails(authentication.getName());
+        var user  = userService.getUserByUsername(authentication.getName());
         if (null != user) {
             session.setAttribute(UserService.USER_ID_CLAIM, user.getId());
         }

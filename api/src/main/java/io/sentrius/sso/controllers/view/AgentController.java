@@ -1,5 +1,7 @@
 package io.sentrius.sso.controllers.view;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
@@ -51,7 +53,9 @@ public class AgentController extends BaseController {
     @GetMapping("/connections")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public String listConnections(Model m, @RequestParam("agentId") String agentId) throws GeneralSecurityException {
-        var decrypted = cryptoService.decrypt(agentId);
+        var aid = URLDecoder.decode(agentId, StandardCharsets.UTF_8);
+        log.info("Received policy request from agent: {} {} ",aid, agentId);
+        var decrypted = cryptoService.decrypt(aid);
         m.addAttribute("agentId",agentId);
         return "sso/agents/agent_comms";
     }
