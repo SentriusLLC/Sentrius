@@ -101,7 +101,8 @@ public class UserApiController extends BaseController {
         users.forEach(user -> {
             if (user.getIdentityType().equalsIgnoreCase("non_person_entity")) {
                 try {
-                    var heartbeat = agentService.getHeartbeat(user.getUsername());
+                    var userid = cryptoService.decrypt(user.getUserId());
+                    var heartbeat = agentService.getHeartbeat(userid);
                     user.setLastSeen(heartbeat.getLastHeartbeat().toString());
                 }catch(Exception e) {
                     user.setLastSeen("NEVER");
@@ -128,7 +129,6 @@ public class UserApiController extends BaseController {
             node.put("status","User successfully added.");
             return ResponseEntity.ok(node);
         } catch (Exception e) {
-            e.printStackTrace();
             node.put("status","Error adding user");
             return ResponseEntity.internalServerError().body(node);
         }

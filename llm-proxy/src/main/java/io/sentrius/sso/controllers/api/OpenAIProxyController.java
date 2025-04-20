@@ -27,6 +27,7 @@ import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.genai.GenerativeAPI;
 import io.sentrius.sso.genai.Message;
+
 import io.sentrius.sso.genai.model.ChatRequest;
 import io.sentrius.sso.genai.model.endpoints.RawConversationRequest;
 import io.sentrius.sso.integrations.exceptions.HttpException;
@@ -35,6 +36,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -116,6 +120,11 @@ public class OpenAIProxyController extends BaseController {
             log.info("no integration");
             return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("No OpenAI integration found");
         }
+        OpenAiApi openAiApi = OpenAiApi.builder()
+            .apiKey(openAiToken.getConnectionInfo())
+            .build();
+        ChatClient client = ChatClient.create(OpenAiChatModel.builder().openAiApi(openAiApi).build());
+
         ExternalIntegrationDTO externalIntegrationDTO = null;
         try {
             externalIntegrationDTO = JsonUtil.MAPPER.readValue(openAiToken.getConnectionInfo(),

@@ -13,6 +13,7 @@ import io.sentrius.sso.config.ApiPaths;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
 import io.sentrius.sso.core.model.chat.AgentCommunication;
 import io.sentrius.sso.core.model.security.IdentityType;
 import io.sentrius.sso.core.model.security.UserType;
@@ -40,7 +41,6 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -85,15 +85,14 @@ public class AgentApiController extends BaseController {
         return auditService.createSession(username, ipAddress);
     }
 
-    @PutMapping("/heartbeat")
+    @PostMapping("/heartbeat")
     // no LimitAccess
     public ResponseEntity<?> heartbeat(
         @RequestHeader("Authorization") String token,
-        @RequestParam("name") String name,
-        @RequestParam("status") String status,
+        @RequestBody AgentHeartbeatDTO status,
         HttpServletRequest request, HttpServletResponse response) throws SQLException, GeneralSecurityException {
 
-        if (name == null || name.isEmpty()) {
+        if (status.getName() == null || status.getName().isEmpty()) {
             return ResponseEntity.status(HttpStatus.SC_BAD_REQUEST).body("Agent name is empty. We need to know what " +
                 "to call you!");
         }
@@ -115,11 +114,11 @@ public class AgentApiController extends BaseController {
             operatingUser = userService.getUserByUsername(username);
         }
         log.info("Received heartbeat from agent: {} {}", agentId, operatingUser);
-        if (status == null || status.isEmpty()) {
+        if (status.getStatus() == null || status.getStatus().isEmpty()) {
             log.warn("Heartbeat status is empty");
             return ResponseEntity.status(HttpStatus.SC_BAD_REQUEST).body("Heartbeat status is empty");
         }
-        agentService.recordHeartbeat(operatingUser.getUsername(),name, status);
+        agentService.recordHeartbeat(operatingUser.getUserId(),status.getName(), status);
         log.info("Heartbeat status recorded for agent: {} {}", agentId, status);
         return ResponseEntity.ok(Map.of("status", "success"));
     }
@@ -332,7 +331,7 @@ public class AgentApiController extends BaseController {
 
     @PostMapping("/ping")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
-    public ResponseEntity<?> ping(@RequestParam String sourceAgent,
+    public ResponseEntity<?> ping(
                                                       @RequestParam String agentId) throws GeneralSecurityException {
         //return agentService.getPolicyYamlForAgent(agentId); // returns YAML string
 
@@ -347,7 +346,7 @@ public class AgentApiController extends BaseController {
 
     @GetMapping("/ping")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
-    public ResponseEntity<?> getPing(@RequestParam String sourceAgent,
+    public ResponseEntity<?> getPing(
                                   @RequestParam String agentId) throws GeneralSecurityException {
         //return agentService.getPolicyYamlForAgent(agentId); // returns YAML string
 

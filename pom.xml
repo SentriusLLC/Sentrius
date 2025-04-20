@@ -9,6 +9,7 @@
   <modules>
     <module>core</module>
     <module>dataplane</module>
+    <module>llm-dataplane</module>
     <module>api</module>
     <module>llm-proxy</module>
     <module>analytics</module>
@@ -45,6 +46,7 @@
     <spring-boot-starter-test.version>3.4.4</spring-boot-starter-test.version>
     <h2.version>2.3.232</h2.version>
     <flyway-postgres.version>11.6.0</flyway-postgres.version>
+    <spring-ai-version>1.0.0-M7</spring-ai-version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -328,6 +330,14 @@
         <scope>import</scope>
       </dependency>
 
+
+        <dependency>
+          <groupId>org.springframework.ai</groupId>
+          <artifactId>spring-ai-bom</artifactId>
+          <version>${spring-ai-version}</version>
+          <type>pom</type>
+          <scope>import</scope>
+        </dependency>
     </dependencies>
   </dependencyManagement>
 

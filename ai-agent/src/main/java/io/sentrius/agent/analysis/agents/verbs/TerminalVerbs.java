@@ -99,9 +99,10 @@ public class TerminalVerbs {
         }
     }
 
-    @Verb(name = "kill_session", description = "Kills a terminal session.", requiresTokenManagement = true,
+    @Verb(name = "kill_session_with_assessment", description = "Kills a terminal session using a terminal assessment.",
+        requiresTokenManagement = true,
         outputInterpreter = TerminalOutputInterpreter.class, inputInterpreter = ObjectListInterpreter.class)
-    public List<ObjectNode> killTerminalSession(AgentExecution execution, List<Object> dtos) {
+    public List<ObjectNode> killTerminalSessionWithTerminalAssessment(AgentExecution execution, List<Object> dtos) {
         try {
             List<ObjectNode> responses = new ArrayList<>();
             log.info("Terminal list response: {}", dtos);
@@ -154,4 +155,63 @@ public class TerminalVerbs {
             throw new RuntimeException("Failed to retrieve terminal list", e);
         }
     }
+
+    @Verb(name = "kill_session_id" , description = "Kills a terminal session by session id.",
+        requiresTokenManagement = true,
+        outputInterpreter = TerminalOutputInterpreter.class, inputInterpreter = ObjectListInterpreter.class)
+    public List<ObjectNode> killTerminalBySessionId(AgentExecution execution, List<Object> dtos) {
+        try {
+            List<ObjectNode> responses = new ArrayList<>();
+            log.info("Terminal list response: {}", dtos);
+            for (Object dto : dtos) {
+                // submit the kill
+                ObjectNode node = JsonUtil.MAPPER.readValue(dto.toString(), ObjectNode.class);
+                ArrayNode assessments = node.get("assessments").deepCopy();
+                for(int i = 0; i < assessments.size(); i++) {
+                    var assessment = assessments.get(i);
+                    var risk = assessment.get("risk");
+                    var description = assessment.get("description");
+                    if (null != risk && null != description) {
+                        switch(risk.asText()) {
+                            case "low":
+                                // skip and do nothing
+                                continue;
+                            case "medium":
+                            case "high":
+                                // kill the session
+                                log.info("Killing terminal session: {}", assessment.get("sessionId").asText());
+                                break;
+                            default:
+                                throw new RuntimeException("Unknown risk level: " + risk.asText());
+                        }
+                        try {
+                            var response = zeroTrustClientService.callGetOnApi(
+                                execution, "/ssh/terminal/kill",
+                                Maps.immutableEntry("sessionId", List.of(assessment.get("sessionId").asText()))
+                            );
+                            if (response != null) {
+                                // Successfully retrieved logs
+                                log.info("Terminal output response: {}", response);
+                                var obj = JsonUtil.MAPPER.createObjectNode();
+                                obj.put("id", assessment.get("hostConnection").asText());
+                                obj.put("terminalOutput", response);
+                                responses.add(obj);
+                            }
+                        }catch (ZtatException e) {
+                            var ztatRequest = e.getZtatRequestId();
+                            agentVerbs.justifyAgent(execution, ztatRequest, description.asText());
+                        }
+                    }
+                }
+
+                log.info("Terminal output response: {}", dto);
+
+            }
+            return responses;
+        } catch (Exception | ZtatException e) {
+            throw new RuntimeException("Failed to retrieve terminal list", e);
+        }
+    }
+
+
 }

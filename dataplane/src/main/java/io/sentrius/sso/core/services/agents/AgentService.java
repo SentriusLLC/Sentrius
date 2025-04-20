@@ -13,6 +13,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.sentrius.sso.core.dto.AgentDTO;
+import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
 import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.dto.UserTypeDTO;
 import io.sentrius.sso.core.dto.ztat.AgentExecution;
@@ -26,9 +27,14 @@ import io.sentrius.sso.core.repository.AgentHeartbeatRepository;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.security.CryptoService;
+import io.sentrius.sso.core.services.security.KeycloakService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -44,36 +50,42 @@ public class AgentService {
     private final ATPLPolicyService policyService;
     private final CryptoService cryptoService;
 
+    private final RestTemplate restTemplate = new RestTemplate();
+
     private final Cache<String, AgentStatus> pingCache =
         Caffeine.newBuilder()
             .expireAfterWrite(5, TimeUnit.MINUTES)
             .build();
+    private final KeycloakService keycloakService;
 
 
     public AgentService(
         AgentCommunicationRepository agentCommunicationRepository, AgentHeartbeatRepository repository, UserService userService, ATPLPolicyService policyService,
-        CryptoService cryptoService
+        CryptoService cryptoService,
+        KeycloakService keycloakService
     ) {
         this.agentCommunicationRepository = agentCommunicationRepository;
         this.repository = repository;
         this.userService = userService;
         this.policyService = policyService;
         this.cryptoService = cryptoService;
+        this.keycloakService = keycloakService;
     }
 
-    public void recordHeartbeat(String agentId, String name, String status) {
+    public void recordHeartbeat(String agentId, String name, AgentHeartbeatDTO heartbeatDTO) {
         AgentHeartbeat heartbeat = repository.findByAgentId(agentId)
             .orElse(new AgentHeartbeat());
         heartbeat.setAgentId(agentId);
         heartbeat.setLastHeartbeat(LocalDateTime.now());
         heartbeat.setAgentName(name);
-        heartbeat.setStatus(status);
+        heartbeat.setAgentUrl(heartbeatDTO.getAgentUrl());
+        heartbeat.setStatus(heartbeatDTO.getStatus());
         repository.save(heartbeat);
     }
 
     public AgentHeartbeat getHeartbeat(String agentId) {
         return repository.findByAgentId(agentId)
-            .orElseThrow(() -> new RuntimeException("Agent not found"));
+            .orElseThrow(() -> new RuntimeException("Agent " + agentId + " not found"));
     }
 
 
@@ -159,6 +171,7 @@ public class AgentService {
     @Async
     public void ping(User user) {
         AgentStatus status = pingCache.getIfPresent(user.getUserId());
+        log.info("Ping user {}: {}", user.getUserId(), status);
         if (status == null) {
             var heartbeat = getHeartbeat(user.getUserId());
             var url = heartbeat.getAgentUrl();
@@ -166,11 +179,21 @@ public class AgentService {
                 throw new RuntimeException("Agent URL not found");
             }
 
-
+            log.info("Ping URL: {}",  url);
             if (url.startsWith("http")) {
-                RestTemplate restTemplate = new RestTemplate();
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+                headers.setBearerAuth(keycloakService.getJwtToken()); // <- your JWT or access token
+                HttpEntity<Void> request = new HttpEntity<>(headers);
                 try {
-                    ResponseEntity<AgentStatus> response = restTemplate.getForEntity(url, AgentStatus.class);
+                    if (url.endsWith("/")) {
+                        url = url.substring(0, url.length() - 1);
+                    }
+
+                    url = url + "/api/v1/agent/ping";
+                    ResponseEntity<AgentStatus> response = restTemplate.exchange(url,
+                        HttpMethod.GET, request, AgentStatus.class);
                     if (response.getStatusCode().is2xxSuccessful() && null != response.getBody()) {
                         log.info("Ping successful for URL: {}", url);
                         pingCache.put(user.getUserId(), response.getBody());
@@ -178,6 +201,7 @@ public class AgentService {
                         log.warn("Ping failed for URL: {} with status code: {}", url, response.getStatusCode());
                     }
                 } catch (Exception e) {
+                    pingCache.invalidate(user.getUserId());
                     log.error("Error while pinging URL: {}", url, e);
                 }
             }

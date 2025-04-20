@@ -48,6 +48,7 @@ public class AgentVerbs {
     final VerbRegistry verbRegistry;
     final AgentClientService agentClientService;
 
+
     @Value("${agent.ai.config}")
     private String agentConfigFile;
 

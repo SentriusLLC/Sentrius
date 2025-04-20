@@ -27,8 +27,13 @@ public class KeycloakService {
 
 
     public String getKeycloakToken() {
-        log.info("Getting Keycloak token");
+        log.info("Getting Keycloak token {}", keycloak.getKeycloak().tokenManager().getAccessTokenString());
         return keycloak.getKeycloak().tokenManager().getAccessTokenString();
+    }
+
+    public String getJwtToken() {
+
+        return keycloak.getKeycloak().tokenManager().getAccessToken().getToken();
     }
 
     public Map<String, List<String>> getUserAttributes(String userId) {

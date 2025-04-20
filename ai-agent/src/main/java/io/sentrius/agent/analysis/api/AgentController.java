@@ -18,7 +18,7 @@ public class AgentController {
 
     KeycloakService keycloakService;
 
-    @GetMapping("/status")
+    @GetMapping("/ping")
     public ResponseEntity<AgentStatus> getStatus() {
         String hostName = "unknown";
         try {
@@ -43,6 +43,7 @@ public class AgentController {
             .freeMemory(runtime.freeMemory())
             .build();
 
+        log.info("Ping status: {}", status);
         return ResponseEntity.ok(status);
     }
 

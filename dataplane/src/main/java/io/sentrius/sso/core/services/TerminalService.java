@@ -43,6 +43,7 @@ import io.sentrius.sso.core.model.users.UserPublicKey;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.repository.ApplicationKeyRepository;
 import io.sentrius.sso.core.repository.SystemRepository;
+import io.sentrius.sso.core.security.PublicKeyManager;
 import io.sentrius.sso.core.services.automation.AutomationService;
 import io.sentrius.sso.core.services.security.KeyStoreService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
@@ -508,60 +509,42 @@ public class TerminalService {
             channel.setInputStream(null);
 
             InputStream in = channel.getInputStream();
-            InputStreamReader is = new InputStreamReader(in);
-            BufferedReader reader = new BufferedReader(is);
-
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
             channel.connect(CHANNEL_TIMEOUT);
 
-            String appPubKey = appPublicKey.replace("\n", "").trim();
             StringBuilder existingKeysBuilder = new StringBuilder();
-
             String currentKey;
             while ((currentKey = reader.readLine()) != null) {
                 existingKeysBuilder.append(currentKey).append("\n");
             }
             String existingKeys = existingKeysBuilder.toString();
-            existingKeys = existingKeys.replaceAll("\\n$", "");
             reader.close();
-            // disconnect
             channel.disconnect();
 
-            StringBuilder newKeysBuilder = new StringBuilder();
+            PublicKeyManager keyManager = new PublicKeyManager();
+            keyManager.loadFromExisting(existingKeys);
+
             if (systemOptions.getKeyManagementEnabled()) {
-                // get keys assigned to system
-                List<UserPublicKey> assignedKeys = null == user ? userPublicKeyService.getPublicKeysForHostGroup(
-                    enclave.getId()) : userPublicKeyService.getPublicKeysForHostGroup(
-                    user.getId(),
-                    enclave.getId()
-                );
+                List<UserPublicKey> assignedKeys = (user == null)
+                    ? userPublicKeyService.getPublicKeysForHostGroup(enclave.getId())
+                    : userPublicKeyService.getPublicKeysForHostGroup(user.getId(), enclave.getId());
+
                 for (UserPublicKey pkey : assignedKeys) {
-                    var key = pkey.getPublicKey();
-                    newKeysBuilder.append(key.replace("\n", "").trim()).append("\n");
-                }
-                newKeysBuilder.append(existingKeys);
-                newKeysBuilder.append(appPubKey);
-            } else {
-                if (existingKeys.indexOf(appPubKey) < 0) {
-                    newKeysBuilder.append(existingKeys).append("\n").append(appPubKey);
-                } else {
-                    newKeysBuilder.append(existingKeys);
+                    keyManager.addKey(pkey.getPublicKey());
                 }
             }
+            keyManager.addKey(appPublicKey);
 
-            String newKeys = newKeysBuilder.toString();
-            log.info("Update Public Keys  ==> " + newKeys);
-            if (!newKeys.equals(existingKeys)) {
-
+            String newKeys = keyManager.buildAuthorizedKeysFile();
+            if (keyManager.isChangedComparedTo(existingKeys)) {
                 channel = session.openChannel("exec");
-                ((ChannelExec) channel)
-                    .setCommand(
-                        "echo '" + newKeys + "' > " + authorizedKeys + "; chmod 600 " + authorizedKeys);
+                ((ChannelExec) channel).setCommand("echo '" + newKeys + "' > " + authorizedKeys + "; chmod 600 " + authorizedKeys);
                 ((ChannelExec) channel).setErrStream(System.err);
                 channel.setInputStream(null);
                 channel.connect(CHANNEL_TIMEOUT);
-                // disconnect
                 channel.disconnect();
             }
+
 
         } catch (JSchException | IOException ex) {
             log.error(ex.toString(), ex);

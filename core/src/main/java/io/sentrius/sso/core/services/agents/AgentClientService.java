@@ -2,10 +2,12 @@ package io.sentrius.sso.core.services.agents;
 
 import java.util.List;
 import com.google.common.collect.Maps;
+import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -14,6 +16,10 @@ import org.springframework.web.client.RestTemplate;
 public class AgentClientService {
 
     final ZeroTrustClientService zeroTrustClientService;
+
+
+    @Value("${agent.callback.url:http://localhost:8080}")
+    private String callbackUrl;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -30,9 +36,9 @@ public class AgentClientService {
 
         String url =  "/agent/heartbeat";
 
-        return zeroTrustClientService.callPutOnApi(token, url, Maps.immutableEntry("status", List.of("heartbeat")),
-            Maps.immutableEntry(
-            "name", List.of(name)));
+        AgentHeartbeatDTO heartbeatDTO = AgentHeartbeatDTO.builder().name(name).status("heartbeat").agentUrl(callbackUrl).build();
+
+        return zeroTrustClientService.callPostOnApi(token, url, heartbeatDTO);
 
     }
 
