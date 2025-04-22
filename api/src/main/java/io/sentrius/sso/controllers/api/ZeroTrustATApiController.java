@@ -5,12 +5,14 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.JITTrackerDTO;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
 import io.sentrius.sso.core.services.ErrorOutputService;
@@ -66,6 +68,7 @@ public class ZeroTrustATApiController extends BaseController {
     }
 
     @GetMapping("/{type}/{status}")
+    @LimitAccess(ztatAccess = {ZeroTrustAccessTokenEnum.CAN_APPROVE_ZTATS})
     public String manageRequest(HttpServletRequest request, HttpServletResponse response,
                               @PathVariable("type") String type,
                               @PathVariable("status") String status,
@@ -208,7 +211,7 @@ public class ZeroTrustATApiController extends BaseController {
                     }
                 case "ops":
                     var opsJit = ztatService.getOpsJITRequest(ztatId);
-                    if (opsJit.getUser().getId() == operatingUser.getId()){
+                    if (Objects.equals(opsJit.getUser().getId(), operatingUser.getId())){
                         if ( ztatService.isApproved(opsJit) ) {
                             return ResponseEntity.ok(Map.of("status", "approved", "ztat_token", opsJit.getApprovals().get(0).getToken()));
                         }

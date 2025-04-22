@@ -22,7 +22,7 @@ import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.genai.ChatConversation;
 import io.sentrius.sso.genai.GenerativeAPI;
 import io.sentrius.sso.genai.GeneratorConfiguration;
-import io.sentrius.sso.genai.model.ChatResponse;
+import io.sentrius.sso.genai.model.LLMResponse;
 import io.sentrius.sso.genai.model.Conversation;
 import io.sentrius.sso.core.integrations.external.ExternalIntegrationDTO;
 import io.sentrius.sso.protobuf.Session;
@@ -121,15 +121,15 @@ public class ChatListenerService {
                                       Session.ChatMessage sshData) {
     }
 
-    private ChatResponse toChatMessage(Session.ChatMessage sshData) {
-        return ChatResponse.builder().role("user").content(sshData.getMessage()).build();
+    private LLMResponse toChatMessage(Session.ChatMessage sshData) {
+        return LLMResponse.builder().role("user").content(sshData.getMessage()).build();
     }
 
-    private ChatResponse toChatMessage(ChatLog chatLog) {
-        return ChatResponse.builder().role(chatLog.getSender().equals("agent") ? "system" : "user").content(chatLog.getMessage()).build();
+    private LLMResponse toChatMessage(ChatLog chatLog) {
+        return LLMResponse.builder().role(chatLog.getSender().equals("agent") ? "system" : "user").content(chatLog.getMessage()).build();
     }
 
-    private List<ChatResponse> toChatMessages(List<ChatLog> chatLogs) {
+    private List<LLMResponse> toChatMessages(List<ChatLog> chatLogs) {
         return chatLogs.stream().map(this::toChatMessage).collect(Collectors.toList());
     }
 

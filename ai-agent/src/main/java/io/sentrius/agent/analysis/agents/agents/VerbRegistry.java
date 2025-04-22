@@ -120,7 +120,7 @@ public class VerbRegistry {
                     Throwable targetException = e.getTargetException();
                     if (targetException instanceof ZtatException ztatEx) {
                         log.info("Mechanisms {}" , ztatEx.getMechanisms());
-                        var endpoint = zeroTrustClientService.createEndPoingRequest("prompt_agent`", ztatEx.getEndpoint());
+                        var endpoint = zeroTrustClientService.createEndPointRequest("prompt_agent`", ztatEx.getEndpoint());
                         ZtatRequestDTO ztatRequestDTO = ZtatRequestDTO.builder()
                             .user(agentExecution.getUser())
                             .command(endpoint.toString())

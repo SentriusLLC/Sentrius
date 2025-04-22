@@ -1,6 +1,7 @@
 package io.sentrius.sso.core.dto.ztat;
 import java.util.List;
 import io.sentrius.sso.core.dto.UserDTO;
+import io.sentrius.sso.genai.Message;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,6 +17,6 @@ import lombok.NoArgsConstructor;
 public class AtatRequest {
     // don't release any sensitive information
     private String requestId;
-    private List<String> messages;
+    private List<Message> messages;
     private String requestedAction;
 }

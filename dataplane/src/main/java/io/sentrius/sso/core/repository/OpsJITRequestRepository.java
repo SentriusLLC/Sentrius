@@ -29,7 +29,15 @@ public interface OpsJITRequestRepository extends JpaRepository<OpsZeroTrustAcess
         "WHERE a.approved = false " +
         "and a.ztatRequest.id = j.id " +
         "AND (:userId IS NULL OR j.user.id = :userId)")
-    List<OpsZeroTrustAcessTokenRequest> findAllWithUnapprovedRequests(@Param("userId") Long userId);
+    List<OpsZeroTrustAcessTokenRequest> findAllWithUnapprovedRequests(@Param("user") Long userId);
+
+    @Query("SELECT j FROM OpsZeroTrustAcessTokenRequest j " +
+        "LEFT JOIN FETCH j.ztatReason r " +
+        "LEFT JOIN FETCH j.approvals a " +
+        "WHERE a.approved = false " +
+        "and a.ztatRequest.id = j.id " +
+        "AND (:user IS NULL OR j.user = :user)")
+    List<OpsZeroTrustAcessTokenRequest> findAllWithUnapprovedRequests(@Param("userId") User user);
 
 
     @Query("SELECT j FROM OpsZeroTrustAcessTokenRequest j " +

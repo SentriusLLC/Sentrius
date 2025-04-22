@@ -28,7 +28,7 @@ public class ListInterpreter<T> implements InputInterpreterIfc<List<T>>{
 
     private List<T> interpretList(Map<String, Object> input) {
 
-        var field = input.get("verb.response.map.key");;
+        var field = input.get("verb.response.map.key");
         if (field == null) {
             throw new IllegalArgumentException("Input response does not contain required fields");
         }

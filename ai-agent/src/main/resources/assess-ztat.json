@@ -1,0 +1,7 @@
+[
+  {
+    "requestId": "<id>",
+    "approved": "<true|false>",
+    "questionToUser": "<question to the agent>"
+  }
+]

@@ -20,4 +20,6 @@ public interface AgentCommunicationRepository extends JpaRepository<AgentCommuni
     List<AgentCommunication> findBySourceAgentAndTargetAgent(String sourceAgent, String targetAgent);
 
     List<AgentCommunication> findByCommunicationId(UUID communicationId);
+
+    List<AgentCommunication> findByCommunicationIdAndTargetAgent(UUID communicationId, String targetAgent);
 }

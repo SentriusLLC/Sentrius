@@ -1,5 +1,7 @@
 package io.sentrius.agent.analysis.agents.verbs;
 
+import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -12,15 +14,20 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.common.collect.Maps;
 import io.sentrius.agent.analysis.agents.agents.AgentConfig;
 import io.sentrius.agent.analysis.agents.agents.PromptBuilder;
 import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
+import io.sentrius.agent.analysis.agents.interpreters.AsessmentListInterpreter;
 import io.sentrius.agent.analysis.agents.interpreters.ObjectListInterpreter;
 import io.sentrius.agent.analysis.agents.interpreters.ZtatOutputInterpreter;
+import io.sentrius.agent.analysis.model.Assessment;
+import io.sentrius.agent.analysis.model.ZtatAsessment;
 import io.sentrius.sso.core.dto.JITTrackerDTO;
 import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.AtatRequest;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
+import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.verbs.Verb;
 import io.sentrius.sso.core.services.agents.AgentClientService;
@@ -29,7 +36,7 @@ import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.genai.Message;
 import io.sentrius.sso.genai.Response;
-import io.sentrius.sso.genai.model.ChatRequest;
+import io.sentrius.sso.genai.model.LLMRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -98,7 +105,7 @@ public class AgentVerbs {
 
         messages.add(Message.builder().role("system").content(prompt).build());
 
-        ChatRequest chatRequest = ChatRequest.builder().model("gpt-4o").messages(messages).build();
+        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
         var resp = llmService.askQuestion(execution, chatRequest);
         execution.addMessages( messages );
         Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
@@ -132,22 +139,27 @@ public class AgentVerbs {
      */
     @Verb(name = "justify_operations", description = "Chats with an agent to justify operations.", isAiCallable =
         false, requiresTokenManagement = true)
-    public String justifyAgent(AgentExecution execution, String ztatRequest, String reason) throws ZtatException,
-        IOException {
-        InputStream is = getClass().getClassLoader().getResourceAsStream(agentConfigFile);
-        if (is == null) {
-            throw new RuntimeException("assessor-config.yaml not found on classpath");
-        }
-        AgentConfig config = new ObjectMapper(new YAMLFactory()).readValue(is, AgentConfig.class);
+    public String justifyAgent(AgentExecution execution, ZtatRequestDTO ztatRequest, String reason) throws ZtatException,
+        IOException, InterruptedException {
 
-        log.info("Agent config loaded: {}", config);
-        PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
-        var prompt = promptBuilder.buildPrompt();
-        List<Message> messages = new ArrayList<>();
 
-        messages.add(Message.builder().role("system").content(prompt).build());
 
-        ChatRequest chatRequest = ChatRequest.builder().model("gpt-4o").messages(messages).build();
+            var status = zeroTrustClientService.getTokenStatus(execution, execution.getUser(), ztatRequest.getRequestId());
+            log.info("Status: {} for {} ", status, ztatRequest);
+            if ("approved".equals(status.get("status").asText())) {
+                return status.get("ztat_token").asText();
+            }
+
+            while(!status.equals("approved")) {
+
+                Thread.sleep(5_000);
+
+                status = zeroTrustClientService.getTokenStatus(execution, execution.getUser(), ztatRequest.getRequestId());
+                log.info("Status: {} for {} ", status, ztatRequest);
+                if ("approved".equals(status.get("status").asText())) {
+                    return status.get("ztat_token").asText();
+                }
+            }
 
         return null;
         //   return llmService.askQuestion(chatRequest);
@@ -164,9 +176,10 @@ public class AgentVerbs {
     @Verb(name = "assess_data", returnType = ArrayNode.class, description = "Accepts api server data based on the " +
         "context and seeks" +
         " to perform the assessment by prompting the LLM. Can be used to assess data or request information from users and/or agents.",
+        outputInterpreter = AsessmentListInterpreter.class,
         inputInterpreter =
         ObjectListInterpreter.class, requiresTokenManagement = true)
-    public ArrayNode assessData(AgentExecution execution, List<?> objectList) throws ZtatException, IOException {
+    public List<Assessment> assessData(AgentExecution execution, List<?> objectList) throws ZtatException, IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream(agentConfigFile);
         if (is == null) {
             throw new RuntimeException("assessor-config.yaml not found on classpath");
@@ -175,7 +188,7 @@ public class AgentVerbs {
 
         log.info("Agent config loaded: {}", config);
 
-        var responses = JsonUtil.MAPPER.createArrayNode();
+        List<Assessment> responses = new ArrayList<>();
         log.info("Object list is {}", objectList);
         for (var obj : objectList) {
             List<Message> messages = new ArrayList<>();
@@ -184,7 +197,7 @@ public class AgentVerbs {
             messages.add(Message.builder().role("user").content(obj.toString()).build());
             messages.add(Message.builder().role("system").content(context).build());
 
-            ChatRequest chatRequest = ChatRequest.builder().model("gpt-4o").messages(messages).build();
+            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
             execution.addMessages( messages );
             var resp = llmService.askQuestion(execution, chatRequest);
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
@@ -194,7 +207,10 @@ public class AgentVerbs {
                 if (content.startsWith("```json")) {
                     content = content.substring(7, content.length() - 3);
                 }
-                responses.add(JsonUtil.MAPPER.readTree(content));
+
+
+                responses.add( JsonUtil.MAPPER.readValue(content, Assessment.class) );
+                //responses.add(JsonUtil.MAPPER.readTree(content));
                 log.info("content is {}", content);
             }
             log.info("Object is {}", obj);
@@ -204,7 +220,7 @@ public class AgentVerbs {
 
     @Verb(name = "list_ztat_requests", returnType = ArrayNode.class, description = "Lists zero trust access tokens to" +
         " review. Does not review access token requests.", outputInterpreter = ZtatOutputInterpreter.class, requiresTokenManagement = true )
-    public List<AtatRequest> getWork(TokenDTO token, Map<String,Object> args) throws ZtatException, IOException {
+    public List<AtatRequest> getWork(AgentExecution token, Map<String,Object> args) throws ZtatException, IOException {
         List<AtatRequest> requests = new ArrayList<>();
 
         var atatRequests = agentClientService.getAtatRequests(token);
@@ -214,19 +230,90 @@ public class AgentVerbs {
         for (var dto : dtos) {
             var request = new AtatRequest();
             request.setRequestId(dto.getId().toString());
-            // for each request7
-            /*request.set
-            request.setStatus(dto.getStatus());
-            request.setCreatedAt(dto.getCreatedAt());
-            request.setUpdatedAt(dto.getUpdatedAt());
-            request.setAgentId(dto.getAgentId());
-            requests.add(request);
-            *
-             */
+            // get messages
+            request.setRequestedAction( dto.getSummary());
+
+            var communications = zeroTrustClientService.callGetOnApi(token,"agent/communications/id",
+                Maps.immutableEntry("communicationId", List.of(token.getCommunicationId())));
+            var messages = JsonUtil.MAPPER.readTree(communications);
+            List<Message> communicationMessages = new ArrayList<>();
+            for(JsonNode message : messages) {
+                if (message.has("payload") && message.has("messageType")) {
+                    var type = message.get("messageType").asText();
+                    if (type.equalsIgnoreCase("chat_request")) {
+                        try {
+                            Message msg = JsonUtil.MAPPER.readValue(message.get("payload").asText(), Message.class);
+                            communicationMessages.add(msg);
+                        } catch (JsonProcessingException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
+            }
+            request.setMessages(communicationMessages);
         }
 
 
         return requests;
+    }
+
+    @Verb(name = "assess_ztat_requests", returnType = ArrayNode.class, description = "Analyzes ztats according to the" +
+        " context.",
+        inputInterpreter = ZtatOutputInterpreter.class, requiresTokenManagement = true )
+    public List<ZtatAsessment> analyzeAtatRequests(AgentExecution execution, List<AtatRequest> requests) throws ZtatException,
+        IOException {
+        // set up context
+        InputStream is = getClass().getClassLoader().getResourceAsStream(agentConfigFile);
+        if (is == null) {
+            throw new RuntimeException("assessor-config.yaml not found on classpath");
+
+        }
+
+        InputStream assessZtatStream = getClass().getClassLoader().getResourceAsStream("assess-ztat.json");
+        if (assessZtatStream == null) {
+            throw new RuntimeException("assessor-config.yaml not found on classpath");
+
+        }
+        String assessZtat = new String(assessZtatStream.readAllBytes());
+
+        AgentConfig config = new ObjectMapper(new YAMLFactory()).readValue(is, AgentConfig.class);
+        log.info("Agent config loaded: {}", config);
+        List<ZtatAsessment> responses = new ArrayList<>();
+        for (var request : requests) {
+            List<Message> messages = new ArrayList<>();
+            var context = config.getContext();
+
+            messages.add(Message.builder().role("system").content(context).build());
+            messages.add(Message.builder().role("system").content("Ensure your response adheres to the following " +
+                "json format:" + assessZtat).build());
+            messages.addAll(execution.getMessages());
+            messages.addAll(request.getMessages());
+
+            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
+            var resp = llmService.askQuestion(execution, chatRequest);
+            Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
+            log.info("Response is {}", resp);
+            for (Response.Choice choice : response.getChoices()) {
+                var content = choice.getMessage().getContent();
+                if (content.startsWith("```json")) {
+                    content = content.substring(7, content.length() - 3);
+                }
+                log.info("content is {}", content);
+                var ztat = JsonUtil.MAPPER.readValue(content, ZtatAsessment.class);
+                if (ztat.isApproved()) {
+                    zeroTrustClientService.approveZtat(execution, request.getRequestId());
+                }
+                else {
+                    if (null != ztat.getQuestionToUser() &&
+                        ztat.getQuestionToUser().isEmpty()){
+                        // ask a question of the user
+                    }
+                }
+                responses.add(ztat);
+
+            }
+        }
+        return responses;
     }
 
 }

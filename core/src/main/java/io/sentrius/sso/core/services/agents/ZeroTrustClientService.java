@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.sentrius.sso.core.dto.UserDTO;
+import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.EndpointRequest;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
@@ -117,6 +118,7 @@ public class ZeroTrustClientService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
         headers.set("ztat_token", token.getZtatToken());
+        headers.set("communication_id", token.getCommunicationId());
 
         HttpEntity<T> requestEntity = new HttpEntity<>(headers);
         if (!apiEndpoint.startsWith("/")) {
@@ -147,13 +149,20 @@ public class ZeroTrustClientService {
             }
         } catch (HttpClientErrorException e){
 
-            log.info("Error: {}", e.getResponseBodyAsString());
+            if (e.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
+                // we need to get
+                log.info("Got {}", e.getResponseBodyAsString());
+                throw new ZtatException(e.getResponseBodyAsString(), apiEndpoint);
+
+            } else {
+                log.info("Error: {}", e.getResponseBodyAsString());
+            }
             throw new RuntimeException(e.getResponseBodyAsString());
         }
     }
 
 
-    public EndpointRequest createEndPoingRequest(String name, String ... endpoints) {
+    public EndpointRequest createEndPointRequest(String name, String ... endpoints) {
         return EndpointRequest.builder()
             .name(name)
             .endpoints(List.of(endpoints))
@@ -191,8 +200,14 @@ public class ZeroTrustClientService {
             }
         } catch (HttpClientErrorException e){
 
-            log.info("Error: {}", e.getResponseBodyAsString());
-            throw new ZtatException(e.getResponseBodyAsString(), apiEndpoint);
+            if (e.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
+                // we need to get
+                throw new ZtatException(e.getResponseBodyAsString(), apiEndpoint);
+
+            } else {
+                log.info("Error: {}", e.getResponseBodyAsString());
+            }
+            throw new RuntimeException(e.getResponseBodyAsString());
         }
 
     }
@@ -231,13 +246,19 @@ public class ZeroTrustClientService {
         }
 
         var builder = UriComponentsBuilder.fromHttpUrl(endpoint)
-            .path(apiEndpoint)
-            .queryParam(param.getKey(), param.getValue());
+            .path(apiEndpoint);
+
+        for (String value : param.getValue()){
+            builder.queryParam(param.getKey(), value);
+        }
         for (Map.Entry<String, List<String>> entry : params) {
-            builder.queryParam(entry.getKey(), entry.getValue());
+            for(String value : entry.getValue()) {
+                builder.queryParam(entry.getKey(), value);
+            }
         }
         try{
-            ResponseEntity<String> response = restTemplate.exchange(builder.toUriString(), HttpMethod.GET, requestEntity,
+            ResponseEntity<String> response = restTemplate.exchange(builder.build(true).toUriString(), HttpMethod.GET,
+                requestEntity,
                 String.class);
 
             if (response.getStatusCode() == HttpStatus.OK) {
@@ -251,7 +272,13 @@ public class ZeroTrustClientService {
             }
         } catch (HttpClientErrorException e){
 
-            log.info("Error: {}", e.getResponseBodyAsString());
+            if (e.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
+                // we need to get
+                throw new ZtatException(e.getResponseBodyAsString(), apiEndpoint);
+
+            } else {
+                log.info("Error: {}", e.getResponseBodyAsString());
+            }
             throw new RuntimeException(e.getResponseBodyAsString());
         }
     }
@@ -295,8 +322,14 @@ public class ZeroTrustClientService {
             }
         } catch (HttpClientErrorException e){
 
-            log.info("Error: {}", e.getResponseBodyAsString());
-            throw new ZtatException(e.getResponseBodyAsString(), apiEndpoint);
+            if (e.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
+                // we need to get
+                throw new ZtatException(e.getResponseBodyAsString(), apiEndpoint);
+
+            } else {
+                log.info("Error: {}", e.getResponseBodyAsString());
+            }
+            throw new RuntimeException(e.getResponseBodyAsString());
         }
     }
 
@@ -416,5 +449,30 @@ public class ZeroTrustClientService {
             throw new RuntimeException(e);
         }
         return null;
+    }
+
+    public void approveZtat(AgentExecution execution, String requestId) throws JsonProcessingException {
+        String keycloakJwt = getKeycloakToken();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(keycloakJwt);
+        headers.set("ztat_token", execution.getZtatToken());
+        headers.set("communication_id", execution.getCommunicationId());
+
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+
+        String url = UriComponentsBuilder.fromHttpUrl(agentApiUrl)
+            .path("/api/v1/zerotrust/accesstoken/ops/approve")
+            .queryParam("ztatId", requestId)
+            .toUriString();
+
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, String.class);
+
+        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+            log.info("successfully approved ZTAT: {}", requestId);
+        } else {
+            throw new RuntimeException("Failed to obtain ZTAT: " + response.getStatusCode());
+        }
     }
 }

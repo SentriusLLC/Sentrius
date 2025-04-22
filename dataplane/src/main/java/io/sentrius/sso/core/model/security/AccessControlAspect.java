@@ -16,6 +16,7 @@ import io.sentrius.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
 import io.sentrius.sso.core.model.security.enums.RuleAccessEnum;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
+import io.sentrius.sso.core.model.zt.OpsZeroTrustAcessTokenRequest;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.agents.AgentService;
@@ -25,6 +26,7 @@ import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.trust.ZtatPolicy;
 import io.sentrius.sso.core.utils.AccessUtil;
 import io.sentrius.sso.core.utils.JsonUtil;
+import io.sentrius.sso.core.utils.ZTATUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -81,11 +83,11 @@ public class AccessControlAspect {
 
         boolean canAccess = true;
         LimitAccess accessAnnotation = limitAccess;
-        log.debug("Checking access for {}", endpoint);
+        log.info("Checking access for {}", endpoint);
         try (Scope scope = span.makeCurrent()) {
             var operatingUser = userService.getOperatingUser(getCurrentHttpRequest(), getCurrentHttpResponse(), null);
             if (null != operatingUser) {
-                log.debug("Checking whether {} has access for {}", operatingUser, endpoint);
+                log.info("Checking whether {} has access for {}", operatingUser, endpoint);
             }
             if (accessAnnotation != null) {
                 if (null == operatingUser) {
@@ -175,7 +177,6 @@ public class AccessControlAspect {
                                                 issuers.add(i);
                                         });
                                     node.put("mechanism", issuers);
-
 
                                     throw new ResponseStatusException(
                                         HttpStatus.PRECONDITION_REQUIRED, node.toString());

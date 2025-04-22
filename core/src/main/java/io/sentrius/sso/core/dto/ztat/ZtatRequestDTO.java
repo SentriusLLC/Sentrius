@@ -19,5 +19,6 @@ public class ZtatRequestDTO {
     @Builder.Default
     String justification = "";
     String command;
+    String requestId;
 
 }

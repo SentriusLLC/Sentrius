@@ -9,7 +9,6 @@ io/sentrius/sso/core/model/ProxySession.class
 io/sentrius/sso/core/repository/KnownHostRepository.class
 io/sentrius/sso/core/utils/AuditConfigProvider.class
 io/sentrius/sso/automation/runner/Automota$Builder.class
-io/sentrius/sso/core/services/openai/categorization/CommandTrie.class
 io/sentrius/sso/core/config/TimeChecker.class
 io/sentrius/sso/core/model/metadata/TerminalSessionMetadata$TerminalSessionMetadataBuilder.class
 io/sentrius/sso/core/repository/SessionLogRepository.class
@@ -46,11 +45,9 @@ io/sentrius/sso/core/model/security/AccessControlAspect.class
 io/sentrius/sso/core/model/zt/ZTATRequestBase.class
 io/sentrius/sso/core/model/automation/AutomationExecution$AutomationExecutionBuilder.class
 io/sentrius/sso/core/model/zt/OpsZeroTrustAcessTokenRequest$OpsZeroTrustAcessTokenRequestBuilder.class
-io/sentrius/sso/automation/auditing/rules/OpenAISessionRule.class
 io/sentrius/sso/automation/auditing/AccessTokenAuditor.class
 io/sentrius/sso/core/services/TaskService$1.class
 io/sentrius/sso/core/model/AgentPolicyAssignmentId$AgentPolicyAssignmentIdBuilder.class
-io/sentrius/sso/core/services/openai/OpenAITerminalService.class
 io/sentrius/sso/core/services/auditing/AuditService.class
 io/sentrius/sso/core/model/ProxyHost$ProxyHostBuilder.class
 io/sentrius/sso/core/model/ErrorOutput$ErrorOutputBuilder.class
@@ -141,7 +138,6 @@ io/sentrius/sso/core/model/security/enums/ZeroTrustAccessTokenEnum.class
 io/sentrius/sso/core/repository/TerminalCommandRepository.class
 io/sentrius/sso/core/services/RuleService.class
 io/sentrius/sso/core/utils/ScriptCronTask.class
-io/sentrius/sso/core/services/openai/categorization/CommandCategorizer.class
 io/sentrius/sso/core/model/hostgroup/ProfileRule$ProfileRuleBuilderImpl.class
 io/sentrius/sso/core/model/security/UserType.class
 io/sentrius/sso/core/model/security/zt/JITOptions.class
@@ -258,7 +254,6 @@ io/sentrius/sso/automation/auditing/rules/DeletePrevention.class
 io/sentrius/sso/core/repository/ConfigurationOptionRepository.class
 io/sentrius/sso/core/model/zt/ZTATRequestBase$ZTATRequestBaseBuilder.class
 io/sentrius/sso/core/model/zt/ZeroTrustAccessTokenReason$ZeroTrustAccessTokenReasonBuilder.class
-io/sentrius/sso/core/services/openai/categorization/TrieNode.class
 io/sentrius/sso/core/model/actors/PrincipalEntity$PrincipalEntityBuilder.class
 io/sentrius/sso/core/data/TimeConfig$TimeConfigBuilderImpl.class
 io/sentrius/sso/core/breadcrumbs/BreadcrumbService.class
@@ -276,7 +271,6 @@ io/sentrius/sso/core/model/users/User$UserBuilderImpl.class
 io/sentrius/sso/core/services/ConfigurationService.class
 io/sentrius/sso/core/repository/UserThemeRepository.class
 io/sentrius/sso/core/model/hostgroup/TimeConfigJson$TimeConfigJsonBuilder.class
-io/sentrius/sso/automation/auditing/rules/TwoPartyAIMonitor.class
 io/sentrius/sso/automation/auditing/RuleFactory.class
 io/sentrius/sso/core/services/metadata/TerminalRiskIndicatorService.class
 io/sentrius/sso/core/repository/ChatLogRepository.class
@@ -297,7 +291,6 @@ io/sentrius/sso/core/model/sessions/SessionIdentifier.class
 io/sentrius/sso/core/model/NotificationRecipient.class
 io/sentrius/sso/core/services/UserService$1.class
 io/sentrius/sso/automation/auditing/Recorder.class
-io/sentrius/sso/core/services/openai/OpenAITwoPartyMonitorService.class
 io/sentrius/sso/core/model/ATPLPolicyEntity$ATPLPolicyEntityBuilder.class
 io/sentrius/sso/core/data/auditing/RecordingStudio.class
 io/sentrius/sso/core/model/ApplicationKey.class

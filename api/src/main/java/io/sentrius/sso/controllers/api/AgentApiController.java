@@ -191,7 +191,7 @@ public class AgentApiController extends BaseController {
 
     }
 
-    @PostMapping("/justify")
+    @GetMapping("/justify")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN}, allowedIdentityTypes = {IdentityType.NON_PERSON_ENTITY})
     public ResponseEntity<?> justifyOperations(
         @RequestHeader("Authorization") String token,
@@ -224,10 +224,15 @@ public class AgentApiController extends BaseController {
 
         var ztat = ztatService.getOpsZtatRequest(Long.valueOf(requestId));
 
+        if (null != ztat ){
+            var communications = agentService.getCommunicationsTo(UUID.fromString(communicationId),
+                operatingUser.getUsername());
+            return ResponseEntity.ok(communications);
+        }
         // communicationId should exist
 
 
-        return null;
+        return ResponseEntity.ok("[]");
 
 
     }
@@ -327,6 +332,12 @@ public class AgentApiController extends BaseController {
         //return agentService.getPolicyYamlForAgent(agentId); // returns YAML string
 
         return ResponseEntity.ok( agentService.getCommunications(sourceAgent, targetAgent) );
+    }
+
+    @GetMapping("/communications/id")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<List<AgentCommunication>> getCommunicationsById(@RequestParam("communicationId") String communicationId) throws GeneralSecurityException {
+        return ResponseEntity.ok( agentService.getCommunications(UUID.fromString(communicationId)) );
     }
 
     @PostMapping("/ping")

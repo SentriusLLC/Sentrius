@@ -84,6 +84,7 @@ public class AuditApiController extends BaseController {
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION}, sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
     public ResponseEntity<String> getTerminalOutput(HttpServletRequest request, HttpServletResponse response, @RequestParam("sessionId") String sessionId)
         throws GeneralSecurityException {
+
         var sessionIdStr = cryptoService.decrypt(sessionId);
         var sessionIdLong = Long.parseLong(sessionIdStr);
 

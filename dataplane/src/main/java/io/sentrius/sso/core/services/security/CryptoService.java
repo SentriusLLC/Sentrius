@@ -4,6 +4,7 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
@@ -95,7 +96,40 @@ public class CryptoService {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
 
         // Decode Base64
-        byte[] decodedVal = Base64.getDecoder().decode(encryptedStr);
+        byte[] decodedVal = null;
+        try {
+            // Try normal Base64 decoding first
+            decodedVal = Base64.getDecoder().decode(encryptedStr);
+        } catch (IllegalArgumentException e) {
+            log.warn("Initial Base64 decode failed, attempting to URL decode and pad: {}", encryptedStr);
+            var paddedEncryptedStr   = encryptedStr;
+            try {
+
+                // Add padding if necessary
+                int padding = (4 - (paddedEncryptedStr.length() % 4)) % 4;
+                paddedEncryptedStr += "=".repeat(padding);
+
+                // Try Base64 decoding again
+                decodedVal = Base64.getDecoder().decode(paddedEncryptedStr);
+            } catch (Exception fallbackEx) {
+                log.error("Failed to Base64 decode after padding: {}", paddedEncryptedStr, fallbackEx);
+                String urlDecoded = encryptedStr;
+                try {
+                    // URL decode
+                    urlDecoded = URLDecoder.decode(urlDecoded, StandardCharsets.UTF_8);
+
+                    // Add padding if necessary
+                    int padding = (4 - (urlDecoded.length() % 4)) % 4;
+                    urlDecoded += "=".repeat(padding);
+
+                    // Try Base64 decoding again
+                    decodedVal = Base64.getDecoder().decode(urlDecoded);
+                } catch (Exception fallbackEx2) {
+                    log.error("Failed to Base64 decode even after URL decoding: {}", encryptedStr, fallbackEx2);
+                    throw new GeneralSecurityException("Unable to decode input string", fallbackEx2);
+                }
+            }
+        }
 
         // Extract IV (first 12 bytes)
         byte[] iv = Arrays.copyOfRange(decodedVal, 0, 12);

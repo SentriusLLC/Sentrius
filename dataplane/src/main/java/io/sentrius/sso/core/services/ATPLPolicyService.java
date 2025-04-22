@@ -110,6 +110,13 @@ public class ATPLPolicyService {
     }
 
     public TrustScoreResult evaluateScore(LimitAccess limitAccess, ATPLPolicy atplPolicy, String endpoint, User operatingUser) {
+        for(var primitive : atplPolicy.getCapabilities().getPrimitives()) {
+            if (primitive.getEndpoint().contains(endpoint)) {
+                if (null != primitive.getTags() && primitive.getTags().contains("high_risk")){
+                    return TrustScoreResult.MARGINAL;
+                }
+            }
+        }
         return TrustScoreResult.SUCCESS;
     }
 

@@ -46,7 +46,7 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
                 return agentVerbs.promptAgent(execution,null);
             } catch (ZtatException e) {
                 log.info("Mechanisms {}" , e.getMechanisms());
-                var endpoint = zeroTrustClientService.createEndPoingRequest("prompt_agent", e.getEndpoint());
+                var endpoint = zeroTrustClientService.createEndPointRequest("prompt_agent", e.getEndpoint());
                 ZtatRequestDTO ztatRequestDTO = ZtatRequestDTO.builder()
                     .user(execution.getUser())
                     .command(endpoint.toString())
@@ -134,8 +134,8 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
                     }
 
                     // Sleep between prompts
-                    log.info("Sleeping for 60 seconds");
-                    Thread.sleep(10_000);
+                    log.info("Sleeping for 5 seconds");
+                    Thread.sleep(5_000);
                 }
 
             } catch (Exception e) {

@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -246,14 +247,14 @@ public class ZeroTrustRequestService {
     }
 
     public List<JITTrackerDTO> getOpenAccessTokenRequests(@NonNull User currentUser) {
-        List<ZeroTrustAccessTokenRequest> openRequests = ztatRequestRepository.findOpenJITRequests(null);
+        List<ZeroTrustAccessTokenRequest> openRequests = ztatRequestRepository.findOpenJITRequests(currentUser);
 
 
         // Map each JITRequest to a JITTrackerDTO
         List<JITTrackerDTO> ztatTrackerList = new ArrayList<>();
         for (ZeroTrustAccessTokenRequest request : openRequests) {
             var dto = convertToDTO(request);
-            if (currentUser.getId() == request.getUser().getId()) {
+            if (Objects.equals(currentUser.getId(), request.getUser().getId())) {
                 dto.setCurrentUser(true);
             }
             ztatTrackerList.add(dto);
@@ -264,12 +265,12 @@ public class ZeroTrustRequestService {
 
     public List<JITTrackerDTO> getOpenOpsRequests(@NonNull User currentUser) {
         // Fetch open JIT requests
-        List<OpsZeroTrustAcessTokenRequest> openRequests = opsJITRequestRepository.findOpenOpsJITRequests(null);
+        List<OpsZeroTrustAcessTokenRequest> openRequests = opsJITRequestRepository.findOpenOpsJITRequests(currentUser);
 
         List<JITTrackerDTO> ztatTrackerList = new ArrayList<>();
         for (OpsZeroTrustAcessTokenRequest request : openRequests) {
             var dto = convertToDTO(request);
-            if (currentUser.getId() == request.getUser().getId()) {
+            if (Objects.equals(currentUser.getId(), request.getUser().getId())) {
                 dto.setCurrentUser(true);
             }
             ztatTrackerList.add(dto);
@@ -280,7 +281,7 @@ public class ZeroTrustRequestService {
 
     public List<JITTrackerDTO> getDeniedOpsAccessTokenRequests(@NonNull User currentUser) {
         // Fetch open JIT requests
-        List<OpsZeroTrustAcessTokenRequest> openRequests = opsJITRequestRepository.findAllWithUnapprovedRequests(null);
+        List<OpsZeroTrustAcessTokenRequest> openRequests = opsJITRequestRepository.findAllWithUnapprovedRequests(currentUser);
 
         List<JITTrackerDTO> ztatTrackerList = new ArrayList<>();
         for (OpsZeroTrustAcessTokenRequest request : openRequests) {

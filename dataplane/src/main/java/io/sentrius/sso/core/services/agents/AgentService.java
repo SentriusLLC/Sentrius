@@ -141,7 +141,11 @@ public class AgentService {
     }
 
     public List<AgentCommunication> getCommunications(UUID communicationId) {
-        return agentCommunicationRepository.findBySourceAgent(communicationId.toString());
+        return agentCommunicationRepository.findByCommunicationId(communicationId);
+    }
+
+    public List<AgentCommunication> getCommunicationsTo(UUID communicationId, String targetAgent) {
+        return agentCommunicationRepository.findByCommunicationIdAndTargetAgent(communicationId, targetAgent);
     }
 
 
@@ -212,4 +216,5 @@ public class AgentService {
     public boolean isAgent(UserTypeDTO userDto) {
         return true;
     }
+
 }

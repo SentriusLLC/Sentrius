@@ -30,6 +30,17 @@
             <artifactId>sentrius-dataplane</artifactId>
             <version>1.0.0-SNAPSHOT</version>
         </dependency>
+
+        <dependency>
+            <groupId>io.sentrius</groupId>
+            <artifactId>sentrius-llm-core</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>io.sentrius</groupId>
+            <artifactId>sentrius-llm-dataplane</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

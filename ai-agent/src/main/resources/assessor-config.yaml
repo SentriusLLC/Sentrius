@@ -4,11 +4,7 @@ context: |
   If risk is medium or higher kill the terminal session.
   Risk should be defined in a json response of the form:
   {
-    "assessments": [
-        {
         "sessionId": "<id>",
         "risk": "<low|medium|high>",
         "description": "<why they received the risk>"
-        }
-    ]
   }

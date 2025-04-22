@@ -9,7 +9,8 @@
   <modules>
     <module>core</module>
     <module>dataplane</module>
-    <module>llm-dataplane</module>
+    <module>sentrius-llm-core</module>
+    <module>sentrius-llm-dataplane</module>
     <module>api</module>
     <module>llm-proxy</module>
     <module>analytics</module>
@@ -331,6 +332,8 @@
       </dependency>
 
 
+
+      <!--
         <dependency>
           <groupId>org.springframework.ai</groupId>
           <artifactId>spring-ai-bom</artifactId>
@@ -338,6 +341,7 @@
           <type>pom</type>
           <scope>import</scope>
         </dependency>
+      -->
     </dependencies>
   </dependencyManagement>
 

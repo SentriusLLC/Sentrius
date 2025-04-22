@@ -25,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -72,7 +73,7 @@ public class TerminalApiController extends BaseController {
         return ResponseEntity.ok(sessionId);
     }
 
-    @DeleteMapping("/kill")
+    @PutMapping("/kill")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<?> killSession(@RequestParam("sessionId") String sessionId) throws GeneralSecurityException {
         var sessionIdStr = cryptoService.decrypt(sessionId);
