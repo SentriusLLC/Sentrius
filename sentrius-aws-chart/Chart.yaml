@@ -1,5 +1,0 @@
-apiVersion: v2
-name: sentrius-aws-chart
-description: A Helm chart for Sentrius and PostgreSQL deployments
-version: 0.1.0
-appVersion: 1.0.0

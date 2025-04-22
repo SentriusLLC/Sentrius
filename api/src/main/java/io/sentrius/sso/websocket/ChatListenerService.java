@@ -14,17 +14,17 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.sentrius.sso.core.model.ConnectedSystem;
 import io.sentrius.sso.core.model.chat.ChatLog;
-import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.services.ChatService;
-import io.sentrius.sso.core.services.IntegrationSecurityTokenService;
+import io.sentrius.sso.core.services.security.CryptoService;
+import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.genai.ChatConversation;
 import io.sentrius.sso.genai.GenerativeAPI;
 import io.sentrius.sso.genai.GeneratorConfiguration;
-import io.sentrius.sso.genai.model.ChatResponse;
+import io.sentrius.sso.genai.model.LLMResponse;
 import io.sentrius.sso.genai.model.Conversation;
-import io.sentrius.sso.integrations.external.ExternalIntegrationDTO;
+import io.sentrius.sso.core.integrations.external.ExternalIntegrationDTO;
 import io.sentrius.sso.protobuf.Session;
 import io.sentrius.sso.security.ApiKey;
 import lombok.RequiredArgsConstructor;
@@ -121,15 +121,15 @@ public class ChatListenerService {
                                       Session.ChatMessage sshData) {
     }
 
-    private ChatResponse toChatMessage(Session.ChatMessage sshData) {
-        return ChatResponse.builder().role("user").content(sshData.getMessage()).build();
+    private LLMResponse toChatMessage(Session.ChatMessage sshData) {
+        return LLMResponse.builder().role("user").content(sshData.getMessage()).build();
     }
 
-    private ChatResponse toChatMessage(ChatLog chatLog) {
-        return ChatResponse.builder().role(chatLog.getSender().equals("agent") ? "system" : "user").content(chatLog.getMessage()).build();
+    private LLMResponse toChatMessage(ChatLog chatLog) {
+        return LLMResponse.builder().role(chatLog.getSender().equals("agent") ? "system" : "user").content(chatLog.getMessage()).build();
     }
 
-    private List<ChatResponse> toChatMessages(List<ChatLog> chatLogs) {
+    private List<LLMResponse> toChatMessages(List<ChatLog> chatLogs) {
         return chatLogs.stream().map(this::toChatMessage).collect(Collectors.toList());
     }
 
@@ -171,7 +171,7 @@ public class ChatListenerService {
                 "history of your chat with the user. We have another AI agent that asks security related questions. " +
                 "If these come they will be sent to you as well along with their response. Ensure that the person " +
                 "answers the question, if they do not or you assess that they are being evasive, send a json field " +
-                "named alert as a boolean value of true." );
+                "named alert as a boolean value of true. Again, always respond with a json response" );
             try {
                 var chatMessageResponse = chatConversation.generate(convo);
                 ChatLog userChat =

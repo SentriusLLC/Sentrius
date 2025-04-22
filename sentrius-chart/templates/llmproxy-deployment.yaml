@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-llmproxy
+  labels:
+    {{- include "sentrius.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: llmproxy
+  template:
+    metadata:
+      labels:
+        app: llmproxy
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: [ 'sh', '-c', 'until nc -z {{ .Release.Name }}-sentrius 8080; do echo waiting for postgres; sleep 2;
+          done;' ]
+      containers:
+        - name: llmproxy
+          image: "{{ .Values.llmproxy.image.repository }}:{{ .Values.llmproxy.image.tag }}"
+          imagePullPolicy: {{ .Values.sentrius.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.sentrius.port }}
+          {{- if not (eq .Values.environment "gke") }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.readinessProbe.path }}
+              port: {{ .Values.healthCheck.readinessProbe.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.livenessProbe.path }}
+              port: {{ .Values.healthCheck.livenessProbe.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          {{- end }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+          env:
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: db-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: db-password
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: keystore-password
+
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ .Release.Name }}-config

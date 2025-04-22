@@ -4,12 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import io.sentrius.sso.automation.auditing.rules.CommandEvaluator;
 import io.sentrius.sso.automation.auditing.rules.RuleConfiguration;
-import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.model.dto.ProfileRuleDTO;
-import io.sentrius.sso.core.model.dto.TopBarLinks;
-import io.sentrius.sso.core.model.security.enums.RuleAccessEnum;
+import io.sentrius.sso.core.dto.ProfileRuleDTO;
+import io.sentrius.sso.core.dto.TopBarLinks;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.RuleService;
@@ -32,8 +30,9 @@ public class ZeroTrustRuleController extends BaseController {
     private final AuditConfigProvider auditor;
     private final RuleService ruleService;
 
-    protected ZeroTrustRuleController(UserService userService, SystemOptions systemOptions,
-                                      ErrorOutputService errorOutputService, AuditConfigProvider auditor, RuleService ruleService) {
+    protected ZeroTrustRuleController(
+        UserService userService, SystemOptions systemOptions,
+        ErrorOutputService errorOutputService, AuditConfigProvider auditor, RuleService ruleService) {
         super(userService, systemOptions, errorOutputService);
         this.auditor = auditor;
         this.ruleService = ruleService;
@@ -65,7 +64,6 @@ public class ZeroTrustRuleController extends BaseController {
 
 
     @GetMapping("/list")
-    @LimitAccess(ruleAccess = {RuleAccessEnum.CAN_VIEW_RULES})
     public String list(Model model) {
         List<TopBarLinks> topBarLinks = new ArrayList<>();
         topBarLinks.add(new TopBarLinks("#", "Add Rule", "addRuleButton"));
@@ -79,7 +77,6 @@ public class ZeroTrustRuleController extends BaseController {
     }
 
     @GetMapping("/config/forbidden_commands_rule")
-    @LimitAccess(ruleAccess = {RuleAccessEnum.CAN_EDIT_RULES})
     public String configureForbiddenCommandsRule(@RequestParam("ruleName") String ruleName, Model model) {
         model.addAttribute("ruleName", ruleName);
         model.addAttribute("ruleClass", CommandEvaluator.class.getCanonicalName());
@@ -88,7 +85,6 @@ public class ZeroTrustRuleController extends BaseController {
 
 
     @GetMapping("/config/allowed_commands_rule")
-    @LimitAccess(ruleAccess = {RuleAccessEnum.CAN_EDIT_RULES})
     public String configureAllowedCommandsRule() {
         return "sso/commands_rule";
     }

@@ -18,16 +18,11 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 
 @Slf4j
 @Configuration
@@ -87,12 +82,20 @@ public class SecurityConfig {
 
             log.info("Extracted User Info: userId={}, username={}, email={}", userId, username, email);
 
-            User user = userService.getUserWithDetails(userId);
+            User user = userService.getUserByUsername(username);
             if (user == null) {
-                user = User.builder()
+                var type = userService.getUserType(
+                    UserType.createUnknownUser());
+                if (type.isEmpty()) {
+                    log.error("Failed to create base user type");
+                    return authorities;
+                }
+                user = User .builder()
                     .username(username)
+                    .name(username)
                     .emailAddress(email)
-                    .authorizationType(UserType.createUnknownUser())
+                    .userId(userId)
+                    .authorizationType( type.get() )
                     .build();
                 log.info("Creating new user: {}", user);
                 userService.save(user);

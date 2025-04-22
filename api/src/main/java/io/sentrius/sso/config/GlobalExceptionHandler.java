@@ -1,16 +1,21 @@
 package io.sentrius.sso.config;
 
+import java.net.URI;
+import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.ErrorOutput;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.utils.MessagingUtil;
 import io.sentrius.sso.core.utils.ZTATUtils;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+@Slf4j
 @ControllerAdvice
 @RequiredArgsConstructor
 public class GlobalExceptionHandler {
@@ -26,10 +31,25 @@ public class GlobalExceptionHandler {
         return ZTATUtils.getCommandHash(sb.toString());
     }
 
+
+    @ExceptionHandler(ZtatException.class)
+    public ResponseEntity<String> handlePrecondition(ZtatException ex) {
+        log.warn("Precondition failed: {}", ex.getMessage());
+        return ResponseEntity.status(428).body(ex.getMessage());
+    }
+
     @ExceptionHandler(Throwable.class) // Catches all unhandled exceptions
-    public String handleAllExceptions(Throwable ex, RedirectAttributes redirectAttributes) {
+    public ResponseEntity<String> handleAllExceptions(Throwable ex, RedirectAttributes redirectAttributes) {
         // Add a general message ID, or customize based on exception type
         String messageId = "generalError";
+
+        if (ex instanceof ResponseStatusException responseStatusException){
+
+            if (responseStatusException.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED ) {
+                // Handle precondition required
+                return ResponseEntity.status(428).body(responseStatusException.getReason());
+            }
+        }
 
         String message = "Received Error Message: " + ex.getCause();
         ErrorOutput errorOutput = ErrorOutput.builder()
@@ -44,8 +64,12 @@ public class GlobalExceptionHandler {
         // Add messageId as a redirect attribute
         redirectAttributes.addAttribute("errorId", MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR));
 
+        ex.printStackTrace();
+        log.info("ahhasldigjudaslkgj {}", ex.getMessage());
         // Redirect to "/mydashboard" with the messageId parameter
-        return "redirect:/sso/v1/dashboard";
+        URI redirectUri = URI.create("/sso/v1/dashboard?errorId=" + MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR));
+        return ResponseEntity.status(HttpStatus.FOUND).location(redirectUri).build();
+        //return "redirect:/sso/v1/dashboard";
     }
 
 

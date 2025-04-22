@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta th:replace="~{fragments/header}" />
+    <title>[[${systemOptions.systemLogoName}]] - Agent Management</title>
+
+    <!-- Styles -->
+    <style>
+        body { background-color: #121212; color: #eaeaea; }
+        .container { margin-top: 20px; }
+        .toast-header { font-size: 1.5rem; font-weight: bold; margin-bottom: 15px; }
+        .modal-content { background-color: #1e1e1e; color: #eaeaea; }
+        .table-striped tbody tr:nth-of-type(odd) { background-color: #2b2b2b; }
+        .table-striped tbody tr:hover { background-color: #3a3a3a; }
+        pre { background: #222; padding: 10px; border-radius: 5px; color: #00ff00; }
+    </style>
+
+</head>
+<body>
+<div id="csrf-token" style="display: none;" th:text="${_csrf.token}"></div>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
+                <h2 class="toast-header">Agent Management</h2>
+
+                <table id="agents-table" class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th>Agent Name</th>
+                        <th>Last Seen</th>
+                        <th>Registered</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody id="agents-table-body">
+                    <!-- Rows will be added here dynamically -->
+                    </tbody>
+                </table>
+
+                <!-- Policy Viewer Modal -->
+                <div class="modal fade" id="policyModal" tabindex="-1" aria-labelledby="policyModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="policyModalLabel">Agent Policy</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <pre id="policyContent" style="display: none;">Loading...</pre>
+                                <textarea id="policyEditor" style="display: none; width: 100%; height: 400px; background: #222; color: #00ff00; border: none; border-radius: 5px; padding: 10px;"></textarea>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-success" id="savePolicyBtn" style="display: none;">Save Policy</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Scripts -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.view-policy-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const agentId = this.getAttribute('data-agent-id');
+                fetch(`/api/v1/agent/policy/${agentId}`)
+                    .then(response => response.text())
+                    .then(data => {
+                        document.getElementById('policyContent').textContent = data;
+                        const modal = new bootstrap.Modal(document.getElementById('policyModal'));
+                        modal.show();
+                    })
+                    .catch(err => {
+                        document.getElementById('policyContent').textContent = 'Failed to load policy.';
+                        console.error('Failed to fetch policy:', err);
+                    });
+            });
+        });
+    });
+    document.addEventListener('DOMContentLoaded', function () {
+
+        function loadAgents() {
+            fetch('/api/v1/agent/list')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('agents-table-body');
+                    tbody.innerHTML = ''; // clear old rows
+
+                    data.forEach(agent => {
+                        const row = document.createElement('tr');
+
+                        row.innerHTML = `
+                        <td>${agent.agentName}</td>
+                        <td>${agent.lastHeartbeat}</td>
+                        <td>${agent.registered ? 'Yes' : 'No'}</td>
+                        <td>
+                        <button class="btn btn-secondary view-policy-btn" data-agent-id="${agent.agentId}">View Policy</button>
+                        <button class="btn btn-primary edit-policy-btn" data-agent-id="${agent.agentId}">Edit Policy</button>
+                        <button class="btn btn-primary audit-agent-btn" data-agent-id="${agent.agentId}">Audit</button>
+                    </td>
+                    `;
+
+                        tbody.appendChild(row);
+                    });
+
+                    // Attach event listeners AFTER populating
+                    document.querySelectorAll('.view-policy-btn').forEach(btn => {
+                        btn.addEventListener('click', function () {
+                            const agentId = encodeURIComponent(this.getAttribute('data-agent-id'));
+                            fetch(`/api/v1/agent/policy?agentId=${agentId}`)
+                                .then(response => response.text())
+                                .then(data => {
+                                    document.getElementById('policyContent').textContent = data;
+                                    document.getElementById('policyContent').style.display = 'block';
+                                    document.getElementById('policyEditor').style.display = 'none';
+                                    const modal = new bootstrap.Modal(document.getElementById('policyModal'));
+                                    modal.show();
+                                })
+                                .catch(err => {
+                                    console.error('Failed to fetch policy:', err);
+                                    document.getElementById('policyContent').textContent = 'Failed to load policy.';
+                                });
+                        });
+                    });
+
+                    document.querySelectorAll('.audit-agent-btn').forEach(btn => {
+                        btn.addEventListener('click', function () {
+                            const agentId = encodeURIComponent(this.getAttribute('data-agent-id'));
+                            const url = `/sso/v1/agent/connections?agentId=${agentId}`;
+                            window.open(url, '_blank');
+                        });
+                    });
+
+                    document.querySelectorAll('.edit-policy-btn').forEach(btn => {
+                        btn.addEventListener('click', function () {
+                            const agentId = encodeURIComponent(this.getAttribute('data-agent-id'));
+                            fetch(`/api/v1/agent/policy?agentId=${agentId}`)
+                                .then(response => response.text())
+                                .then(data => {
+                                    document.getElementById('policyContent').style.display = 'none';
+                                    document.getElementById('policyEditor').style.display = 'block';
+                                    document.getElementById('savePolicyBtn').style.display = 'inline-block';
+
+                                    document.getElementById('policyEditor').value = data;
+
+                                    const modal = new bootstrap.Modal(document.getElementById('policyModal'));
+                                    modal.show();
+
+                                    // Save click
+                                    document.getElementById('savePolicyBtn').onclick = function () {
+                                        const updatedPolicy = document.getElementById('policyEditor').value;
+                                        const csrfToken = document.getElementById("csrf-token").textContent;
+                                        fetch(`/api/v1/agent/policy/update?agentId=${agentId}`, {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'text/plain',
+                                                'X-CSRF-TOKEN': csrfToken
+                                            },
+                                            body: updatedPolicy
+                                        }).then(response => {
+                                            if (response.ok) {
+                                                alert('Policy updated successfully.');
+                                                modal.hide();
+                                            } else {
+                                                alert('Failed to update policy.');
+                                            }
+                                        });
+                                    };
+                                })
+                                .catch(err => {
+                                    console.error('Failed to fetch policy:', err);
+                                    document.getElementById('policyContent').textContent = 'Failed to load policy.';
+                                });
+                        });
+                    });
+                });
+        }
+
+        loadAgents();
+    });
+
+
+
+</script>
+
+</body>
+</html>

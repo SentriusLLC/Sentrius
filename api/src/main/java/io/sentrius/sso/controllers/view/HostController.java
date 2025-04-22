@@ -4,26 +4,25 @@ import java.security.GeneralSecurityException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
-import io.sentrius.sso.core.annotations.LimitAccess;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.model.ConnectedSystem;
 import io.sentrius.sso.core.model.HostSystem;
-import io.sentrius.sso.core.model.dto.HostGroupDTO;
-import io.sentrius.sso.core.model.dto.HostSystemDTO;
-import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.dto.HostGroupDTO;
+import io.sentrius.sso.core.dto.HostSystemDTO;
 import io.sentrius.sso.core.model.users.UserSettings;
-import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.HostGroupService;
-import io.sentrius.sso.core.services.UserService;
-import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.services.UserCustomizationService;
+import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.metadata.TerminalSessionMetadataService;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
+import org.hibernate.query.spi.Limit;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,7 +32,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @Slf4j
 @Controller
-@RequestMapping("/sso/v1/ssh/servers")
+@RequestMapping("/sso/v1/enclaves/hosts")
 public class HostController extends BaseController {
 
     final HostGroupService hostGroupService;
@@ -44,14 +43,15 @@ public class HostController extends BaseController {
     private ConnectedSystem connectedSystem;
 
 
-    protected HostController(UserService userService,
-                             SystemOptions systemOptions,
-                             ErrorOutputService errorOutputService,
-                             HostGroupService hostGroupService,
-                             SessionTrackingService sessionTrackingService,
-                             CryptoService cryptoService,
-                             UserCustomizationService userThemeService,
-                             TerminalSessionMetadataService terminalSessionMetadataService) {
+    protected HostController(
+        UserService userService,
+        SystemOptions systemOptions,
+        ErrorOutputService errorOutputService,
+        HostGroupService hostGroupService,
+        SessionTrackingService sessionTrackingService,
+        CryptoService cryptoService,
+        UserCustomizationService userThemeService,
+        TerminalSessionMetadataService terminalSessionMetadataService) {
         super(userService, systemOptions, errorOutputService);
         this.hostGroupService = hostGroupService;
         this.sessionTrackingService = sessionTrackingService;
@@ -75,7 +75,7 @@ public class HostController extends BaseController {
             }
             log.info("Connected system: {}", sys.getHostSystem().getDisplayName());
             log.info("Connected system: {}", sys.getHostSystem().getStatusCd());
-            return new HostSystemDTO(sys.getHostSystem());
+            return sys.getHostSystem().toDTO();
         }
         log.error("No session ID provided");
         return null;
@@ -93,7 +93,7 @@ public class HostController extends BaseController {
             Hibernate.initialize(sys.getHostSystem().getPublicKeyList());
             log.info("Connected system: {}", sys.getHostSystem().getDisplayName());
             log.info("Connected system: {}", sys.getHostSystem().getStatusCd());
-            return new HostSystemDTO(sys.getHostSystem());
+            return sys.getHostSystem().toDTO();
         }
         log.error("No session ID provided");
         return null;
@@ -110,7 +110,7 @@ public class HostController extends BaseController {
             var sys = sessionTrackingService.getConnectedSession(sessionIdLong);
             Hibernate.initialize(sys.getHostSystem().getPublicKeyList());
             log.info("Connected system: {}", sys.getHostSystem().getDisplayName());
-            return List.of(new HostSystemDTO(sys.getHostSystem()));
+            return List.of(sys.getHostSystem().toDTO());
         }
         log.error("No session ID provided");
         return new ArrayList<>();
@@ -129,7 +129,7 @@ public class HostController extends BaseController {
             var hostGroup = hostGroupService.getHostGroupWithHostSystems(user, groupId);
 
             // use the default group
-            var hg = new HostGroupDTO(hostGroup.orElse(hostGroupService.getHostGroupWithHostSystems(user, -1L).get()));
+            var hg = hostGroup.orElse(hostGroupService.getHostGroupWithHostSystems(user, -1L).get()).toDTO();
             log.info("Current group: {}", hg.getGroupId());
             return hg;
         }
@@ -164,11 +164,11 @@ public class HostController extends BaseController {
 
             // use the default group
             HostGroupDTO hg = hostGroupOptional
-                .map(HostGroupDTO::new)
+                .map(x -> x.toDTO())
                 .orElseGet(() -> {
                     // If no group is found, fall back to a default group
                     var defaultGroup = hostGroupService.getHostGroupWithHostSystems(user, -1L).get();
-                    return new HostGroupDTO(defaultGroup);
+                    return defaultGroup.toDTO();
                 });
             log.info("Current group: {}", hg);
             model.addAttribute("currentGroup", hg);
@@ -178,7 +178,7 @@ public class HostController extends BaseController {
 
 
     @GetMapping("/connect")
-    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
+    
     public String connectSSHServer(
         HttpServletRequest request, HttpServletResponse response, Model model,
         @RequestParam("sessionId") String sessionId) throws GeneralSecurityException {
@@ -192,7 +192,7 @@ public class HostController extends BaseController {
         var user = getOperatingUser(request, response);
 
         if (myConnectedSystem == null || !myConnectedSystem.getUser().getId().equals(user.getId())) {
-            return "redirect:/sso/v1/ssh/servers/list";
+            return "redirect:/sso/v1/enclaves/hosts/list";
         }
 
         this.connectedSystem = myConnectedSystem;
@@ -207,7 +207,6 @@ public class HostController extends BaseController {
     }
 
     @GetMapping("/attach")
-    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public String attachSession(
         HttpServletRequest request, HttpServletResponse response, Model model,
         @RequestParam("sessionId") String sessionId) throws GeneralSecurityException {
@@ -222,7 +221,7 @@ public class HostController extends BaseController {
 
         if (myConnectedSystem == null ||
             !myConnectedSystem.getUser().getId().equals(user.getId())) {
-            return "redirect:/sso/v1/ssh/servers/list";
+            return "redirect:/sso/v1/enclaves/hosts/list";
         }
 
         this.connectedSystem = myConnectedSystem;

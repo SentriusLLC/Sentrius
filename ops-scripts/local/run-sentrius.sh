@@ -52,6 +52,7 @@ export KEYCLOAK_SECRET="${KEYCLOAK_SECRET:-defaultSecret}"
 export KEYCLOAK_BASE_URL="${KEYCLOAK_BASE_URL:-http://localhost:8180}"
 export HTTP_REQUIRED="${HTTP_REQUIRED:-false}"
 export BASE_URL="${BASE_URL:-http://localhost:8080}"
+export OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4317}"
 
 # Adjust memory settings for your local environment
 export MIN_HEAP="${MIN_HEAP:-4096m}"

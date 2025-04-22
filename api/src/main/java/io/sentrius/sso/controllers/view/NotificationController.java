@@ -3,15 +3,12 @@ package io.sentrius.sso.controllers.view;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.List;
-import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.model.dto.NotificationDTO;
-import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
+import io.sentrius.sso.core.dto.NotificationDTO;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.NotificationService;
 import io.sentrius.sso.core.services.UserService;
-import io.sentrius.sso.core.utils.MessagingUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -29,10 +26,11 @@ public class NotificationController extends BaseController {
     protected final NotificationService notificationService;
     protected final ErrorOutputService errorOutputService;
 
-    protected NotificationController(UserService userService,
-                                     SystemOptions systemOptions,
-                                     NotificationService notificationService,
-                                     ErrorOutputService errorOutputService) {
+    protected NotificationController(
+        UserService userService,
+        SystemOptions systemOptions,
+        NotificationService notificationService,
+        ErrorOutputService errorOutputService) {
         super(userService, systemOptions, errorOutputService);
         this.notificationService = notificationService;
         this.errorOutputService= errorOutputService;
@@ -43,14 +41,14 @@ public class NotificationController extends BaseController {
 
     @GetMapping
     public String listNotifications(HttpServletRequest request, HttpServletResponse response, Model model) {
-        List<NotificationDTO> notifications = notificationService.findUnseenNotifications(getOperatingUser(request, response)).stream().map(NotificationDTO::new).toList();
+        List<NotificationDTO> notifications = notificationService.findUnseenNotifications(getOperatingUser(request,
+            response)).stream().map(x -> x.toDTO()).toList();
         model.addAttribute("myNotifications", notifications);
         model.addAttribute("unreadCount", notifications.size());
         return "sso/notifications/view_notifications"; // Redirect to login page
     }
 
     @GetMapping("/error/log/get")
-    @LimitAccess(sshAccess = SSHAccessEnum.CAN_MANAGE_SYSTEMS, notificationMessage = MessagingUtil.CANNOT_MANAGE_SYSTEMS)
     public String getErrorLog() throws GeneralSecurityException, SQLException {
 
 

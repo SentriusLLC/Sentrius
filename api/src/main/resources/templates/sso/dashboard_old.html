@@ -213,14 +213,14 @@
             var id = encodeURIComponent(terminal.hostConnection);
             return `
             <div style="width: 100%;">
-                <a href="/sso/v1/ssh/servers/attach?sessionId=${id}">
+                <a href="/sso/v1/enclaves/hosts/attach?sessionId=${id}">
                     <table style="width: 100%; border-collapse: collapse; text-align: center; margin: 10px 0;">
                         <tr>
                             <td style="border: none; padding: 10px; background-color: #FFFFFF;">
                                 <img src="/images/terminal_medium.png" style="width: 60px; height: auto;">
                             </td>
                             <td style="border: none; padding: 10px;">
-                                <a href="/sso/v1/ssh/servers/attach?sessionId=${id}" style="font-weight: bold; font-size: 1.2em; color: #FFFFFF; text-decoration: none;">
+                                <a href="/sso/v1/enclaves/hosts/attach?sessionId=${id}" style="font-weight: bold; font-size: 1.2em; color: #FFFFFF; text-decoration: none;">
                                     Terminal: ${terminal.displayName}
                                 </a>
                             </td>

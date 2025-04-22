@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const formData = new FormData(this);
-            fetch('/api/v1/ssh/servers/add', {
+            fetch('/api/v1/enclaves/hosts/add', {
                 method: 'POST',
                 body: formData
             })

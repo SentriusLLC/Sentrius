@@ -11,15 +11,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.hash.Hashing;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.model.dto.TicketDTO;
+import io.sentrius.sso.core.dto.TicketDTO;
+import io.sentrius.sso.core.integrations.ticketing.TicketService;
 import io.sentrius.sso.core.model.users.UserConfig;
-import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.services.ErrorOutputService;
-import io.sentrius.sso.core.services.IntegrationSecurityTokenService;
-import io.sentrius.sso.core.services.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.security.CryptoService;
+import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
+import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
-import io.sentrius.sso.integrations.ticketing.TicketService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +40,7 @@ public class TicketingApiController extends BaseController {
 
 
     final IntegrationSecurityTokenService integrationService;
-    final CryptoService  cryptoService;
+    final CryptoService cryptoService;
     final SessionTrackingService sessionTrackingService;
     final TicketService ticketingService;
     final ZeroTrustAccessTokenService ztatService;
@@ -52,11 +52,12 @@ public class TicketingApiController extends BaseController {
         }
     }
 
-    protected TicketingApiController(UserService userService, SystemOptions systemOptions,
-                                     ErrorOutputService errorOutputService,
-                                     IntegrationSecurityTokenService integrationService, CryptoService  cryptoService,
-                                     TicketService ticketingService,
-                                     ZeroTrustAccessTokenService ztatService, SessionTrackingService sessionTrackingService
+    protected TicketingApiController(
+        UserService userService, SystemOptions systemOptions,
+        ErrorOutputService errorOutputService,
+        IntegrationSecurityTokenService integrationService, CryptoService  cryptoService,
+        TicketService ticketingService,
+        ZeroTrustAccessTokenService ztatService, SessionTrackingService sessionTrackingService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.integrationService =     integrationService;

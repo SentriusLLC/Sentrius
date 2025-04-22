@@ -36,6 +36,16 @@ core/target/**
 java-agent/target/**
 core/target/
 java-agent/target/
+ai-agent/target/**
+ai-agent/target/
+analytics/target/**
+analytics/target/
+dataplane/target/**
+dataplane/target/
+llm-proxy/target/**
+llm-proxy/target/
+llm-dataplane/target/**
+llm-dataplane/target/
 node/*
 node_modules/*
 api/node_modules/*
@@ -50,4 +60,4 @@ api/node_modules/*
 
 .settings/*
 .env.bak
-.gcp.env.bak
+cp.env.bak

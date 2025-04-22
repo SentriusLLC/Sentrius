@@ -69,7 +69,7 @@
 
     <div class="container-fluid">
         <br><br>
-        <h3>Assigned Host Enclaves</h3>
+        <h3>Your Assigned Host Enclaves</h3>
         <table id="group-table" class="display" style="width:100%">
             <thead>
             <tr>
@@ -114,7 +114,7 @@
         var csrf = "[[${_csrf.token}]]"
         let terminalsInNewTab = [[${systemOptions.terminalsInNewTab != null ? systemOptions.terminalsInNewTab : false}]];
         console.log("Data: ", data);
-        const apiUrl = `/api/v1/ssh/servers/delete/${groupId}/${data}`;
+        const apiUrl = `/api/v1/enclaves/hosts/delete/${groupId}/${data}`;
 
         // Perform the API call
         fetch(apiUrl, {
@@ -149,7 +149,7 @@
         // The API URL you want to call
         let terminalsInNewTab = [[${systemOptions.terminalsInNewTab != null ? systemOptions.terminalsInNewTab : false}]];
         console.log("Data: ", data);
-        const apiUrl = `/api/v1/ssh/servers/connect/${groupId}/${data}`;
+        const apiUrl = `/api/v1/enclaves/hosts/connect/${groupId}/${data}`;
 
         // Perform the API call
         fetch(apiUrl, {
@@ -171,9 +171,9 @@
                     var sesh = encodeURIComponent(data.sessionId);
                     // Redirect to the URL received in response
                     if (terminalsInNewTab) {
-                        window.open(`/sso/v1/ssh/servers/connect?sessionId=${sesh}`, '_blank').focus();
+                        window.open(`/sso/v1/enclaves/hosts/connect?sessionId=${sesh}`, '_blank').focus();
                     } else {
-                        window.location.href = `/sso/v1/ssh/servers/connect?sessionId=${sesh}`;
+                        window.location.href = `/sso/v1/enclaves/hosts/connect?sessionId=${sesh}`;
                     }
                 } else {
 
@@ -211,21 +211,21 @@
                 {
                     data: 'groupId',
                     render: function(data, type) {
-                        let ret = `<a href="/sso/v1/ssh/servers/list?groupId=${data}"><button class="btn btn-primary" >View Group</button></a> `;
+                        let ret = `<a href="/sso/v1/enclaves/hosts/list?groupId=${data}"><button class="btn btn-primary" >View Group</button></a> `;
                         if (canEdit) {
                             ret += `<a href="/sso/v1/enclaves/edit?groupId=${data}"><button class="btn btn-primary">Edit Group</button></a> `;
                             ret += `<a href="/sso/v1/enclaves/assign?groupId=${data}"><button class="btn btn-primary">Assign Users</button></a>`;
                         }
                         return ret;
-//                        return `<a href="/sso/v1/ssh/servers/connect/-1/${data}" class="btn btn-primary" >Connect</a>`;
+//                        return `<a href="/sso/v1/enclaves/hosts/connect/-1/${data}" class="btn btn-primary" >Connect</a>`;
                     }
                 }
             ]
         });
-        var url = '/api/v1/ssh/servers/list';
+        var url = '/api/v1/enclaves/hosts/list';
         console.log("group id: ", groupId);
         if (groupId && groupId !== '-1') {
-            url = `/api/v1/ssh/servers/list?groupId=${groupId}`;
+            url = `/api/v1/enclaves/hosts/list?groupId=${groupId}`;
             console.log("url is " + url);
         }
         let canDelete = [[${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DEL_SYSTEMS')}]];

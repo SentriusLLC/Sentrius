@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-sentriusaiagent
+  labels:
+    {{- include "sentriusaiagent.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: sentriusaiagent
+  template:
+    metadata:
+      labels:
+        app: sentriusaiagent
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: [ 'sh', '-c', 'until nc -z {{ .Release.Name }}-postgres 5432; do echo waiting for postgres; sleep 2; done;' ]
+      containers:
+        - name: sentrius-agent
+          image: "{{ .Values.sentriusaiagent.image.repository }}:{{ .Values.sentriusaiagent.image.tag }}"
+          imagePullPolicy: {{ .Values.sentriusaiagent.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.sentriusaiagent.port }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ .Release.Name }}-config

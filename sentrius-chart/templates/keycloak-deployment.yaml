@@ -22,10 +22,24 @@ spec:
           image: "{{ .Values.keycloak.image.repository }}:{{ .Values.keycloak.image.tag }}"
           imagePullPolicy: "{{ .Values.keycloak.image.pullPolicy }}"
           ports:
-            - containerPort: 30081
+            - containerPort: 8081
+          {{- if not (eq .Values.environment "gke") }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.keycloak.readinessPath }}
+              port: {{ .Values.healthCheck.keycloak.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.keycloak.livenessPath }}
+              port: {{ .Values.healthCheck.keycloak.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          {{- end }}
           env:
             - name: KC_HTTP_PORT
-              value: "30081"
+              value: "8081"
             - name: KEYCLOAK_ADMIN
               value: {{ .Values.keycloak.adminUser }}
             - name: KEYCLOAK_ADMIN_PASSWORD
@@ -41,12 +55,26 @@ spec:
             - name: KC_DB_PASSWORD
               value: {{ .Values.keycloak.db.password }}
             - name: KC_HOSTNAME
-              value: {{ .Values.keycloak.hostname }}:30081
+              value: {{ .Values.keycloakHostname }}
             - name: KC_HOSTNAME_STRICT
               value: "false"
             - name: KEYCLOAK_LOGLEVEL
               value: DEBUG
             - name: ROOT_LOGLEVEL
               value: DEBUG
+            - name: ROOT_URL
+              value: https://{{ .Values.subdomain }}/
+            - name: REDIRECT_URIS
+              value: {{ .Values.sentriusDomain }}
+            - name: PROXY_ADDRESS_FORWARDING
+              value: "true"
+            - name: KC_HOSTNAME_STRICT_HTTPS
+              value: "false"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: GOOGLE_CLIENT_ID
+              value: {{ .Values.keycloak.clientId }}
+            - name: GOOGLE_CLIENT_SECRET
+              value: {{ .Values.keycloak.clientSecret }}
           command: [ "/opt/keycloak/bin/kc.sh" ]
-          args: [ "start-dev", "--proxy=edge", "--import-realm"]
+          args: [ "start-dev", "--proxy=edge", "--import-realm", "--health-enabled=true"]

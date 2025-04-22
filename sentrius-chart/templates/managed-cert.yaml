@@ -1,0 +1,27 @@
+{{- if and (ne .Values.environment "local") (.Values.certificates.enabled) }}
+---
+{{- if eq .Values.environment "gke" }}
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: wildcard-cert-{{ .Values.tenant }}
+spec:
+  domains:
+    - "{{ .Values.subdomain }}"
+    - "keycloak.{{ .Values.subdomain }}"
+{{- else if or (eq .Values.environment "aws") (eq .Values.environment "azure") }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-cert-{{ .Values.tenant }}
+spec:
+  secretName: wildcard-cert-{{ .Values.tenant }}
+  issuerRef:
+    name: {{ .Values.certificates.issuer }}
+    kind: ClusterIssuer
+  commonName: "{{ .Values.tenant }}.sentrius.cloud"
+  dnsNames:
+    - "{{ .Values.tenant }}.sentrius.cloud"
+    - "keycloak.{{ .Values.tenant }}.sentrius.cloud"
+{{- end }}
+{{- end }}

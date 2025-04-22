@@ -18,7 +18,7 @@ spec:
       containers:
         - name: sentrius-ssh
           image: "{{ .Values.ssh.image.repository }}:{{ .Values.ssh.image.tag }}"
-          imagePullPolicy: {{ .Values.sentrius.image.pullPolicy }}
+          imagePullPolicy: {{ .Values.ssh.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.ssh.port }}
           volumeMounts:

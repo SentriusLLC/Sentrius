@@ -14,20 +14,19 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import com.jcraft.jsch.JSchException;
-import io.sentrius.sso.automation.auditing.RuleFactory;
 import io.sentrius.sso.automation.sideeffects.SideEffect;
 import io.sentrius.sso.automation.sideeffects.SideEffectType;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.ConfigurationOption;
 import io.sentrius.sso.core.model.HostSystem;
-import io.sentrius.sso.core.model.dto.HostGroupDTO;
-import io.sentrius.sso.core.model.dto.HostSystemDTO;
-import io.sentrius.sso.core.model.dto.UserTypeDTO;
+import io.sentrius.sso.core.dto.HostGroupDTO;
+import io.sentrius.sso.core.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.model.hostgroup.ProfileRule;
 import io.sentrius.sso.core.model.security.UserType;
@@ -43,10 +42,11 @@ import io.sentrius.sso.core.repository.HostGroupRepository;
 import io.sentrius.sso.core.repository.SystemRepository;
 import io.sentrius.sso.core.repository.UserRepository;
 import io.sentrius.sso.core.repository.UserTypeRepository;
-import io.sentrius.sso.core.security.service.CryptoService;
+import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.RuleService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.install.configuration.InstallConfiguration;
 import io.sentrius.sso.install.configuration.dtos.HostGroupConfigurationDTO;
 import io.sentrius.sso.install.configuration.dtos.RuleDTO;
@@ -81,6 +81,8 @@ public class ConfigurationApplicationTask {
     private final HostGroupService hostGroupService;
 
     final CryptoService cryptoService;
+
+    final ATPLPolicyService atplPolicyService;
 
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
@@ -208,8 +210,21 @@ public class ConfigurationApplicationTask {
 
         //AppConfig.encryptProperty("initialized", Instant.now().toString());
 
+        // get the policies
+        createPolicies(installConfiguration, action);
+
         return sideEffects;
     }
+
+    private void createPolicies(InstallConfiguration installConfiguration, boolean action) {
+
+            installConfiguration.getAtplDefinitions().forEach( policy -> {
+                atplPolicyService.savePolicy(policy);
+
+            });
+
+    }
+
     @Transactional
     protected Map<String,ProfileRule> createRules(
         List<SideEffect> sideEffects, InstallConfiguration installConfiguration,
@@ -253,7 +268,7 @@ public class ConfigurationApplicationTask {
                                 }else {
                                     // it is possible that these are already assigned.
                                     log.info("Adding new systems to profile");
-                                    systems.add(HostSystemDTO.fromDTO(hostSystem));
+                                    systems.add(HostSystem.fromDTO(hostSystem));
                                 }
                                 break;
                             }
@@ -326,7 +341,7 @@ public class ConfigurationApplicationTask {
         List<SideEffect> sideEffects = new ArrayList<>();
         if (null != installConfiguration.getSystems()) {
             for (var system : installConfiguration.getSystems()) {
-                var systemObj = HostSystemDTO.fromDTO(system);
+                var systemObj = HostSystem.fromDTO(system);
                 if ( shouldInsertSystem(systemObj)) {
                     if (action) {
                         var sys = systemRepository.save(systemObj);
@@ -389,8 +404,9 @@ public class ConfigurationApplicationTask {
                         },
                         () -> {
                             if (action){
-                            newType.setId( userTypeRepository.save(newType).getId() );
+                                newType.setId( userTypeRepository.save(newType).getId() );
                             }
+                            log.info("Creating user type {}, with id {}", type.getUserTypeName(), newType.getId());
                             sideEffects.add(
                                 SideEffect.builder().sideEffectDescription("Creating user type " + type.getUserTypeName()).type(
                                     SideEffectType.UPDATE_DATABASE).asset("UserTypes").build()
@@ -418,15 +434,20 @@ public class ConfigurationApplicationTask {
                 if (null != userDTO.getAuthorizationType()) {
                     for (UserType type : userTypes) {
                         if (type.getUserTypeName().equals(userDTO.getAuthorizationType().getUserTypeName())) {
-                            userDTO.setAuthorizationType(new UserTypeDTO(type));
+                            userDTO.setAuthorizationType(type.toDTO());
                             break;
                         }
                     }
                 } else {
-                    userDTO.setAuthorizationType(new UserTypeDTO( UserType.createSystemAdmin()));
+                    userDTO.setAuthorizationType( UserType.createSystemAdmin().toDTO());
                 }
 
-                User user = User.from(userDTO);
+                log.info("Retrieving user type {}, id {}", userDTO.getAuthorizationType().getUserTypeName(),
+                    userDTO.getAuthorizationType().getId());
+                var type =
+                    userService.getUserType(UserType.builder().id(userDTO.getAuthorizationType().getId()).build());
+
+                User user = User.from(userDTO, type.get());
                 User finalUser = user;
                 userService.findByUsername(user.getUsername()).ifPresentOrElse(
                     user1 -> {
@@ -526,9 +547,15 @@ public class ConfigurationApplicationTask {
                 if (action) {
                     try {
                         user.setPassword(userService.encodePassword(user.getPassword()));
-                        user.setAuthorizationType(new UserTypeDTO(UserType.createSuperUser()));
+                        user.setAuthorizationType(UserType.createSuperUser().toDTO());
 
-                        userService.addUscer(User.from(user));
+                        var type =
+                            userService.getUserType(UserType.createSuperUser());
+                        if (type.isEmpty()){
+                            type = Optional.of( userService.saveUserType(UserType.createSuperUser()) );
+                        }
+
+                        userService.addUscer(User.from(user, type.get()));
                     } catch (NoSuchAlgorithmException e) {
                         throw new RuntimeException(e);
                     }

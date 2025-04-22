@@ -3,17 +3,19 @@ package io.sentrius.sso.controllers.api;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
+import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.model.dto.HostSystemDTO;
-import io.sentrius.sso.core.model.dto.TerminalLogOutputDTO;
+import io.sentrius.sso.core.dto.HostSystemDTO;
+import io.sentrius.sso.core.dto.TerminalLogOutputDTO;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
-import io.sentrius.sso.core.security.service.CryptoService;
+import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.SessionService;
 import io.sentrius.sso.core.services.TerminalService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import io.sentrius.sso.core.utils.AccessUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,7 +23,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -56,6 +60,7 @@ public class TerminalApiController extends BaseController {
     }
 
     @GetMapping("/resize")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN}, sshAccess = {SSHAccessEnum.CAN_VIEW_SYSTEMS})
     public ResponseEntity<String> resize(@RequestParam("sessionId") String sessionId, @RequestParam("width") double cols,
     @RequestParam(
         "height") double rows) throws GeneralSecurityException {
@@ -67,6 +72,17 @@ public class TerminalApiController extends BaseController {
         return ResponseEntity.ok("resized");
     }
 
+    @PutMapping("/kill")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<?> killSession(@RequestParam("sessionId") String sessionId) throws GeneralSecurityException {
+        var sessionIdStr = cryptoService.decrypt(sessionId);
+        var sessionIdLong = Long.parseLong(sessionIdStr);
+
+        sessionTrackingService.killSession(sessionIdLong);
+
+        return ResponseEntity.ok(sessionId);
+    }
+
     @GetMapping("/list")
     public ResponseEntity<List<HostSystemDTO>> listTerminal(HttpServletRequest request, HttpServletResponse response) throws GeneralSecurityException {
         var user= getOperatingUser(request,response);
@@ -75,7 +91,27 @@ public class TerminalApiController extends BaseController {
         connectedSystems.stream().map(connectedSystem -> {
             try {
                 var encryptedSessionId = cryptoService.encrypt(connectedSystem.getSession().getId().toString());
-                var dto = new HostSystemDTO(encryptedSessionId, connectedSystem);
+                var dto = connectedSystem.toHostSystemDTO(encryptedSessionId);
+                return dto;
+            } catch (GeneralSecurityException e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+        }).forEach(dtos::add);
+        return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/list/all")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION}, sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<List<HostSystemDTO>> listAllTerminal(HttpServletRequest request,
+                                                             HttpServletResponse response) throws GeneralSecurityException {
+        var user= getOperatingUser(request,response);
+        var connectedSystems = sessionTrackingService.getAllOpenSessions();
+        List<HostSystemDTO> dtos = new ArrayList<>();
+        connectedSystems.stream().map(connectedSystem -> {
+            try {
+                var encryptedSessionId = cryptoService.encrypt(connectedSystem.getSession().getId().toString());
+                var dto = connectedSystem.toHostSystemDTO(encryptedSessionId);
                 return dto;
             } catch (GeneralSecurityException e) {
                 e.printStackTrace();

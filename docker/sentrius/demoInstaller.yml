@@ -25,6 +25,11 @@ users:
       userTypeName: jitType
     hostGroups:
       - displayName: testGroup
+  - username: service-account-java-agents
+    name: java agents
+    authorizationType:
+      userTypeName: agentType
+    atlpDefinition: behavior-risk-openai
 
 rules:
   - displayName: deleteRule
@@ -116,3 +121,77 @@ systemKeyConfigurations:
     publicKey: |
       ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDmanENTLBjxp7ZwbNoNaIU9nl7dIPAm0yyVAKPs3d3GSw6VEAxQIEAbPxygxlQta5YZ6oLKVIA7oUadg/r7fWo095Ah9IPDvZOgV1Z0LVM/qGSBLFFMIZqyeA+N28M9LfO2mG2vLrvWRv1jbCKUVOgnWiTisU78ubV26zScTelJh/UQE4bAkdRfs+YfJMvkNm1LpoHIKaaKtSgTrf912L/cIPbW3sM5Vi6j7mR0/Ya2+q+uacpTPL4EMRmF8Fg6/F/OcqIjUcsr5FtI6owXu2GWuIeud28DqHVxXqEZ6ZYR2/J5Y/fOEoTpSJ2fNwvCl1fm2NM8a+Ndngokb40zsn8lDwfslEefRcZfPrDEe97s+kmP5ed5s/xpyVAy3YgAF21HUWqTu4GrS34cUqmEZEQb4xTrsNoJ94nQrmEFOlPKKCxCsNH3Gj4/RiNLxIBKdwoEVOk/S3yHh2U11ngjQEzVwK0n5CbAGik5UKPQ++k1b2gi3FbthM58MJgltc/k9M= user@public-key
     privateKeyPassphrase: password
+
+
+atplDefinitions:
+  version: v1
+  policy_id: behavior-risk-openai
+  description: Allows agent to analyze terminal logs using OpenAI after trust evaluation
+  match:
+    agent_tags:
+      - env:prod
+      - capability:risk-analysis
+
+  identity:
+    issuer: https://idp.sentrius.io
+    subject_prefix: java-agent-
+    mfa_required: true
+    certificate_authority: Sentrius-CA
+
+  provenance:
+    source: https://ci.sentrius.io
+    signature_required: true
+    approved_committers:
+      - trusted-dev@example.com
+
+  runtime:
+    enclave_required: true
+    attestation_type: aws-nitro
+    verified_at_boot: true
+
+  behavior:
+    minimum_positive_runs: 10
+    max_incidents: 0
+    incident_types:
+      denylist:
+        - escalation
+        - tamper
+
+  trust_score:
+    minimum: 85
+    weightings:
+      identity: 0.3
+      provenance: 0.2
+      runtime: 0.3
+      behavior: 0.2
+
+  capabilities:
+    primitives:
+      - id: fetchOpenAICreds
+        description: Access secure OpenAI credentials from the key service
+      - id: readTerminalLogs
+        description: Pull terminal logs from the audit layer
+      - id: sendToOpenAI
+        description: Send data to OpenAI for risk analysis
+
+    composed:
+      - id: analyze_behavior_via_openai
+        includes:
+          - fetchOpenAICreds
+          - readTerminalLogs
+          - sendToOpenAI
+
+  actions:
+    on_success: allow
+    on_marginal:
+      action: require_ztat
+      ztat_provider: ztat-service.internal
+    on_failure: deny
+
+  ztat:
+    provider: ztat-service.internal
+    ttl: 10m
+    approved_issuers:
+      - sentrius
+    key_binding: RSA2048
+    approval_required: true

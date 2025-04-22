@@ -3,19 +3,19 @@ package io.sentrius.sso.controllers.view;
 import java.util.List;
 import io.sentrius.sso.automation.sideeffects.SideEffect;
 import io.sentrius.sso.core.annotations.LimitAccess;
-import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
-import io.sentrius.sso.core.services.ErrorOutputService;
-import io.sentrius.sso.startup.ConfigurationApplicationTask;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.model.dto.SystemOption;
-import io.sentrius.sso.core.model.dto.UserTypeDTO;
-import io.sentrius.sso.core.model.users.User;
-import io.sentrius.sso.core.services.ConfigurationService;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.ObfuscationService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.utils.MessagingUtil;
 import io.sentrius.sso.install.configuration.InstallConfiguration;
+import io.sentrius.sso.startup.ConfigurationApplicationTask;
+import io.sentrius.sso.core.dto.SystemOption;
+import io.sentrius.sso.core.dto.UserTypeDTO;
+import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.services.ConfigurationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -36,10 +36,11 @@ public class SystemController extends BaseController {
     final ConfigurationService configurationService;
     final ConfigurationApplicationTask configurationApplicationTask;
 
-    protected SystemController(UserService userService, SystemOptions systemOptions,
-                               ErrorOutputService errorOutputService,
-                               ObfuscationService obfuscationService, ConfigurationService configurationService,
-                               ConfigurationApplicationTask configurationApplicationTask) {
+    protected SystemController(
+        UserService userService, SystemOptions systemOptions,
+        ErrorOutputService errorOutputService,
+        ObfuscationService obfuscationService, ConfigurationService configurationService,
+        ConfigurationApplicationTask configurationApplicationTask) {
         super(userService, systemOptions, errorOutputService);
         this.obfuscationService = obfuscationService;
         this.configurationService = configurationService;
@@ -69,9 +70,11 @@ public class SystemController extends BaseController {
 
     @ModelAttribute("systemSettings")
     public List<SystemOption> getSystemSettings() throws IllegalAccessException {
+        log.info("SystemSettings: {}", systemOptions.getOptions());
         return systemOptions.getOptions().values().stream().toList();
     }
     @GetMapping("/settings")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public String displaySettings() {
 
 
@@ -79,7 +82,6 @@ public class SystemController extends BaseController {
     }
 
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
-    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<String> uploadConfig(@RequestParam("configFile") MultipartFile file) {
         try {
             var config = InstallConfiguration.fromYaml(file.getInputStream());
@@ -93,7 +95,6 @@ public class SystemController extends BaseController {
     }
 
     @GetMapping(value = "/settings/validate")
-    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public String uploadConfig(@RequestParam("id") String id, Model model) {
         try {
             var databaseId = obfuscationService.deobfuscate(id);

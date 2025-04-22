@@ -2,22 +2,35 @@ package io.sentrius.sso.controllers.api;
 
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import io.sentrius.sso.core.annotations.LimitAccess;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.model.dto.JITTrackerDTO;
+import io.sentrius.sso.core.dto.JITTrackerDTO;
+import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
 import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
 import io.sentrius.sso.core.services.ErrorOutputService;
-import io.sentrius.sso.core.services.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.NotificationService;
 import io.sentrius.sso.core.services.UserService;
-import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.services.security.KeycloakService;
+import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -28,15 +41,22 @@ public class ZeroTrustATApiController extends BaseController {
 
     private final ZeroTrustAccessTokenService ztatService;
     private final NotificationService notificationService;
+    private final KeycloakService keycloakService;
 
-    protected ZeroTrustATApiController(UserService userService, SystemOptions systemOptions,
-                                       ErrorOutputService errorOutputService, ZeroTrustAccessTokenService ztatService, NotificationService notificationService) {
+
+    protected ZeroTrustATApiController(
+        UserService userService, SystemOptions systemOptions,
+        ErrorOutputService errorOutputService, ZeroTrustAccessTokenService ztatService, NotificationService notificationService,
+        KeycloakService keycloakService
+    ) {
         super(userService, systemOptions, errorOutputService);
         this.ztatService = ztatService;
         this.notificationService=notificationService;
+        this.keycloakService = keycloakService;
     }
 
     @GetMapping("/my/current")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<List<JITTrackerDTO>> getCurrentJit(HttpServletRequest request, HttpServletResponse response) {
 
         var operatingUser = getOperatingUser(request, response);
@@ -48,6 +68,7 @@ public class ZeroTrustATApiController extends BaseController {
     }
 
     @GetMapping("/{type}/{status}")
+    @LimitAccess(ztatAccess = {ZeroTrustAccessTokenEnum.CAN_APPROVE_ZTATS})
     public String manageRequest(HttpServletRequest request, HttpServletResponse response,
                               @PathVariable("type") String type,
                               @PathVariable("status") String status,
@@ -94,4 +115,173 @@ public class ZeroTrustATApiController extends BaseController {
         }
     }
 
+
+    @PostMapping("/request")
+    public ResponseEntity<?> requestZtat(
+        @RequestHeader("Authorization") String token,
+        @RequestBody ZtatRequestDTO ztatRequest, HttpServletRequest request, HttpServletResponse response) {
+
+        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+
+        if (!keycloakService.validateJwt(compactJwt)) {
+            log.warn("Invalid Keycloak token");
+            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+        }
+
+        // Extract agent identity from the JWT
+        var operatingUser = getOperatingUser(request, response );
+
+        // Extract agent identity from the JWT
+        String agentId = keycloakService.extractAgentId(compactJwt);
+
+        if (null == operatingUser) {
+            log.warn("No operating user found for agent: {}", agentId);
+            var username = keycloakService.extractUsername(compactJwt);
+            operatingUser = userService.getUserByUsername(username);
+
+        }
+
+        log.info("Received ZTAT request from agent: {}", agentId);
+        // Store the request in the database
+        ZeroTrustAccessTokenReason reason = ztatService.createReason(ztatRequest.getJustification(), "", ztatRequest.getCommand());
+        var submittedZtatRequest = ztatService.createOpsRequest(ztatRequest.getCommand(), ztatRequest.getCommand(),
+            reason, operatingUser);
+        submittedZtatRequest = ztatService.addJITRequest(submittedZtatRequest);
+
+        return ResponseEntity.ok(Map.of("ztat_request", submittedZtatRequest.getId()));
+    }
+
+    /**
+     * Get the status of a ZTAT request
+     *
+     * @param request
+     * @param response
+     * @param token
+     * @param type
+     * @param ztatId
+     * @return
+     * @throws SQLException
+     * @throws GeneralSecurityException
+     */
+
+    @GetMapping("/status/{type}")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
+    public ResponseEntity<?> getRequest(HttpServletRequest request, HttpServletResponse response,
+                                             @RequestHeader("Authorization") String token,
+                                             @PathVariable("type") String type,
+                                             @RequestParam("ztatId") Long ztatId) throws SQLException, GeneralSecurityException {
+        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+
+        log.info("Received ZTAT request from agent: {}", compactJwt);
+        if (!keycloakService.validateJwt(compactJwt)) {
+            log.warn("Invalid Keycloak token");
+            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+        }
+
+        // Extract agent identity from the JWT
+        var operatingUser = getOperatingUser(request, response );
+
+        // Extract agent identity from the JWT
+        String agentId = keycloakService.extractAgentId(compactJwt);
+
+        if (null == operatingUser) {
+            log.warn("No operating user found for agent: {}", agentId);
+            var username = keycloakService.extractUsername(compactJwt);
+            operatingUser = userService.getUserByUsername(username);
+
+        }
+
+        if (null != type ){
+            switch(type){
+                case "terminal":
+                    var terminalJIT = ztatService.getZtatRequest(ztatId);
+                    if (terminalJIT.getUser().getId() == operatingUser.getId()){
+                        if ( terminalJIT.getApprovals().size() > 0 && terminalJIT.getApprovals().get(0).isApproved() ) {
+                            return ResponseEntity.ok(Map.of("status", "approved", "ztat_token", terminalJIT.getApprovals().get(0).getToken()));
+                        }
+                        else {
+                            log.info("User {} is not the owner of the request {}", operatingUser.getId(), ztatId);
+                            return ResponseEntity.ok(Map.of("status", "unknown"));
+                        }
+                    } else {
+                        log.info("User {} is not the owner of the request {}", operatingUser.getId(), ztatId);
+                        return ResponseEntity.ok(Map.of("status", "unknown"));
+                    }
+                case "ops":
+                    var opsJit = ztatService.getOpsJITRequest(ztatId);
+                    if (Objects.equals(opsJit.getUser().getId(), operatingUser.getId())){
+                        if ( ztatService.isApproved(opsJit) ) {
+                            return ResponseEntity.ok(Map.of("status", "approved", "ztat_token", opsJit.getApprovals().get(0).getToken()));
+                        }
+                        else {
+                            return ResponseEntity.ok(Map.of("status", "unknown"));
+                        }
+                    } else {
+                        return ResponseEntity.ok(Map.of("status", "unknown"));
+                    }
+
+                default:
+
+            }
+        }
+        return ResponseEntity.ok(Map.of("status", "unknown"));
+    }
+
+    @GetMapping("/list/{type}")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<?> listZtatRequests(@RequestHeader("Authorization") String token,
+        @PathVariable("type") String type,
+                                                                HttpServletRequest request, HttpServletResponse response) {
+        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+
+        log.info("Received ZTAT request from agent: {}", compactJwt);
+        if (!keycloakService.validateJwt(compactJwt)) {
+            log.warn("Invalid Keycloak token");
+            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+        }
+
+        // Extract agent identity from the JWT
+        var operatingUser = getOperatingUser(request, response );
+
+        // Extract agent identity from the JWT
+        String agentId = keycloakService.extractAgentId(compactJwt);
+
+        if (null == operatingUser) {
+            log.warn("No operating user found for agent: {}", agentId);
+            var username = keycloakService.extractUsername(compactJwt);
+            operatingUser = userService.getUserByUsername(username);
+
+        }
+        List<JITTrackerDTO> ztatTracker = new ArrayList<JITTrackerDTO>();
+        switch(type){
+            case "terminal":
+                ztatTracker = ztatService.getOpenJITRequests(operatingUser);
+                break;
+            case "ops":
+                ztatTracker = ztatService.getOpenOpsRequests(operatingUser);
+                break;
+            case "atat":
+                ztatTracker = ztatService.getOpenOpsRequests(operatingUser);
+                ztatTracker = ztatTracker.stream().filter(dto -> {
+                  if (dto.getCommand().equals("register")) {
+                        return false;
+                  }
+                    try {
+                        if (userService.isNPE(dto.getUserName())){
+                            return true;
+                        }
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                    return false;
+                }).toList();
+                break;
+            default:
+                log.warn("Invalid type: {}", type);
+        }
+        return ResponseEntity.ok(ztatTracker);
+    }
 }

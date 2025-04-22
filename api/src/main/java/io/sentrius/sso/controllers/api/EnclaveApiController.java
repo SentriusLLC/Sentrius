@@ -4,15 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import io.sentrius.sso.core.annotations.LimitAccess;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.model.dto.HostGroupDTO;
+import io.sentrius.sso.core.dto.HostGroupDTO;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.UserService;
-import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.utils.AccessUtil;
 import io.sentrius.sso.core.utils.MessagingUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,34 +38,31 @@ public class EnclaveApiController extends BaseController {
     }
 
     @GetMapping("/search")
-    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_VIEW_SYSTEMS})
     public ResponseEntity<List<HostGroupDTO>> searchEnclaves(HttpServletRequest request, HttpServletResponse response,
                                                              @RequestParam(name="query",required = false) String query) {
 
 
         var operatingUser = getOperatingUser(request, response);
         if (AccessUtil.canAccess(operatingUser, SSHAccessEnum.CAN_MANAGE_SYSTEMS)) {
-            return ResponseEntity.ok( hostGroupService.searchAllHostGroups(query).stream().map(HostGroupDTO::new)
+            return ResponseEntity.ok( hostGroupService.searchAllHostGroups(query).stream().map(x -> x.toDTO())
                 .collect(Collectors.toList()) );
         }
         else {
             return ResponseEntity.ok(
                 hostGroupService.searchHostGroupsByUserIdAndFilters(operatingUser.getId(), query).stream()
-                    .map(HostGroupDTO::new)
+                    .map(x -> x.toDTO())
                     .collect(Collectors.toList()));
         }
     }
 
     @GetMapping("/assign")
-    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_EDIT_SYSTEMS})
     public ResponseEntity<HostGroupDTO> assign(HttpServletRequest request, HttpServletResponse response,
                                                 @RequestParam(name="groupId") Long groupId) {
-        var resp = new HostGroupDTO(hostGroupService.getHostGroup(groupId),true);
+        var resp = hostGroupService.getHostGroup(groupId).toDTO(true);
         return ResponseEntity.ok(resp);
     }
 
     @PostMapping("/assign")
-    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_EDIT_SYSTEMS})
     public ResponseEntity<HostGroupDTO> setAssignments(HttpServletRequest request, HttpServletResponse response,
                                                        @RequestBody Map<String, Object> payload) {
 
@@ -85,11 +81,10 @@ public class EnclaveApiController extends BaseController {
         }
         hg.setUsers(newUserList);
         hostGroupService.save(hg);
-        return ResponseEntity.ok(new HostGroupDTO(hg, true));
+        return ResponseEntity.ok(hg.toDTO(true));
     }
 
     @GetMapping("/lock")
-    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_EDIT_SYSTEMS})
     public String lockEnclave(HttpServletRequest request, HttpServletResponse response) {
         var grpIdStr = request.getParameter("groupId");
         if (null == grpIdStr  || grpIdStr.isEmpty()) {
@@ -112,7 +107,6 @@ public class EnclaveApiController extends BaseController {
     }
 
     @GetMapping("/unlock")
-    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_EDIT_SYSTEMS})
     public String unlockEnclave(HttpServletRequest request, HttpServletResponse response) {
         var grpIdStr = request.getParameter("groupId");
         if (null == grpIdStr  || grpIdStr.isEmpty()) {
@@ -135,7 +129,6 @@ public class EnclaveApiController extends BaseController {
     }
 
     @PostMapping("/edit")
-    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_EDIT_SYSTEMS})
     public String editEnclave(HttpServletRequest request, HttpServletResponse response) {
 
         var grpIdStr = request.getParameter("groupId");

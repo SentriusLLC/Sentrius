@@ -1,9 +1,9 @@
 package io.sentrius.sso.websocket;
 import io.sentrius.sso.automation.auditing.Trigger;
 import io.sentrius.sso.automation.auditing.TriggerAction;
+import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.protobuf.Session;
 import io.sentrius.sso.core.model.ConnectedSystem;
-import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -174,8 +174,6 @@ public class SshListenerService {
             try {
                 String command = terminalMessage.getCommand();
 
-                log.info("Got " + command);
-
                 Integer keyCode = null;
                 Double keyCodeDbl = terminalMessage.getKeycode();
                 if (keyCodeDbl != null) {
@@ -196,7 +194,6 @@ public class SshListenerService {
                         sessionTrackingService.addTrigger(terminalSessionId, terminalSessionId.getTerminalAuditor().getCurrentTrigger());
                     }
                     if (keyCode != null && keyCode != -1) {
-                        log.info("key code isn't null " + keyCode );
                         if (keyMap.containsKey(keyCode)) {
 
                             if (keyCode == 13
@@ -230,7 +227,6 @@ public class SshListenerService {
                         }
 
                     } else {
-                        log.info("Appending");
 
                             terminalSessionId.getTerminalAuditor().append(command);
                             terminalSessionId.getCommander().print(command);

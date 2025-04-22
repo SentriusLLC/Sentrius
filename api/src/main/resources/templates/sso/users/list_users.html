@@ -24,10 +24,11 @@
 </head>
 <script>
     $(document).ready(function() {
+        const csrfToken = $("#csrf-token").text();
         var cmu = [[${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_USERS')}]];
         $('#user-table').DataTable({
             ajax: {
-                url: '/api/v1/users/list', // list
+                url: '/api/v1/users/list?type=user', // list
                 dataSrc: '', // Specify the property where the data is located (e.g. use 'data' if response has a "data" field)
             },
             columns: [
@@ -56,9 +57,36 @@
             ]
         });
 
+        $('#npe-table').DataTable({
+            ajax: {
+                url: '/api/v1/users/list?type=non_person_entity', // list
+                dataSrc: '', // Specify the property where the data is located (e.g. use 'data' if response has a "data" field)
+            },
+            columns: [
+                { data: 'name' },
+                { data: 'username' },
+                { data: 'lastSeen' },
+            {
+                    data: 'userId',
+                    render: function(data, type, row) {
+                        var myId = encodeURIComponent(data);
+                        var actions = "";
+                        if (cmu){
+                            actions = `<button class="btn btn-primary ping-btn" data-agent-id="${myId}">Ping</button> &nbsp; | &nbsp;`;
+                            actions += `<button class="btn btn-secondary view-policy-btn" data-agent-id="${myId}">View
+                                Policy</button> &nbsp; | &nbsp;`;
+                            actions += `<button class="btn btn-primary edit-policy-btn" data-agent-id="${myId}">Edit Policy</button> &nbsp; | &nbsp;`;
+                            actions += `<button class="btn btn-primary audit-agent-btn" data-agent-id="${myId}">Audit Graph</button>`;
+                        }
+                        return actions;
+                    }
+                }
+            ]
+        });
+
         $('#user-types-table').DataTable({
             ajax: {
-                url: '/api/v1/users/types/list', // list
+                url: '/api/v1/users/types/list?type=user', // list
                 dataSrc: '', // Specify the property where the data is located (e.g. use 'data' if response has a "data" field)
             },
             columns: [
@@ -87,14 +115,135 @@
                 }
             ]
         });
+
+        // View Policy
+        let pollingInterval = null;
+
+        $(document).on('click', '.ping-btn', function () {
+            const agentId = encodeURIComponent($(this).data('agent-id'));
+
+            // Start Ping
+            fetch(`/api/v1/agent/ping?agentId=${agentId}`, { method: 'POST',headers: {
+                    'Content-Type': 'text/plain',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+            })
+                .then(response => response.text())
+                .then(pingId => {
+                    $('#policyContent').html('<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div><p>Waiting for agent...</p></div>').show();
+                    $('#policyEditor, #savePolicyBtn').hide();
+                    const modalEl = $('#policyModal');
+                    const modal = new bootstrap.Modal(modalEl);
+                    $('#policyModalLabel').text(`Agent Ping...`);
+                    modal.show();
+
+                    // Poll for result
+                    pollingInterval = setInterval(() => {
+                        fetch(`/api/v1/agent/ping?agentId=${agentId}`)
+                            .then(res => {
+                                if (res.status === 404) return null;
+                                if (!res.ok) throw new Error("Error fetching ping result");
+                                return res.json();
+                            })
+                            .then(result => {
+                                if (!result) return;
+                                console.log("Got " + result);
+                                clearInterval(pollingInterval);
+                                $('#policyModalLabel').text(`Agent Ping - ${result.hostName}`);
+                                $('#policyContent').html(`
+                            <p><strong>Status:</strong> ${result.status}</p>
+                            <p><strong>Version:</strong> ${result.version}</p>
+                            <p><strong>Health:</strong> ${result.health}</p>
+                            <p><strong>Host:</strong> ${result.hostName}</p>
+                            <p><strong>OS:</strong> ${result.osName} ${result.osArch} ${result.osVersion}</p>
+                        `);
+                            })
+                            .catch(err => {
+                                clearInterval(pollingInterval);
+                                $('#policyContent').html(`<p class="text-danger">Failed to get ping result.</p>`);
+                                console.error(err);
+                            });
+                    }, 1000);
+
+                    // Stop polling when modal closes
+                    modalEl.on('hidden.bs.modal', () => {
+                        clearInterval(pollingInterval);
+                    });
+                })
+                .catch(err => {
+                    $('#policyContent').text('Failed to start ping.').show();
+                    console.error(err);
+                });
+        });
+
+        // View Policy
+        $(document).on('click', '.view-policy-btn', function () {
+            const agentId = encodeURIComponent($(this).data('agent-id'));
+            fetch(`/api/v1/agent/policy?agentId=${agentId}`)
+                .then(response => response.text())
+                .then(data => {
+                    $('#policyModalLabel').text('View Agent Policy');
+                    $('#policyContent').text(data).show();
+                    $('#policyEditor, #savePolicyBtn').hide();
+                    new bootstrap.Modal($('#policyModal')).show();
+                }).catch(err => {
+                $('#policyContent').text('Failed to load policy.').show();
+                console.error(err);
+            });
+        });
+
+        // Audit Agent
+        $(document).on('click', '.audit-agent-btn', function () {
+            const agentId = encodeURIComponent($(this).data('agent-id'));
+            window.open(`/sso/v1/agent/connections?agentId=${agentId}`, '_blank');
+        });
+
+        // Edit Policy
+        $(document).on('click', '.edit-policy-btn', function () {
+            const agentId = encodeURIComponent($(this).data('agent-id'));
+            fetch(`/api/v1/agent/policy?agentId=${agentId}`)
+                .then(response => response.text())
+                .then(data => {
+                    $('#policyModalLabel').text('Edit Agent Policy');
+                    $('#policyEditor').val(data).show();
+                    $('#policyContent').hide();
+                    $('#savePolicyBtn').show().off('click').on('click', function () {
+                        const updatedPolicy = $('#policyEditor').val();
+                        fetch(`/api/v1/agent/policy/update?agentId=${agentId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'text/plain',
+                                'X-CSRF-TOKEN': csrfToken
+                            },
+                            body: updatedPolicy
+                        }).then(response => {
+                            if (response.ok) {
+                                alert('Policy updated successfully.');
+                                bootstrap.Modal.getInstance($('#policyModal')[0]).hide();
+                            } else {
+                                alert('Failed to update policy.');
+                            }
+                        });
+                    });
+
+                    new bootstrap.Modal($('#policyModal')).show();
+                }).catch(err => {
+                $('#policyContent').text('Failed to load policy.').show();
+                console.error(err);
+            });
+        });
+
+
+
     });
 </script>
 
 
 <body>
-
+<div id="csrf-token" style="display: none;" th:text="${_csrf.token}"></div>
 <div th:replace="fragments/add_user"></div>
 <div th:replace="fragments/add_type"></div>
+
 <div class="container-fluid">
     <div class="row flex-nowrap">
         <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
@@ -157,6 +306,7 @@
         <!-- Data will be dynamically loaded here -->
         </tbody>
     </table>
+
     </div>
     <h3>Users</h3>
     <table id="user-table" class="display" style="width:100%">
@@ -173,12 +323,46 @@
         <!-- Data will be dynamically loaded here -->
         </tbody>
     </table>
+    <h3>NPEs</h3>
+    <table id="npe-table" class="display" style="width:100%">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Username</th>
+            <th>Last Seen</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- Data will be dynamically loaded here -->
+        </tbody>
+    </table>
 
 
 </div>
 </div>
 </div>
 </div>
+<!-- Policy Viewer Modal -->
+<div class="modal fade" id="policyModal" tabindex="-1" aria-labelledby="policyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="policyModalLabel">Agent Policy</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="policyContent" style="display: none;">Loading...</pre>
+                <textarea id="policyEditor" style="display: none; width: 100%; height: 400px; background: #222; color: #00ff00; border: none; border-radius: 5px; padding: 10px;"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" id="savePolicyBtn" style="display: none;">Save Policy</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script type="module" th:src="@{/js/add_user.js}" defer></script>
 <script type="module" th:src="@{/js/add_type.js}" defer></script>
 </body>

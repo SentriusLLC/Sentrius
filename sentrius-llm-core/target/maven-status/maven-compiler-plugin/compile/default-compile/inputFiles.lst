@@ -1,0 +1,12 @@
+/mnt/ExtraDrive/repos/Sentrius/sentrius-llm-core/src/main/java/io/sentrius/sso/genai/model/endpoints/ConversationRequest.java
+/mnt/ExtraDrive/repos/Sentrius/sentrius-llm-core/src/main/java/io/sentrius/sso/genai/model/ApiEndPointRequest.java
+/mnt/ExtraDrive/repos/Sentrius/sentrius-llm-core/src/main/java/io/sentrius/sso/genai/model/TwoPartyRequest.java
+/mnt/ExtraDrive/repos/Sentrius/sentrius-llm-core/src/main/java/io/sentrius/sso/genai/model/Conversation.java
+/mnt/ExtraDrive/repos/Sentrius/sentrius-llm-core/src/main/java/io/sentrius/sso/genai/model/LLMRequest.java
+/mnt/ExtraDrive/repos/Sentrius/sentrius-llm-core/src/main/java/io/sentrius/sso/genai/api/BaseGenerativeRequest.java
+/mnt/ExtraDrive/repos/Sentrius/sentrius-llm-core/src/main/java/io/sentrius/sso/genai/model/ComplianceRule.java
+/mnt/ExtraDrive/repos/Sentrius/sentrius-llm-core/src/main/java/io/sentrius/sso/genai/Response.java
+/mnt/ExtraDrive/repos/Sentrius/sentrius-llm-core/src/main/java/io/sentrius/sso/genai/model/endpoints/ChatApiEndpointRequest.java
+/mnt/ExtraDrive/repos/Sentrius/sentrius-llm-core/src/main/java/io/sentrius/sso/genai/Message.java
+/mnt/ExtraDrive/repos/Sentrius/sentrius-llm-core/src/main/java/io/sentrius/sso/genai/model/endpoints/RawConversationRequest.java
+/mnt/ExtraDrive/repos/Sentrius/sentrius-llm-core/src/main/java/io/sentrius/sso/genai/model/LLMResponse.java

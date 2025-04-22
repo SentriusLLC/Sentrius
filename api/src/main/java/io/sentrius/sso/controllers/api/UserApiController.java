@@ -12,27 +12,24 @@ import com.fasterxml.jackson.databind.node.IntNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import io.sentrius.sso.core.annotations.LimitAccess;
-import io.sentrius.sso.core.annotations.Model;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.model.HostSystem;
 import io.sentrius.sso.core.model.security.UserType;
-import io.sentrius.sso.core.model.users.User;
-import io.sentrius.sso.core.model.dto.UserDTO;
-import io.sentrius.sso.core.model.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
+import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.dto.UserDTO;
+import io.sentrius.sso.core.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.users.UserConfig;
 import io.sentrius.sso.core.model.users.UserSettings;
-import io.sentrius.sso.core.model.zt.OpsZeroTrustAcessTokenRequest;
-import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenRequest;
-import io.sentrius.sso.core.security.service.CryptoService;
 import io.sentrius.sso.core.services.ErrorOutputService;
+import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.SessionService;
 import io.sentrius.sso.core.services.UserCustomizationService;
 import io.sentrius.sso.core.services.UserService;
-import io.sentrius.sso.core.services.HostGroupService;
-import io.sentrius.sso.core.config.SystemOptions;
-import io.sentrius.sso.core.services.ZeroTrustAccessTokenService;
-import io.sentrius.sso.core.services.ZeroTrustRequestService;
+import io.sentrius.sso.core.services.agents.AgentService;
+import io.sentrius.sso.core.services.security.CryptoService;
+import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
+import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.core.utils.MessagingUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,6 +37,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -55,11 +53,12 @@ public class UserApiController extends BaseController {
 
 
     final HostGroupService hostGroupService;
-    final CryptoService  cryptoService;
+    final CryptoService cryptoService;
     private final MessagingUtil messagingUtil;
     final UserCustomizationService userThemeService;
     final ZeroTrustRequestService ztatRequestService;
     final ZeroTrustAccessTokenService ztatService;
+    final AgentService agentService;
 
     static Map<String, Field> fields = new HashMap<>();
     static {
@@ -70,14 +69,15 @@ public class UserApiController extends BaseController {
 
     private final SessionService sessionService;
 
-    protected UserApiController(UserService userService, SystemOptions systemOptions,
-                                ErrorOutputService errorOutputService,
-                                HostGroupService hostGroupService, CryptoService  cryptoService,
-                                MessagingUtil messagingUtil,
-                                UserCustomizationService userThemeService,
-                                SessionService sessionService,
-                                ZeroTrustRequestService ztatRequestService,
-                                ZeroTrustAccessTokenService ztatService
+    protected UserApiController(
+        UserService userService, SystemOptions systemOptions,
+        ErrorOutputService errorOutputService,
+        HostGroupService hostGroupService, CryptoService  cryptoService,
+        MessagingUtil messagingUtil,
+        UserCustomizationService userThemeService,
+        SessionService sessionService,
+        ZeroTrustRequestService ztatRequestService,
+        ZeroTrustAccessTokenService ztatService, AgentService agentService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.hostGroupService =     hostGroupService;
@@ -87,13 +87,28 @@ public class UserApiController extends BaseController {
         this.sessionService = sessionService;
         this.ztatRequestService = ztatRequestService;
         this.ztatService = ztatService;
+        this.agentService = agentService;
     }
 
     @GetMapping("list")
     @LimitAccess(userAccess = {UserAccessEnum.CAN_VIEW_USERS})
-    public ResponseEntity<List<UserDTO>> listusers(HttpServletRequest request, HttpServletResponse response) {
+    public ResponseEntity<List<UserDTO>> listusers(
+        @RequestParam(required = false) String type,
+        HttpServletRequest request, HttpServletResponse response) {
 
-        var users = userService.getAllUsers();
+        var users = userService.getAllUsers(type);
+
+        users.forEach(user -> {
+            if (user.getIdentityType().equalsIgnoreCase("non_person_entity")) {
+                try {
+                    var userid = cryptoService.decrypt(user.getUserId());
+                    var heartbeat = agentService.getHeartbeat(userid);
+                    user.setLastSeen(heartbeat.getLastHeartbeat().toString());
+                }catch(Exception e) {
+                    user.setLastSeen("NEVER");
+                }
+            }
+        });
 
         return ResponseEntity.ok(users);
     }
@@ -114,14 +129,13 @@ public class UserApiController extends BaseController {
             node.put("status","User successfully added.");
             return ResponseEntity.ok(node);
         } catch (Exception e) {
-            e.printStackTrace();
             node.put("status","Error adding user");
             return ResponseEntity.internalServerError().body(node);
         }
     }
 
     @GetMapping("/delete")
-    @LimitAccess(userAccess = {UserAccessEnum.CAN_EDIT_USERS})
+    @LimitAccess(userAccess = {UserAccessEnum.CAN_DEL_USERS})
     public String deleteUser(@RequestParam("userId") String userId) throws GeneralSecurityException {
         log.info("Deleting user with id: {}", userId);
         Long id = Long.parseLong(cryptoService.decrypt(userId));
@@ -188,13 +202,14 @@ public class UserApiController extends BaseController {
     }
 
     @GetMapping("/types/list")
-    @LimitAccess(userAccess = {UserAccessEnum.CAN_MANAGE_USERS})
+    @LimitAccess(userAccess = {UserAccessEnum.CAN_VIEW_USERS})
     public ResponseEntity<List<UserTypeDTO>> getUserTypes() throws GeneralSecurityException {
 
 
         var userDtos = userService.getUserTypeList();
         userDtos.forEach( userDto -> {
             try {
+
                 if (userDto.getId() > 0) {
                     userDto.setDtoId(cryptoService.encrypt(userDto.getId().toString()));
                 }
@@ -206,7 +221,6 @@ public class UserApiController extends BaseController {
     }
 
     @PostMapping("/types/add")
-    @LimitAccess(userAccess = {UserAccessEnum.CAN_MANAGE_USERS})
     public ResponseEntity<String> createUserType(
         UserTypeDTO dto) throws GeneralSecurityException {
 
@@ -226,7 +240,6 @@ public class UserApiController extends BaseController {
     }
 
     @GetMapping("/types/delete")
-    @LimitAccess(userAccess = {UserAccessEnum.CAN_MANAGE_USERS})
     public String deleteType(@RequestParam("id") String dtoId) throws GeneralSecurityException {
         log.info("Deleting user with id: {}", dtoId);
         Long id = Long.parseLong(cryptoService.decrypt(dtoId));
