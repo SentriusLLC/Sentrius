@@ -306,7 +306,7 @@ public class AgentApiController extends BaseController {
         log.info("Received policy request from agent: {} {} {} {}",agent, aid, agentId, operatingUser);
 
         var agents = agentService.getCommunications(operatingUser.getUsername(), start, end, pageable);
-        return ResponseEntity.ok(agents);
+        return ResponseEntity.ok(agents.map(AgentCommunication::toDTO));
     }
 
     @GetMapping("/policy")

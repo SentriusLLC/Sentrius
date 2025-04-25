@@ -4,6 +4,8 @@ package io.sentrius.sso.core.model.chat;
 
 import java.util.List;
 import java.util.UUID;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import io.sentrius.sso.core.dto.AgentCommunicationDTO;
 import io.sentrius.sso.core.model.zt.RequestCommunicationLink;
 import jakarta.persistence.Basic;
 import jakarta.persistence.CascadeType;
@@ -55,5 +57,19 @@ public class AgentCommunication {
     private java.time.Instant createdAt = java.time.Instant.now();
 
     @OneToMany(mappedBy = "communication", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference // <-- ADD THIS
     private List<RequestCommunicationLink> linkedRequests;
+
+    public AgentCommunicationDTO toDTO(){
+        return AgentCommunicationDTO.builder()
+                .id(this.id)
+                .sourceAgent(this.sourceAgent)
+                .targetAgent(this.targetAgent)
+                .messageType(this.messageType)
+                .communicationId(this.communicationId)
+                .payload(this.payload)
+                .createdAt(this.createdAt)
+                .linkedRequests(linkedRequests.stream().map(RequestCommunicationLink::getId).toList())
+                .build();
+    }
 }

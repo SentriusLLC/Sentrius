@@ -2,6 +2,7 @@ package io.sentrius.sso.core.model.zt;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import io.sentrius.sso.core.model.chat.AgentCommunication;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -49,6 +50,7 @@ public class RequestCommunicationLink {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "communication_id", nullable = false)
+    @JsonManagedReference // <-- ADD THIS
     private AgentCommunication communication;
 
     @Column(name = "created_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")

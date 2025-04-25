@@ -140,10 +140,11 @@ public class AgentClientService {
         return List.of();
     }
 
-    public AgentCommunicationDTO askQuestion(AgentExecution execution, AtatRequest atatRequest, String payload)
+    public AgentCommunicationDTO askAgent(AgentExecution execution, AtatRequest atatRequest, String payload)
         throws ZtatException, TimeoutException, JsonProcessingException {
         // pose a question to the user and then wait for a response a reasonable amount of time.
         String ask = "/agent/chat/atat/send";
+
 
         AgentCommunicationDTO myQuestion = AgentCommunicationDTO.builder()
             .payload(payload)
@@ -151,6 +152,7 @@ public class AgentClientService {
             .sourceAgent(execution.getUser().getUsername())
             .targetAgent(atatRequest.getUserName())
             .build();
+        log.info("My question is {}",myQuestion);
         var acommResponse = zeroTrustClientService.callPostOnApi(execution, ask, myQuestion,
             Maps.immutableEntry("requestId", List.of(atatRequest.getRequestId())));
         return JsonUtil.MAPPER.readValue(acommResponse, AgentCommunicationDTO.class);

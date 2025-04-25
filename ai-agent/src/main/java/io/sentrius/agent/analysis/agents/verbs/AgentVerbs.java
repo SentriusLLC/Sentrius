@@ -44,7 +44,6 @@ import io.sentrius.sso.genai.Message;
 import io.sentrius.sso.genai.Response;
 import io.sentrius.sso.genai.model.LLMRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -189,7 +188,7 @@ public class AgentVerbs {
 
                 if (commsIds.size() > 1) {
                     // get the first one
-                    throw new RuntimeException("have more than one");
+                    log.info("CommsIds is {}", commsIds);
                 }
 
 
@@ -436,7 +435,7 @@ public class AgentVerbs {
                         log.info("We have a question");
                         // ask a question of the user
                         String payload = JsonUtil.MAPPER.writeValueAsString(ztat);
-                        var comm = agentClientService.askQuestion(execution,request,payload);
+                        var comm = agentClientService.askAgent(execution,request,payload);
                         log.info("Question is {}", comm);
                         var newComms = agentClientService.getResponse(execution,request,comm, 60,
                             java.util.concurrent.TimeUnit.SECONDS);

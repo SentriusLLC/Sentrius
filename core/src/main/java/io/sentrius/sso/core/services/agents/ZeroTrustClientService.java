@@ -517,7 +517,7 @@ public class ZeroTrustClientService {
 
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, String.class);
 
-        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+        if (response.getStatusCode().is2xxSuccessful()) {
             log.info("successfully approved ZTAT: {}", requestId);
         } else {
             throw new RuntimeException("Failed to obtain ZTAT: " + response.getStatusCode());
