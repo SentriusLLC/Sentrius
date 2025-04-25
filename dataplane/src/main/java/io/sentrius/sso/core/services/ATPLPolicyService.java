@@ -97,7 +97,7 @@ public class ATPLPolicyService {
     public boolean allowsEndpoint(ATPLPolicy policy, String endpoint) {
         var f =  policy.getCapabilities().getPrimitives().stream()
             .filter(p -> {
-                log.info("Checking if {} contains {}", p.getEndpoint(), endpoint);
+                log.info("Checking if {} contains {} {} ", p.getEndpoint(), endpoint, p.getEndpoint().contains(endpoint));
                 return p.getEndpoint().contains(endpoint);
             })
             .findFirst();

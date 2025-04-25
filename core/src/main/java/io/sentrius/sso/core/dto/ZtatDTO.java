@@ -1,14 +1,20 @@
 package io.sentrius.sso.core.dto;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Data
 @Builder
+@Setter
 @AllArgsConstructor
-public class JITTrackerDTO {
+@NoArgsConstructor
+public class ZtatDTO {
     private Long id;
     @Builder.Default
     private String status = "Open";
@@ -28,4 +34,7 @@ public class JITTrackerDTO {
     private boolean canApprove = false;
     @Builder.Default
     private boolean canDeny = false;
+
+    @Builder.Default
+    List<String> communicationIds = new ArrayList<>();
 }

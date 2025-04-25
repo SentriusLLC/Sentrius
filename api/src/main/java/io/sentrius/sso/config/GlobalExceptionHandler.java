@@ -50,7 +50,9 @@ public class GlobalExceptionHandler {
                 return ResponseEntity.status(428).body(responseStatusException.getReason());
             }
         }
-
+        ex.printStackTrace();
+        log.info("ahhasldigjudaslkgj {}", ex.getMessage());
+        log.error("asldkjgadlskgj " + ex.getCause(), ex);
         String message = "Received Error Message: " + ex.getCause();
         ErrorOutput errorOutput = ErrorOutput.builder()
                 .errorType(ex.getClass().getName())
@@ -64,8 +66,7 @@ public class GlobalExceptionHandler {
         // Add messageId as a redirect attribute
         redirectAttributes.addAttribute("errorId", MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR));
 
-        ex.printStackTrace();
-        log.info("ahhasldigjudaslkgj {}", ex.getMessage());
+
         // Redirect to "/mydashboard" with the messageId parameter
         URI redirectUri = URI.create("/sso/v1/dashboard?errorId=" + MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR));
         return ResponseEntity.status(HttpStatus.FOUND).location(redirectUri).build();

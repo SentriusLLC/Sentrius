@@ -1,12 +1,15 @@
 package io.sentrius.agent.analysis.agents.verbs;
 
-import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -15,18 +18,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import io.sentrius.agent.analysis.agents.agents.AgentConfig;
 import io.sentrius.agent.analysis.agents.agents.PromptBuilder;
 import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
 import io.sentrius.agent.analysis.agents.interpreters.AsessmentListInterpreter;
 import io.sentrius.agent.analysis.agents.interpreters.ObjectListInterpreter;
 import io.sentrius.agent.analysis.agents.interpreters.ZtatOutputInterpreter;
+import io.sentrius.agent.analysis.model.AssessedTerminal;
 import io.sentrius.agent.analysis.model.Assessment;
 import io.sentrius.agent.analysis.model.ZtatAsessment;
-import io.sentrius.sso.core.dto.JITTrackerDTO;
+import io.sentrius.agent.analysis.model.ZtatResponse;
+import io.sentrius.sso.core.dto.AgentCommunicationDTO;
+import io.sentrius.sso.core.dto.ZtatDTO;
 import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.AtatRequest;
-import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.verbs.Verb;
@@ -38,6 +44,7 @@ import io.sentrius.sso.genai.Message;
 import io.sentrius.sso.genai.Response;
 import io.sentrius.sso.genai.model.LLMRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -114,6 +121,8 @@ public class AgentVerbs {
             var content = choice.getMessage().getContent();
             if (content.startsWith("```json")) {
                 content = content.substring(7, content.length() - 3);
+            } else if (content.startsWith("```")) {
+                content = content.substring(3, content.length() - 3);
             }
             log.info("content is {}", content);
             if (null != content && !content.isEmpty()) {
@@ -139,8 +148,9 @@ public class AgentVerbs {
      */
     @Verb(name = "justify_operations", description = "Chats with an agent to justify operations.", isAiCallable =
         false, requiresTokenManagement = true)
-    public String justifyAgent(AgentExecution execution, ZtatRequestDTO ztatRequest, String reason) throws ZtatException,
-        IOException, InterruptedException {
+    public String justifyAgent(AgentExecution execution, ZtatRequestDTO ztatRequest,
+                               AssessedTerminal reason) throws ZtatException,
+        IOException, InterruptedException, TimeoutException {
 
 
 
@@ -149,6 +159,15 @@ public class AgentVerbs {
             if ("approved".equals(status.get("status").asText())) {
                 return status.get("ztat_token").asText();
             }
+
+        InputStream assessZtatStream = getClass().getClassLoader().getResourceAsStream("respond-ztat.json");
+        if (assessZtatStream == null) {
+            throw new RuntimeException("assessor-config.yaml not found on classpath");
+
+        }
+        AtatRequest atat =
+            AtatRequest.builder().requestId(ztatRequest.getRequestId()).requestedAction(ztatRequest.getCommand()).build();
+        String respondZtat = new String(assessZtatStream.readAllBytes());
 
             while(!status.equals("approved")) {
 
@@ -159,6 +178,80 @@ public class AgentVerbs {
                 if ("approved".equals(status.get("status").asText())) {
                     return status.get("ztat_token").asText();
                 }
+
+                Set<String> commsIds = agentClientService.getCommunicationIds(execution, ztatRequest);
+
+                commsIds.remove(execution.getCommunicationId());
+
+                if (commsIds.isEmpty()) {
+                    continue;
+                }
+
+                if (commsIds.size() > 1) {
+                    // get the first one
+                    throw new RuntimeException("have more than one");
+                }
+
+
+                var commsId = commsIds.iterator().next();
+
+                AgentExecution newExecution =
+                AgentExecution.builder().executionId(execution.getExecutionId()).ztatToken(execution.getZtatToken()).communicationId(commsId).build();
+
+                var nextMessaged = agentClientService.getResponse(newExecution, ztatRequest, 1, TimeUnit.MINUTES);
+                Set<String> otherAgents = Sets.newHashSet();
+                Set<UUID> communicationIds = new HashSet<>();
+                if (!nextMessaged.isEmpty()) {
+                    List<Message> messages = new ArrayList<>();
+                    messages.add(Message.builder().role("system").content("The following messages are " +
+                        "communications between two agents. One agent is interpreting data from another and may " +
+                        "ask questions. Please respond to the questions using the initial guidance layed out in " +
+                        "the next messages").build());
+                    messages.addAll( reason.getMessages() );
+                    for (AgentCommunicationDTO agentCommunicationDTO : nextMessaged) {
+                        if (agentCommunicationDTO.getTargetAgent().equals(execution.getUser().getUsername())) {
+                            otherAgents.add( agentCommunicationDTO.getSourceAgent());
+                        }
+                        communicationIds.add(agentCommunicationDTO.getCommunicationId());
+                    }
+                    messages.add(Message.builder().role("system").content("please respond in the following json " +
+                        "format: " + respondZtat).build());
+
+                    LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
+                    execution.addMessages( messages );
+                    var resp = llmService.askQuestion(execution, chatRequest);
+                    Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
+                    log.info("Response is {}", resp);
+                    for (Response.Choice choice : response.getChoices()) {
+                        var content = choice.getMessage().getContent();
+                        if (content.startsWith("```json")) {
+                            content = content.substring(7, content.length() - 3);
+                        }
+
+
+                        var ztatResponse = JsonUtil.MAPPER.readValue(content,
+                            ZtatResponse.class);
+
+                        for(var agent : otherAgents ) {
+                            for (var commId : communicationIds) {
+                                AgentCommunicationDTO myResponse = AgentCommunicationDTO.builder()
+                                    .communicationId(commId)
+                                    .payload(JsonUtil.MAPPER.writeValueAsString(ztatResponse))
+                                    .messageType("atat_chat_respond")
+                                    .sourceAgent(execution.getUser().getUsername())
+                                    .targetAgent(agent)
+                                    .build();
+
+                                agentClientService.sendResponse(execution, myResponse, ztatRequest);
+                            }
+                        }
+                        log.info("content is {}", content);
+                    }
+                }
+
+                // check for messages
+
+
             }
 
         return null;
@@ -179,7 +272,7 @@ public class AgentVerbs {
         outputInterpreter = AsessmentListInterpreter.class,
         inputInterpreter =
         ObjectListInterpreter.class, requiresTokenManagement = true)
-    public List<Assessment> assessData(AgentExecution execution, List<?> objectList) throws ZtatException, IOException {
+    public List<AssessedTerminal> assessData(AgentExecution execution, List<?> objectList) throws ZtatException, IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream(agentConfigFile);
         if (is == null) {
             throw new RuntimeException("assessor-config.yaml not found on classpath");
@@ -188,7 +281,7 @@ public class AgentVerbs {
 
         log.info("Agent config loaded: {}", config);
 
-        List<Assessment> responses = new ArrayList<>();
+        List<AssessedTerminal> responses = new ArrayList<>();
         log.info("Object list is {}", objectList);
         for (var obj : objectList) {
             List<Message> messages = new ArrayList<>();
@@ -209,8 +302,8 @@ public class AgentVerbs {
                 }
 
 
-                responses.add( JsonUtil.MAPPER.readValue(content, Assessment.class) );
-                //responses.add(JsonUtil.MAPPER.readTree(content));
+                responses.add(AssessedTerminal.builder().assessment(JsonUtil.MAPPER.readValue(content,
+                    Assessment.class)).messages(messages).build());
                 log.info("content is {}", content);
             }
             log.info("Object is {}", obj);
@@ -219,40 +312,54 @@ public class AgentVerbs {
     }
 
     @Verb(name = "list_ztat_requests", returnType = ArrayNode.class, description = "Lists zero trust access tokens to" +
-        " review. Does not review access token requests.", outputInterpreter = ZtatOutputInterpreter.class, requiresTokenManagement = true )
+        " review from API. Does not review access token requests.", outputInterpreter = ZtatOutputInterpreter.class,
+        requiresTokenManagement = true )
     public List<AtatRequest> getWork(AgentExecution token, Map<String,Object> args) throws ZtatException, IOException {
         List<AtatRequest> requests = new ArrayList<>();
 
         var atatRequests = agentClientService.getAtatRequests(token);
-        List<JITTrackerDTO> dtos =  JsonUtil.MAPPER.readValue(atatRequests, new TypeReference<>() {
+        log.info("Atat requests: {}", atatRequests);
+        List<ZtatDTO> dtos =  JsonUtil.MAPPER.readValue(atatRequests, new TypeReference<>() {
         });
 
         for (var dto : dtos) {
+            Set<String> communicationIds = Sets.newHashSet(dto.getCommunicationIds());
+            dto.setCommunicationIds(communicationIds.stream().toList());
             var request = new AtatRequest();
+            request.setUserName(dto.getUserName());
             request.setRequestId(dto.getId().toString());
             // get messages
             request.setRequestedAction( dto.getSummary());
 
-            var communications = zeroTrustClientService.callGetOnApi(token,"agent/communications/id",
-                Maps.immutableEntry("communicationId", List.of(token.getCommunicationId())));
-            var messages = JsonUtil.MAPPER.readTree(communications);
+            log.info("Request is {}", dto);
             List<Message> communicationMessages = new ArrayList<>();
-            for(JsonNode message : messages) {
-                if (message.has("payload") && message.has("messageType")) {
-                    var type = message.get("messageType").asText();
-                    if (type.equalsIgnoreCase("chat_request")) {
-                        try {
-                            Message msg = JsonUtil.MAPPER.readValue(message.get("payload").asText(), Message.class);
-                            communicationMessages.add(msg);
-                        } catch (JsonProcessingException e) {
-                            throw new RuntimeException(e);
+                for(String commsId : dto.getCommunicationIds()){
+                var communications = zeroTrustClientService.callGetOnApi(token,"/agent/communications/id",
+                    Maps.immutableEntry("communicationId", List.of(commsId)));
+                var messages = JsonUtil.MAPPER.readTree(communications);
+                for(JsonNode message : messages) {
+                    if (message.has("payload") && message.has("messageType")) {
+                        var type = message.get("messageType").asText();
+
+                        if (type.equalsIgnoreCase("chat_request")) {
+                            try {
+                                LLMRequest msg = JsonUtil.MAPPER.readValue(message.get("payload").asText(), LLMRequest.class);
+                                log.info("Message is {} from {}", msg, message.get("payload").asText());
+
+                                    communicationMessages.addAll(msg.getMessages());
+
+                            } catch (JsonProcessingException e) {
+                                log.error(e.getMessage());
+                            }
                         }
                     }
                 }
             }
             request.setMessages(communicationMessages);
+            requests.add(request);
         }
 
+        log.info("Requests is {}", requests);
 
         return requests;
     }
@@ -260,8 +367,9 @@ public class AgentVerbs {
     @Verb(name = "assess_ztat_requests", returnType = ArrayNode.class, description = "Analyzes ztats according to the" +
         " context.",
         inputInterpreter = ZtatOutputInterpreter.class, requiresTokenManagement = true )
-    public List<ZtatAsessment> analyzeAtatRequests(AgentExecution execution, List<AtatRequest> requests) throws ZtatException,
-        IOException {
+    public List<ZtatAsessment> analyzeAtatRequests(AgentExecution execution, List<AtatRequest> requests)
+        throws ZtatException,
+        IOException, TimeoutException {
         // set up context
         InputStream is = getClass().getClassLoader().getResourceAsStream(agentConfigFile);
         if (is == null) {
@@ -279,41 +387,116 @@ public class AgentVerbs {
         AgentConfig config = new ObjectMapper(new YAMLFactory()).readValue(is, AgentConfig.class);
         log.info("Agent config loaded: {}", config);
         List<ZtatAsessment> responses = new ArrayList<>();
+        log.info("Size of requests {}", requests.size());
         for (var request : requests) {
-            List<Message> messages = new ArrayList<>();
+            var originalMessages  = request.getMessages().stream().map(message ->{
+                message.setRole("user");
+                return message;
+            }).toList();
+            List<Message> messages = new ArrayList<>(originalMessages);
             var context = config.getContext();
 
             messages.add(Message.builder().role("system").content(context).build());
             messages.add(Message.builder().role("system").content("Ensure your response adheres to the following " +
                 "json format:" + assessZtat).build());
-            messages.addAll(execution.getMessages());
-            messages.addAll(request.getMessages());
+            messages.add(Message.builder().role("system").content("The user's ztat request ID is " + request.getRequestId() + ", and their requested action is " + request.getRequestedAction()).build());
+            //messages.addAll(execution.getMessages());
 
-            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
+
+            log.info("Messages is {}", messages);
+
+            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
-            log.info("Response is {}", resp);
-            for (Response.Choice choice : response.getChoices()) {
-                var content = choice.getMessage().getContent();
-                if (content.startsWith("```json")) {
-                    content = content.substring(7, content.length() - 3);
-                }
-                log.info("content is {}", content);
-                var ztat = JsonUtil.MAPPER.readValue(content, ZtatAsessment.class);
-                if (ztat.isApproved()) {
-                    zeroTrustClientService.approveZtat(execution, request.getRequestId());
-                }
-                else {
-                    if (null != ztat.getQuestionToUser() &&
-                        ztat.getQuestionToUser().isEmpty()){
-                        // ask a question of the user
-                    }
-                }
+            log.info("Assess Response is {}", resp);
+            List<ZtatAsessment> assessments = new ArrayList<>();
+            if (response.getChoices().isEmpty()) {
+                log.info("No choices in response");
+                return responses;
+            }
+            var choice = response.getChoices().get(0);
+
+            var content = choice.getMessage().getContent();
+            if (content.startsWith("```json")) {
+                content = content.substring(7, content.length() - 3);
+            }
+            log.info("content is {}", content);
+            var ztat = JsonUtil.MAPPER.readValue(content, ZtatAsessment.class);
+            if (ztat.isApproved()) {
+                log.info("Ztat is approved");
+                zeroTrustClientService.approveZtat(execution, request.getRequestId());
                 responses.add(ztat);
+            }
+            else {
+                // only allow 100 back and forths
+                int max = 2;
+                do{
+                    if (null != ztat.getQuestionToAgent() &&
+                        !ztat.getQuestionToAgent().isEmpty()){
+                        log.info("We have a question");
+                        // ask a question of the user
+                        String payload = JsonUtil.MAPPER.writeValueAsString(ztat);
+                        var comm = agentClientService.askQuestion(execution,request,payload);
+                        log.info("Question is {}", comm);
+                        var newComms = agentClientService.getResponse(execution,request,comm, 60,
+                            java.util.concurrent.TimeUnit.SECONDS);
+
+                        messages = new ArrayList<>(originalMessages);
+                        for(var newComm : newComms) {
+                            if (newComm.getMessageType().equalsIgnoreCase("atat_chat_ask")) {
+                                var msg = JsonUtil.MAPPER.readValue(newComm.getPayload(), ZtatAsessment.class);
+                                var newMessage = Message.builder().role("system").content(msg.getQuestionToAgent()).build();
+                                messages.add(newMessage);
+                            } else if (newComm.getMessageType().equalsIgnoreCase("atat_chat_response")) {
+                                var msg = JsonUtil.MAPPER.readValue(newComm.getPayload(), ZtatResponse.class);
+                                var newMessage =
+                                    Message.builder().role("user").content(msg.getJustificationToAgent()).build();
+                                messages.add(newMessage);
+                            }
+                        }
+
+
+
+                        messages.add(Message.builder().role("system").content(context).build());
+                        messages.add(Message.builder().role("system").content("Ensure your response adheres to the following " +
+                            "json format:" + assessZtat).build());
+                        messages.add(Message.builder().role("system").content("The user's ztat request ID is " + request.getRequestId() + ", and their requested action is " + request.getRequestedAction()).build());
+                        //messages.addAll(execution.getMessages());
+
+
+                        log.info("Messages is {}", messages);
+
+                        chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+                        resp = llmService.askQuestion(execution, chatRequest);
+                        response = JsonUtil.MAPPER.readValue(resp, Response.class);
+                        if (response.getChoices().isEmpty()) {
+                            return responses;
+                        }
+                        choice = response.getChoices().get(0);
+
+                        content = choice.getMessage().getContent();
+                        if (content.startsWith("```json")) {
+                            content = content.substring(7, content.length() - 3);
+                        }
+                        log.info("content is {}", content);
+                        ztat = JsonUtil.MAPPER.readValue(content, ZtatAsessment.class);
+                        if (ztat.isApproved()) {
+                            zeroTrustClientService.approveZtat(execution, request.getRequestId());
+                            responses.add(ztat);
+                            break;
+                        }
+
+                    }
+
+                }while(--max > 0);
 
             }
+
+
+
         }
         return responses;
     }
+
 
 }

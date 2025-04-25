@@ -1,7 +1,5 @@
-[
-  {
-    "requestId": "<id>",
-    "approved": "<true|false>",
-    "questionToUser": "<question to the agent>"
-  }
-]
+{
+  "requestId": "<id>",
+  "approved": "<true|false>",
+  "questionToAgent": "<question to the agent>"
+}

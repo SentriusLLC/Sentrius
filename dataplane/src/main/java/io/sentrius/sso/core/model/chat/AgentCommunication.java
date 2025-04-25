@@ -2,8 +2,11 @@ package io.sentrius.sso.core.model.chat;
 
 
 
+import java.util.List;
 import java.util.UUID;
+import io.sentrius.sso.core.model.zt.RequestCommunicationLink;
 import jakarta.persistence.Basic;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -11,12 +14,14 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Getter
@@ -24,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 @Builder
 @AllArgsConstructor
 @RequiredArgsConstructor
+@ToString(exclude = {"linkedRequests"}) // <-- add this
 @Table(name = "agent_communications")
 public class AgentCommunication {
 
@@ -47,4 +53,7 @@ public class AgentCommunication {
     @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
     @Builder.Default
     private java.time.Instant createdAt = java.time.Instant.now();
+
+    @OneToMany(mappedBy = "communication", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RequestCommunicationLink> linkedRequests;
 }

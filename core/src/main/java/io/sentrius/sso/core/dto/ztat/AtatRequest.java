@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
 public class AtatRequest {
     // don't release any sensitive information
     private String requestId;
+    private String userName;
     private List<Message> messages;
     private String requestedAction;
 }

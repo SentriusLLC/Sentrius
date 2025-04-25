@@ -3,7 +3,7 @@ package io.sentrius.sso.controllers.view;
 import java.util.List;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.dto.JITTrackerDTO;
+import io.sentrius.sso.core.dto.ZtatDTO;
 import io.sentrius.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.services.ErrorOutputService;
@@ -55,7 +55,7 @@ public class ZeroTrustATController extends BaseController {
     }
 
 
-    List<JITTrackerDTO> decorateTats(List<JITTrackerDTO> tats, User operatingUser){
+    List<ZtatDTO> decorateTats(List<ZtatDTO> tats, User operatingUser){
         boolean canApprove = AccessUtil.canAccess(operatingUser, ZeroTrustAccessTokenEnum.CAN_APPROVE_ZTATS);
         boolean canDeny = AccessUtil.canAccess(operatingUser, ZeroTrustAccessTokenEnum.CAN_DENY_ZTATS);
         if (canApprove || canDeny) {

@@ -8,10 +8,11 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 import io.sentrius.sso.core.config.SystemOptions;
-import io.sentrius.sso.core.dto.JITTrackerDTO;
+import io.sentrius.sso.core.dto.ZtatDTO;
 import io.sentrius.sso.core.model.HostSystem;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.model.zt.OpsApproval;
+import io.sentrius.sso.core.model.zt.RequestCommunicationLink;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenApproval;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenRequest;
@@ -269,11 +270,11 @@ public class ZeroTrustAccessTokenService {
     return ztatRequestService.hasJITRequest(command, user.getId(), system.getId());
   }
 
-    public List<JITTrackerDTO> getOpenJITRequests(User operatingUser) {
+    public List<ZtatDTO> getOpenJITRequests(User operatingUser) {
         return ztatRequestService.getOpenAccessTokenRequests(operatingUser);
     }
 
-  public List<JITTrackerDTO> getOpenOpsRequests(User operatingUser) {
+  public List<ZtatDTO> getOpenOpsRequests(User operatingUser) {
       return ztatRequestService.getOpenOpsRequests(operatingUser);
   }
 
@@ -289,4 +290,7 @@ public class ZeroTrustAccessTokenService {
     return ztatRequestService.getAccessTokenRequestById(ztatId);
   }
 
+  public void addCommunicationLink(RequestCommunicationLink link) {
+    ztatRequestService.addCommunicationLink(link);
+  }
 }

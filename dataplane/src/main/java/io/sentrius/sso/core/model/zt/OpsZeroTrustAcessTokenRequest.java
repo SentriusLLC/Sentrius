@@ -1,6 +1,9 @@
 package io.sentrius.sso.core.model.zt;
 
+import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import io.sentrius.sso.core.model.users.User;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -17,14 +20,17 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 // JITRequest Entity
 
 @Builder
 @Entity
 @Table(name = "operations_request")
 @Data
+@ToString(exclude = {"approvals", "communicationLinks"}) // <-- add this
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class OpsZeroTrustAcessTokenRequest {
 
     @Id
@@ -53,4 +59,9 @@ public class OpsZeroTrustAcessTokenRequest {
     // Add the relationship to OpsApproval
     @OneToMany(mappedBy = "ztatRequest", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<OpsApproval> approvals;
+
+    @OneToMany(mappedBy = "operationsRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @JsonManagedReference  // ⭐ Parent owns the collection
+    private List<RequestCommunicationLink> communicationLinks = new ArrayList<>();
 }

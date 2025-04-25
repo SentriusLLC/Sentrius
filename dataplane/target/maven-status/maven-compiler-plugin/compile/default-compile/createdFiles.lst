@@ -46,6 +46,7 @@ io/sentrius/sso/core/model/zt/ZTATRequestBase.class
 io/sentrius/sso/core/model/automation/AutomationExecution$AutomationExecutionBuilder.class
 io/sentrius/sso/core/model/zt/OpsZeroTrustAcessTokenRequest$OpsZeroTrustAcessTokenRequestBuilder.class
 io/sentrius/sso/automation/auditing/AccessTokenAuditor.class
+io/sentrius/sso/core/repository/RequestCommunicationLinkRepository.class
 io/sentrius/sso/core/services/TaskService$1.class
 io/sentrius/sso/core/model/AgentPolicyAssignmentId$AgentPolicyAssignmentIdBuilder.class
 io/sentrius/sso/core/services/auditing/AuditService.class
@@ -105,6 +106,7 @@ io/sentrius/sso/core/model/metadata/TerminalBehaviorMetrics.class
 io/sentrius/sso/core/model/sessions/SessionOutput.class
 io/sentrius/sso/config/KeycloakAuthSuccessHandler.class
 io/sentrius/sso/core/config/SystemOptions.class
+io/sentrius/sso/core/model/zt/RequestCommunicationLink.class
 io/sentrius/sso/core/repository/OpsUseRepository.class
 io/sentrius/sso/core/repository/automation/ScriptRepository.class
 io/sentrius/sso/core/model/metadata/TerminalCommand.class
@@ -146,6 +148,7 @@ io/sentrius/sso/core/model/HostSystem$HostSystemBuilderImpl.class
 io/sentrius/sso/automation/runner/AutomationTracker.class
 io/sentrius/sso/core/model/KnownHost.class
 io/sentrius/sso/core/services/security/KeyStoreService.class
+io/sentrius/sso/core/model/zt/RequestCommunicationLink$RequestCommunicationLinkBuilder.class
 io/sentrius/sso/core/model/ConfigurationOption.class
 io/sentrius/sso/core/model/Notification.class
 io/sentrius/sso/core/model/zt/ZeroTrustAccessTokenRequest$ZeroTrustAccessTokenRequestBuilderImpl.class
@@ -241,6 +244,7 @@ io/sentrius/sso/core/repository/ATPLPolicyRepository.class
 io/sentrius/sso/core/repository/JITReasonRepository.class
 io/sentrius/sso/core/repository/TimeConfigRepository.class
 io/sentrius/sso/core/model/chat/AgentCommunication$AgentCommunicationBuilder.class
+io/sentrius/sso/core/model/zt/OpsUse$OpsUseBuilder.class
 io/sentrius/sso/core/model/users/UserSettings$UserSettingsBuilder.class
 io/sentrius/sso/core/model/users/User.class
 io/sentrius/sso/core/model/hostgroup/TimeConfigJson$TimeConfigJsonBuilderImpl.class

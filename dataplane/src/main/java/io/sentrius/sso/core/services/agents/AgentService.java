@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import io.sentrius.sso.core.dto.AgentCommunicationDTO;
 import io.sentrius.sso.core.dto.AgentDTO;
 import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
 import io.sentrius.sso.core.dto.UserDTO;
@@ -131,6 +132,19 @@ public class AgentService {
             .messageType(messageType)
             .communicationId(UUID.fromString(communicationId))
             .payload(payload)
+            .build();
+        return CompletableFuture.completedFuture(agentCommunicationRepository.save(communication));
+
+    }
+
+
+    public CompletableFuture<AgentCommunication> saveCommunication(AgentCommunicationDTO agentCommunicationDTO) {
+        AgentCommunication communication = AgentCommunication.builder()
+            .sourceAgent(agentCommunicationDTO.getSourceAgent())
+            .targetAgent(agentCommunicationDTO.getTargetAgent())
+            .messageType(agentCommunicationDTO.getMessageType())
+            .communicationId(agentCommunicationDTO.getCommunicationId())
+            .payload(agentCommunicationDTO.getPayload())
             .build();
         return CompletableFuture.completedFuture(agentCommunicationRepository.save(communication));
 

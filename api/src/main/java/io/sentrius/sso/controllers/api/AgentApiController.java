@@ -5,20 +5,27 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.sentrius.sso.config.ApiPaths;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.dto.AgentCommunicationDTO;
 import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
 import io.sentrius.sso.core.model.chat.AgentCommunication;
 import io.sentrius.sso.core.model.security.IdentityType;
 import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.sessions.SessionLog;
+import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.model.zt.RequestCommunicationLink;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.ErrorOutputService;
@@ -30,10 +37,12 @@ import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
+import io.sentrius.sso.protobuf.Session;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -328,16 +337,43 @@ public class AgentApiController extends BaseController {
 
     @GetMapping("/communications")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
-    public ResponseEntity<List<AgentCommunication>> getAgentComms(@RequestParam String sourceAgent, @RequestParam String targetAgent) throws GeneralSecurityException {
+    public ResponseEntity<List<AgentCommunicationDTO>> getAgentComms(@RequestParam String sourceAgent, @RequestParam String targetAgent) throws GeneralSecurityException {
         //return agentService.getPolicyYamlForAgent(agentId); // returns YAML string
 
-        return ResponseEntity.ok( agentService.getCommunications(sourceAgent, targetAgent) );
+        var comms = agentService.getCommunications(sourceAgent, targetAgent);
+        return getListResponseEntity(comms);
+
+    }
+
+    @NotNull
+    private ResponseEntity<List<AgentCommunicationDTO>> getListResponseEntity(final List<AgentCommunication> comms) {
+        var commsDTOs = comms.stream()
+            .map(comm -> {
+                return AgentCommunicationDTO.builder()
+                    .id(comm.getId())
+                    .sourceAgent(comm.getSourceAgent())
+                    .targetAgent(comm.getTargetAgent())
+                    .messageType(comm.getMessageType())
+                    .communicationId(comm.getCommunicationId())
+                    .payload(comm.getPayload())
+                    .createdAt(comm.getCreatedAt())
+                    .linkedRequests(comm.getLinkedRequests().stream()
+                        .map(RequestCommunicationLink::getId)
+                        .toList())
+                    .build();
+            })
+            .toList();
+
+        return ResponseEntity.ok( commsDTOs );
     }
 
     @GetMapping("/communications/id")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
-    public ResponseEntity<List<AgentCommunication>> getCommunicationsById(@RequestParam("communicationId") String communicationId) throws GeneralSecurityException {
-        return ResponseEntity.ok( agentService.getCommunications(UUID.fromString(communicationId)) );
+    public ResponseEntity<List<AgentCommunicationDTO>> getCommunicationsById(@RequestParam("communicationId") String communicationId) throws GeneralSecurityException {
+
+        var comms = agentService.getCommunications(UUID.fromString(communicationId));
+
+        return getListResponseEntity(comms);
     }
 
     @PostMapping("/ping")
@@ -373,4 +409,228 @@ public class AgentApiController extends BaseController {
         }
     }
 
+    @PostMapping("/chat/atat/send")
+    public ResponseEntity<?> sendMessage(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        @RequestHeader("Authorization") String token,
+        @RequestHeader("communication_id") String communicationId,
+        @RequestParam("requestId") String requestId,
+        @RequestBody AgentCommunicationDTO comm)
+        throws GeneralSecurityException, ExecutionException, InterruptedException {
+
+        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+        if (null == communicationId ){
+            log.warn("No communication id found");
+            return ResponseEntity.status(HttpStatus.SC_BAD_REQUEST).body("Invalid communication ID");
+        }
+
+        if (!keycloakService.validateJwt(compactJwt)) {
+            log.warn("Invalid Keycloak token");
+            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+        }
+
+        var operatingUser = getOperatingUser(request, response );
+
+        // Extract agent identity from the JWT
+        // String agentId = keycloakService.extractAgentId(compactJwt);
+
+        if (null == operatingUser) {
+            var username = keycloakService.extractUsername(compactJwt);
+            operatingUser = userService.getUserByUsername(username);
+
+        }
+
+        var ztat = ztatService.getOpsZtatRequest(Long.valueOf(requestId));
+
+        if ( !validateUser(ztat.getUser(), operatingUser, comm) ){
+            log.warn("User {} is not allowed to send message to agent {}", operatingUser.getUsername(), comm.getTargetAgent());
+            return ResponseEntity.status(HttpStatus.SC_FORBIDDEN).body("User is not allowed to send message to agent");
+        }
+
+
+
+
+        var newAgentComm = agentService.saveCommunication(comm);
+
+        if (null == newAgentComm) {
+            log.warn("Failed to save communication");
+            return ResponseEntity.status(HttpStatus.SC_INTERNAL_SERVER_ERROR).body("Failed to save communication");
+        }
+
+        RequestCommunicationLink newCommunicationLink = RequestCommunicationLink.builder()
+            .operationsRequest(ztat).communication(newAgentComm.get())
+            .build();
+
+        ztatService.addCommunicationLink(newCommunicationLink);
+
+        return ResponseEntity.ok(comm.clone( newAgentComm.get().getId()) );
+
+    }
+
+    @GetMapping ("/chat/atat/next")
+    public ResponseEntity<?> getNextMessage(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        @RequestHeader("Authorization") String token,
+        @RequestHeader("communication_id") String communicationId,
+        @RequestParam("id") Long previousId)
+        throws GeneralSecurityException, ExecutionException, InterruptedException {
+
+        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+        if (null == communicationId ){
+            log.warn("No communication id found");
+            return ResponseEntity.status(HttpStatus.SC_BAD_REQUEST).body("Invalid communication ID");
+        }
+
+        if (!keycloakService.validateJwt(compactJwt)) {
+            log.warn("Invalid Keycloak token");
+            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+        }
+
+        var operatingUser = getOperatingUser(request, response );
+
+        // Extract agent identity from the JWT
+        // String agentId = keycloakService.extractAgentId(compactJwt);
+
+        if (null == operatingUser) {
+            var username = keycloakService.extractUsername(compactJwt);
+            operatingUser = userService.getUserByUsername(username);
+
+        }
+
+        var comms = agentService.getCommunications(UUID.fromString(communicationId));
+
+
+        comms = comms.stream().filter(c ->
+           null != previousId &&  c.getId() > previousId).toList();
+
+        var commsDto = comms.stream()
+            .map(comm -> AgentCommunicationDTO.builder()
+                .id(comm.getId())
+                .sourceAgent(comm.getSourceAgent())
+                .targetAgent(comm.getTargetAgent())
+                .messageType(comm.getMessageType())
+                .communicationId(comm.getCommunicationId())
+                .payload(comm.getPayload())
+                .createdAt(comm.getCreatedAt())
+                .linkedRequests(comm.getLinkedRequests().stream()
+                    .map(RequestCommunicationLink::getId)
+                    .toList())
+                .build())
+            .toList();
+
+        return ResponseEntity.ok(commsDto);
+
+    }
+
+    @GetMapping ("/chat/atat/first")
+    public ResponseEntity<?> getNextMessage(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        @RequestHeader("Authorization") String token,
+        @RequestHeader("communication_id") String communicationId)
+        throws GeneralSecurityException, ExecutionException, InterruptedException {
+
+        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+        if (null == communicationId ){
+            log.warn("No communication id found");
+            return ResponseEntity.status(HttpStatus.SC_BAD_REQUEST).body("Invalid communication ID");
+        }
+
+        if (!keycloakService.validateJwt(compactJwt)) {
+            log.warn("Invalid Keycloak token");
+            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+        }
+
+        var operatingUser = getOperatingUser(request, response );
+
+        // Extract agent identity from the JWT
+        // String agentId = keycloakService.extractAgentId(compactJwt);
+
+        if (null == operatingUser) {
+            var username = keycloakService.extractUsername(compactJwt);
+            operatingUser = userService.getUserByUsername(username);
+
+        }
+
+        var comms = agentService.getCommunications(UUID.fromString(communicationId));
+
+
+        comms = comms.stream().toList();
+
+        var commsDto = comms.stream()
+            .map(comm -> AgentCommunicationDTO.builder()
+                .id(comm.getId())
+                .sourceAgent(comm.getSourceAgent())
+                .targetAgent(comm.getTargetAgent())
+                .messageType(comm.getMessageType())
+                .communicationId(comm.getCommunicationId())
+                .payload(comm.getPayload())
+                .createdAt(comm.getCreatedAt())
+                .linkedRequests(comm.getLinkedRequests().stream()
+                    .map(RequestCommunicationLink::getId)
+                    .toList())
+                .build())
+            .toList();
+
+        return ResponseEntity.ok(commsDto);
+
+    }
+
+    @GetMapping ("/chat/atat/links")
+    public ResponseEntity<?> getLinkedCommunications(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        @RequestParam("requestId") Long requestId)
+        throws GeneralSecurityException, ExecutionException, InterruptedException {
+
+        var operatingUser = getOperatingUser(request, response );
+
+
+        Set<String> communicationIds = new HashSet<>();
+        var ops = ztatService.getOpsJITRequest(requestId);
+        var links = ops.getCommunicationLinks();
+        if (null == links || links.isEmpty() ){
+            return ResponseEntity.ok("[]");
+        }
+        boolean isAuthorized = operatingUser.getUsername().equals(ops.getUser().getUsername());
+        for(var link : links){
+            communicationIds.add(link.getCommunication().getCommunicationId().toString() );
+            if (!isAuthorized && (link.getCommunication().getSourceAgent().equals(ops.getUser().getUsername()) || link.getCommunication().getTargetAgent().equals(ops.getUser().getUsername()))){
+                isAuthorized = true;
+            }
+        }
+
+        return ResponseEntity.ok(communicationIds);
+
+    }
+
+    private boolean validateUser(User user, User operatingUser, AgentCommunicationDTO comm) {
+        // validate that the user is allowed to send message to the agent
+        // validate that the user is either the source agent or receiving agent on comm
+
+        if (!user.getUsername().equals(comm.getTargetAgent()) && user.getUsername().equals(comm.getSourceAgent())) {
+            return false;
+
+        }
+        return comm.getTargetAgent().equals(operatingUser.getUsername()) ||
+            comm.getSourceAgent().equals(operatingUser.getUsername());
+    }
+
+    private boolean validateUser(User user, User operatingUser, AgentCommunication comm) {
+        // validate that the user is allowed to send message to the agent
+        // validate that the user is either the source agent or receiving agent on comm
+
+        if (!user.getUsername().equals(comm.getTargetAgent()) && user.getUsername().equals(comm.getSourceAgent())) {
+            return false;
+
+        }
+        return comm.getTargetAgent().equals(operatingUser.getUsername()) ||
+            comm.getSourceAgent().equals(operatingUser.getUsername());
+
+    }
 }

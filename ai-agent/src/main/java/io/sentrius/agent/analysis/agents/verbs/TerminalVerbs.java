@@ -13,6 +13,7 @@ import io.sentrius.agent.analysis.agents.interpreters.AsessmentListInterpreter;
 import io.sentrius.agent.analysis.agents.interpreters.ObjectListInterpreter;
 import io.sentrius.agent.analysis.agents.interpreters.TerminalListInterpreter;
 import io.sentrius.agent.analysis.agents.interpreters.TerminalOutputInterpreter;
+import io.sentrius.agent.analysis.model.AssessedTerminal;
 import io.sentrius.agent.analysis.model.Assessment;
 import io.sentrius.sso.core.dto.HostSystemDTO;
 import io.sentrius.sso.core.dto.ztat.AgentExecution;
@@ -110,12 +111,12 @@ public class TerminalVerbs {
         " Requires sessionId, risk, and description in a json object.",
         requiresTokenManagement = true,
         outputInterpreter = TerminalOutputInterpreter.class, inputInterpreter = AsessmentListInterpreter.class)
-    public List<ObjectNode> killTerminalSessionWithTerminalAssessment(AgentExecution execution, List<Assessment> dtos)
+    public List<ObjectNode> killTerminalSessionWithTerminalAssessment(AgentExecution execution, List<AssessedTerminal> dtos)
         throws ZtatException, IOException {
         try {
             List<ObjectNode> responses = new ArrayList<>();
             log.info("Terminal list response: {}", dtos);
-            for (Assessment dto : dtos) {
+            for (AssessedTerminal dto : dtos) {
 
                 // submit the kill
                 if (dto != null){
@@ -126,8 +127,8 @@ public class TerminalVerbs {
                 }
 
 
-                    var risk =dto.getRisk();
-                    var description = dto.getDescription();
+                    var risk =dto.getAssessment().getRisk();
+                    var description = dto.getAssessment().getDescription();
                     if (null != risk && null != description) {
                         switch(risk) {
                             case "low":
@@ -136,13 +137,13 @@ public class TerminalVerbs {
                             case "medium":
                             case "high":
                                 // kill the session
-                                log.info("Killing terminal session: {}", dto.getSessionId());
+                                log.info("Killing terminal session: {}", dto.getAssessment().getSessionId());
                                 break;
                             default:
                                 throw new RuntimeException("Unknown risk level: " + risk);
                         }
                         try {
-                            var sessionId = URLEncoder.encode(dto.getSessionId(), StandardCharsets.UTF_8);
+                            var sessionId = URLEncoder.encode(dto.getAssessment().getSessionId(), StandardCharsets.UTF_8);
                             var response = zeroTrustClientService.callPutOnApi(
                                 execution, "/ssh/terminal/kill",
                                 Maps.immutableEntry("sessionId", List.of(sessionId))
@@ -151,7 +152,7 @@ public class TerminalVerbs {
                                 // Successfully retrieved logs
                                 log.info("Terminal output response: {}", response);
                                 var obj = JsonUtil.MAPPER.createObjectNode();
-                                obj.put("id", dto.getSessionId());
+                                obj.put("id", dto.getAssessment().getSessionId());
                                 obj.put("terminalOutput", response);
                                 responses.add(obj);
                             }
@@ -166,13 +167,19 @@ public class TerminalVerbs {
                                 .justification(description)
                                 .summary("Kill a Terminal session because it is high risk")
                                 .build();
-                            log.info("Obtaining approval. Justification: {}", description);
+                            log.info("Obtaining approval. Justification: {} {}", description, ztatRequestDTO);
                             var request = zeroTrustClientService.requestZtatToken(execution, execution.getUser()
                                 ,ztatRequestDTO);
 
                             ztatRequestDTO.setRequestId(request);
 
-                            agentVerbs.justifyAgent(execution, ztatRequestDTO, dto.getDescription());
+                            var token = agentVerbs.justifyAgent(execution, ztatRequestDTO, dto);
+                            execution.setZtatToken(token);
+                            var sessionId = URLEncoder.encode(dto.getAssessment().getSessionId(), StandardCharsets.UTF_8);
+                            var response = zeroTrustClientService.callPutOnApi(
+                                execution, "/ssh/terminal/kill",
+                                Maps.immutableEntry("sessionId", List.of(sessionId))
+                            );
                         }
                     }
 

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.jcraft.jsch.Identity;
 import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.dto.UserTypeDTO;
@@ -38,6 +39,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @EqualsAndHashCode
 @Table(name = "users")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class User extends PrincipalEntity {
 
 

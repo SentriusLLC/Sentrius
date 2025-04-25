@@ -55,4 +55,7 @@ public class ZeroTrustAccessTokenRequest {
     // Add the relationship to OpsApproval
     @OneToMany(mappedBy = "ztatRequest", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<ZeroTrustAccessTokenApproval> approvals;
+
+    @OneToMany(mappedBy = "ztatRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RequestCommunicationLink> communicationLinks;
 }

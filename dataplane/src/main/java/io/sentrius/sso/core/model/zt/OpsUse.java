@@ -11,12 +11,18 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Getter
 @Table(name = "ops_uses")
 public class OpsUse {
@@ -26,8 +32,8 @@ public class OpsUse {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ztat_approval_id", nullable = false)
-    private ZeroTrustAccessTokenApproval ztatApproval;
+    @JoinColumn(name = "ops_approval_id", nullable = false)
+    private OpsApproval opsApproval;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

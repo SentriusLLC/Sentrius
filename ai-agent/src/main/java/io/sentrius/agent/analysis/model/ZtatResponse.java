@@ -11,9 +11,8 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ZtatAsessment {
+public class ZtatResponse {
     String requestId;
-    boolean approved;
-    String questionToAgent;
+    String justificationToAgent;
 
 }

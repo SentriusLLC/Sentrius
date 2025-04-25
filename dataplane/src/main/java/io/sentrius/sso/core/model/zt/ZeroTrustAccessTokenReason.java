@@ -23,12 +23,12 @@ public class ZeroTrustAccessTokenReason {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "command_need", nullable = false)
+    @Column(name = "command_need", nullable = false,  columnDefinition = "TEXT")
     private String commandNeed;
 
-    @Column(name = "reason_identifier")
+    @Column(name = "reason_identifier",  columnDefinition = "TEXT")
     private String reasonIdentifier;
 
-    @Column(name = "url")
+    @Column(name = "url",  columnDefinition = "TEXT")
     private String url;
 }

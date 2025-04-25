@@ -30,7 +30,6 @@ public class LoginController extends BaseController {
         HttpServletResponse response) {
 
         // Custom authentication logic (e.g., validating username and password)
-        log.info("* ********* *log {} {}",username, password);
         if (isAuthenticated(username, password)) {
             // Set session attribute or JWT token as needed
             request.getSession(true).setAttribute("user", username);

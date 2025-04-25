@@ -1,5 +1,7 @@
 package io.sentrius.agent.analysis.model;
 
+import java.util.List;
+import io.sentrius.sso.genai.Message;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,9 +13,8 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ZtatAsessment {
-    String requestId;
-    boolean approved;
-    String questionToAgent;
+public class AssessedTerminal {
+    Assessment assessment;
+    List<Message> messages;
 
 }

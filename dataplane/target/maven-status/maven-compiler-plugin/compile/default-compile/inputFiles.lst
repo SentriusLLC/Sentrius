@@ -7,6 +7,7 @@
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/repository/SystemRepository.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/security/enums/ZeroTrustAccessTokenEnum.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/repository/automation/ScriptRepository.java
+/mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/zt/RequestCommunicationLink.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/repository/NotificationRecipientRepository.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/services/TwoPartyApprovalConfigService.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/security/enums/SystemKeyConfiguration.java
@@ -203,6 +204,7 @@
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/DataTableResponse.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/utils/AuditConfigProvider.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/services/security/KeyStoreService.java
+/mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/repository/RequestCommunicationLinkRepository.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/ErrorOutput.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/zt/ZtatUse.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/metadata/TerminalCommand.java

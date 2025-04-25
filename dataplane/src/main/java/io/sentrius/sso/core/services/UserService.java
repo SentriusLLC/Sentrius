@@ -294,4 +294,13 @@ public class UserService {
     public Optional<UserType> getUserType(UserType baseUser) {
         return userTypeRepository.findById(baseUser.getId());
     }
+
+    public boolean validateJwt(String compactJwt) {
+        return keycloakService.validateJwt(compactJwt);
+    }
+
+    public User extractByJwt(String compactJwt) {
+        var username = keycloakService.extractUsername(compactJwt);
+        return getUserByUsername(username);
+    }
 }

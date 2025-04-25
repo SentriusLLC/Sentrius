@@ -6,18 +6,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
-import io.sentrius.sso.core.dto.JITTrackerDTO;
+import io.sentrius.sso.core.dto.ZtatDTO;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
 import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.model.zt.RequestCommunicationLink;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.NotificationService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,34 +45,40 @@ public class ZeroTrustATApiController extends BaseController {
     private final ZeroTrustAccessTokenService ztatService;
     private final NotificationService notificationService;
     private final KeycloakService keycloakService;
+    private final AgentService agentService;
 
 
     protected ZeroTrustATApiController(
         UserService userService, SystemOptions systemOptions,
         ErrorOutputService errorOutputService, ZeroTrustAccessTokenService ztatService, NotificationService notificationService,
-        KeycloakService keycloakService
+        KeycloakService keycloakService,
+        AgentService agentService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.ztatService = ztatService;
         this.notificationService=notificationService;
         this.keycloakService = keycloakService;
+        this.agentService = agentService;
     }
 
     @GetMapping("/my/current")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
-    public ResponseEntity<List<JITTrackerDTO>> getCurrentJit(HttpServletRequest request, HttpServletResponse response) {
+    public ResponseEntity<List<ZtatDTO>> getCurrentJit(HttpServletRequest request, HttpServletResponse response) {
 
         var operatingUser = getOperatingUser(request, response);
 
         var ztatTracker = ztatService.getOpenJITRequests(operatingUser);
         ztatTracker.addAll(ztatService.getOpenOpsRequests( operatingUser));
 
+
+        ztatTracker = ztatTracker.stream().filter(ZtatDTO::isCurrentUser).toList();
+
         return ResponseEntity.ok(ztatTracker);
     }
 
     @GetMapping("/{type}/{status}")
     @LimitAccess(ztatAccess = {ZeroTrustAccessTokenEnum.CAN_APPROVE_ZTATS})
-    public String manageRequest(HttpServletRequest request, HttpServletResponse response,
+    public ResponseEntity<?> manageRequest(HttpServletRequest request, HttpServletResponse response,
                               @PathVariable("type") String type,
                               @PathVariable("status") String status,
                               @RequestParam("ztatId") Long ztatId) throws SQLException, GeneralSecurityException {
@@ -87,7 +96,7 @@ public class ZeroTrustATApiController extends BaseController {
 
             }
         }
-        return "redirect:/sso/v1/zerotrust/accesstoken/list";
+        return ResponseEntity.ok().build();
     }
 
     private void manageOpsRequest(User operatingUser, Long ztatId, String status)
@@ -142,12 +151,30 @@ public class ZeroTrustATApiController extends BaseController {
 
         }
 
+
+
         log.info("Received ZTAT request from agent: {}", agentId);
         // Store the request in the database
         ZeroTrustAccessTokenReason reason = ztatService.createReason(ztatRequest.getJustification(), "", ztatRequest.getCommand());
         var submittedZtatRequest = ztatService.createOpsRequest(ztatRequest.getCommand(), ztatRequest.getCommand(),
             reason, operatingUser);
+
+
         submittedZtatRequest = ztatService.addJITRequest(submittedZtatRequest);
+
+        // link communications
+        if (request.getHeader("communication_id") != null) {
+            var communications = agentService.getCommunications(UUID.fromString(request.getHeader("communication_id")));
+            if (communications != null) {
+                for (var communication : communications) {
+                    var link = RequestCommunicationLink.builder()
+                        .operationsRequest(submittedZtatRequest)
+                        .communication(communication)
+                        .build();
+                    ztatService.addCommunicationLink(link);
+                }
+            }
+        }
 
         return ResponseEntity.ok(Map.of("ztat_request", submittedZtatRequest.getId()));
     }
@@ -230,7 +257,7 @@ public class ZeroTrustATApiController extends BaseController {
     }
 
     @GetMapping("/list/{type}")
-    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    @LimitAccess(ztatAccess = {ZeroTrustAccessTokenEnum.CAN_VIEW_ZTATS})
     public ResponseEntity<?> listZtatRequests(@RequestHeader("Authorization") String token,
         @PathVariable("type") String type,
                                                                 HttpServletRequest request, HttpServletResponse response) {
@@ -255,7 +282,7 @@ public class ZeroTrustATApiController extends BaseController {
             operatingUser = userService.getUserByUsername(username);
 
         }
-        List<JITTrackerDTO> ztatTracker = new ArrayList<JITTrackerDTO>();
+        List<ZtatDTO> ztatTracker = new ArrayList<ZtatDTO>();
         switch(type){
             case "terminal":
                 ztatTracker = ztatService.getOpenJITRequests(operatingUser);

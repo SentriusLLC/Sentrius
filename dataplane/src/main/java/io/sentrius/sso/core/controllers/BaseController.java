@@ -12,7 +12,9 @@ import io.sentrius.sso.core.utils.UIMessaging;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -75,7 +77,7 @@ public abstract class BaseController {
     @ModelAttribute("authenticated")
     public boolean isAuthenticated(HttpServletRequest request, HttpServletResponse response) {
         try {
-            var operatingUser = userService.getOperatingUser(request, response, getUserMessage(request, null, null));
+            var operatingUser = getOperatingUser(request, response );
             if (null == operatingUser) {
                 return false;
             }
@@ -89,9 +91,25 @@ public abstract class BaseController {
     public User getOperatingUser(HttpServletRequest request, HttpServletResponse response) {
         // Logic to retrieve the operating user, e.g., from a JWT token
         try {
-            return userService.getOperatingUser(request, response, getUserMessage(request, null, null));
+            var user =  userService.getOperatingUser(request, response, getUserMessage(request, null, null));
+
+            if (null == user ){
+                var token = request.getHeader("Authorization");
+                String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+
+                if (!userService.validateJwt(compactJwt)) {
+                    log.warn("Invalid Keycloak token");
+                    return null;
+                }
+
+                return userService.extractByJwt(compactJwt);
+            }else {
+                return user;
+            }
 
         }catch(Exception e){
+            log.error("Error getting user", e);
             return null;
         }
     }

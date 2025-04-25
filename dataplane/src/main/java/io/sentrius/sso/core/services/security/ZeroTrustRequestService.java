@@ -1,14 +1,19 @@
 package io.sentrius.sso.core.services.security;
 
 import io.sentrius.sso.core.config.SystemOptions;
-import io.sentrius.sso.core.dto.JITTrackerDTO;
+import io.sentrius.sso.core.dto.ZtatDTO;
 import io.sentrius.sso.core.model.HostSystem;
+import io.sentrius.sso.core.model.chat.AgentCommunication;
 import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.model.zt.OpsUse;
+import io.sentrius.sso.core.model.zt.RequestCommunicationLink;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenApproval;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenRequest;
 import io.sentrius.sso.core.model.zt.OpsApproval;
 import io.sentrius.sso.core.model.zt.OpsZeroTrustAcessTokenRequest;
 import io.sentrius.sso.core.model.zt.ZtatUse;
+import io.sentrius.sso.core.repository.OpsUseRepository;
+import io.sentrius.sso.core.repository.RequestCommunicationLinkRepository;
 import io.sentrius.sso.core.repository.ZeroTrustAccessTokenApprovalRepository;
 import io.sentrius.sso.core.repository.JITReasonRepository;
 import io.sentrius.sso.core.repository.ZeroTrustAccessTokenRequestRepository;
@@ -51,6 +56,11 @@ public class ZeroTrustRequestService {
 
     @Autowired
     private ZtatUseRepository ztatUseRepository;
+
+    @Autowired
+    private RequestCommunicationLinkRepository requestCommunicationLinkRepository;
+    @Autowired
+    private OpsUseRepository opsUseRepository;
 
 
     @Transactional(readOnly = true)
@@ -246,12 +256,12 @@ public class ZeroTrustRequestService {
         opsApprovalRepository.deleteByZtatRequestId(ztatRequest.getId());
     }
 
-    public List<JITTrackerDTO> getOpenAccessTokenRequests(@NonNull User currentUser) {
-        List<ZeroTrustAccessTokenRequest> openRequests = ztatRequestRepository.findOpenJITRequests(currentUser);
+    public List<ZtatDTO> getOpenAccessTokenRequests(@NonNull User currentUser) {
+        List<ZeroTrustAccessTokenRequest> openRequests = ztatRequestRepository.findOpenJITRequests(null);
 
 
         // Map each JITRequest to a JITTrackerDTO
-        List<JITTrackerDTO> ztatTrackerList = new ArrayList<>();
+        List<ZtatDTO> ztatTrackerList = new ArrayList<>();
         for (ZeroTrustAccessTokenRequest request : openRequests) {
             var dto = convertToDTO(request);
             if (Objects.equals(currentUser.getId(), request.getUser().getId())) {
@@ -263,11 +273,11 @@ public class ZeroTrustRequestService {
         return ztatTrackerList;
     }
 
-    public List<JITTrackerDTO> getOpenOpsRequests(@NonNull User currentUser) {
+    public List<ZtatDTO> getOpenOpsRequests(@NonNull User currentUser) {
         // Fetch open JIT requests
-        List<OpsZeroTrustAcessTokenRequest> openRequests = opsJITRequestRepository.findOpenOpsJITRequests(currentUser);
+        List<OpsZeroTrustAcessTokenRequest> openRequests = opsJITRequestRepository.findOpenOpsJITRequests(null);
 
-        List<JITTrackerDTO> ztatTrackerList = new ArrayList<>();
+        List<ZtatDTO> ztatTrackerList = new ArrayList<>();
         for (OpsZeroTrustAcessTokenRequest request : openRequests) {
             var dto = convertToDTO(request);
             if (Objects.equals(currentUser.getId(), request.getUser().getId())) {
@@ -279,11 +289,11 @@ public class ZeroTrustRequestService {
         return ztatTrackerList;
     }
 
-    public List<JITTrackerDTO> getDeniedOpsAccessTokenRequests(@NonNull User currentUser) {
+    public List<ZtatDTO> getDeniedOpsAccessTokenRequests(@NonNull User currentUser) {
         // Fetch open JIT requests
-        List<OpsZeroTrustAcessTokenRequest> openRequests = opsJITRequestRepository.findAllWithUnapprovedRequests(currentUser);
+        List<OpsZeroTrustAcessTokenRequest> openRequests = opsJITRequestRepository.findAllWithUnapprovedRequests(null);
 
-        List<JITTrackerDTO> ztatTrackerList = new ArrayList<>();
+        List<ZtatDTO> ztatTrackerList = new ArrayList<>();
         for (OpsZeroTrustAcessTokenRequest request : openRequests) {
 
             var dto = convertToDTO(request);
@@ -299,10 +309,10 @@ public class ZeroTrustRequestService {
 
 
 
-    public List<JITTrackerDTO> getApprovedOpsAccessTokenRequests(@NonNull User currentUser) {
+    public List<ZtatDTO> getApprovedOpsAccessTokenRequests(@NonNull User currentUser) {
         List<OpsZeroTrustAcessTokenRequest> openRequests = opsJITRequestRepository.findAllApprovedRequests(null);
         log.info("Approved Ops Access Token Requests: {}", openRequests.size());
-        List<JITTrackerDTO> ztatTrackerList = new ArrayList<>();
+        List<ZtatDTO> ztatTrackerList = new ArrayList<>();
         for (var request : openRequests) {
             var dto = convertToDTO(request);
             if (currentUser.getId() == request.getUser().getId()) {
@@ -314,10 +324,10 @@ public class ZeroTrustRequestService {
         return ztatTrackerList;
     }
 
-    public List<JITTrackerDTO> getApprovedTerminalAccessTokenRequests(@NonNull User currentUser) {
+    public List<ZtatDTO> getApprovedTerminalAccessTokenRequests(@NonNull User currentUser) {
         List<ZeroTrustAccessTokenRequest> openRequests = ztatRequestRepository.findAllApprovedRequests(null);
 
-        List<JITTrackerDTO> ztatTrackerList = new ArrayList<>();
+        List<ZtatDTO> ztatTrackerList = new ArrayList<>();
         for (var request : openRequests) {
             var dto = convertToDTO(request);
             if (currentUser.getId() == request.getUser().getId()) {
@@ -330,8 +340,8 @@ public class ZeroTrustRequestService {
     }
 
 
-    private JITTrackerDTO convertToDTO(ZeroTrustAccessTokenRequest request) {
-        return JITTrackerDTO.builder()
+    private ZtatDTO convertToDTO(ZeroTrustAccessTokenRequest request) {
+        return ZtatDTO.builder()
             .id(request.getId())
             .command(request.getCommand())
             .lastUpdated(request.getLastUpdated())
@@ -345,13 +355,18 @@ public class ZeroTrustRequestService {
             .build();
     }
 
-    private JITTrackerDTO convertToDTO(OpsZeroTrustAcessTokenRequest request) {
-        return JITTrackerDTO.builder()
+    private ZtatDTO convertToDTO(OpsZeroTrustAcessTokenRequest request) {
+        return ZtatDTO.builder()
             .id(request.getId())
             .summary(request.getSummary())
             .command(request.getCommand())
             .commandHash(request.getCommandHash())
             .userName(request.getUser().getUsername())
+            .communicationIds( request.getCommunicationLinks().stream()
+                .map(RequestCommunicationLink::getCommunication)
+                .map(AgentCommunication::getCommunicationId)
+                .map(UUID::toString)
+                .toList())
             .hostName("")
             .reasonIdentifier(request.getZtatReason() != null ? request.getZtatReason().getReasonIdentifier() : null)
             .reasonUrl(request.getZtatReason() != null ? request.getZtatReason().getUrl() : null)
@@ -382,10 +397,10 @@ public class ZeroTrustRequestService {
         return systemOptions.maxJitUses; // Update as needed based on your logic
     }
 
-    public List<JITTrackerDTO> getDeniedTerminalAccessTokenRequests(@NonNull User currentUser) {
+    public List<ZtatDTO> getDeniedTerminalAccessTokenRequests(@NonNull User currentUser) {
         List<ZeroTrustAccessTokenRequest> openRequests = ztatRequestRepository.findAllWithUnapprovedRequests( null);
 
-        List<JITTrackerDTO> ztatTrackerList = new ArrayList<>();
+        List<ZtatDTO> ztatTrackerList = new ArrayList<>();
         for (ZeroTrustAccessTokenRequest request : openRequests) {
 
             var dto = convertToDTO(request);
@@ -400,4 +415,23 @@ public class ZeroTrustRequestService {
     }
 
 
+    @Transactional
+    public void addCommunicationLink(RequestCommunicationLink link) {
+        requestCommunicationLinkRepository.save(link);
+    }
+
+    public void incrementAccessTokenUses(OpsApproval request) {
+        log.info("Incrementing uses for JITRequest: {}",
+            opsApprovalRepository.findByZtatRequestId(request.getZtatRequest().getId()).isPresent());
+        opsApprovalRepository.findByZtatRequestId(request.getZtatRequest().getId()).ifPresent(approval -> {
+            if (approval.getUses() >= systemOptions.maxJitUses) {
+                throw new RuntimeException("JIT uses exceeded");
+            }
+            log.info("Incrementing uses for JITRequest: {}", request.getId());
+            opsUseRepository.save(OpsUse.builder().opsApproval(approval).user(request.getApprover()).build());
+            log.info("Incrementing uses for JITRequest: {}", request.getId());
+            approval.setUses( approval.getUses() + 1 );
+            opsApprovalRepository.save(approval);
+        });
+    }
 }

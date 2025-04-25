@@ -9,6 +9,7 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import io.sentrius.sso.config.ApplicationConfig;
 import io.sentrius.sso.core.annotations.LimitAccess;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.dto.ztat.EndpointRequest;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
@@ -57,6 +58,7 @@ public class AccessControlAspect {
     private final ATPLPolicyService atplPolicyService;
     private final AgentService agentService;
     private final ApplicationConfig applicationConfig;
+    private final SystemOptions systemOptions;
     static List<String> allowedEndpoints = new ArrayList<>();
     static {
         allowedEndpoints.add("/api/v1/zerotrust/accesstoken/status");
@@ -130,20 +132,26 @@ public class AccessControlAspect {
                     if (null == token) {
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Registration Required");
                     } else {
-                        log.debug("token is {} ", token);
+                        log.info("token is {} ", token);
                         // validate the token
                         var opsApproval = zeroTrustRequestService.getOpsTokenStatus(token);
+
                         if (opsApproval.isEmpty() || !opsApproval.get().isApproved()) {
                             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Registration Required");
                         }
-                        var command = opsApproval.get().getZtatRequest().getCommand();
-                        log.debug("Command is {} ", command);
+                        if (opsApproval.get().getUses() < systemOptions.getMaxJitUses()) {
+                            var command = opsApproval.get().getZtatRequest().getCommand();
+                            log.info("Command is {} ", command);
 
-                        try {
-                            endpointRequest = JsonUtil.MAPPER.readValue(command, EndpointRequest.class);
-                            log.debug("EndpointRequest is {} ", endpointRequest);
-                        } catch (JsonProcessingException e) {
-                            endpointRequest = null;
+                            try {
+                                endpointRequest = JsonUtil.MAPPER.readValue(command, EndpointRequest.class);
+                                log.info("EndpointRequest is {} ", endpointRequest);
+                            } catch (JsonProcessingException e) {
+                                log.error(e.getMessage());
+                                endpointRequest = null;
+                            }
+                        } else {
+                            log.info("Token {} has been used up", token);
                         }
 
                     }
@@ -151,8 +159,10 @@ public class AccessControlAspect {
                     if (isAllowedEndpoint(endpoint)) {
                         log.debug("Access Granted to {} at {}", operatingUser, accessAnnotation);
                         return;
-                    } else if (null != endpointRequest && endpointRequest.contains(endpoint)) {
+                    } else if (null != endpointRequest && containsEndpoint(endpointRequest.getEndpoints(), endpoint)) {
                         // this endpoint is approved for use.
+                        var opsApproval = zeroTrustRequestService.getOpsTokenStatus(token);
+                        zeroTrustRequestService.incrementAccessTokenUses(opsApproval.get());
                         return;
                     }
                     else if (atplPolicyService.allowsEndpoint(policy.get(), endpoint)) {
@@ -249,6 +259,15 @@ public class AccessControlAspect {
         }finally{
             span.end();
         }
+    }
+
+    private boolean containsEndpoint(List<String> endpoints, String endpoint) {
+        for (String allowedEndpoint : endpoints) {
+            if (endpoint.contains(allowedEndpoint)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 
