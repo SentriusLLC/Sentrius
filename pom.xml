@@ -37,8 +37,7 @@
     <okhttp-version>4.10.0</okhttp-version>
     <jackson-dataformat-xml-version>2.18.2</jackson-dataformat-xml-version>
     <postgresql-version>42.7.4</postgresql-version>
-    <junit-jupiter.version>5.10.1</junit-jupiter.version>
-    <mockito.version>5.10.0</mockito.version>
+    <!--<mockito.version>5.10.0</mockito.version> -->
     <keycloak-version>25.0.3</keycloak-version>
     <caffeine-version>3.2.0</caffeine-version>
     <classgraph.version>4.8.179</classgraph.version>
@@ -281,7 +280,8 @@
         <artifactId>postgresql</artifactId>
         <version>${postgresql-version}</version>
       </dependency>
-      <dependency>
+
+      <!--<dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-junit-jupiter</artifactId>
         <version>${mockito.version}</version>
@@ -291,6 +291,12 @@
         <groupId>org.junit.jupiter</groupId>
         <artifactId>junit-jupiter</artifactId>
         <version>${junit-jupiter.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.junit.platform</groupId>
+        <artifactId>junit-platform-engine</artifactId>
+        <version>${junit.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -305,6 +311,7 @@
         <version>${junit-jupiter.version}</version>
         <scope>test</scope>
       </dependency>
+    -->
       <dependency>
         <groupId>org.keycloak</groupId>
         <artifactId>keycloak-admin-client</artifactId>
@@ -330,7 +337,6 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-
 
 
       <!--
@@ -440,8 +446,23 @@
         <version>3.0.2</version>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.22.1</version>
+        <version>3.2.5</version>
+        <configuration>
+          <useModulePath>false</useModulePath>
+          <properties>
+            <configurationParameters>junit.jupiter.extensions.autodetection.enabled=true</configurationParameters>
+          </properties>
+          <dependenciesToScan>
+            <dependency>org.junit.jupiter</dependency>
+          </dependenciesToScan>
+          <providers>
+            <provider>
+              <name>junit-platform</name>
+            </provider>
+          </providers>
+        </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>

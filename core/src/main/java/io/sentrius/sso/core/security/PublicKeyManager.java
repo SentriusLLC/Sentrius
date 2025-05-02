@@ -4,6 +4,7 @@ package io.sentrius.sso.core.security;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import lombok.NonNull;
 
 public class PublicKeyManager {
 
@@ -31,7 +32,7 @@ public class PublicKeyManager {
 
     public void addKey(String key) {
         if (key != null && !key.trim().isEmpty()) {
-            keys.add(normalize(key));
+                keys.add(normalize(key));
         }
     }
 
@@ -39,7 +40,7 @@ public class PublicKeyManager {
         return String.join("\n", keys).trim();
     }
 
-    private String normalize(String key) {
+    private String normalize(@NonNull String key) {
         return key.replace("\n", "").trim();
     }
 

@@ -182,10 +182,6 @@ public class TerminalVerbs {
                             );
                         }
                     }
-
-
-
-
             }
             return responses;
         } catch (Exception | ZtatException e) {

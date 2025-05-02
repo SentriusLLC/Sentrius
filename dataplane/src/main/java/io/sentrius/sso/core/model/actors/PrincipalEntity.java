@@ -28,7 +28,8 @@ public abstract class PrincipalEntity implements SystemActor{
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  protected Long id;
+  @Builder.Default
+  protected Long id = 0L;
 
   @Column(name = "name")
   protected String name;

@@ -27,7 +27,6 @@ public class KeycloakService {
 
 
     public String getKeycloakToken() {
-        log.info("Getting Keycloak token {}", keycloak.getKeycloak().tokenManager().getAccessTokenString());
         return keycloak.getKeycloak().tokenManager().getAccessTokenString();
     }
 

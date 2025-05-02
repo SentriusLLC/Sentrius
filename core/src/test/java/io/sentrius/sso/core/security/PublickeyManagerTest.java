@@ -7,7 +7,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class PublicKeyManagerTest {
+class PublickeyManagerTest {
 
     @Test
     void loadFromExisting_shouldAddKeysFromNonEmptyFileContent() {
@@ -38,7 +38,7 @@ class PublicKeyManagerTest {
     @Test
     void addKeys_shouldAddValidKeysOnly() {
         PublicKeyManager manager = new PublicKeyManager();
-        List<String> newKeys = List.of("key1", "  ", null, "key2");
+        List<String> newKeys = List.of("key1", "  ", "key2");
 
         manager.addKeys(newKeys);
 

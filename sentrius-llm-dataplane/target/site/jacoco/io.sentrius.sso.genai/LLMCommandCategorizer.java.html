@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LLMCommandCategorizer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sentrius-llm-dataplane</a> &gt; <a href="index.source.html" class="el_package">io.sentrius.sso.genai</a> &gt; <span class="el_source">LLMCommandCategorizer.java</span></div><h1>LLMCommandCategorizer.java</h1><pre class="source lang-java linenums">package io.sentrius.sso.genai;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.sentrius.sso.core.dto.CommandCategoryDTO;
+import io.sentrius.sso.core.utils.JsonUtil;
+import io.sentrius.sso.genai.model.endpoints.ChatApiEndpointRequest;
+import io.sentrius.sso.integrations.exceptions.HttpException;
+import io.sentrius.sso.security.TokenProvider;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * The ComplianceScorer class contains methods for generating compliance scores.
+ * The generate() method returns a double that represents the compliance score.
+ *
+ * This class can be used to efficiently score compliance in various domains, including but not limited to
+ * healthcare, finance, and government regulations.
+ *
+ * It is recommended to initialize the ComplianceScorer with relevant settings and parameters for a specific
+ * compliance scenario. The generate() method can then be called repeatedly on incoming data to obtain
+ * compliance scores in real-time.
+ *
+ * Note: This class does not handle data storage, retrieval or manipulation. It is only intended for
+ * calculating compliance scores based on input data.
+ */
+<span class="nc" id="L26">@Slf4j</span>
+public class LLMCommandCategorizer extends DataGenerator&lt;String, CommandCategoryDTO&gt; {
+
+    public LLMCommandCategorizer(TokenProvider token, GenerativeAPI generator, GeneratorConfiguration config) {
+<span class="nc" id="L30">        super(token, generator, config);</span>
+<span class="nc" id="L31">    }</span>
+
+    /**
+     * Parses queries from the response.
+     *
+     * @return List of queries.
+     */
+    @Override
+    public CommandCategoryDTO generate(String on) throws HttpException, JsonProcessingException {
+<span class="nc" id="L40">        var ipt = generateInput(on);</span>
+<span class="nc" id="L41">        log.info(&quot;Input: {}&quot;, ipt);</span>
+<span class="nc" id="L42">        ChatApiEndpointRequest request = ChatApiEndpointRequest.builder().userInput(ipt).build();</span>
+<span class="nc" id="L43">        request.setTemperature(0.5f);</span>
+<span class="nc" id="L44">        Response hello = api.sample(request, Response.class);</span>
+<span class="nc" id="L45">        var resp = hello.concatenateResponses();</span>
+<span class="nc" id="L46">        log.info(&quot;Response: {}&quot;, resp);</span>
+<span class="nc" id="L47">        var objectNode = JsonUtil.MAPPER.readValue(resp, ObjectNode.class);</span>
+<span class="nc" id="L48">        return CommandCategoryDTO.builder().categoryName(objectNode.get(&quot;category&quot;).asText()).pattern(objectNode.get(</span>
+<span class="nc" id="L49">            &quot;pattern&quot;).asText()).priority(objectNode.get(&quot;priority&quot;).asInt()).build();</span>
+    }
+
+    /**
+     * Generates input for the generative AI endpoint.
+     *
+     * @return Question to be asked to the generative AI endpoint.
+     */
+    @Override
+    public String generateInput(String on) {
+<span class="nc" id="L59">        return &quot;&quot;&quot;</span>
+        Categorize the following command with a generalized pattern, defined as a **regex**, that captures the intent and considers risk factors. Include specific arguments or paths in the regex only if they significantly impact the risk level. If no regex is predefined for the command, generate one that appropriately generalizes the command's behavior while retaining any risk-relevant components.
+         
+         For example:
+         - 'cat /etc/passwd' is risky due to sensitive user data, so it should be included as-is with the regex '^cat /etc/passwd$'.
+         - 'cat /etc/hosts' has low risk, so it should be generalized to '^cat /etc/.*$' to cover all files in the `/etc` directory.
+         - 'sudo rm -rf /important_dir' should include '/important_dir' if it's sensitive, but otherwise generalized to '^sudo rm -rf .*'.
+         
+         Command: &quot;%s&quot;
+         
+         **Categories to choose from:**
+         - PRIVILEGED: Commands that require elevated permissions or pose a risk if misused.
+         - DESTRUCTIVE: Commands that can delete or alter critical files or system configurations.
+         - INFORMATIONAL: Commands that retrieve information without altering the system state.
+         - GENERAL: Commands that do not fit into the above categories.
+         
+         Respond in **JSON format** as follows:
+         {
+             &quot;category&quot;: &quot;&lt;Category Name&gt;&quot;,
+             &quot;priority&quot;: &lt;Numerical Priority&gt;,
+             &quot;pattern&quot;: &quot;&lt;Generalized regex Pattern&gt;&quot;,
+             &quot;rationale&quot;: &quot;&lt;Explain why this category and regex were chosen&gt;&quot;
+         }
+            
+<span class="nc" id="L83">    &quot;&quot;&quot;.formatted(on);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
