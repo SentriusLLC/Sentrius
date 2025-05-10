@@ -86,7 +86,7 @@ public class ChatAgent implements ApplicationListener<ApplicationReadyEvent> {
             var encryptedSecret = agentRegistrationDTO.getClientSecret();
             var decryptedSecret = agentKeyService.
                 decryptWithPrivateKey(encryptedSecret, keyPair.getPrivate());
-            keycloakService.createKeycloakClient(agentRegistrationDTO.getAgentName(),
+            keycloakService.createKeycloakClient(agentConfigOptions.getName(),
                 decryptedSecret);
 
 
@@ -131,7 +131,7 @@ public class ChatAgent implements ApplicationListener<ApplicationReadyEvent> {
 
         while(running) {
 
-                log.info("Registering v1.0.2 agent failed. Retrying in 10 seconds...");
+                log.info("Agent Registered...");
                 try {
 
                     Thread.sleep(5_000);

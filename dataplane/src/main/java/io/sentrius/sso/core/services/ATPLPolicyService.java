@@ -76,6 +76,7 @@ public class ATPLPolicyService {
         List<AgentPolicyAssignment> assignments = agentPolicyAssignmentRepository.findByUserUsernameOrderByAssignedAtDesc(operatingUser.getUsername());
 
         if (assignments.isEmpty()) {
+            log.info("No policy assignments found for user {}", operatingUser.getUsername());
             return Optional.empty();
         }
 

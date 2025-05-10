@@ -17,4 +17,6 @@ public class AgentRegistrationDTO {
     private final String agentPublicKey;
     private final String agentPublicKeyAlgo;
     private final String clientSecret;
+    private final String clientId;
+    private final String agentType;
 }

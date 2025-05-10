@@ -58,6 +58,7 @@ public class AgentController {
             .agentName(agentConfig.getName())
             .agentPublicKey(agentKeyService.getKeyPair().getPublic().toString())
             .agentPublicKeyAlgo(agentKeyService.getKeyPair().getPublic().getAlgorithm())
+            .agentType(agentConfig.getType())
             .build();
         return ResponseEntity.ok(dto);
     }

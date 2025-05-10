@@ -1,11 +1,16 @@
 package io.sentrius.sso.controllers.api;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import io.sentrius.sso.config.ApiPaths;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.AgentRegistrationDTO;
+import io.sentrius.sso.core.model.security.IdentityType;
+import io.sentrius.sso.core.model.security.UserType;
+import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
@@ -19,6 +24,7 @@ import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,6 +44,13 @@ public class AgentBootstrapController extends BaseController {
     final ZeroTrustAccessTokenService ztatService;
     final ZeroTrustRequestService ztrService;
     final AgentService agentService;
+
+
+    @Value("${sentrius.agent.register.bootstrap.allow:false}")
+    private boolean allowRegistration;
+
+    @Value("${sentrius.agent.bootstrap.policy:default-policy.yaml}")
+    private String defaultPolicyFile;
 
     public AgentBootstrapController(
         UserService userService,
@@ -62,22 +75,56 @@ public class AgentBootstrapController extends BaseController {
 
     @PostMapping("/register")
     // no LimitAccess
-    public ResponseEntity<AgentRegistrationDTO> bootsrap(
-        @RequestBody AgentRegistrationDTO registrationDTO) throws GeneralSecurityException {
+    public ResponseEntity<AgentRegistrationDTO> bootstrap(
+        @RequestBody AgentRegistrationDTO registrationDTO) throws GeneralSecurityException, IOException {
         log.info("Registering agent {}", registrationDTO);
-        var secret = keycloakService.registerAgentClient(registrationDTO.getAgentName());
+        // need a pre-shared secret to register the agent or ztat approval
+        var unencryptedRegistration = keycloakService.registerAgentClient(registrationDTO);
 
-        var secretKey = CryptoService.encryptWithPublicKey(secret,
+        var secretKey = CryptoService.encryptWithPublicKey(unencryptedRegistration.getClientSecret(),
             CryptoService.decodePublicKey(registrationDTO.getAgentPublicKey(),
             registrationDTO.getAgentPublicKeyAlgo()));
 
         var newDTO = AgentRegistrationDTO.builder()
-            .agentName(registrationDTO.getAgentName())
+            .agentName(unencryptedRegistration.getAgentName())
             .agentPublicKey(registrationDTO.getAgentPublicKey())
             .agentPublicKeyAlgo(registrationDTO.getAgentPublicKeyAlgo())
             .clientSecret(secretKey)
+            .clientId(unencryptedRegistration.getClientId())
             .build();
 
+        if (allowRegistration) {
+            log.info("Registering {}", registrationDTO.getAgentName());
+            User user = userService.getUserByUsername(newDTO.getAgentName());
+            if (user == null) {
+                var type = userService.getUserType(
+                    UserType.createUnknownUser());
+
+                user = User.builder()
+                    .username(newDTO.getAgentName())
+                    .name(newDTO.getAgentName())
+                    .emailAddress(newDTO.getAgentName())
+                    .userId(unencryptedRegistration.getClientId())
+                    .authorizationType(type.get())
+                    .identityType(IdentityType.NON_PERSON_ENTITY)
+                    .build();
+                log.info("Creating new user: {}", user);
+                userService.save(user);
+            }
+            try(InputStream terminalHelperStream = getClass().getClassLoader().getResourceAsStream(defaultPolicyFile)) {
+                if (terminalHelperStream == null) {
+                    throw new RuntimeException(defaultPolicyFile + "not found on classpath");
+
+                }
+                String defaultYaml = new String(terminalHelperStream.readAllBytes());
+                log.info("Default policy file: {}", defaultPolicyFile);
+                var policy = atplPolicyService.createPolicy(user, defaultYaml);
+            }
+
+        }
+        else {
+            log.info("Not Registering {}", registrationDTO.getAgentName());
+        }
         // bootstrap with a default policy
         return ResponseEntity.ok(newDTO);
     }

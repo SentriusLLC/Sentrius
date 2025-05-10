@@ -15,4 +15,5 @@ public class AgentConfigOptions {
 
 
     private String name;
+    private String type;
 }

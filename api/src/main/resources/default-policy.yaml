@@ -27,7 +27,7 @@ ztat:
     - "http://localhost:8080/"
   key_binding: "RSA2048"
   approval_required: true
-policy_id: "trust-observer"
+policy_id: "f3326ce2-f46f-405d-94b6-bda2b26db423"
 identity:
   issuer: "https://keycloak.test.sentrius.cloud"
   subject_prefix: "agent-"
