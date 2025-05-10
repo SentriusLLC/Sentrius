@@ -69,6 +69,7 @@ public class GlobalExceptionHandler {
 
         // Redirect to "/mydashboard" with the messageId parameter
         URI redirectUri = URI.create("/sso/v1/dashboard?errorId=" + MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR));
+        log.info("redirectUri {}", redirectUri);
         return ResponseEntity.status(HttpStatus.FOUND).location(redirectUri).build();
         //return "redirect:/sso/v1/dashboard";
     }

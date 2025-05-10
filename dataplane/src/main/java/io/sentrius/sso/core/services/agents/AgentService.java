@@ -39,6 +39,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.ui.Model;
 import org.springframework.web.client.RestTemplate;
 
 @Service
@@ -171,11 +172,24 @@ public class AgentService {
         return agentCommunicationRepository.findBySourceAgent(sourceAgent);
     }
 
-    public Page<AgentCommunication> getCommunications(String sourceAgent, LocalDateTime start, LocalDateTime end,
-                                                      Pageable pageable) {
+    public Page<AgentCommunication> getCommunications(
+        String sourceAgent,
+        LocalDateTime start,
+        LocalDateTime end,
+        String type,
+        Pageable pageable
+    ) {
         Instant startInstant = start.atZone(ZoneId.systemDefault()).toInstant();
         Instant endInstant = end.atZone(ZoneId.systemDefault()).toInstant();
-        return agentCommunicationRepository.findBySourceAgentAndCreatedAtBetween(sourceAgent, startInstant, endInstant, pageable);
+
+        if (type != null && !type.isBlank()) {
+            return agentCommunicationRepository.findBySourceAgentAndMessageTypeAndCreatedAtBetween(
+                sourceAgent, type, startInstant, endInstant, pageable);
+        }
+
+
+        return agentCommunicationRepository.findBySourceAgentAndCreatedAtBetween(
+            sourceAgent, startInstant, endInstant, pageable);
     }
 
     public Optional<AgentStatus> getPing(User user) {

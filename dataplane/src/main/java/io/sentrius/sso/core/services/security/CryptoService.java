@@ -7,9 +7,13 @@ import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.spec.EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 import java.util.Base64;
 import com.jcraft.jsch.JSch;
@@ -201,5 +205,23 @@ public class CryptoService {
         applicationKey =  applicationKeyRepository.save(applicationKey);
 
         return applicationKey;
+    }
+
+    public static PublicKey decodePublicKey(String base64Key, String algo) throws GeneralSecurityException {
+        byte[] keyBytes = Base64.getDecoder().decode(base64Key);
+        KeyFactory keyFactory = KeyFactory.getInstance(algo);
+        EncodedKeySpec keySpec = switch (algo.toUpperCase()) {
+            case "RSA" -> new X509EncodedKeySpec(keyBytes);
+            case "EC" -> new X509EncodedKeySpec(keyBytes);
+            default -> throw new IllegalArgumentException("Unsupported algorithm: " + algo);
+        };
+        return keyFactory.generatePublic(keySpec);
+    }
+
+    public static String encryptWithPublicKey(String data, PublicKey publicKey) throws GeneralSecurityException {
+        Cipher cipher = Cipher.getInstance(publicKey.getAlgorithm());
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+        byte[] encryptedBytes = cipher.doFinal(data.getBytes());
+        return Base64.getEncoder().encodeToString(encryptedBytes);
     }
 }

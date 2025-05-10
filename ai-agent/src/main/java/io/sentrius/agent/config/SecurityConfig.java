@@ -37,6 +37,7 @@ public class SecurityConfig {
 
         http
             .authorizeHttpRequests(auth -> auth.
+                requestMatchers("/api/v1/agent/bootstrap/**").permitAll(). // Public login endpoint
                 requestMatchers("/actuator/**").permitAll() // Public endpoints
                 .requestMatchers("/**").fullyAuthenticated())
             .oauth2ResourceServer(oauth2 -> oauth2

@@ -63,7 +63,7 @@ public class PromptBuilder {
         verbRegistry.getVerbs().forEach((name, verb) -> {
             prompt.append("- ").append(name);
             prompt.append(" (").append(buildMethodSignature(verb.getMethod())).append(") - ");
-            prompt.append(verb.getDescription()).append(")\n");
+            prompt.append(verb.getDescription()).append("\n");
         });
 
         return prompt.toString();

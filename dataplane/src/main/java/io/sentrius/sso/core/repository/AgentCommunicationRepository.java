@@ -22,4 +22,12 @@ public interface AgentCommunicationRepository extends JpaRepository<AgentCommuni
     List<AgentCommunication> findByCommunicationId(UUID communicationId);
 
     List<AgentCommunication> findByCommunicationIdAndTargetAgent(UUID communicationId, String targetAgent);
+
+    Page<AgentCommunication> findBySourceAgentAndMessageTypeAndCreatedAtBetween(
+        String sourceAgent,
+        String messageType,
+        Instant start,
+        Instant end,
+        Pageable pageable
+    );
 }

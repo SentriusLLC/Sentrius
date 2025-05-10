@@ -117,6 +117,13 @@ public class ZeroTrustAccessTokenService {
     return opsApprovals.size() > 0 && opsApprovals.stream().anyMatch(approval -> approval.isApproved());
   }
 
+  public boolean isDenied(
+      @NonNull OpsZeroTrustAcessTokenRequest request) {
+
+    var opsApprovals =  request.getApprovals();
+    return opsApprovals.size() > 0 && opsApprovals.stream().anyMatch(approval -> !approval.isApproved());
+  }
+
 
   public boolean isApproved(
       @NonNull String command, @NonNull User user , @NonNull HostSystem system)

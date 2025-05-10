@@ -241,6 +241,8 @@ public class ZeroTrustATApiController extends BaseController {
                     if (Objects.equals(opsJit.getUser().getId(), operatingUser.getId())){
                         if ( ztatService.isApproved(opsJit) ) {
                             return ResponseEntity.ok(Map.of("status", "approved", "ztat_token", opsJit.getApprovals().get(0).getToken()));
+                        } else if ( ztatService.isDenied(opsJit) ) {
+                            return ResponseEntity.ok(Map.of("status", "denied"));
                         }
                         else {
                             return ResponseEntity.ok(Map.of("status", "unknown"));

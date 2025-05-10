@@ -1,8 +1,14 @@
 package io.sentrius.sso.core.services.security;
 import io.jsonwebtoken.Jwts;
+import io.sentrius.sso.config.KeycloakConfig;
 import io.sentrius.sso.config.KeycloakManager;
+import jakarta.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
+import org.keycloak.admin.client.resource.ClientResource;
+import org.keycloak.admin.client.resource.ClientsResource;
 import org.keycloak.admin.client.resource.UsersResource;
+import org.keycloak.representations.idm.ClientRepresentation;
+import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -16,13 +22,16 @@ public class KeycloakService {
 
     private final KeycloakManager keycloak;
 
+    private final KeycloakConfig keycloakConfig;
+
     @Value("${keycloak.realm}")
     private String realm;
 
 
 
-    public KeycloakService(KeycloakManager keycloak) {
+    public KeycloakService(KeycloakManager keycloak, KeycloakConfig keycloakConfig) {
         this.keycloak = keycloak;
+        this.keycloakConfig = keycloakConfig;
     }
 
 
@@ -91,5 +100,48 @@ public class KeycloakService {
             .getBody();
 
         return claims.get("preferred_username", String.class); // Extracts agent identity
+    }
+
+    public String registerAgentClient(String agentName) {
+        ClientsResource clients = keycloak.getKeycloak().realm(realm).clients();
+
+        // Step 1: Build client representation
+        ClientRepresentation client = new ClientRepresentation();
+        client.setClientId(agentName);
+        client.setEnabled(true);
+        client.setProtocol("openid-connect");
+        client.setServiceAccountsEnabled(true);
+        client.setPublicClient(false);
+        client.setDirectAccessGrantsEnabled(false);
+
+        CredentialRepresentation credential = new CredentialRepresentation();
+        credential.setType(CredentialRepresentation.SECRET);
+        credential.setValue(generateRandomSecret());
+        client.setSecret(credential.getValue());
+
+        // Step 2: Create the client
+        try( Response response = clients.create(client)) {
+            if (response.getStatus() != 201) {
+                throw new RuntimeException("Failed to create client: " + response.getStatus());
+            }
+
+            // Step 3: Get client UUID
+            String clientId = response.getLocation().getPath().replaceAll(".*/([^/]+)$", "$1");
+            ClientResource createdClient = clients.get(clientId);
+
+            // Step 4: Get generated secret
+            CredentialRepresentation secret = createdClient.getSecret();
+            return secret.getValue(); // Return this to the agent
+        }
+    }
+
+    public void createKeycloakClient(String clientId, String clientSecret) {
+
+        keycloak.setKeycloak(
+            keycloak.createKeycloakClient(keycloakConfig.getServerUrl(), realm, clientId, clientSecret) );
+    }
+
+    private String generateRandomSecret() {
+        return java.util.UUID.randomUUID().toString();
     }
 }

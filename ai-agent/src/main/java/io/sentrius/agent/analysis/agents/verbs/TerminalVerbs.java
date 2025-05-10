@@ -189,5 +189,14 @@ public class TerminalVerbs {
         }
     }
 
+    @Verb(name = "open_ssh_session", description = "Opens an SSH websocket connection.",
+        requiresTokenManagement = true,
+        outputInterpreter = TerminalOutputInterpreter.class, inputInterpreter = AsessmentListInterpreter.class)
+    public List<ObjectNode> openSSHSession(AgentExecution execution)
+        throws ZtatException, IOException {
+        log.info("Opening SSH session");
+        return null;
+    }
+
 
 }

@@ -62,6 +62,7 @@ public class AccessControlAspect {
     static List<String> allowedEndpoints = new ArrayList<>();
     static {
         allowedEndpoints.add("/api/v1/zerotrust/accesstoken/status");
+        allowedEndpoints.add("/api/v1/agent/bootstrap/register");
     }
 
     Tracer tracer = GlobalOpenTelemetry.getTracer("io.sentrius.sso");

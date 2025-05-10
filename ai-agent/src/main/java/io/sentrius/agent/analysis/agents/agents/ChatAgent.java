@@ -1,19 +1,21 @@
 package io.sentrius.agent.analysis.agents.agents;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
+import io.sentrius.agent.analysis.api.AgentKeyService;
+import io.sentrius.agent.analysis.api.UserCommunicationService;
+import io.sentrius.agent.config.AgentConfigOptions;
+import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.security.Ztat;
-import io.sentrius.sso.core.model.verbs.VerbResponse;
 import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.AgentExecutionService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
-import io.sentrius.sso.core.dto.UserDTO;
+import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -26,8 +28,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "agents.ai.registered.agent.enabled", havingValue = "true", matchIfMissing = false)
-public class RegisteredAgent implements ApplicationListener<ApplicationReadyEvent> {
+@ConditionalOnProperty(name = "agents.ai.chat.agent.enabled", havingValue = "true", matchIfMissing = false)
+public class ChatAgent implements ApplicationListener<ApplicationReadyEvent> {
 
 
     final ZeroTrustClientService zeroTrustClientService;
@@ -35,6 +37,10 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
     final VerbRegistry verbRegistry;
     final AgentVerbs agentVerbs;
     final AgentExecutionService agentExecutionService;
+    final UserCommunicationService userCommunicationService;
+    final AgentConfigOptions agentConfigOptions;
+    final AgentKeyService agentKeyService;
+    private final KeycloakService keycloakService;
 
     private volatile boolean running = true;
     private Thread workerThread;
@@ -70,6 +76,27 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
 
         verbRegistry.scanClasspath();
 
+        var keyPair = agentKeyService.getKeyPair();
+
+        try {
+            var base64PublicKey = agentKeyService.getBase64PublicKey(keyPair.getPublic());
+            var agentRegistrationDTO = agentClientService.bootstrap(agentConfigOptions.getName(), base64PublicKey
+                , keyPair.getPublic().getAlgorithm());
+
+            var encryptedSecret = agentRegistrationDTO.getClientSecret();
+            var decryptedSecret = agentKeyService.
+                decryptWithPrivateKey(encryptedSecret, keyPair.getPrivate());
+            keycloakService.createKeycloakClient(agentRegistrationDTO.getAgentName(),
+                decryptedSecret);
+
+
+        } catch (ZtatException e) {
+            throw new RuntimeException(e);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+
         final UserDTO user = UserDTO.builder()
             .username(zeroTrustClientService.getUsername())
             .build();
@@ -79,6 +106,7 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
         } catch (ZtatException e) {
             throw new RuntimeException(e);
         }
+
         while(running) {
 
             try {
@@ -101,53 +129,23 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
             }
         }
 
-        workerThread = new Thread(() -> {
-            try {
+        while(running) {
 
-                log.info("Username: {}", user.getUsername());
-                log.info("Registering v1.0.2 agent...");
+                log.info("Registering v1.0.2 agent failed. Retrying in 10 seconds...");
+                try {
 
-
-
-                var agentExecution = agentExecutionService.getAgentExecution(user);
-                var response = promptAgent(agentExecution);
-                while (running) {
-                    try {
-                        log.info("Got response: {}", response);
-
-                        VerbResponse priorResponse = null;
-                        Map<String, Object> args = new HashMap<>();
-
-                        for (var node : response) {
-                            if (node.get("verb") != null) {
-                                var verb = node.get("verb").asText();
-                                log.info("Executing verb: {}", verb);
-                                priorResponse = verbRegistry.execute(agentExecution, priorResponse, verb, args);
-                            }
-                            log.info("Node: {}", node);
-                        }
-
-                    } catch (Exception e) {
-                        log.error("Exception in agent loop", e);
-                    }
-
-                    // Sleep between prompts
-                    log.info("Sleeping for 5 seconds");
                     Thread.sleep(5_000);
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException(ex);
                 }
 
-            } catch (Exception | ZtatException e) {
-                log.error("Fatal error in RegisteredAgent", e);
-            }
-        });
+        }
 
-        workerThread.setName("RegisteredAgent-Worker");
-        workerThread.start();
     }
 
     @PreDestroy
     public void shutdown() {
-        log.info("Shutting down RegisteredAgent...");
+        log.info("Shutting down ChatAgent...");
         running = false;
         if (workerThread != null) {
             workerThread.interrupt();

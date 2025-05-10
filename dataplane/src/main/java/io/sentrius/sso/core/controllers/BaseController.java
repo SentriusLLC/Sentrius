@@ -109,7 +109,7 @@ public abstract class BaseController {
             }
 
         }catch(Exception e){
-            log.error("Error getting user", e);
+            log.trace("Error getting user. This may be expected", e);
             return null;
         }
     }
