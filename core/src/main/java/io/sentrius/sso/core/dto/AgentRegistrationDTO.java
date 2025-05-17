@@ -19,4 +19,5 @@ public class AgentRegistrationDTO {
     private final String clientSecret;
     private final String clientId;
     private final String agentType;
+    private final String agentCallbackUrl;
 }

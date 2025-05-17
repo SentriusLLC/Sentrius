@@ -122,6 +122,7 @@ public class KeycloakService {
         client.setSecret(credential.getValue());
 
         // Step 2: Create the client
+
         try( Response response = clients.create(client)) {
             if (response.getStatus() != 201) {
                 throw new RuntimeException("Failed to create client: " + response.getStatus());

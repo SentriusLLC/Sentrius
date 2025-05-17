@@ -177,6 +177,7 @@ public class AgentClientService {
 
         AgentRegistrationDTO registration = AgentRegistrationDTO.builder()
             .agentName(name)
+            .agentCallbackUrl(getCallbackUrl())
             .agentPublicKey(publicKey)
             .agentPublicKeyAlgo(keyType)
             .build();
@@ -184,4 +185,9 @@ public class AgentClientService {
         var acommResponse = zeroTrustClientService.callPostOnApi(ask, registration);
         return JsonUtil.MAPPER.readValue(acommResponse, AgentRegistrationDTO.class);
     }
+
+    public String getCallbackUrl() {
+        return callbackUrl;
+    }
+
 }

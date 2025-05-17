@@ -135,7 +135,8 @@ public class ChatAgent implements ApplicationListener<ApplicationReadyEvent> {
                 try {
 
                     Thread.sleep(5_000);
-                } catch (InterruptedException ex) {
+                    agentClientService.heartbeat(execution, execution.getUser().getUsername());
+                } catch (InterruptedException | ZtatException ex) {
                     throw new RuntimeException(ex);
                 }
 

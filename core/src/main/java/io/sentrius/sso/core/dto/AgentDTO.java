@@ -12,6 +12,7 @@ public class AgentDTO {
     private final String agentId;
     private final String policyId;
     private final String lastHeartbeat;
+    private final String agentCallback;
     @Builder.Default
     private final boolean isRegistered = false;
 }

@@ -6,7 +6,6 @@ import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.util.Base64;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import io.sentrius.agent.analysis.api.UserCommunicationService;

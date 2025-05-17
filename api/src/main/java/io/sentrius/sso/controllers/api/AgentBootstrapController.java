@@ -14,6 +14,7 @@ import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.services.auditing.AuditService;
 import io.sentrius.sso.core.services.security.CryptoService;
@@ -44,6 +45,7 @@ public class AgentBootstrapController extends BaseController {
     final ZeroTrustAccessTokenService ztatService;
     final ZeroTrustRequestService ztrService;
     final AgentService agentService;
+    private final AgentClientService agentClientService;
 
 
     @Value("${sentrius.agent.register.bootstrap.allow:false}")
@@ -59,7 +61,8 @@ public class AgentBootstrapController extends BaseController {
         AuditService auditService,
         CryptoService cryptoService, SessionTrackingService sessionTrackingService, KeycloakService keycloakService,
         ATPLPolicyService atplPolicyService,
-        ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService, AgentService agentService
+        ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService, AgentService agentService,
+        AgentClientService agentClientService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
@@ -70,6 +73,7 @@ public class AgentBootstrapController extends BaseController {
         this.ztatService = ztatService;
         this.ztrService = ztrService;
         this.agentService = agentService;
+        this.agentClientService = agentClientService;
     }
 
 
@@ -97,29 +101,33 @@ public class AgentBootstrapController extends BaseController {
             log.info("Registering {}", registrationDTO.getAgentName());
             User user = userService.getUserByUsername(newDTO.getAgentName());
             if (user == null) {
-                var type = userService.getUserType(
-                    UserType.createUnknownUser());
+                    var type = userService.getUserType(
+                        UserType.createUnknownUser());
 
-                user = User.builder()
-                    .username(newDTO.getAgentName())
-                    .name(newDTO.getAgentName())
-                    .emailAddress(newDTO.getAgentName())
-                    .userId(unencryptedRegistration.getClientId())
-                    .authorizationType(type.get())
-                    .identityType(IdentityType.NON_PERSON_ENTITY)
-                    .build();
-                log.info("Creating new user: {}", user);
-                userService.save(user);
-            }
-            try(InputStream terminalHelperStream = getClass().getClassLoader().getResourceAsStream(defaultPolicyFile)) {
-                if (terminalHelperStream == null) {
-                    throw new RuntimeException(defaultPolicyFile + "not found on classpath");
+                    user = User.builder()
+                        .username(newDTO.getAgentName())
+                        .name(newDTO.getAgentName())
+                        .emailAddress(newDTO.getAgentName())
+                        .userId(unencryptedRegistration.getClientId())
+                        .authorizationType(type.get())
+                        .identityType(IdentityType.NON_PERSON_ENTITY)
+                        .build();
+                    log.info("Creating new user: {}", user);
+                    userService.save(user);
 
+                try(InputStream terminalHelperStream = getClass().getClassLoader().getResourceAsStream(defaultPolicyFile)) {
+                    if (terminalHelperStream == null) {
+                        throw new RuntimeException(defaultPolicyFile + "not found on classpath");
+
+                    }
+                    String defaultYaml = new String(terminalHelperStream.readAllBytes());
+                    log.info("Default policy file: {}", defaultPolicyFile);
+                    var policy = atplPolicyService.createPolicy(user, defaultYaml);
                 }
-                String defaultYaml = new String(terminalHelperStream.readAllBytes());
-                log.info("Default policy file: {}", defaultPolicyFile);
-                var policy = atplPolicyService.createPolicy(user, defaultYaml);
+
             }
+
+            agentService.setCallBack(user, registrationDTO.getAgentCallbackUrl());
 
         }
         else {
@@ -129,14 +137,6 @@ public class AgentBootstrapController extends BaseController {
         return ResponseEntity.ok(newDTO);
     }
 
-    @GetMapping("/register")
-    // no LimitAccess
-    public ResponseEntity<?> ohhia(
-
-        HttpServletRequest request, HttpServletResponse response) throws SQLException, GeneralSecurityException {
-
-        return ResponseEntity.ok("ohhiai");
-    }
 
 
 }

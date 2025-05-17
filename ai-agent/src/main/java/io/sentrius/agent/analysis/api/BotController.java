@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/agent")
-public class AgentController {
+public class BotController {
 
     KeycloakService keycloakService;
     AgentKeyService agentKeyService;

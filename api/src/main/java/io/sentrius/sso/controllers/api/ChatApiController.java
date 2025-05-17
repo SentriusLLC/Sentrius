@@ -2,13 +2,17 @@ package io.sentrius.sso.controllers.api;
 
 import java.security.GeneralSecurityException;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.dto.AgentDTO;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.utils.AccessUtil;
+import io.sentrius.sso.genai.Response;
 import io.sentrius.sso.protobuf.Session.ChatMessage;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.model.sessions.SessionLog;
@@ -36,19 +40,22 @@ public class ChatApiController extends BaseController {
     final CryptoService cryptoService;
     final SessionTrackingService sessionTrackingService;
     final ChatLogRepository chatLogRepository;
+    final AgentService agentService;
 
     public ChatApiController(
         UserService userService,
         SystemOptions systemOptions,
         ErrorOutputService errorOutputService,
         AuditService auditService,
-        CryptoService cryptoService, SessionTrackingService sessionTrackingService, ChatLogRepository chatLogRepository
+        CryptoService cryptoService, SessionTrackingService sessionTrackingService, ChatLogRepository chatLogRepository,
+        AgentService agentService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
         this.cryptoService = cryptoService;
         this.sessionTrackingService = sessionTrackingService;
         this.chatLogRepository = chatLogRepository;
+        this.agentService = agentService;
     }
 
     public SessionLog createSession(@RequestParam String username, @RequestParam String ipAddress) {
@@ -90,6 +97,21 @@ public class ChatApiController extends BaseController {
             .collect(Collectors.toList());
 
         return ResponseEntity.ok(messages);
+    }
+
+    @GetMapping("/agent/list")
+    public ResponseEntity<List<AgentDTO>> listAvailableAgents(
+        HttpServletRequest request,
+        HttpServletResponse response)
+        throws GeneralSecurityException {
+
+        List<AgentDTO> availableAgents = agentService.getAvailableAgents();
+
+
+
+        // get a list of registered agents.
+
+        return ResponseEntity.ok(availableAgents);
     }
 
 

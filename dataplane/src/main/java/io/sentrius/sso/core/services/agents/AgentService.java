@@ -5,13 +5,17 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.common.collect.Maps;
 import io.sentrius.sso.core.dto.AgentCommunicationDTO;
 import io.sentrius.sso.core.dto.AgentDTO;
 import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
@@ -51,6 +55,8 @@ public class AgentService {
     private final UserService userService;
     private final ATPLPolicyService policyService;
     private final CryptoService cryptoService;
+
+    private ConcurrentMap<String, String> callbackUrls = new ConcurrentHashMap<>();
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -92,7 +98,15 @@ public class AgentService {
 
 
     public List<AgentDTO> getAllAgents(boolean encryptId) {
+     return getAllAgents(encryptId, List.of());
+    }
+
+    public List<AgentDTO> getAllAgents(boolean encryptId, List<String> filteredIds) {
         return repository.findAll().stream()
+            .filter(heartbeat -> {
+                var user = userService.getUserByUsername(heartbeat.getAgentId());
+                return !filteredIds.contains(user.getUserId());
+            })
             .map(heartbeat -> {
                 var user = userService.getUserByUsername(heartbeat.getAgentId());
 
@@ -107,6 +121,7 @@ public class AgentService {
                     }
                     if (encryptId){
                         try {
+
                             // this is obfuscation of something known, let's use a real id of some kind
                             dtoBuilder.agentId(cryptoService.encrypt(user.getUserId()));
                         } catch (GeneralSecurityException e) {
@@ -245,4 +260,11 @@ public class AgentService {
         return true;
     }
 
+    public void setCallBack(User user, String agentCallbackUrl) {
+        callbackUrls.put(user.getUserId(), agentCallbackUrl);
+    }
+
+    public List<AgentDTO> getAvailableAgents() {
+        return getAllAgents(false, callbackUrls.keySet().stream().toList());
+    }
 }

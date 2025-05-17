@@ -3,6 +3,7 @@
 <head>
     <meta th:replace="~{fragments/header}">
     <title>[[${systemOptions.systemLogoName}]] - Dashboard</title>
+    <script type="module" th:src="@{/js/chat.js}"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             /*
@@ -369,7 +370,16 @@
         <div class="col py-4">
             <div class="main-content">
                 <div th:replace="~{fragments/alerts}"></div>
+                <!-- Chat Container -->
 
+                <div id="chat-container" class="hidden" data-agent-id="" data-agent-host="">
+                    <div id="chat-header" onclick="toggleChat()">
+                        Chat with <span id="chat-agent-name"></span>
+                        <span id="close-chat" onclick="toggleChat()">✖</span>
+                    </div>
+                    <div id="chat-messages"></div>
+                    <input type="text" id="chat-input" placeholder="Type a message..." onkeypress="sendMessage(event)">
+                </div>
                 <div class="container-fluid">
                     <br><br>
                     <div class="grid-stack" id="grid_stack_stats"></div>
@@ -434,6 +444,8 @@
                                 <!-- Buttons -->
                                 <div class="mb-4 d-flex justify-content-center gap-2">
                                     <a href="/api/v1/users/list" class="btn btn-danger">Build Automation</a>
+                                    <a href="#" class="btn btn-primary" data-bs-toggle="modal"
+                                       data-bs-target="#userFormModal">Usage Patterns</a>
                                     <a href="#" class="btn btn-primary" data-bs-toggle="modal"
                                        data-bs-target="#userFormModal">Usage Patterns</a>
                                 </div>
@@ -511,6 +523,7 @@
 <script type="module" th:src="@{/js/add_system.js}" defer></script>
 <script type="module" th:src="@{/js/add_user.js}" defer></script>
 <script type="module" th:src="@{/js/add_group.js}" defer></script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         let maxConnections = 10;
