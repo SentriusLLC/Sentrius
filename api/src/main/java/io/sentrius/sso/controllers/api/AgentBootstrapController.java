@@ -24,6 +24,7 @@ import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -79,6 +80,7 @@ public class AgentBootstrapController extends BaseController {
 
     @PostMapping("/register")
     // no LimitAccess
+    @Transactional
     public ResponseEntity<AgentRegistrationDTO> bootstrap(
         @RequestBody AgentRegistrationDTO registrationDTO) throws GeneralSecurityException, IOException {
         log.info("Registering agent {}", registrationDTO);
@@ -101,9 +103,12 @@ public class AgentBootstrapController extends BaseController {
             log.info("Registering {}", registrationDTO.getAgentName());
             User user = userService.getUserByUsername(newDTO.getAgentName());
             if (user == null) {
-                    var type = userService.getUserType(
-                        UserType.createUnknownUser());
+                    var type = userService.getUserType(UserType.createUnknownUser());
 
+                    if (type.isEmpty()){
+                        throw new RuntimeException("No user type found for agent");
+                    }
+                    userService.saveUserType(type.get());
                     user = User.builder()
                         .username(newDTO.getAgentName())
                         .name(newDTO.getAgentName())
@@ -113,7 +118,7 @@ public class AgentBootstrapController extends BaseController {
                         .identityType(IdentityType.NON_PERSON_ENTITY)
                         .build();
                     log.info("Creating new user: {}", user);
-                    userService.save(user);
+                    user = userService.save(user);
 
                 try(InputStream terminalHelperStream = getClass().getClassLoader().getResourceAsStream(defaultPolicyFile)) {
                     if (terminalHelperStream == null) {
@@ -140,3 +145,5 @@ public class AgentBootstrapController extends BaseController {
 
 
 }
+
+

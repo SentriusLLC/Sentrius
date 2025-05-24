@@ -224,4 +224,8 @@ public class CryptoService {
         byte[] encryptedBytes = cipher.doFinal(data.getBytes());
         return Base64.getEncoder().encodeToString(encryptedBytes);
     }
+
+    public byte[] getKey() {
+        return Arrays.copyOf(key, key.length); // defensive copy
+    }
 }

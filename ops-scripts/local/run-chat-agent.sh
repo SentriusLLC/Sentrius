@@ -74,6 +74,6 @@ pushd ai-agent
 
 mvn spring-boot:run \
   -Dspring-boot.run.jvmArguments="-Xms${MIN_HEAP} -Xmx${MAX_HEAP}" \
-  -Dspring-boot.run.arguments="--spring.config.location=file:./src/main/resources/chat-helper.properties --agent.ai.config=chat-helper.yaml --agent.name=${AGENT_NAME}"
+  -Dspring-boot.run.arguments="--spring.config.location=file:./src/main/resources/chat-helper.properties --agent.ai.config=chat-helper.yaml --agent.namePrefix=${AGENT_NAME}"
 
 popd

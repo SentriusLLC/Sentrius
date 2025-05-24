@@ -1,5 +1,6 @@
 package io.sentrius.agent.analysis.agents.agents;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -45,6 +46,8 @@ public class ChatAgent implements ApplicationListener<ApplicationReadyEvent> {
     private volatile boolean running = true;
     private Thread workerThread;
 
+    private AgentExecution agentExecution;
+
     public ArrayNode promptAgent(AgentExecution execution) throws ZtatException {
         while(true){
             try {
@@ -79,14 +82,15 @@ public class ChatAgent implements ApplicationListener<ApplicationReadyEvent> {
         var keyPair = agentKeyService.getKeyPair();
 
         try {
+            var agentName = agentConfigOptions.getNamePrefix() + "-" + UUID.randomUUID().toString();
             var base64PublicKey = agentKeyService.getBase64PublicKey(keyPair.getPublic());
-            var agentRegistrationDTO = agentClientService.bootstrap(agentConfigOptions.getName(), base64PublicKey
+            var agentRegistrationDTO = agentClientService.bootstrap(agentName, base64PublicKey
                 , keyPair.getPublic().getAlgorithm());
 
             var encryptedSecret = agentRegistrationDTO.getClientSecret();
             var decryptedSecret = agentKeyService.
                 decryptWithPrivateKey(encryptedSecret, keyPair.getPrivate());
-            keycloakService.createKeycloakClient(agentConfigOptions.getName(),
+            keycloakService.createKeycloakClient(agentName,
                 decryptedSecret);
 
 
@@ -100,9 +104,10 @@ public class ChatAgent implements ApplicationListener<ApplicationReadyEvent> {
         final UserDTO user = UserDTO.builder()
             .username(zeroTrustClientService.getUsername())
             .build();
-        var execution = agentExecutionService.getAgentExecution(user);
+        agentExecution = agentExecutionService.getAgentExecution(user);
+
         try {
-            agentClientService.heartbeat(execution, execution.getUser().getUsername());
+            agentClientService.heartbeat(agentExecution, agentExecution.getUser().getUsername());
         } catch (ZtatException e) {
             throw new RuntimeException(e);
         }
@@ -110,12 +115,12 @@ public class ChatAgent implements ApplicationListener<ApplicationReadyEvent> {
         while(running) {
 
             try {
-                var register = zeroTrustClientService.registerAgent(execution);
+                var register = zeroTrustClientService.registerAgent(agentExecution);
                 log.info("Registered agent response: {}", register);
 
                 var ztat = JsonUtil.MAPPER.readValue(register, Ztat.class);
-                execution.setZtatToken(ztat.getZtatToken());
-                execution.setCommunicationId(ztat.getCommunicationId());
+                agentExecution.setZtatToken(ztat.getZtatToken());
+                agentExecution.setCommunicationId(ztat.getCommunicationId());
                 break;
             }catch (Exception | ZtatException e) {
 
@@ -135,7 +140,7 @@ public class ChatAgent implements ApplicationListener<ApplicationReadyEvent> {
                 try {
 
                     Thread.sleep(5_000);
-                    agentClientService.heartbeat(execution, execution.getUser().getUsername());
+                    agentClientService.heartbeat(agentExecution, agentExecution.getUser().getUsername());
                 } catch (InterruptedException | ZtatException ex) {
                     throw new RuntimeException(ex);
                 }
@@ -153,4 +158,7 @@ public class ChatAgent implements ApplicationListener<ApplicationReadyEvent> {
         }
     }
 
+    public AgentExecution getAgentExecution() {
+        return agentExecution;
+    }
 }

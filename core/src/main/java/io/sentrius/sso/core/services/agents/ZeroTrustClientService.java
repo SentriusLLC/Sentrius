@@ -583,4 +583,39 @@ public class ZeroTrustClientService {
             throw new RuntimeException("Failed to obtain ZTAT: " + response.getStatusCode());
         }
     }
-}
+
+    public boolean verifyZtatChallenge(AgentExecution execution, String ztatToken, String nonce, String signatureBase64, String publicKeyBase64) {
+        var builder = UriComponentsBuilder
+            .fromHttpUrl(agentApiUrl)
+            .path("/api/v1/zerotrust/accesstoken/jwt/verify");
+
+        String keycloakJwt = getKeycloakToken();
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("ztat_token", execution.getZtatToken());
+        headers.setBearerAuth(keycloakJwt);
+        headers.set("communication_id", execution.getCommunicationId());
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        Map<String, String> body = Map.of(
+            "ztat", ztatToken,
+            "nonce", nonce,
+            "signature", signatureBase64,
+            "publicKey", publicKeyBase64
+        );
+
+        HttpEntity<Map<String, String>> entity = new HttpEntity<>(body, headers);
+
+        try {
+            ResponseEntity<Boolean> response = restTemplate.exchange(builder.build(true).toUriString(), HttpMethod.POST, entity, Boolean.class);
+            return Boolean.TRUE.equals(response.getBody());
+        } catch (HttpClientErrorException e) {
+            e.printStackTrace();
+            log.warn("ZTAT challenge verification failed: {}", e.getResponseBodyAsString());
+            return false;
+        } catch (Exception ex) {
+            log.error("Error during ZTAT verification", ex);
+            return false;
+        }
+    }
+
+    }

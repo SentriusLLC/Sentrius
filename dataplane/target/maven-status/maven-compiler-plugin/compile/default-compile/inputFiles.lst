@@ -168,6 +168,7 @@
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/security/enums/RuleAccessEnum.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/zt/ZTATRequestBase.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/repository/UserThemeRepository.java
+/mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/services/security/EcdsaSignatureUtil.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/services/security/CookieService.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/zt/OpsApproval.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/users/UserPublicKey.java
@@ -213,6 +214,7 @@
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/hostgroup/TimeConfigJson.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/repository/WorkHoursRepository.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/config/SystemOptions.java
+/mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/services/security/ZtatTokenService.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/annotations/LimitAccess.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/integrations/ticketing/TicketService.java
 /mnt/ExtraDrive/repos/Sentrius/dataplane/src/main/java/io/sentrius/sso/core/model/security/zt/JITReason.java

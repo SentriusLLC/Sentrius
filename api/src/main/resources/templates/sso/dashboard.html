@@ -3,6 +3,8 @@
 <head>
     <meta th:replace="~{fragments/header}">
     <title>[[${systemOptions.systemLogoName}]] - Dashboard</title>
+    <script th:src="@{/node/js/google-protobuf/google-protobuf.js}"></script>
+    <script th:src="@{/js/bundled_session_pb.js}"></script>
     <script type="module" th:src="@{/js/chat.js}"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
@@ -446,8 +448,15 @@
                                     <a href="/api/v1/users/list" class="btn btn-danger">Build Automation</a>
                                     <a href="#" class="btn btn-primary" data-bs-toggle="modal"
                                        data-bs-target="#userFormModal">Usage Patterns</a>
-                                    <a href="#" class="btn btn-primary" data-bs-toggle="modal"
+                                    chat-container                                    <a href="#" class="btn btn-primary" data-bs-toggle="modal"
                                        data-bs-target="#userFormModal">Usage Patterns</a>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="agent-select" class="form-label">Chat with Agent:</label>
+                                    <select id="agent-select" class="form-select">
+                                        <option value="">Select an agent...</option>
+                                    </select>
+                                    <button id="start-chat-btn" class="btn btn-primary mt-2" disabled>Start Chat</button>
                                 </div>
                             </div>
                         </div>
@@ -523,6 +532,7 @@
 <script type="module" th:src="@{/js/add_system.js}" defer></script>
 <script type="module" th:src="@{/js/add_user.js}" defer></script>
 <script type="module" th:src="@{/js/add_group.js}" defer></script>
+<script type="module" th:src="@{/js/dashboard-agents.js}" defer></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -764,6 +774,7 @@
             }
         });
     });
+
 
 </script>
 </body>

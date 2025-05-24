@@ -55,7 +55,7 @@ public class BotController {
     @GetMapping("/describe")
     public ResponseEntity<AgentRegistrationDTO> describeAgent() {
         AgentRegistrationDTO dto = AgentRegistrationDTO.builder()
-            .agentName(agentConfig.getName())
+            .agentName(agentConfig.getNamePrefix())
             .agentPublicKey(agentKeyService.getKeyPair().getPublic().toString())
             .agentPublicKeyAlgo(agentKeyService.getKeyPair().getPublic().getAlgorithm())
             .agentType(agentConfig.getType())
@@ -67,7 +67,7 @@ public class BotController {
     public ResponseEntity<AgentRegistrationDTO> getRegistration
         () {
         AgentRegistrationDTO dto = AgentRegistrationDTO.builder()
-            .agentName(agentConfig.getName())
+            .agentName(agentConfig.getNamePrefix())
             .agentPublicKey(agentKeyService.getKeyPair().getPublic().toString())
             .agentPublicKeyAlgo(agentKeyService.getKeyPair().getPublic().getAlgorithm())
             .build();
