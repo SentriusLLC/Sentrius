@@ -11,8 +11,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentrius.agent.analysis.agents.agents.ChatAgent;
+import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
+import io.sentrius.agent.analysis.agents.verbs.TerminalVerbs;
 import io.sentrius.agent.analysis.api.UserCommunicationService;
+import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
+import io.sentrius.sso.genai.Message;
 import io.sentrius.sso.protobuf.Session;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,15 +33,20 @@ public class ChatWSHandler extends TextWebSocketHandler {
 
     final UserCommunicationService userCommunicationService;
     final ZeroTrustClientService zeroTrustClientService;
+    final TerminalVerbs terminalVerbs;
+    final AgentVerbs agentVerbs;
     // Store active sessions, using session ID or a custom identifier
 
 
     private final ChatAgent chatAgent;
 
     @Autowired
-    public ChatWSHandler(UserCommunicationService userCommunicationService, ZeroTrustClientService zeroTrustClientService, ChatAgent chatAgent) {
+    public ChatWSHandler(UserCommunicationService userCommunicationService, ZeroTrustClientService zeroTrustClientService,
+                         TerminalVerbs terminalVerbs, AgentVerbs agentVerbs, ChatAgent chatAgent) {
         this.userCommunicationService = userCommunicationService;
         this.zeroTrustClientService = zeroTrustClientService;
+        this.terminalVerbs = terminalVerbs;
+        this.agentVerbs = agentVerbs;
         this.chatAgent = chatAgent;
     }
 
@@ -85,6 +94,8 @@ public class ChatWSHandler extends TextWebSocketHandler {
         session.sendMessage(new TextMessage(
             base64Message
         ));
+
+        userCommunicationService.createSession(queryParams.get("sessionId"), session);
     }
 
 
@@ -100,7 +111,10 @@ public class ChatWSHandler extends TextWebSocketHandler {
                 Map<String, String> queryParams = parseQueryParams(uri.getQuery());
                 String sessionId = queryParams.get("sessionId");
 
-                if (sessionId != null) {
+                var websocky = userCommunicationService.getSession(sessionId);
+
+                if (sessionId != null && websocky.isPresent()) {
+                    var websocketCommunication = websocky.get();
                     log.info("Received message from session ID: " + sessionId);
                     // Handle the message (e.g., process or respond)
 
@@ -113,7 +127,6 @@ public class ChatWSHandler extends TextWebSocketHandler {
                             Session.ChatMessage.parseFrom(messageBytes);
 
                         if (auditLog.getMessage().equals("heartbeat")) {
-                            log.info("heartbeat");
                             return;
                         }
                         var json = new ObjectMapper().readTree(auditLog.getMessage());
@@ -136,8 +149,25 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                 session.close();
                             }
                             return;
-                        } else if ("heartbeat".equals(auditLog.getMessage())) {
+                        } else if ("user-message".equals(json.get("type").asText())) {
+                            Message userMessage = Message.builder().role("user").content(json.get("message").asText()).build();
                             log.info("Received heartbeat from session {}", sessionId);
+                            var response = agentVerbs.interpretUserData(chatAgent.getAgentExecution(),
+                                websocketCommunication, userMessage);
+                            log.info("Response: {}", response);
+                            var newMessage = Session.ChatMessage.newBuilder()
+                                .setMessage(String.format("{\"type\":\"user-message\",\"message\":\"%s\"}",
+                                    response.getResponseForUser()))
+                                .setSender("agent")
+                                .setChatGroupId("")
+                                .setSessionId(Long.parseLong(websocketCommunication.getSessionId()))
+                                .setTimestamp(System.currentTimeMillis())
+                                .build();
+                            messageBytes = newMessage.toByteArray();
+                            String base64Message = Base64.getEncoder().encodeToString(messageBytes);
+                            session.sendMessage(new TextMessage(
+                                base64Message
+                            ));
                             return; // Ignore heartbeat messages
                         } else {
                             log.info("Processing message: {}", auditLog.getMessage());
@@ -154,7 +184,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
                     log.info("Session ID not found in query parameters for message handling.");
                 }
             }
-        }catch (Exception e ){
+        }catch (Exception | ZtatException e ){
             throw new RuntimeException(e);
         }
     }

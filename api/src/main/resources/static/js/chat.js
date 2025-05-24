@@ -230,11 +230,13 @@ export function switchToAgent(agentName,agentId, sessionId, agentHost) {
         appendToChatWindow(msg.sender, msg.message);
     });
 
+    container.classList.remove("hidden");
     container.style.display = "block";
     console.log("Chat container displayed");
 }
 
 export function sendMessage(event) {
+    console.log("Send message event:", event);
     if (event.key !== "Enter") return;
 
     const input = document.getElementById("chat-input");
@@ -291,3 +293,5 @@ export async function fetchAvailableAgents() {
         return [];
     }
 }
+
+window.sendMessage = sendMessage;

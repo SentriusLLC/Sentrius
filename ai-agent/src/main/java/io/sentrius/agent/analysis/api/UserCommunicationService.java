@@ -28,6 +28,8 @@ public class UserCommunicationService {
 
     private final ConcurrentHashMap<String, WebSocky> sessions = new ConcurrentHashMap<>();
 
+
+
     public void createSession(String sessionId, WebSocketSession session) {
         sessions.put(sessionId, WebSocky.builder().sessionId(sessionId).webSocketSession(session).build());
     }

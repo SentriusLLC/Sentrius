@@ -24,4 +24,5 @@ public class WebSocky {
     WebSocketSession webSocketSession;
     @Builder.Default
     List<TerminalResponse> messages = new ArrayList<>();
+
 }

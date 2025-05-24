@@ -19,6 +19,10 @@ actions:
     ztat_provider: "ztat-service.internal"
 capabilities:
   primitives:
+      - id: "accessLLM"
+        description: "access llm"
+        endpoint:
+          - "/api/v1/chat/completions"
   composed:
 ztat:
   provider: "ztat-service.internal"

@@ -151,7 +151,8 @@ public class AgentVerbs {
     @Verb(name = "interpret_user_request", returnType = ArrayNode.class, description = "Queries the LLM using the " +
         "user input.",
         isAiCallable = false, requiresTokenManagement = true)
-    public TerminalResponse interpretUserData(AgentExecution execution, @NonNull WebSocky socketConnection) throws ZtatException,
+    public TerminalResponse interpretUserData(AgentExecution execution, @NonNull WebSocky socketConnection,
+                                              @NonNull Message userMessage) throws ZtatException,
         IOException {
 
         var lastMessage = socketConnection.getMessages().stream().reduce((prev, next) -> next).orElse(null);
@@ -175,10 +176,14 @@ public class AgentVerbs {
             List<Message> messages = new ArrayList<>();
 
             messages.add(Message.builder().role("system").content(prompt).build());
-            messages.add(Message.builder().role("system").content("Please ensure your respones abide by the " +
-                "following json format. Please summarize prior terminal sessions, using terminal output if needed " +
+            messages.add(Message.builder().role("system").content("Please ensure your nextOperation abides by the " +
+                "following json format and leave it empty if user's request doesn't require explicit use of system " +
+                "operations" +
+                ". Please summarize prior terminal " +
+                "sessions, using " +
+                "terminal output if needed " +
                 "for clarity of the next LLM request and for the user: " + terminalResponse).build());
-
+            messages.add(Message.builder().role("user").content(userMessage.getContent()).build());
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
             execution.addMessages( messages );
@@ -217,10 +222,11 @@ public class AgentVerbs {
             List<Message> messages = new ArrayList<>();
 
             messages.add(Message.builder().role("system").content(prompt).build());
-            messages.add(Message.builder().role("system").content("Please ensure your respones abide by the " +
+            messages.add(Message.builder().role("system").content("Please ensure your nextOperation abide by the " +
                 "following json format. Please summarize prior terminal sessions, using terminal output if needed " +
                 "for clarity of the next LLM request and for the user: " + terminalResponse).build());
             messages.add(Message.builder().role("assistant").content("prior response: " + lastMessage.getTerminalSummaryForLLM()).build());
+            messages.add(Message.builder().role("user").content(userMessage.getContent()).build());
 
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);

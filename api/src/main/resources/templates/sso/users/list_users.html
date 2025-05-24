@@ -76,7 +76,8 @@
                             actions += `<button class="btn btn-secondary view-policy-btn" data-agent-id="${myId}">View
                                 Policy</button> &nbsp; | &nbsp;`;
                             actions += `<button class="btn btn-primary edit-policy-btn" data-agent-id="${myId}">Edit Policy</button> &nbsp; | &nbsp;`;
-                            actions += `<button class="btn btn-primary audit-agent-btn" data-agent-id="${myId}">Audit Graph</button>`;
+                            actions += `<button class="btn btn-primary audit-agent-btn" data-agent-id="${myId}">Audit Graph</button> &nbsp; | &nbsp;`;
+                            actions += `<a href="/api/v1/users/delete?userId=${myId}&type=non_person_entity" class="btn btn-primary" >Delete</a>`;
                         }
                         return actions;
                     }

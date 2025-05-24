@@ -104,6 +104,16 @@ public class KeycloakService {
         return claims.get("preferred_username", String.class); // Extracts agent identity
     }
 
+    public void removeAgentClient(String clientId) {
+        ClientsResource clients = keycloak.getKeycloak().realm(realm).clients();
+        ClientResource client = clients.get(clientId);
+        if (client != null) {
+            client.remove();
+        } else {
+            log.warn("Client with ID {} not found", clientId);
+        }
+    }
+
     public AgentRegistrationDTO registerAgentClient(AgentRegistrationDTO agent) {
         ClientsResource clients = keycloak.getKeycloak().realm(realm).clients();
 

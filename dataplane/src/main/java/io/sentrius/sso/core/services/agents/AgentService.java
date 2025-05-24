@@ -289,11 +289,13 @@ public class AgentService {
                     repository.delete(heartbeat);
                     continue;
                 }
+                log.info("Ping user {}: {}", user.getUserId(), heartbeat);
                 ping(user).join(); // This will update the pingCache
                 Optional<AgentStatus> status = getPing(user);
                 if (status.isEmpty()) {
                     // Remove agent if not available
                     repository.delete(heartbeat);
+                    keycloakService.removeAgentClient(agentId);
                     log.info("Removed unavailable agent: {}", agentId);
                 }
             } catch (Exception e) {
