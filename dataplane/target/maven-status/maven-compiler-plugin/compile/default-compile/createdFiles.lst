@@ -110,6 +110,7 @@ io/sentrius/sso/core/model/zt/RequestCommunicationLink.class
 io/sentrius/sso/core/repository/OpsUseRepository.class
 io/sentrius/sso/core/repository/automation/ScriptRepository.class
 io/sentrius/sso/core/model/metadata/TerminalCommand.class
+io/sentrius/sso/core/services/security/EcdsaSignatureUtil.class
 io/sentrius/sso/automation/RunShellScript.class
 io/sentrius/sso/core/repository/NotificationRepository.class
 io/sentrius/sso/core/services/metadata/TerminalSessionMetadataService.class
@@ -266,6 +267,7 @@ io/sentrius/sso/core/repository/NotificationRecipientRepository.class
 io/sentrius/sso/core/model/security/AccessControl.class
 io/sentrius/sso/core/model/ErrorOutput.class
 io/sentrius/sso/core/model/install/Configuration.class
+io/sentrius/sso/core/services/security/ZtatTokenService.class
 io/sentrius/sso/core/model/HostSystem.class
 io/sentrius/sso/core/repository/UserTypeRepository.class
 io/sentrius/sso/core/repository/AutomationExecutionRepository.class

@@ -62,6 +62,8 @@ public class AccessControlAspect {
     static List<String> allowedEndpoints = new ArrayList<>();
     static {
         allowedEndpoints.add("/api/v1/zerotrust/accesstoken/status");
+        allowedEndpoints.add("/api/v1/zerotrust/accesstoken/jwt/verify");
+        allowedEndpoints.add("/api/v1/agent/bootstrap/register");
     }
 
     Tracer tracer = GlobalOpenTelemetry.getTracer("io.sentrius.sso");
@@ -123,7 +125,7 @@ public class AccessControlAspect {
                     span.setAttribute("access.limit", limitAccess.toString());
                     var policy = atplPolicyService.getPolicy(operatingUser);
                     if (policy.isEmpty()) {
-                        log.debug("Access Denied to {} at {}", operatingUser, accessAnnotation);
+                        log.info("Access Denied to {} at {}", operatingUser, accessAnnotation);
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Policy is required ");
                     }
                     log.info("Found policy {} for {}", policy.get().getPolicyId(), operatingUser.getUsername());
@@ -157,7 +159,7 @@ public class AccessControlAspect {
                     }
 
                     if (isAllowedEndpoint(endpoint)) {
-                        log.debug("Access Granted to {} at {}", operatingUser, accessAnnotation);
+                        log.info("Access Granted to {} at {}", operatingUser, accessAnnotation);
                         return;
                     } else if (null != endpointRequest && containsEndpoint(endpointRequest.getEndpoints(), endpoint)) {
                         // this endpoint is approved for use.

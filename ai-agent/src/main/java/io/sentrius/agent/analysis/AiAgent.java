@@ -1,7 +1,9 @@
 package io.sentrius.agent.analysis;
 
+import io.sentrius.agent.config.AgentConfigOptions;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 
@@ -11,6 +13,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration.class,
         org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration.class
     })
+@EnableConfigurationProperties(AgentConfigOptions.class)
 @EnableScheduling
 public class AiAgent {
     public static void main(String[] args) {

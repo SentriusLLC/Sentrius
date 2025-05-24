@@ -3,6 +3,7 @@ package io.sentrius.sso.controllers.view;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.util.List;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
@@ -57,6 +58,7 @@ public class AgentController extends BaseController {
         log.info("Received policy request from agent: {} {} ",aid, agentId);
         var decrypted = cryptoService.decrypt(aid);
         m.addAttribute("agentId",agentId);
+        m.addAttribute("callTypes", List.of("intercept","chat_request","atat_chat_respond", "atat_chat_ask"));
         return "sso/agents/agent_comms";
     }
 

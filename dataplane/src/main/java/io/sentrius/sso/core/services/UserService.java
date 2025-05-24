@@ -357,6 +357,7 @@ public class UserService {
      * @param user The user to save.
      * @return The saved user object.
      */
+    @Transactional
     public User save(User user) {
         return UserDB.save(user);
     }
@@ -378,7 +379,14 @@ public class UserService {
      * @return An optional containing the user type if found, or empty if not found.
      */
     public Optional<UserType> getUserType(UserType baseUser) {
-        return userTypeRepository.findById(baseUser.getId());
+        if (baseUser == null || baseUser.getId() == null) {
+            log.warn("Attempted to get UserType with null baseUser or null ID");
+            return Optional.empty();
+        }
+        log.info("Getting user type for baseUser: {}", baseUser);
+        var ret = userTypeRepository.findById(baseUser.getId());
+        log.info("Got user type for baseUser: {}", ret);
+        return ret;
     }
 
     /**

@@ -64,10 +64,18 @@
                     <label for="endDate" class="form-label">End Time</label>
                     <input type="date" id="endDate" class="form-control">
                 </div>
+                <div class="col-md-3">
+                    <label for="callType" class="form-label">Call Type</label>
+                    <select id="callType" class="form-select">
+                        <option value="">All</option>
+                        <option th:each="type : ${callTypes}"
+                                th:value="${type}"
+                                th:text="${type}">Message</option>
+                    </select>
+                </div>
                 <div class="col-md-2 d-flex align-items-end">
                     <button class="btn btn-primary w-100" id="filterBtn">Filter</button>
                 </div>
-            </div>
 
             <div class="graph-container">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -181,6 +189,11 @@
         loadWithDate();
     });
 
+    document.getElementById('callType').addEventListener('change', () => {
+        currentPage = 0;
+        loadWithDate();
+    });
+
     document.getElementById('nextPage').addEventListener('click', () => {
         currentPage++;
         loadWithDate();
@@ -200,6 +213,10 @@
         url.searchParams.append("agentId", agentId);
         if (startTime) url.searchParams.append("start", startTime);
         if (endTime) url.searchParams.append("end", endTime);
+
+
+        const callType = document.getElementById('callType').value;
+        if (callType) url.searchParams.append("type", callType); // Add call type filter
 
         if (limit > 0) {
             url.searchParams.append("limit", limit);

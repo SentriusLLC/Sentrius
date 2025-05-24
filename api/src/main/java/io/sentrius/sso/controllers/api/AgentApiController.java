@@ -291,6 +291,7 @@ public class AgentApiController extends BaseController {
     public ResponseEntity<?> getConnections(
         @RequestParam String agentId,
         @RequestParam(required = false) Integer limit,
+        @RequestParam(required = false) String type,
         @RequestParam(required = false) Integer page,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end
@@ -305,7 +306,9 @@ public class AgentApiController extends BaseController {
         var operatingUser = userService.getUserByUserid(agent);
         log.info("Received policy request from agent: {} {} {} {}",agent, aid, agentId, operatingUser);
 
-        var agents = agentService.getCommunications(operatingUser.getUsername(), start, end, pageable);
+        var agents = agentService.getCommunications(
+            operatingUser.getUsername(), start, end, type, pageable
+        );
         return ResponseEntity.ok(agents.map(AgentCommunication::toDTO));
     }
 
@@ -609,28 +612,28 @@ public class AgentApiController extends BaseController {
 
     }
 
-    private boolean validateUser(User user, User operatingUser, AgentCommunicationDTO comm) {
+    private boolean validateUser(User requestor, User operatingUser, AgentCommunicationDTO comm) {
         // validate that the user is allowed to send message to the agent
         // validate that the user is either the source agent or receiving agent on comm
+        //        : Validating user service-account-java-agents service-account-java-agents
+        //        service-account-java-agents service-account-ai-agents-assessor
+        // : User service-account-java-agents is not allowed to send message to agent service-account-ai-agents-assessor
 
-        if (!user.getUsername().equals(comm.getTargetAgent()) && user.getUsername().equals(comm.getSourceAgent())) {
-            return false;
+   //     : Validating user service-account-java-agents service-account-ai-agents-assessor
+        //     service-account-ai-agents-assessor service-account-java-agents
+// User service-account-ai-agents-assessor is allowed to send message to agent service-account-java-agents true
 
-        }
-        return comm.getTargetAgent().equals(operatingUser.getUsername()) ||
-            comm.getSourceAgent().equals(operatingUser.getUsername());
-    }
+        log.info("Validating user {} {} {} {}", requestor.getUsername(),
+            operatingUser.getUsername(), comm.getSourceAgent(), comm.getTargetAgent());
+        if (!requestor.getUsername().equals(comm.getTargetAgent()) && requestor.getUsername().equals(comm.getSourceAgent())) {
 
-    private boolean validateUser(User user, User operatingUser, AgentCommunication comm) {
-        // validate that the user is allowed to send message to the agent
-        // validate that the user is either the source agent or receiving agent on comm
-
-        if (!user.getUsername().equals(comm.getTargetAgent()) && user.getUsername().equals(comm.getSourceAgent())) {
-            return false;
+            return true;
 
         }
-        return comm.getTargetAgent().equals(operatingUser.getUsername()) ||
+        var canSend = comm.getTargetAgent().equals(operatingUser.getUsername()) ||
             comm.getSourceAgent().equals(operatingUser.getUsername());
-
+        log.info("User {} is allowed to send message to agent {} {}", operatingUser.getUsername(), comm.getTargetAgent(), canSend);
+        return canSend;
     }
+
 }

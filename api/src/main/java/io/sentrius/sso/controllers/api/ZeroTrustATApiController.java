@@ -1,8 +1,12 @@
 package io.sentrius.sso.controllers.api;
 
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.PublicKey;
+import java.security.Signature;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -11,6 +15,9 @@ import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.ZtatDTO;
+import io.sentrius.sso.core.dto.ztat.UserTokenDTO;
+import io.sentrius.sso.core.dto.ztat.UserTokenResponse;
+import io.sentrius.sso.core.dto.ztat.ZtatChallengeRequest;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.ZeroTrustAccessTokenEnum;
@@ -21,8 +28,11 @@ import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.NotificationService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.agents.AgentService;
+import io.sentrius.sso.core.services.security.CryptoService;
+import io.sentrius.sso.core.services.security.EcdsaSignatureUtil;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
+import io.sentrius.sso.core.services.security.ZtatTokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -46,19 +56,22 @@ public class ZeroTrustATApiController extends BaseController {
     private final NotificationService notificationService;
     private final KeycloakService keycloakService;
     private final AgentService agentService;
+    final ZtatTokenService tokenService;
+
 
 
     protected ZeroTrustATApiController(
         UserService userService, SystemOptions systemOptions,
         ErrorOutputService errorOutputService, ZeroTrustAccessTokenService ztatService, NotificationService notificationService,
         KeycloakService keycloakService,
-        AgentService agentService
+        AgentService agentService, ZtatTokenService tokenService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.ztatService = ztatService;
         this.notificationService=notificationService;
         this.keycloakService = keycloakService;
         this.agentService = agentService;
+        this.tokenService = tokenService;
     }
 
     @GetMapping("/my/current")
@@ -241,6 +254,8 @@ public class ZeroTrustATApiController extends BaseController {
                     if (Objects.equals(opsJit.getUser().getId(), operatingUser.getId())){
                         if ( ztatService.isApproved(opsJit) ) {
                             return ResponseEntity.ok(Map.of("status", "approved", "ztat_token", opsJit.getApprovals().get(0).getToken()));
+                        } else if ( ztatService.isDenied(opsJit) ) {
+                            return ResponseEntity.ok(Map.of("status", "denied"));
                         }
                         else {
                             return ResponseEntity.ok(Map.of("status", "unknown"));
@@ -311,4 +326,42 @@ public class ZeroTrustATApiController extends BaseController {
         }
         return ResponseEntity.ok(ztatTracker);
     }
+
+    @PostMapping("/jwt/issue")
+    public ResponseEntity<UserTokenResponse> issueZtat(@RequestBody UserTokenDTO request) {
+        String ztat = tokenService.issueZtat(request.getUserId(), request.getSessionId(), request.getPublicKey());
+        return ResponseEntity.ok(new UserTokenResponse(ztat));
+    }
+
+
+    @PostMapping("/jwt/verify")
+    public ResponseEntity<Boolean> verifyZtat(@RequestBody ZtatChallengeRequest request) {
+        try {
+            var claims = tokenService.parseZtat(request.getZtat()).getBody();
+
+            // Check expiration and claims
+            String expectedKeyfp = claims.get("keyfp", String.class);
+            String actualKeyfp = tokenService.computeFingerprint(request.getPublicKey());
+
+            if (!expectedKeyfp.equals(actualKeyfp)) {
+                return ResponseEntity.ok(false);
+            }
+
+            PublicKey key = CryptoService.decodePublicKey(request.getPublicKey(), "EC");
+
+            byte[] rawSignature = Base64.getDecoder().decode(request.getSignature());
+            byte[] derSignature = EcdsaSignatureUtil.convertRawSignatureToDer(rawSignature); // <- convert here
+
+            Signature sig = Signature.getInstance("SHA256withECDSA");
+            sig.initVerify(key);
+            sig.update(request.getNonce().getBytes(StandardCharsets.UTF_8));
+            boolean verified = sig.verify(derSignature); // <- use DER-encoded signature
+
+            return ResponseEntity.ok(verified);
+        } catch (Exception e) {
+            log.warn("ZTAT validation error", e);
+            return ResponseEntity.ok(false);
+        }
+    }
+
 }

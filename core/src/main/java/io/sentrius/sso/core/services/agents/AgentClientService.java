@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.Maps;
 import io.sentrius.sso.core.dto.AgentCommunicationDTO;
 import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
+import io.sentrius.sso.core.dto.AgentRegistrationDTO;
 import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.AtatRequest;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
@@ -169,4 +170,24 @@ public class AgentClientService {
             Maps.immutableEntry("requestId", List.of(ztatRequest.getRequestId())));
         return JsonUtil.MAPPER.readValue(acommResponse, AgentCommunicationDTO.class);
     }
+
+    public AgentRegistrationDTO bootstrap(String name, String publicKey, String keyType)
+        throws ZtatException, JsonProcessingException {
+        String ask = "/agent/bootstrap/register";
+
+        AgentRegistrationDTO registration = AgentRegistrationDTO.builder()
+            .agentName(name)
+            .agentCallbackUrl(getCallbackUrl())
+            .agentPublicKey(publicKey)
+            .agentPublicKeyAlgo(keyType)
+            .build();
+
+        var acommResponse = zeroTrustClientService.callPostOnApi(ask, registration);
+        return JsonUtil.MAPPER.readValue(acommResponse, AgentRegistrationDTO.class);
+    }
+
+    public String getCallbackUrl() {
+        return callbackUrl;
+    }
+
 }

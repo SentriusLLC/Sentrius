@@ -26,16 +26,16 @@ public class ErrorOutput {
     @Column(name = "system_id")
     private Integer systemId;
 
-    @Column(name = "error_type", nullable = false)
+    @Column(name = "error_type", nullable = false, columnDefinition = "TEXT")
     private String errorType;
 
-    @Column(name = "error_location")
+    @Column(name = "error_location", columnDefinition = "TEXT")
     private String errorLocation;
 
     @Column(name = "error_hash", nullable = false)
     private String errorHash;
 
-    @Column(name = "error_logs", nullable = false)
+    @Column(name = "error_logs", nullable = false, columnDefinition = "TEXT")
     private String errorLogs;
 
     @Column(name = "log_tm", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")

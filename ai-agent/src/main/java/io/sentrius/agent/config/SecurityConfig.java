@@ -37,14 +37,15 @@ public class SecurityConfig {
 
         http
             .authorizeHttpRequests(auth -> auth.
+                requestMatchers("/api/v1/agent/bootstrap/**").permitAll(). // Public login endpoint
                 requestMatchers("/actuator/**").permitAll() // Public endpoints
+                .requestMatchers("/api/v1/chat/attach/subscribe/**").permitAll() // Important!
                 .requestMatchers("/**").fullyAuthenticated())
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverterForKeycloak()))
             )
-            .oauth2Login(oauth2 -> oauth2
-                .loginPage("/oauth2/authorization/keycloak")
-                .successHandler(new SimpleUrlAuthenticationSuccessHandler())
+            .csrf(csrf -> csrf
+                .ignoringRequestMatchers("/api/v1/chat/subscribe/**") // ✅ Disable only for your WebSocket path
             )
             .cors(Customizer.withDefaults());
 

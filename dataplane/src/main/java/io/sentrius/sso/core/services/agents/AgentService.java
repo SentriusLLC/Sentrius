@@ -8,16 +8,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.sentrius.sso.core.dto.AgentCommunicationDTO;
 import io.sentrius.sso.core.dto.AgentDTO;
 import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
-import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.dto.UserTypeDTO;
-import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.model.AgentHeartbeat;
 import io.sentrius.sso.core.model.AgentStatus;
 import io.sentrius.sso.core.model.chat.AgentCommunication;
@@ -38,6 +37,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -50,6 +50,8 @@ public class AgentService {
     private final UserService userService;
     private final ATPLPolicyService policyService;
     private final CryptoService cryptoService;
+
+    private ConcurrentMap<String, String> callbackUrls = new ConcurrentHashMap<>();
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -91,9 +93,25 @@ public class AgentService {
 
 
     public List<AgentDTO> getAllAgents(boolean encryptId) {
+     return getAllAgents(encryptId, List.of(), false);
+    }
+
+    public List<AgentDTO> getAllAgents(boolean encryptId, List<String> filteredIds, boolean include) {
         return repository.findAll().stream()
+            .filter(heartbeat -> {
+                var user = userService.getUserByUsername(heartbeat.getAgentName());
+                log.info("Agent {}: {}", heartbeat.getAgentId(), user);
+                log.info("Excluding {}: {}", heartbeat.getAgentId(), filteredIds);
+                if (include){
+                    return user != null && filteredIds.contains(user.getUserId());
+                }
+                else {
+                    return user != null && !filteredIds.contains(user.getUserId());
+                }
+            })
             .map(heartbeat -> {
-                var user = userService.getUserByUsername(heartbeat.getAgentId());
+                log.info("Second Agent {}", heartbeat.getAgentName());
+                var user = userService.getUserByUsername(heartbeat.getAgentName());
 
                 var dtoBuilder = AgentDTO.builder();
                 if (null != user && user.getAuthorizationType() != UserType.createUnknownUser()){
@@ -103,9 +121,14 @@ public class AgentService {
                         dtoBuilder.isRegistered(true);
                         dtoBuilder.lastHeartbeat(heartbeat.getLastHeartbeat().toString());
                         dtoBuilder.agentName(heartbeat.getAgentName());
+                        var callback = callbackUrls.get(heartbeat.getAgentId());
+                        if (callback != null) {
+                            dtoBuilder.agentCallback(callback);
+                        }
                     }
                     if (encryptId){
                         try {
+
                             // this is obfuscation of something known, let's use a real id of some kind
                             dtoBuilder.agentId(cryptoService.encrypt(user.getUserId()));
                         } catch (GeneralSecurityException e) {
@@ -171,11 +194,24 @@ public class AgentService {
         return agentCommunicationRepository.findBySourceAgent(sourceAgent);
     }
 
-    public Page<AgentCommunication> getCommunications(String sourceAgent, LocalDateTime start, LocalDateTime end,
-                                                      Pageable pageable) {
+    public Page<AgentCommunication> getCommunications(
+        String sourceAgent,
+        LocalDateTime start,
+        LocalDateTime end,
+        String type,
+        Pageable pageable
+    ) {
         Instant startInstant = start.atZone(ZoneId.systemDefault()).toInstant();
         Instant endInstant = end.atZone(ZoneId.systemDefault()).toInstant();
-        return agentCommunicationRepository.findBySourceAgentAndCreatedAtBetween(sourceAgent, startInstant, endInstant, pageable);
+
+        if (type != null && !type.isBlank()) {
+            return agentCommunicationRepository.findBySourceAgentAndMessageTypeAndCreatedAtBetween(
+                sourceAgent, type, startInstant, endInstant, pageable);
+        }
+
+
+        return agentCommunicationRepository.findBySourceAgentAndCreatedAtBetween(
+            sourceAgent, startInstant, endInstant, pageable);
     }
 
     public Optional<AgentStatus> getPing(User user) {
@@ -187,7 +223,7 @@ public class AgentService {
     }
 
     @Async
-    public void ping(User user) {
+    public CompletableFuture<Void> ping(User user) {
         AgentStatus status = pingCache.getIfPresent(user.getUserId());
         log.info("Ping user {}: {}", user.getUserId(), status);
         if (status == null) {
@@ -225,10 +261,47 @@ public class AgentService {
             }
 
         }
+        return CompletableFuture.completedFuture(null);
     }
 
     public boolean isAgent(UserTypeDTO userDto) {
         return true;
     }
 
+    public void setCallBack(User user, String agentCallbackUrl) {
+        callbackUrls.put(user.getUserId(), agentCallbackUrl);
+    }
+
+    public List<AgentDTO> getAvailableAgents() {
+        return getAllAgents(true, callbackUrls.keySet().stream().toList(), true);
+    }
+
+    @Scheduled(fixedDelay = 60000) // Runs every 60 seconds
+    @Async
+    public void pingAndRemoveUnavailableAgents() {
+        List<AgentHeartbeat> allAgents = repository.findAll();
+        for (AgentHeartbeat heartbeat : allAgents) {
+            String agentId = heartbeat.getAgentId();
+            try {
+                User user = userService.getUserByUsername(agentId);
+                if (user == null) {
+                    // Remove agent if user not found
+                    repository.delete(heartbeat);
+                    continue;
+                }
+                log.info("Ping user {}: {}", user.getUserId(), heartbeat);
+                ping(user).join(); // This will update the pingCache
+                Optional<AgentStatus> status = getPing(user);
+                if (status.isEmpty()) {
+                    // Remove agent if not available
+                    repository.delete(heartbeat);
+                    keycloakService.removeAgentClient(agentId);
+                    log.info("Removed unavailable agent: {}", agentId);
+                }
+            } catch (Exception e) {
+                repository.delete(heartbeat);
+                log.info("Removed agent due to exception: {}", agentId, e);
+            }
+        }
+    }
 }

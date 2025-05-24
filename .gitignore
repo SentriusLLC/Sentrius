@@ -46,8 +46,10 @@ llm-proxy/target/**
 llm-proxy/target/
 llm-dataplane/target/**
 sentrius-llm-dataplane/target/**
+sentrius-llm-core/target/**
 llm-dataplane/target/
 sentrius-llm-dataplane/target/
+sentrius-llm-core/target/
 node/*
 node_modules/*
 api/node_modules/*

@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.context.annotation.Bean;
@@ -44,6 +45,8 @@ public class SecurityConfig {
 
         http
             .authorizeHttpRequests(auth -> auth.
+                requestMatchers(HttpMethod.POST, "/api/v1/agent/bootstrap/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/agent/bootstrap/**").permitAll().
                 requestMatchers("/actuator/**").permitAll() // Public endpoints
                 .requestMatchers("/**").fullyAuthenticated())
             .oauth2ResourceServer(oauth2 -> oauth2
@@ -53,7 +56,10 @@ public class SecurityConfig {
                 .loginPage("/oauth2/authorization/keycloak")
                 .successHandler(keycloakAuthSuccessHandler)
             )
-            .cors(Customizer.withDefaults());
+            .cors(Customizer.withDefaults())
+            .csrf(csrf -> csrf
+                .ignoringRequestMatchers("/api/v1/agent/bootstrap/**")
+            );
 
         if (httpsRequired) {
             http.requiresChannel(channel -> channel

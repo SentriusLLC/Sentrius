@@ -1,14 +1,28 @@
 package io.sentrius.sso.controllers.api;
 
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.PublicKey;
+import java.security.Signature;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.dto.AgentDTO;
+import io.sentrius.sso.core.dto.ZtatDTO;
+import io.sentrius.sso.core.dto.ztat.UserTokenDTO;
+import io.sentrius.sso.core.dto.ztat.UserTokenResponse;
+import io.sentrius.sso.core.dto.ztat.ZtatChallengeRequest;
+import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.services.security.CryptoService;
+import io.sentrius.sso.core.services.security.ZtatTokenService;
 import io.sentrius.sso.core.utils.AccessUtil;
+import io.sentrius.sso.genai.Response;
 import io.sentrius.sso.protobuf.Session.ChatMessage;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.model.sessions.SessionLog;
@@ -23,6 +37,7 @@ import org.apache.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -36,19 +51,24 @@ public class ChatApiController extends BaseController {
     final CryptoService cryptoService;
     final SessionTrackingService sessionTrackingService;
     final ChatLogRepository chatLogRepository;
+    final AgentService agentService;
+    final ZtatTokenService tokenService;
 
     public ChatApiController(
         UserService userService,
         SystemOptions systemOptions,
         ErrorOutputService errorOutputService,
         AuditService auditService,
-        CryptoService cryptoService, SessionTrackingService sessionTrackingService, ChatLogRepository chatLogRepository
+        CryptoService cryptoService, SessionTrackingService sessionTrackingService, ChatLogRepository chatLogRepository,
+        AgentService agentService, ZtatTokenService tokenService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
         this.cryptoService = cryptoService;
         this.sessionTrackingService = sessionTrackingService;
         this.chatLogRepository = chatLogRepository;
+        this.agentService = agentService;
+        this.tokenService = tokenService;
     }
 
     public SessionLog createSession(@RequestParam String username, @RequestParam String ipAddress) {
@@ -90,6 +110,53 @@ public class ChatApiController extends BaseController {
             .collect(Collectors.toList());
 
         return ResponseEntity.ok(messages);
+    }
+
+    @GetMapping("/agent/list")
+    public ResponseEntity<List<AgentDTO>> listAvailableAgents(
+        HttpServletRequest request,
+        HttpServletResponse response)
+        throws GeneralSecurityException {
+
+        List<AgentDTO> availableAgents = agentService.getAvailableAgents();
+
+        // get a list of registered agents.
+
+        return ResponseEntity.ok(availableAgents);
+    }
+
+    @PostMapping("/ztat")
+    public ResponseEntity<UserTokenResponse> issueZtat(@RequestBody UserTokenDTO request) {
+        String ztat = tokenService.issueZtat(request.getUserId(), request.getSessionId(), request.getPublicKey());
+        return ResponseEntity.ok(new UserTokenResponse(ztat));
+    }
+
+
+    @PostMapping("/ztat/verify")
+    public ResponseEntity<Boolean> verifyZtat(@RequestBody ZtatChallengeRequest request) {
+        try {
+            var claims = tokenService.parseZtat(request.getZtat()).getBody();
+
+            // Check expiration and claims
+            String expectedKeyfp = claims.get("keyfp", String.class);
+            String actualKeyfp = tokenService.computeFingerprint(request.getPublicKey());
+
+            if (!expectedKeyfp.equals(actualKeyfp)) {
+                return ResponseEntity.ok(false);
+            }
+
+            PublicKey key = CryptoService.decodePublicKey(request.getPublicKey(), "EC");
+
+            Signature sig = Signature.getInstance("SHA256withECDSA");
+            sig.initVerify(key);
+            sig.update(request.getNonce().getBytes(StandardCharsets.UTF_8));
+            boolean verified = sig.verify(Base64.getDecoder().decode(request.getSignature()));
+
+            return ResponseEntity.ok(verified);
+        } catch (Exception e) {
+            log.warn("ZTAT validation error", e);
+            return ResponseEntity.ok(false);
+        }
     }
 
 

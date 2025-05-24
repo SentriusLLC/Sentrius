@@ -3,6 +3,7 @@ import java.security.PublicKey;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import io.sentrius.sso.core.security.RSAKeyFactory;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.KeycloakBuilder;
@@ -15,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 
 @Configuration
 @Slf4j
+@Getter
 public class KeycloakConfig {
 
     @Value("${keycloak.base-url}")
@@ -31,7 +33,6 @@ public class KeycloakConfig {
     public KeycloakConfig(ClientRegistrationRepository clientRegistrationRepository) {
         this.clientRegistrationRepository = clientRegistrationRepository;
     }
-
 
 
     private KeycloakManager fetchPublicKeys(KeycloakManager manager) {

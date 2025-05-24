@@ -109,10 +109,10 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
 
 
 
+                var agentExecution = agentExecutionService.getAgentExecution(user);
+                var response = promptAgent(agentExecution);
                 while (running) {
                     try {
-                        var agentExecution = agentExecutionService.getAgentExecution(user);
-                        var response = promptAgent(agentExecution);
                         log.info("Got response: {}", response);
 
                         VerbResponse priorResponse = null;
@@ -129,16 +129,14 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
 
                     } catch (Exception e) {
                         log.error("Exception in agent loop", e);
-                    } catch (ZtatException e) {
-                        throw new RuntimeException(e);
                     }
 
                     // Sleep between prompts
                     log.info("Sleeping for 5 seconds");
-                    Thread.sleep(1_000);
+                    Thread.sleep(5_000);
                 }
 
-            } catch (Exception e) {
+            } catch (Exception | ZtatException e) {
                 log.error("Fatal error in RegisteredAgent", e);
             }
         });

@@ -136,10 +136,17 @@ public class UserApiController extends BaseController {
 
     @GetMapping("/delete")
     @LimitAccess(userAccess = {UserAccessEnum.CAN_DEL_USERS})
-    public String deleteUser(@RequestParam("userId") String userId) throws GeneralSecurityException {
+    public String deleteUser(@RequestParam("userId") String userId, @RequestParam(required = false) String type) throws GeneralSecurityException {
         log.info("Deleting user with id: {}", userId);
-        Long id = Long.parseLong(cryptoService.decrypt(userId));
-        userService.deleteUser(id);
+        if (null != type && type.equalsIgnoreCase("non_person_entity")) {
+            log.info("Deleting non-person entity user with id: {}", userId);
+            String userIdStr = cryptoService.decrypt(userId);
+            var usr = userService.getUserByUserid(userIdStr);
+            userService.deleteUser(usr.getId());
+        } else {
+            Long id = Long.parseLong(cryptoService.decrypt(userId));
+            userService.deleteUser(id);
+        }
         return "redirect:/sso/v1/users/list?message=" + MessagingUtil.getMessageId(MessagingUtil.USER_DELETE_SUCCESS);
     }
 
