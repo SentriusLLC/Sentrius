@@ -8,9 +8,11 @@
   <description>Multi-module project for sentrius</description>
   <modules>
     <module>core</module>
+    <module>provenance-core</module>
     <module>dataplane</module>
     <module>sentrius-llm-core</module>
     <module>sentrius-llm-dataplane</module>
+    <module>provenance-ingestor</module>
     <module>api</module>
     <module>llm-proxy</module>
     <module>analytics</module>
@@ -25,6 +27,7 @@
     <commons-lang3>3.14.0</commons-lang3>
     <spring-data-jpa.version>3.3.5</spring-data-jpa.version>
     <spring.boot.version>3.3.5</spring.boot.version>
+    <spring.kafka.version>3.3.5</spring.kafka.version>
     <go-offline-maven-plugin.version>1.2.8</go-offline-maven-plugin.version>
     <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
     <jjwt-version>0.12.6</jjwt-version>
@@ -47,6 +50,7 @@
     <h2.version>2.3.232</h2.version>
     <flyway-postgres.version>11.6.0</flyway-postgres.version>
     <spring-ai-version>1.0.0-M7</spring-ai-version>
+    <neo4j.version>5.28.5</neo4j.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -111,6 +115,16 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-web</artifactId>
         <version>${spring.boot.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.kafka</groupId>
+        <artifactId>spring-kafka</artifactId>
+        <version>${spring.kafka.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.neo4j.driver</groupId>
+        <artifactId>neo4j-java-driver</artifactId>
+        <version>${neo4j.version}</version>
       </dependency>
       <dependency>
         <groupId>org.springframework.boot</groupId>

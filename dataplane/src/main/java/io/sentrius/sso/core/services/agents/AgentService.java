@@ -4,6 +4,7 @@ import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,6 +29,8 @@ import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.security.KeycloakService;
+import io.sentrius.sso.provenance.ProvenanceEvent;
+import io.sentrius.sso.provenance.kafka.ProvenanceKafkaProducer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -61,11 +64,13 @@ public class AgentService {
             .build();
     private final KeycloakService keycloakService;
 
+    final ProvenanceKafkaProducer provenanceKafkaProducer;
+
 
     public AgentService(
         AgentCommunicationRepository agentCommunicationRepository, AgentHeartbeatRepository repository, UserService userService, ATPLPolicyService policyService,
         CryptoService cryptoService,
-        KeycloakService keycloakService
+        KeycloakService keycloakService, ProvenanceKafkaProducer provenanceKafkaProducer
     ) {
         this.agentCommunicationRepository = agentCommunicationRepository;
         this.repository = repository;
@@ -73,6 +78,7 @@ public class AgentService {
         this.policyService = policyService;
         this.cryptoService = cryptoService;
         this.keycloakService = keycloakService;
+        this.provenanceKafkaProducer = provenanceKafkaProducer;
     }
 
     public void recordHeartbeat(String agentId, String name, AgentHeartbeatDTO heartbeatDTO) {
@@ -156,6 +162,30 @@ public class AgentService {
             .communicationId(UUID.fromString(communicationId))
             .payload(payload)
             .build();
+
+        try {
+            var eventType = switch(messageType){
+                case "intercept" -> ProvenanceEvent.EventType.ENDPOINT_ACCESS;
+                case "chat_request" -> ProvenanceEvent.EventType.AGENT_RESPONSE;
+                case "interpretation_response" -> ProvenanceEvent.EventType.AGENT_RESPONSE;
+                default -> ProvenanceEvent.EventType.UNKNOWN;
+            };
+            ProvenanceEvent event = ProvenanceEvent.builder()
+                .eventId(communicationId)
+                .actor(sourceAgent)
+                .triggeringUser(targetAgent)
+                .eventType(eventType)
+                .outputSummary("Interpretation request sent to OpenAI")
+                .timestamp(java.time.Instant.now())
+                .sourceDocs(new ArrayList<>()) // no source docs for this
+                .build();
+
+            provenanceKafkaProducer.send(event);
+        }catch (Exception e){
+            log.error("Error saving provenance", e);
+        }
+
+
         return CompletableFuture.completedFuture(agentCommunicationRepository.save(communication));
 
     }
@@ -169,6 +199,28 @@ public class AgentService {
             .communicationId(agentCommunicationDTO.getCommunicationId())
             .payload(agentCommunicationDTO.getPayload())
             .build();
+
+        try {
+            var eventType = switch(communication.getMessageType()){
+                case "intercept" -> ProvenanceEvent.EventType.ENDPOINT_ACCESS;
+                case "chat_request" -> ProvenanceEvent.EventType.AGENT_RESPONSE;
+                case "interpretation_response" -> ProvenanceEvent.EventType.AGENT_RESPONSE;
+                default -> ProvenanceEvent.EventType.UNKNOWN;
+            };
+            ProvenanceEvent event = ProvenanceEvent.builder()
+                .eventId(agentCommunicationDTO.getCommunicationId().toString())
+                .actor(agentCommunicationDTO.getSourceAgent())
+                .triggeringUser(agentCommunicationDTO.getTargetAgent()e)
+                .eventType(eventType)
+                .outputSummary("Interpretation request sent to OpenAI")
+                .timestamp(java.time.Instant.now())
+                .sourceDocs(new ArrayList<>()) // no source docs for this
+                .build();
+
+            provenanceKafkaProducer.send(event);
+        }catch (Exception e){
+            log.error("Error saving provenance", e);
+        }
         return CompletableFuture.completedFuture(agentCommunicationRepository.save(communication));
 
     }

@@ -80,6 +80,9 @@ public class AgentClientService {
                 }
             );
         }
+
+
+
         return Set.of();
     }
 
@@ -154,6 +157,7 @@ public class AgentClientService {
             .targetAgent(atatRequest.getUserName())
             .build();
         log.info("My question is {}",myQuestion);
+
         var acommResponse = zeroTrustClientService.callPostOnApi(execution, ask, myQuestion,
             Maps.immutableEntry("requestId", List.of(atatRequest.getRequestId())));
         return JsonUtil.MAPPER.readValue(acommResponse, AgentCommunicationDTO.class);

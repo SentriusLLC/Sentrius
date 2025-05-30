@@ -28,6 +28,8 @@ import io.sentrius.sso.core.trust.ZtatPolicy;
 import io.sentrius.sso.core.utils.AccessUtil;
 import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.core.utils.ZTATUtils;
+import io.sentrius.sso.provenance.ProvenanceEvent;
+import io.sentrius.sso.provenance.kafka.ProvenanceKafkaProducer;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -42,8 +44,10 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Aspect
 @Component
@@ -59,6 +63,7 @@ public class AccessControlAspect {
     private final AgentService agentService;
     private final ApplicationConfig applicationConfig;
     private final SystemOptions systemOptions;
+    private final ProvenanceKafkaProducer provenanceKafkaProducer;
     static List<String> allowedEndpoints = new ArrayList<>();
     static {
         allowedEndpoints.add("/api/v1/zerotrust/accesstoken/status");
@@ -229,6 +234,17 @@ public class AccessControlAspect {
                     span.setAttribute("user.id", operatingUser.getUsername());
                     span.setAttribute("endpoint", endpoint);
                     span.setAttribute("access.limit", limitAccess.toString());
+
+                    ProvenanceEvent event = ProvenanceEvent.builder()
+                        .eventId(UUID.randomUUID().toString())
+                        .sessionId(operatingUser.getUserId())
+                        .actor(operatingUser.getUsername())
+                        .triggeringUser(operatingUser.getUsername())
+                        .eventType(ProvenanceEvent.EventType.ENDPOINT_ACCESS)
+                        .outputSummary("User accessed endpoint: " + endpoint)
+                        .timestamp(LocalDateTime.now().toInstant(java.time.ZoneOffset.UTC))
+                        .build();
+                    provenanceKafkaProducer.send(event);
                 }
                 // Get the required roles from the annotation
                 for (var userAccess : accessAnnotation.userAccess()) {

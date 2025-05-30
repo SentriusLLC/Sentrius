@@ -32,6 +32,8 @@ import io.sentrius.sso.genai.model.LLMRequest;
 import io.sentrius.sso.genai.model.endpoints.RawConversationRequest;
 import io.sentrius.sso.genai.spring.ai.AgentCommunicationMemoryStore;
 import io.sentrius.sso.integrations.exceptions.HttpException;
+import io.sentrius.sso.provenance.ProvenanceEvent;
+import io.sentrius.sso.provenance.kafka.ProvenanceKafkaProducer;
 import io.sentrius.sso.security.ApiKey;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -59,6 +61,7 @@ public class OpenAIProxyController extends BaseController {
     final AgentService agentService;
     private final ApplicationConfig applicationConfig;
     final AgentCommunicationMemoryStore agentCommunicationMemoryStore;
+    final ProvenanceKafkaProducer provenanceKafkaProducer;
 
     Tracer tracer = GlobalOpenTelemetry.getTracer("io.sentrius.sso");
 
@@ -68,7 +71,7 @@ public class OpenAIProxyController extends BaseController {
         SessionTrackingService sessionTrackingService, KeycloakService keycloakService,
         ATPLPolicyService atplPolicyService, ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService,
         IntegrationSecurityTokenService integrationSecurityTokenService, AgentService agentService,
-        ApplicationConfig applicationConfig
+        ApplicationConfig applicationConfig, ProvenanceKafkaProducer provenanceKafkaProducer
     ) {
         super(userService, systemOptions, errorOutputService);
         this.cryptoService = cryptoService;
@@ -81,6 +84,7 @@ public class OpenAIProxyController extends BaseController {
         this.agentService = agentService;
         this.applicationConfig = applicationConfig;
         agentCommunicationMemoryStore = new AgentCommunicationMemoryStore(agentService);
+        this.provenanceKafkaProducer = provenanceKafkaProducer;
     }
 
     @PostMapping("/completions")
@@ -244,8 +248,7 @@ public class OpenAIProxyController extends BaseController {
             "chat_request",
             rawBody
         );
-
-
+        
         Span span = tracer.spanBuilder("AgentToAgentCommunication").startSpan();
         try (Scope scope = span.makeCurrent()) {
             var resp = endpoint.sample(RawConversationRequest.builder().request(chatRequest).build());

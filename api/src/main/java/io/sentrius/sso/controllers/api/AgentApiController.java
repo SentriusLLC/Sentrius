@@ -38,6 +38,8 @@ import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import io.sentrius.sso.protobuf.Session;
+import io.sentrius.sso.provenance.ProvenanceEvent;
+import io.sentrius.sso.provenance.kafka.ProvenanceKafkaProducer;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -69,6 +71,7 @@ public class AgentApiController extends BaseController {
     final ZeroTrustAccessTokenService ztatService;
     final ZeroTrustRequestService ztrService;
     final AgentService agentService;
+    final ProvenanceKafkaProducer provenanceKafkaProducer;
 
     public AgentApiController(
         UserService userService,
@@ -77,7 +80,8 @@ public class AgentApiController extends BaseController {
         AuditService auditService,
         CryptoService cryptoService, SessionTrackingService sessionTrackingService, KeycloakService keycloakService,
         ATPLPolicyService atplPolicyService,
-        ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService, AgentService agentService
+        ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService, AgentService agentService,
+        ProvenanceKafkaProducer provenanceKafkaProducer
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
@@ -88,6 +92,7 @@ public class AgentApiController extends BaseController {
         this.ztatService = ztatService;
         this.ztrService = ztrService;
         this.agentService = agentService;
+        this.provenanceKafkaProducer = provenanceKafkaProducer;
     }
 
     public SessionLog createSession(@RequestParam String username, @RequestParam String ipAddress) {
@@ -129,6 +134,16 @@ public class AgentApiController extends BaseController {
         }
         agentService.recordHeartbeat(operatingUser.getUserId(),status.getName(), status);
         log.info("Heartbeat status recorded for agent: {} {}", agentId, status);
+        ProvenanceEvent event = ProvenanceEvent.builder()
+            .eventId(UUID.randomUUID().toString())
+            .sessionId(status.getAgentId())
+            .actor(operatingUser.getUsername())
+            .triggeringUser(operatingUser.getUsername())
+            .eventType(ProvenanceEvent.EventType.AGENT_RESPONSE)
+            .outputSummary("Heartbeat received from agent: " + status.getName() + " with status: " + status.getStatus())
+            .timestamp(LocalDateTime.now().toInstant(java.time.ZoneOffset.UTC))
+            .build();
+        provenanceKafkaProducer.send(event);
         return ResponseEntity.ok(Map.of("status", "success"));
     }
 
@@ -452,7 +467,16 @@ public class AgentApiController extends BaseController {
             return ResponseEntity.status(HttpStatus.SC_FORBIDDEN).body("User is not allowed to send message to agent");
         }
 
-
+        ProvenanceEvent event = ProvenanceEvent.builder()
+            .eventId(requestId)
+            .sessionId(communicationId)
+            .actor(operatingUser.getUsername())
+            .triggeringUser(comm.getTargetAgent())
+            .eventType(ProvenanceEvent.EventType.KNOWLEDGE_GENERATED)
+            .outputSummary("Ask agent " + comm.getPayload())
+            .timestamp(LocalDateTime.now().toInstant(java.time.ZoneOffset.UTC))
+            .build();
+        provenanceKafkaProducer.send(event);
 
 
         var newAgentComm = agentService.saveCommunication(comm);
