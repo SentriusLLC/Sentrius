@@ -210,7 +210,7 @@ public class AgentService {
             ProvenanceEvent event = ProvenanceEvent.builder()
                 .eventId(agentCommunicationDTO.getCommunicationId().toString())
                 .actor(agentCommunicationDTO.getSourceAgent())
-                .triggeringUser(agentCommunicationDTO.getTargetAgent()e)
+                .triggeringUser(agentCommunicationDTO.getTargetAgent())
                 .eventType(eventType)
                 .outputSummary("Interpretation request sent to OpenAI")
                 .timestamp(java.time.Instant.now())
