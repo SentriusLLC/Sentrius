@@ -166,8 +166,8 @@ public class AgentService {
         try {
             var eventType = switch(messageType){
                 case "intercept" -> ProvenanceEvent.EventType.ENDPOINT_ACCESS;
-                case "chat_request" -> ProvenanceEvent.EventType.AGENT_RESPONSE;
-                case "interpretation_response" -> ProvenanceEvent.EventType.AGENT_RESPONSE;
+                case "chat_request" -> ProvenanceEvent.EventType.AGENT_RESPOND;
+                case "interpretation_response" -> ProvenanceEvent.EventType.AGENT_RESPOND;
                 default -> ProvenanceEvent.EventType.UNKNOWN;
             };
             ProvenanceEvent event = ProvenanceEvent.builder()
@@ -203,8 +203,8 @@ public class AgentService {
         try {
             var eventType = switch(communication.getMessageType()){
                 case "intercept" -> ProvenanceEvent.EventType.ENDPOINT_ACCESS;
-                case "chat_request" -> ProvenanceEvent.EventType.AGENT_RESPONSE;
-                case "interpretation_response" -> ProvenanceEvent.EventType.AGENT_RESPONSE;
+                case "chat_request" -> ProvenanceEvent.EventType.AGENT_RESPOND;
+                case "interpretation_response" -> ProvenanceEvent.EventType.INTERPRET_MESSAGE;
                 default -> ProvenanceEvent.EventType.UNKNOWN;
             };
             ProvenanceEvent event = ProvenanceEvent.builder()

@@ -5,7 +5,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +36,6 @@ import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
-import io.sentrius.sso.protobuf.Session;
 import io.sentrius.sso.provenance.ProvenanceEvent;
 import io.sentrius.sso.provenance.kafka.ProvenanceKafkaProducer;
 import jakarta.servlet.http.HttpServletRequest;
@@ -134,16 +132,6 @@ public class AgentApiController extends BaseController {
         }
         agentService.recordHeartbeat(operatingUser.getUserId(),status.getName(), status);
         log.info("Heartbeat status recorded for agent: {} {}", agentId, status);
-        ProvenanceEvent event = ProvenanceEvent.builder()
-            .eventId(UUID.randomUUID().toString())
-            .sessionId(status.getAgentId())
-            .actor(operatingUser.getUsername())
-            .triggeringUser(operatingUser.getUsername())
-            .eventType(ProvenanceEvent.EventType.AGENT_RESPONSE)
-            .outputSummary("Heartbeat received from agent: " + status.getName() + " with status: " + status.getStatus())
-            .timestamp(LocalDateTime.now().toInstant(java.time.ZoneOffset.UTC))
-            .build();
-        provenanceKafkaProducer.send(event);
         return ResponseEntity.ok(Map.of("status", "success"));
     }
 
@@ -195,6 +183,43 @@ public class AgentApiController extends BaseController {
             return ResponseEntity.status(org.springframework.http.HttpStatus.PRECONDITION_REQUIRED).body(Map.of("ztat_request",
                 ztatRequest.getId()));
         }
+
+
+
+    }
+
+    @PostMapping("/provenance/submit")
+    // no LimitAccess
+    public ResponseEntity<?> submitProvenance(
+        @RequestHeader("Authorization") String token,
+        HttpServletRequest request, HttpServletResponse response, @RequestBody ProvenanceEvent event) throws SQLException,
+        GeneralSecurityException {
+
+        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+
+        if (!keycloakService.validateJwt(compactJwt)) {
+            log.warn("Invalid Keycloak token");
+            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+        }
+
+        var operatingUser = getOperatingUser(request, response );
+
+        // Extract agent identity from the JWT
+        String agentId = keycloakService.extractAgentId(compactJwt);
+
+        if (null == operatingUser) {
+            log.warn("No operating user found for agent: {}", agentId);
+            var username = keycloakService.extractUsername(compactJwt);
+            operatingUser = userService.getUserByUsername(username);
+
+        }
+
+        provenanceKafkaProducer.send(event);
+
+        return ResponseEntity.ok(Map.of("status", "success", "message", "Provenance event submitted successfully"));
+
+
 
 
 
@@ -548,6 +573,21 @@ public class AgentApiController extends BaseController {
                     .toList())
                 .build())
             .toList();
+
+        for (var comm : comms) {
+            log.info("Found communication: {} {} {} {}", comm.getId(), comm.getSourceAgent(), comm.getTargetAgent(), comm.getPayload());
+            ProvenanceEvent event = ProvenanceEvent.builder()
+                .eventId(communicationId)
+                .sessionId(communicationId)
+                .actor(operatingUser.getUsername())
+                .triggeringUser(comm.getTargetAgent())
+                .eventType(ProvenanceEvent.EventType.KNOWLEDGE_GENERATED)
+                .outputSummary("Ask agent " + comm.getPayload())
+                .timestamp(LocalDateTime.now().toInstant(java.time.ZoneOffset.UTC))
+                .build();
+            provenanceKafkaProducer.send(event);
+        }
+
 
         return ResponseEntity.ok(commsDto);
 

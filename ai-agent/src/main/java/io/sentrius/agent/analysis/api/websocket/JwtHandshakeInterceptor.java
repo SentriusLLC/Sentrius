@@ -3,6 +3,7 @@ package io.sentrius.agent.analysis.api.websocket;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -19,6 +20,7 @@ import java.util.Map;
 
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "agents.ai.chat.agent.enabled", havingValue = "true", matchIfMissing = false)
 public class JwtHandshakeInterceptor implements HandshakeInterceptor {
 
     private final JwtDecoder jwtDecoder;

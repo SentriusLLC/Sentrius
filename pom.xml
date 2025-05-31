@@ -7,8 +7,8 @@
   <name>sentrius</name>
   <description>Multi-module project for sentrius</description>
   <modules>
-    <module>core</module>
     <module>provenance-core</module>
+    <module>core</module>
     <module>dataplane</module>
     <module>sentrius-llm-core</module>
     <module>sentrius-llm-dataplane</module>

@@ -15,12 +15,15 @@ import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
 import io.sentrius.agent.analysis.agents.verbs.TerminalVerbs;
 import io.sentrius.agent.analysis.api.UserCommunicationService;
 import io.sentrius.sso.core.exceptions.ZtatException;
+import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.genai.Message;
 import io.sentrius.sso.protobuf.Session;
+import io.sentrius.sso.provenance.ProvenanceEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -29,6 +32,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "agents.ai.chat.agent.enabled", havingValue = "true", matchIfMissing = false)
 public class ChatWSHandler extends TextWebSocketHandler {
 
     final UserCommunicationService userCommunicationService;
@@ -39,15 +43,19 @@ public class ChatWSHandler extends TextWebSocketHandler {
 
 
     private final ChatAgent chatAgent;
+    private final AgentClientService agentClientService;
 
     @Autowired
     public ChatWSHandler(UserCommunicationService userCommunicationService, ZeroTrustClientService zeroTrustClientService,
-                         TerminalVerbs terminalVerbs, AgentVerbs agentVerbs, ChatAgent chatAgent) {
+                         TerminalVerbs terminalVerbs, AgentVerbs agentVerbs, ChatAgent chatAgent,
+                         AgentClientService agentClientService
+    ) {
         this.userCommunicationService = userCommunicationService;
         this.zeroTrustClientService = zeroTrustClientService;
         this.terminalVerbs = terminalVerbs;
         this.agentVerbs = agentVerbs;
         this.chatAgent = chatAgent;
+        this.agentClientService = agentClientService;
     }
 
     @Override
@@ -96,6 +104,17 @@ public class ChatWSHandler extends TextWebSocketHandler {
         ));
 
         userCommunicationService.createSession(queryParams.get("sessionId"), session);
+
+
+        ProvenanceEvent provenanceEvent = ProvenanceEvent.builder()
+            .eventType(ProvenanceEvent.EventType.USER_CHAT_AGENT)
+            .actor(session.getPrincipal().getName())
+            .triggeringUser(chatAgent.getAgentExecution().getUser().getName())
+            .outputSummary("New chat session established")
+            .sessionId(session.getId())
+            .build();
+
+        agentClientService.submitProvenance(chatAgent.getAgentExecution(), provenanceEvent);
     }
 
 

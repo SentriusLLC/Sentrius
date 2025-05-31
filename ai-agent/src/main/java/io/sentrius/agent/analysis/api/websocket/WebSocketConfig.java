@@ -3,6 +3,7 @@ package io.sentrius.agent.analysis.api.websocket;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
@@ -13,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 @EnableWebSocket
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "agents.ai.chat.agent.enabled", havingValue = "true", matchIfMissing = false)
 public class WebSocketConfig implements WebSocketConfigurer {
 
     @Value("${agent.listen.websocket:false}") // Default is false

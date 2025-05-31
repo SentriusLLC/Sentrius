@@ -18,6 +18,7 @@ import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.utils.JsonUtil;
+import io.sentrius.sso.provenance.ProvenanceEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -84,6 +85,16 @@ public class AgentClientService {
 
 
         return Set.of();
+    }
+
+    public void submitProvenance(AgentExecution execution, ProvenanceEvent event){
+        String url = "/agent/provenance/submit";
+
+        try {
+            zeroTrustClientService.callPostOnApi(execution, url, event);
+        } catch (ZtatException e) {
+            log.error("Failed to submit provenance event: {}", e.getMessage());
+        }
     }
 
     public List<AgentCommunicationDTO> getResponse(AgentExecution execution, AtatRequest atatRequest,

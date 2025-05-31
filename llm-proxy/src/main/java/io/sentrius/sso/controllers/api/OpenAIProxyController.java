@@ -1,5 +1,6 @@
 package io.sentrius.sso.controllers.api;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -153,6 +154,27 @@ public class OpenAIProxyController extends BaseController {
         );
 
 
+        ProvenanceEvent event = ProvenanceEvent.builder()
+            .eventId(communicationId)
+            .sessionId(communicationId)
+            .actor(operatingUser.getUsername())
+            .triggeringUser("LLM")
+            .eventType(ProvenanceEvent.EventType.KNOWLEDGE_REQUESTED)
+            .outputSummary("prompt LLM" + chatRequest.getMessages().get(0).getContent())
+            .timestamp(LocalDateTime.now().toInstant(java.time.ZoneOffset.UTC))
+            .build();
+        provenanceKafkaProducer.send(event);
+
+        event = ProvenanceEvent.builder()
+            .eventId(communicationId)
+            .sessionId(communicationId)
+            .actor("LLM")
+            .triggeringUser(operatingUser.getUsername())
+            .eventType(ProvenanceEvent.EventType.KNOWLEDGE_GENERATED)
+            .outputSummary("prompt LLM")
+            .timestamp(LocalDateTime.now().toInstant(java.time.ZoneOffset.UTC))
+            .build();
+        provenanceKafkaProducer.send(event);
 
 
 
@@ -248,7 +270,7 @@ public class OpenAIProxyController extends BaseController {
             "chat_request",
             rawBody
         );
-        
+
         Span span = tracer.spanBuilder("AgentToAgentCommunication").startSpan();
         try (Scope scope = span.makeCurrent()) {
             var resp = endpoint.sample(RawConversationRequest.builder().request(chatRequest).build());
