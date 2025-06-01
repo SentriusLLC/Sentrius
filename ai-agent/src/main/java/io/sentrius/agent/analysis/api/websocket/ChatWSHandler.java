@@ -10,10 +10,14 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Maps;
 import io.sentrius.agent.analysis.agents.agents.ChatAgent;
+import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
 import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
+import io.sentrius.agent.analysis.agents.verbs.ChatVerbs;
 import io.sentrius.agent.analysis.agents.verbs.TerminalVerbs;
 import io.sentrius.agent.analysis.api.UserCommunicationService;
+import io.sentrius.agent.analysis.model.TerminalResponse;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
@@ -39,23 +43,28 @@ public class ChatWSHandler extends TextWebSocketHandler {
     final ZeroTrustClientService zeroTrustClientService;
     final TerminalVerbs terminalVerbs;
     final AgentVerbs agentVerbs;
+    final ChatVerbs chatVerbs;
     // Store active sessions, using session ID or a custom identifier
 
 
     private final ChatAgent chatAgent;
     private final AgentClientService agentClientService;
+    private final VerbRegistry verbRegistry;
 
     @Autowired
     public ChatWSHandler(UserCommunicationService userCommunicationService, ZeroTrustClientService zeroTrustClientService,
-                         TerminalVerbs terminalVerbs, AgentVerbs agentVerbs, ChatAgent chatAgent,
-                         AgentClientService agentClientService
+                         TerminalVerbs terminalVerbs, AgentVerbs agentVerbs, ChatVerbs chatVerbs, ChatAgent chatAgent,
+                         AgentClientService agentClientService,
+                         VerbRegistry verbRegistry
     ) {
         this.userCommunicationService = userCommunicationService;
         this.zeroTrustClientService = zeroTrustClientService;
         this.terminalVerbs = terminalVerbs;
         this.agentVerbs = agentVerbs;
+        this.chatVerbs = chatVerbs;
         this.chatAgent = chatAgent;
         this.agentClientService = agentClientService;
+        this.verbRegistry = verbRegistry;
     }
 
     @Override
@@ -108,7 +117,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
 
         ProvenanceEvent provenanceEvent = ProvenanceEvent.builder()
             .eventType(ProvenanceEvent.EventType.USER_CHAT_AGENT)
-            .actor(session.getPrincipal().getName())
+            .actor("admin")
             .triggeringUser(chatAgent.getAgentExecution().getUser().getName())
             .outputSummary("New chat session established")
             .sessionId(session.getId())
@@ -171,7 +180,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
                         } else if ("user-message".equals(json.get("type").asText())) {
                             Message userMessage = Message.builder().role("user").content(json.get("message").asText()).build();
                             log.info("Received heartbeat from session {}", sessionId);
-                            var response = agentVerbs.interpretUserData(chatAgent.getAgentExecution(),
+                            var response = chatVerbs.interpretUserData(chatAgent.getAgentExecution(),
                                 websocketCommunication, userMessage);
                             log.info("Response: {}", response);
                             var newMessage = Session.ChatMessage.newBuilder()
@@ -187,6 +196,42 @@ public class ChatWSHandler extends TextWebSocketHandler {
                             session.sendMessage(new TextMessage(
                                 base64Message
                             ));
+
+                            websocky.get().getMessages().add(response);
+
+                            if (response.getNextOperation() != null )
+                            {
+                                var lastVerbResponse =
+                                    websocketCommunication.getVerbResponses().stream().reduce((prev, next) -> next).orElse(null);
+                                var executionResponse = verbRegistry.execute(chatAgent.getAgentExecution(),
+                                    lastVerbResponse,
+                                    response.getNextOperation(), Maps.newHashMap());
+
+                                var nextResponse = chatVerbs.interpret_plan_response(
+                                    chatAgent.getAgentExecution(), websocketCommunication,
+                                    verbRegistry.getVerbs().get(response.getNextOperation()),
+                                    executionResponse.getResponse().toString());
+
+                                websocky.get().getMessages().add(nextResponse);
+
+                                websocketCommunication.getVerbResponses().add(executionResponse);
+
+                                var newNextMessage = Session.ChatMessage.newBuilder()
+                                    .setMessage(String.format("{\"type\":\"user-message\",\"message\":\"%s\"}",
+                                        nextResponse.getResponseForUser()))
+                                    .setSender("agent")
+                                    .setChatGroupId("")
+                                    .setSessionId(Long.parseLong(websocketCommunication.getSessionId()))
+                                    .setTimestamp(System.currentTimeMillis())
+                                    .build();
+                                messageBytes = newNextMessage.toByteArray();
+                                base64Message = Base64.getEncoder().encodeToString(messageBytes);
+                                session.sendMessage(new TextMessage(
+                                    base64Message
+                                ));
+
+
+                            }
                             return; // Ignore heartbeat messages
                         } else {
                             log.info("Processing message: {}", auditLog.getMessage());

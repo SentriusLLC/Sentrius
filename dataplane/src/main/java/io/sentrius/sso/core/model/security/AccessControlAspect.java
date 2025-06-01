@@ -144,6 +144,7 @@ public class AccessControlAspect {
                         var opsApproval = zeroTrustRequestService.getOpsTokenStatus(token);
 
                         if (opsApproval.isEmpty() || !opsApproval.get().isApproved()) {
+                            log.info("Access Denied to {} at {}", operatingUser, accessAnnotation);
                             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Registration Required");
                         }
                         if (opsApproval.get().getUses() < systemOptions.getMaxJitUses()) {
@@ -168,6 +169,7 @@ public class AccessControlAspect {
                         return;
                     } else if (null != endpointRequest && containsEndpoint(endpointRequest.getEndpoints(), endpoint)) {
                         // this endpoint is approved for use.
+                        log.info("Use endpoint {} is allowed by policy {}", endpoint, policy.get());
                         var opsApproval = zeroTrustRequestService.getOpsTokenStatus(token);
                         zeroTrustRequestService.incrementAccessTokenUses(opsApproval.get());
                         return;
@@ -281,6 +283,7 @@ public class AccessControlAspect {
 
     private boolean containsEndpoint(List<String> endpoints, String endpoint) {
         for (String allowedEndpoint : endpoints) {
+            log.info("Checking if endpoint {} matches {}", endpoint, allowedEndpoint);
             if (endpoint.contains(allowedEndpoint)) {
                 return true;
             }

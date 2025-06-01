@@ -62,12 +62,36 @@ public class TerminalVerbs {
         outputInterpreter = TerminalListInterpreter.class, requiresTokenManagement = true)
     public ArrayNode listTerminals(TokenDTO token, Map<String, Object> args) throws ZtatException {
         try {
-            var response = zeroTrustClientService.callGetOnApi(token, "/ssh/terminal/list/all");
+            String response = zeroTrustClientService.callGetOnApi(token, "/ssh/terminal/list/all");
             if (response == null) {
                 throw new RuntimeException("Failed to retrieve terminal list");
             }
             log.info("Terminal list response: {}", response);
             return (ArrayNode) JsonUtil.MAPPER.readTree(response);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to retrieve terminal list", e);
+        }
+    }
+
+    /**
+     * Retrieves a list of currently open terminals.
+     *
+     * @param args A map of arguments for the operation (currently unused).
+     * @return An `ArrayNode` containing the list of open terminals.
+     * @throws ZtatException If there is an error during the operation.
+     */
+    @Verb(name = "list_systems", description = "Retrieves a list of available systems. These are not connected " +
+        "sessions.",
+        outputInterpreter = TerminalListInterpreter.class, requiresTokenManagement = true)
+    public List<HostSystemDTO> listSystem(TokenDTO token, Map<String, Object> args) throws ZtatException {
+        try {
+            List<HostSystemDTO> response = zeroTrustClientService.callGetOnApi(token, "/api/v1/enclaves/hosts/list/all");
+
+            if (response == null) {
+                throw new RuntimeException("Failed to retrieve terminal list");
+            }
+            log.info("Terminal list response: {}", response);
+            return response;
         } catch (Exception e) {
             throw new RuntimeException("Failed to retrieve terminal list", e);
         }

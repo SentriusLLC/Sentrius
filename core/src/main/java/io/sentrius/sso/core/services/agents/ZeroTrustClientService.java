@@ -395,12 +395,12 @@ public class ZeroTrustClientService {
     /**
      * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
      */
-    public <T> String callGetOnApi(@NonNull TokenDTO token, @NonNull String apiEndpoint) throws ZtatException {
+    public <T> T callGetOnApi(@NonNull TokenDTO token, @NonNull String apiEndpoint) throws ZtatException {
         return callGetOnApi(token, agentApiUrl, apiEndpoint);
     }
 
 
-    <T> String callGetOnApi(@NonNull TokenDTO token, String endpoint, @NonNull String apiEndpoint) throws ZtatException {
+    <T> T callGetOnApi(@NonNull TokenDTO token, String endpoint, @NonNull String apiEndpoint) throws ZtatException {
         String keycloakJwt = getKeycloakToken();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -413,17 +413,18 @@ public class ZeroTrustClientService {
             apiEndpoint = "/" + apiEndpoint;
         }
         if (!apiEndpoint.startsWith("/api/v1/")) {
-            apiEndpoint = "/api/v1/" + apiEndpoint;
+            apiEndpoint = "/api/v1" + apiEndpoint;
         }
         String url =  endpoint + apiEndpoint;
         try{
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, String.class);
+            ResponseEntity<T> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, (Class<T>) Object.class);
 
             if (response.getStatusCode() == HttpStatus.OK) {
                 return response.getBody(); // This is the ZTAT (JWT or opaque token)
             } else if (response.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
                 // we need to get
-                throw new ZtatException(response.getBody(), apiEndpoint);
+                String resp = response.getBody().toString();
+                throw new ZtatException(resp, apiEndpoint);
 
             } else {
                 throw new RuntimeException("Failed to obtain ZTAT: " + response.getStatusCode());

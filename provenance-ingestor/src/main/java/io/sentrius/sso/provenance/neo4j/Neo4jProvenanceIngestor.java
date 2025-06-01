@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.neo4j.driver.Values.parameters;
 import io.sentrius.sso.provenance.ProvenanceEvent;
@@ -57,12 +58,21 @@ public class Neo4jProvenanceIngestor {
 
     private Map<String, Object> mapToParams(ProvenanceEvent e) {
         Map<String, Object> map = new HashMap<>();
-        map.put("eventId", e.getEventId().toString());
+        if (null != e.getEventId()) {
+            map.put("eventId", e.getEventId().toString());
+        } else {
+            map.put("eventId", UUID.randomUUID().toString());
+        }
         map.put("actor", e.getActor());
         map.put("triggeringUser", e.getTriggeringUser());
         map.put("eventType", e.getEventType().name()); // must be string
         map.put("outputSummary", e.getOutputSummary());
-        map.put("timestamp", e.getTimestamp().toString());
+        if (null != e.getTimestamp()) {
+            map.put("timestamp", e.getTimestamp().toString());
+        }
+        else {
+            map.put("timestamp", System.currentTimeMillis());
+        }
         map.put("sourceDocs", e.getSourceDocs() != null ? e.getSourceDocs() : List.of());
         return map;
     }

@@ -62,6 +62,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initial load
     updateAgentList();
 
-    // Refresh every 15 seconds
-    setInterval(updateAgentList, 15000);
+    // Refresh every 10 seconds
+    setInterval(updateAgentList, 10000);
 });

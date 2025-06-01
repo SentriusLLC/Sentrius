@@ -55,7 +55,7 @@ public class UserConnectionVerbs {
         outputInterpreter = TerminalListInterpreter.class, requiresTokenManagement = true)
     public List<HostSystemDTO> listHosts(TokenDTO token, Map<String, Object> args) throws ZtatException {
         try {
-            var response = zeroTrustClientService.callGetOnApi(token, "/sso/v1/enclaves/hosts/list");
+            String response = zeroTrustClientService.callGetOnApi(token, "/sso/v1/enclaves/hosts/list");
             if (response == null) {
                 throw new RuntimeException("Failed to retrieve terminal list");
             }

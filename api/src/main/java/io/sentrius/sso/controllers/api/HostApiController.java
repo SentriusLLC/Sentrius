@@ -98,6 +98,26 @@ public class HostApiController extends BaseController {
         return ResponseEntity.ok(hostSystemDTOS);
     }
 
+    @GetMapping("/list/all")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS}, endpointThreat = EndpointThreat.HIGH)
+    public ResponseEntity<List<HostSystemDTO>> listAllSSHServers(HttpServletRequest request,
+                                                                HttpServletResponse response) {
+
+        var hostSystems = hostGroupService.getAllHosts();
+
+        List<HostSystemDTO> hostSystemDTOS = new ArrayList<>();
+        for(HostSystem hostSystem : hostSystems) {
+            for(HostGroup hostGroup : hostSystem.getHostGroups()) {
+                if ("CONNECTED".equalsIgnoreCase(hostSystem.getStatusCd())){
+                    hostSystem.setStatusCd("available");
+                }
+                hostSystemDTOS.add(hostSystem.toDTO(hostGroup));
+            }
+
+        }
+        return ResponseEntity.ok(hostSystemDTOS);
+    }
+
 
     @PostMapping("/add")
     public ResponseEntity<HostSystemDTO> addSSHServer(HttpServletRequest request, HttpServletResponse response,

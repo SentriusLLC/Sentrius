@@ -3,7 +3,72 @@
 
 <head>
     <meta th:replace="~{fragments/header}">
+    <style>
+        /* Chat Button */
+        #chat-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+        }
 
+        /* Chat Container */
+        #chat-container {
+            position: fixed;
+            bottom: 10px;
+            right: 20px;
+            width: 300px;
+            height: 350px;
+            background: #222;
+            color: white;
+            border-radius: 10px;
+            display: none;
+            flex-direction: column;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Chat Header */
+        #chat-header {
+            background: #444;
+            padding: 10px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: bold;
+            position: relative;
+        }
+
+        #close-chat {
+            position: absolute;
+            right: 10px;
+            cursor: pointer;
+        }
+
+        /* Chat Messages */
+        #chat-messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            max-height: 250px;
+            font-size: 14px;
+        }
+
+        /* Chat Input */
+        #chat-input {
+            width: 100%;
+            padding: 8px;
+            border: none;
+            background: #333;
+            color: white;
+            font-size: 14px;
+            border-top: 1px solid #666;
+        }
+    </style>
     <script th:src="@{/node/js/google-protobuf/google-protobuf.js}"></script>
     <script th:src="@{/node/js/sockjs-client/sockjs.js}"></script>
     <script th:src="@{/js/bundled_session_pb.js}"></script>

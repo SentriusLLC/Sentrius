@@ -3,6 +3,7 @@ package io.sentrius.agent.analysis.model;
 import java.util.ArrayList;
 import java.util.List;
 import io.sentrius.sso.core.dto.HostSystemDTO;
+import io.sentrius.sso.core.model.verbs.VerbResponse;
 import io.sentrius.sso.genai.Message;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,5 +25,8 @@ public class WebSocky {
     WebSocketSession webSocketSession;
     @Builder.Default
     List<TerminalResponse> messages = new ArrayList<>();
+
+    @Builder.Default
+    List<VerbResponse> verbResponses = new ArrayList<>();
 
 }

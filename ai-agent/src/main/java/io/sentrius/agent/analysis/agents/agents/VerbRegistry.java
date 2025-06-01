@@ -85,6 +85,7 @@ public class VerbRegistry {
             if (null != args) {
                 newArgs.putAll(args);
             }
+            log.info("Executing verb: {}", verb);
             var returnType = verbs.get(verb).getReturnType();
             if (null != priorResponse ) {
                 Class<? extends OutputInterpreterIfc> interpreter = priorResponse.getOutputInterpreter();
@@ -134,7 +135,11 @@ public class VerbRegistry {
                             request, 60, TimeUnit.MINUTES);
                         agentExecution.setZtatToken(token);
 
+                        log.info("Re-attempting verb execution after Ztat token acquisition: {}", verb);
+
                         var interpretedInput = interpreterInstance.interpret(newArgs);
+
+                        log.info("Re-attempting verb execution after Ztat token acquisition: {}", verb);
 
                         return VerbResponse.builder()
                             .response(verbs.get(verb).isRequiresTokenManagement() ?

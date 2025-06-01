@@ -134,7 +134,7 @@ public class AgentClientService {
         String responseUrl = "/agent/chat/atat/first";
         var millis = Duration.of(timeToWait, timeUnit.toChronoUnit()).toMillis();
         while(millis > 0){
-            var response = zeroTrustClientService.callGetOnApi(execution, responseUrl);
+            String response = zeroTrustClientService.callGetOnApi(execution, responseUrl);
             if (response != null) {
                 return JsonUtil.MAPPER.readValue(
                     response,
