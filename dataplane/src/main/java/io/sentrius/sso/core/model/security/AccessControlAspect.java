@@ -92,11 +92,11 @@ public class AccessControlAspect {
 
         boolean canAccess = true;
         LimitAccess accessAnnotation = limitAccess;
-        log.info("Checking access for {}", endpoint);
+        log.trace("Checking access for {}", endpoint);
         try (Scope scope = span.makeCurrent()) {
             var operatingUser = userService.getOperatingUser(getCurrentHttpRequest(), getCurrentHttpResponse(), null);
             if (null != operatingUser) {
-                log.info("Checking whether {} has access for {}", operatingUser, endpoint);
+                log.trace("Checking whether {} has access for {}", operatingUser, endpoint);
             }
             if (accessAnnotation != null) {
                 if (null == operatingUser) {
@@ -130,46 +130,45 @@ public class AccessControlAspect {
                     span.setAttribute("access.limit", limitAccess.toString());
                     var policy = atplPolicyService.getPolicy(operatingUser);
                     if (policy.isEmpty()) {
-                        log.info("Access Denied to {} at {}", operatingUser, accessAnnotation);
+                        log.debug("Access Denied to {} at {}", operatingUser, accessAnnotation);
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Policy is required ");
                     }
-                    log.info("Found policy {} for {}", policy.get().getPolicyId(), operatingUser.getUsername());
+                    log.debug("Found policy {} for {}", policy.get().getPolicyId(), operatingUser.getUsername());
                     EndpointRequest endpointRequest = null;
                     var token = getCurrentHttpRequest().getHeader("ztat_token");
                     if (null == token) {
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Registration Required");
                     } else {
-                        log.info("token is {} ", token);
                         // validate the token
                         var opsApproval = zeroTrustRequestService.getOpsTokenStatus(token);
 
                         if (opsApproval.isEmpty() || !opsApproval.get().isApproved()) {
-                            log.info("Access Denied to {} at {}", operatingUser, accessAnnotation);
+                            log.debug("Access Denied to {} at {}", operatingUser, accessAnnotation);
                             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Registration Required");
                         }
                         if (opsApproval.get().getUses() < systemOptions.getMaxJitUses()) {
                             var command = opsApproval.get().getZtatRequest().getCommand();
-                            log.info("Command is {} ", command);
+                            log.debug("Command is {} ", command);
 
                             try {
                                 endpointRequest = JsonUtil.MAPPER.readValue(command, EndpointRequest.class);
-                                log.info("EndpointRequest is {} ", endpointRequest);
+                                log.debug("EndpointRequest is {} ", endpointRequest);
                             } catch (JsonProcessingException e) {
                                 log.error(e.getMessage());
                                 endpointRequest = null;
                             }
                         } else {
-                            log.info("Token {} has been used up", token);
+                            log.debug("Token {} has been used up", token);
                         }
 
                     }
 
                     if (isAllowedEndpoint(endpoint)) {
-                        log.info("Access Granted to {} at {}", operatingUser, accessAnnotation);
+                        log.debug("Access Granted to {} at {}", operatingUser, accessAnnotation);
                         return;
                     } else if (null != endpointRequest && containsEndpoint(endpointRequest.getEndpoints(), endpoint)) {
                         // this endpoint is approved for use.
-                        log.info("Use endpoint {} is allowed by policy {}", endpoint, policy.get());
+                        log.debug("Use endpoint {} is allowed by policy {}", endpoint, policy.get());
                         var opsApproval = zeroTrustRequestService.getOpsTokenStatus(token);
                         zeroTrustRequestService.incrementAccessTokenUses(opsApproval.get());
                         return;
@@ -202,14 +201,14 @@ public class AccessControlAspect {
                                 } else if (policy.get().getActions().getOnMarginal().getAction().contains("allow")) {
                                     return;
                                 } else {
-                                    log.info("Access Denied to {} at {}", operatingUser, accessAnnotation);
+                                    log.debug("Access Denied to {} at {}", operatingUser, accessAnnotation);
                                     throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied to ");
                                 }
                             case FAILURE:
-                                log.info("Access Denied to {} at {}", operatingUser, accessAnnotation);
+                                log.debug("Access Denied to {} at {}", operatingUser, accessAnnotation);
                                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied");
                         }
-                        log.info("Access Denied to {} at {}", operatingUser, accessAnnotation);
+                        log.debug("Access Denied to {} at {}", operatingUser, accessAnnotation);
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied to ");
                     } else {
                         if (policy.get().getRuntimePolicies().isAllowDrift()) {
@@ -251,14 +250,14 @@ public class AccessControlAspect {
                 // Get the required roles from the annotation
                 for (var userAccess : accessAnnotation.userAccess()) {
                     if (!canAccess(operatingUser, userAccess)) {
-                        log.info("Access Denied to {} at {}", operatingUser, userAccess);
+                        log.debug("Access Denied to {} at {}", operatingUser, userAccess);
                         canAccess = false;
                         break;
                     }
                 }
                 for (var appAccess : accessAnnotation.applicationAccess()) {
                     if (!canAccess(operatingUser, appAccess)) {
-                        log.info("Access Denied to {} at {}", operatingUser, appAccess);
+                        log.debug("Access Denied to {} at {}", operatingUser, appAccess);
                         canAccess = false;
                         break;
                     }
@@ -283,7 +282,7 @@ public class AccessControlAspect {
 
     private boolean containsEndpoint(List<String> endpoints, String endpoint) {
         for (String allowedEndpoint : endpoints) {
-            log.info("Checking if endpoint {} matches {}", endpoint, allowedEndpoint);
+            log.debug("Checking if endpoint {} matches {}", endpoint, allowedEndpoint);
             if (endpoint.contains(allowedEndpoint)) {
                 return true;
             }

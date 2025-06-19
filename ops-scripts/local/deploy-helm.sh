@@ -25,7 +25,7 @@ fi
 
 helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set tenant=${TENANT} \
-    --set subdomain="localhost" \
+    --set subdomain="sentrius-sentrius" \
     --set keycloakSubdomain="sentrius-keycloak" \
     --set keycloakHostname="sentrius-keycloak:8081" \
     --set keycloakDomain="http://sentrius-keycloak:8081" \
@@ -41,5 +41,6 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set ssh.image.tag=${SENTRIUS_SSH_VERSION} \
     --set keycloak.image.tag=${SENTRIUS_KEYCLOAK_VERSION} \
     --set sentriusaiagent.image.tag=${SENTRIUS_AI_AGENT_VERSION} \
+    --set neo4j.env.NEO4J_server_config_strict__validation__enabled="\"false\"" \
     --set sentriusagent.image.tag=${SENTRIUS_AGENT_VERSION} || { echo "Failed to deploy Sentrius with Helm"; exit 1; }
 

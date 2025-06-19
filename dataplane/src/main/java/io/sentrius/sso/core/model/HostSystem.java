@@ -2,6 +2,7 @@ package io.sentrius.sso.core.model;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import io.sentrius.sso.core.dto.HostGroupDTO;
 import io.sentrius.sso.core.dto.HostSystemDTO;
@@ -34,7 +35,6 @@ import lombok.experimental.SuperBuilder;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode
 @Entity
 @Table(name = "host_systems") // Name of the table for HostSystem
 public class HostSystem implements Host {
@@ -171,5 +171,18 @@ public class HostSystem implements Host {
         hostSystem.setPort(dto.getPort());
         hostSystem.setSshUser(dto.getSshUser());
         return hostSystem;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        HostSystem that = (HostSystem) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

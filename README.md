@@ -3,14 +3,18 @@ Sentrius
 ![image](docs/images/mainscreen.png)
 
 Sentrius is zero trust (and if you want AI assisted) management system. to protect your infrastructure. It is split 
-into 
-two primary Maven. Currently we only support SSH, but RDP is in the works.
+into several maven projects. Currently we only support SSH, but RDP is in the works. Agents can be leveraged to monitor and control SSH sessions, ensuring that all connections are secure and compliant with your organization's policies.
 sub-projects:
 
     core – Handles the core functionalities (e.g., SSH session management, RDP, zero trust policy enforcement).
     api – Provides a RESTful API layer to interface with the core module.
-    java-agent -- java based agent to monitor and control the ssh sessions.
-    python-agent -- python based agent to monitor and control the ssh sessions.
+    dataplane -- offers dataplane functionality for secure data transfer and processing.
+    llm-proxy -- A proxy service that integrates with large language models (LLMs) to enhance security and compliance in SSH sessions.
+    llm-dataplane -- A data processing layer that leverages LLMs for advanced analysis and decision-making in SSH 
+sessions.
+    ops-scripts -- Contains operational scripts for deployment and management tasks.
+    ai-agent -- java based agent to monitor and control the ssh sessions.
+    python-agent -- python based agent to monitor and control the ssh sessions and act on behalf of user  (TBD).
 
 Internally, Sentrius may still be referenced by its former name, SSO (SecureShellOps), in certain scripts or configurations.
 Table of Contents
@@ -74,7 +78,7 @@ sentrius/
 
 Prerequisites
 
-    Java 11 or later
+    Java 17 or later
     Apache Maven 3.6+
     Database (PostgreSQL, MySQL, etc.) for storing session and configuration data
     Keycloak for user authentication and authorization
@@ -90,9 +94,31 @@ cd sentrius
 
 Running Sentrius
 
-For convenience the ops/local directory contains a "run-sentrius.sh" script which will start the core and api modules. You can run this script from the project root:
+Build the projects from root ( mvn clean install ) to ensure all dependencies are resolved and the modules are compiled.
+
+For convenience the ops/local directory contains a "run-sentrius.sh" script which will start the core and api 
+modules. You can run this script from the project root.
+This assumes you have a database available, keycloak running, and the necessary configurations. We now require an 
+OTEL endpoint, along with neo4j and kafka (but these are optional).:
 
 ./ops/local/run-sentrius.sh
+
+It is simpler to run a kubernetes deployment, which is described in the Deployment. To do this, build as you would 
+above.
+
+Build the images in your local Docker registry (note this builds all images, including core, api, and any other modules):
+
+    /build-images-local.sh --all --no-cache
+
+Run the Helm deployment script to deploy Sentrius to your local Kubernetes cluster:
+
+    ./ops-scripts/local/deploy-helm.sh
+
+There is a GCP deployment that is hasn't been tested in some time. You can find it in the ops-scripts/gcp directory.
+
+You will need to ensure you link to your GKE cluster and have the necessary permissions to deploy resources.
+
+    ./ops-scripts/gcp/deploy-helm.sh <helm-release-name> <gcp-project-id> <any-other-key-or-params>
 
 You are welcome to run the core and api modules separately, as needed. You can start the core module by running:
 
@@ -190,6 +216,6 @@ Contact
 
 Questions, feedback, or need commercial support? Reach out to the project maintainers:
 
-Email: support@sentrius.io
+Email: marc@sentrius.io
 
 We’re always happy to help you secure your infrastructure with Sentrius!

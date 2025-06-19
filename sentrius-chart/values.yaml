@@ -256,3 +256,34 @@ jaeger:
     requests:
       cpu: 250m
       memory: 256Mi
+
+
+kafka:
+  enabled: true
+  serverName: sentrius-kafka:9092
+  image:
+    repository: bitnami/kafka
+    tag: 3.6.0
+    pullPolicy: IfNotPresent
+  port: 9092
+  # Remove or comment out the zookeeper section
+  # zookeeper:
+  #   enabled: false
+  resources: {}
+  kraft:
+    enabled: true
+    clusterId: "my-cluster-id"  # Use a unique base64-encoded string
+    controllerQuorumVoters: "0@localhost:9093"
+
+neo4j:
+  enabled: true
+  image:
+    repository: neo4j
+    tag: 5.15
+    pullPolicy: IfNotPresent
+  port: 7687
+  httpPort: 7474
+  resources: {}
+  env:
+    NEO4J_AUTH: neo4j/testingsecret
+    NEO4J_server_config_strict__validation__enabled: "true"

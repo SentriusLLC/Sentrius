@@ -210,4 +210,13 @@ public class ATPLPolicyService {
 
         return Optional.of(policy);
     }
+
+    @Transactional
+    public AgentPolicyAssignment assignPolicyToUser(User operatingUser, ATPLPolicyEntity atplPolicyEntity) {
+        AgentPolicyAssignment assignment = new AgentPolicyAssignment();
+        assignment.setPolicy(atplPolicyEntity);
+        assignment.setId(AgentPolicyAssignmentId.builder().userId(operatingUser.getId()).policyId(atplPolicyEntity.getId()).build());
+        assignment.setUser(operatingUser);
+        return agentPolicyAssignmentRepository.save(assignment);
+    }
 }

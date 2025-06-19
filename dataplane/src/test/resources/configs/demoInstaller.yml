@@ -10,9 +10,6 @@ userTypes:
   - userTypeName: jitType
     systemAccess: CAN_VIEW_SYSTEMS
     ztAccessTokenAccess: CAN_MANAGE_ZTATS
-  - userTypeName: agentType
-    systemAccess: CAN_VIEW_SYSTEMS
-    ztAccessTokenAccess: CAN_VIEW_ZTATS
 users:
   - username: test
     name: firstname lastname

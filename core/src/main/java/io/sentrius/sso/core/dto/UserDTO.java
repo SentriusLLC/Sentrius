@@ -28,4 +28,6 @@ public class UserDTO {
 
     @Builder.Default
     public List<HostGroupDTO> hostGroups = new ArrayList<>();
+
+    private String atlpDefinition;
 }

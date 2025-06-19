@@ -126,4 +126,31 @@ public class InstallConfigurationTest extends ConfiguredClass {
         KeyUtil.validateKeyPair(priv.getBytes(), pub.getBytes(), passphase);
     }
 
+    @Test
+    public void testAtpl() throws IOException, JSchException {
+        InputStream inputStream =
+            Thread.currentThread()
+                .getContextClassLoader()
+                .getResourceAsStream("configs/demoInstaller.yml");
+
+        InstallConfiguration configuration =
+            objectMapper.readValue(inputStream, InstallConfiguration.class);
+        assertNotNull(configuration);
+
+        var sysKeys = configuration.getSystemKeyConfigurations();
+
+        assertNotNull(sysKeys);
+
+        var sysKey = sysKeys.get(0);
+
+        var priv = sysKey.getPrivateKey();
+
+        var pub = sysKey.getPublicKey();
+
+        var passphase = sysKey.getPrivateKeyPassphrase();
+
+        KeyUtil.validateKeyPair(priv.getBytes(), pub.getBytes(), passphase);
+    }
+
+
 }

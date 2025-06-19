@@ -23,6 +23,7 @@ import com.jcraft.jsch.JSchException;
 import io.sentrius.sso.automation.sideeffects.SideEffect;
 import io.sentrius.sso.automation.sideeffects.SideEffectType;
 import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.model.ATPLPolicyEntity;
 import io.sentrius.sso.core.model.ConfigurationOption;
 import io.sentrius.sso.core.model.HostSystem;
 import io.sentrius.sso.core.dto.HostGroupDTO;
@@ -202,7 +203,10 @@ public class ConfigurationApplicationTask {
 
         var profiles = createHostGroups(sideEffects, rules, installConfiguration, action);
 
-        createUsers(sideEffects, installConfiguration, userTypes, profiles, action);
+        // get the policies
+        var policyList = createPolicies(installConfiguration, action);
+
+        createUsers(sideEffects, installConfiguration, userTypes, profiles, action, policyList);
 
 
 
@@ -210,19 +214,19 @@ public class ConfigurationApplicationTask {
 
         //AppConfig.encryptProperty("initialized", Instant.now().toString());
 
-        // get the policies
-        createPolicies(installConfiguration, action);
+
 
         return sideEffects;
     }
 
-    private void createPolicies(InstallConfiguration installConfiguration, boolean action) {
+    private List<ATPLPolicyEntity> createPolicies(InstallConfiguration installConfiguration, boolean action) {
 
+            List<ATPLPolicyEntity> policyList = new ArrayList<>();
             installConfiguration.getAtplDefinitions().forEach( policy -> {
-                atplPolicyService.savePolicy(policy);
+                policyList.add( atplPolicyService.savePolicy(policy) );
 
             });
-
+            return policyList;
     }
 
     @Transactional
@@ -241,6 +245,137 @@ public class ConfigurationApplicationTask {
         return rules;
     }
 
+
+    @Transactional
+    protected List<HostGroup> createHostGroups(
+        List<SideEffect> sideEffects,
+        Map<String, ProfileRule> rules,
+        InstallConfiguration installConfiguration,
+        boolean action
+    ) throws JSchException, GeneralSecurityException, IOException {
+
+        List<HostGroup> profiles = new ArrayList<>();
+
+        if (installConfiguration.getManagementGroups() == null) {
+            return profiles;
+        }
+
+        for (HostGroupConfigurationDTO hostGroupDto : installConfiguration.getManagementGroups()) {
+
+            HostGroup hostGroup = HostGroup.builder()
+                .name(hostGroupDto.getDisplayName())
+                .description(hostGroupDto.getDescription())
+                .hostSystems(new ArrayList<>())
+                .rules(new HashSet<>())
+                .build();
+
+            if (action) {
+                hostGroup.setApplicationKey(cryptoService.generateKeyPair(UUID.randomUUID().toString()));
+                hostGroup = hostGroupRepository.save(hostGroup); // 🔑 Persist early
+            }
+
+            List<HostSystem> associatedSystems = new ArrayList<>();
+
+            if (hostGroupDto.getSystems() != null) {
+                for (String systemName : hostGroupDto.getSystems()) {
+                    for (var hostSystemDto : installConfiguration.getSystems()) {
+                        if (hostSystemDto.getDisplayName().equals(systemName)) {
+
+                            List<HostSystem> existingSystems = systemRepository.findByDisplayNameAndHost(
+                                hostSystemDto.getDisplayName(),
+                                hostSystemDto.getHost()
+                            );
+
+                            if (!existingSystems.isEmpty()) {
+                                for (HostSystem existing : existingSystems) {
+                                    if (existing.getHostGroups() == null) {
+                                        existing.setHostGroups(new ArrayList<>());
+                                    }
+
+                                    HostGroup finalHostGroup = hostGroup;
+                                    boolean alreadyLinked = existing.getHostGroups().stream()
+                                        .anyMatch(g -> g.getName().equals(finalHostGroup.getName()));
+
+                                    if (!alreadyLinked) {
+                                        existing.getHostGroups().add(hostGroup);
+                                        associatedSystems.add(existing); // Add only if new relationship
+                                    }
+                                }
+                            } else {
+                                HostSystem newSystem = HostSystem.fromDTO(hostSystemDto);
+                                newSystem.setHostGroups(new ArrayList<>(List.of(hostGroup)));
+                                associatedSystems.add(newSystem);
+                            }
+
+                            break; // stop after match
+                        }
+                    }
+                }
+            }
+
+            // Assign rules
+            if (hostGroupDto.getAssignedRules() != null) {
+                for (String ruleName : hostGroupDto.getAssignedRules()) {
+                    ProfileRule rule = rules.get(ruleName);
+                    if (rule != null) {
+                        hostGroup.getRules().add(rule);
+                        rule.getHostGroups().add(hostGroup);
+                    }
+                }
+            }
+
+            List<HostGroup> existingGroups = hostGroupService.getHostGroupsByName(hostGroup.getName());
+
+            if (existingGroups.isEmpty()) {
+                if (action) {
+                    hostGroup = hostGroupRepository.save(hostGroup);
+                    profiles.add(hostGroup);
+
+                    // Save all systems that were linked above
+                    systemRepository.saveAll(associatedSystems);
+                    log.info("Created Host Enclave {} with {}", hostGroup.getId(), hostGroupDto.getDisplayName());
+                }
+
+                sideEffects.add(SideEffect.builder()
+                    .sideEffectDescription("Creating Host Enclave " + hostGroupDto.getDisplayName())
+                    .type(SideEffectType.UPDATE_DATABASE)
+                    .asset("HostGroups")
+                    .build());
+
+            } else {
+                for (HostGroup existingGroup : existingGroups) {
+                    profiles.add(existingGroup);
+                    for (HostSystem hs : associatedSystems) {
+                        if (hs.getHostGroups() == null) {
+                            hs.setHostGroups(new ArrayList<>());
+                        }
+
+                        boolean alreadyAssigned = hs.getHostGroups().stream()
+                            .anyMatch(g -> g.getId().equals(existingGroup.getId()));
+
+                        if (!alreadyAssigned) {
+                            hs.getHostGroups().add(existingGroup);
+                            if (action) {
+                                systemRepository.save(hs);
+                                log.info("Updated Host Enclave {} with {}", existingGroup.getId(), hs.getId());
+                            }
+                            sideEffects.add(SideEffect.builder()
+                                .sideEffectDescription("Updating Host Enclave " + hostGroupDto.getDisplayName())
+                                .type(SideEffectType.UPDATE_DATABASE)
+                                .asset("HostGroups")
+                                .build());
+                        }
+                    }
+                }
+            }
+        }
+
+        return profiles;
+    }
+
+
+
+    /*
     @Transactional
     protected List<HostGroup> createHostGroups(List<SideEffect> sideEffects, Map<String,ProfileRule> rules, InstallConfiguration installConfiguration,
                                              boolean action)
@@ -313,6 +448,23 @@ public class ConfigurationApplicationTask {
                                 log.info("Updating Host Enclave {} with {}", hg.getId(), hg.getId());
                                 profiles.add(hg);
 
+                                for (var hs : hostGroup.getHostSystems()) {
+                                    boolean alreadyAssigned = hs.getHostGroups().stream().anyMatch(g -> g.getId().equals(hg.getId()));
+                                    if (!alreadyAssigned) {
+                                        if (action) {
+                                            hs.getHostGroups().add(hg);
+                                            systemRepository.save(hs);
+                                            log.info("Updating Host Enclave {} with {}", hg.getId(), hs.getId());
+                                        }
+
+                                        sideEffects.add(SideEffect.builder()
+                                            .sideEffectDescription("Updating Host Enclave " + hostGroupDto.getDisplayName())
+                                            .type(SideEffectType.UPDATE_DATABASE)
+                                            .asset("HostGroups")
+                                            .build());
+                                    }
+                                }
+                                /*
                                 for(var hs : hostGroup.getHostSystems()) {
                                     if (!systemRepository.isAssignedToHostGroups(hs.getId(), List.of( hg.getId()))) {
                                         if (action) {
@@ -334,7 +486,7 @@ public class ConfigurationApplicationTask {
         }
         return profiles;
     }
-
+*/
     @Transactional
     protected List<SideEffect> createSystems(InstallConfiguration installConfiguration, boolean action) throws SQLException,
         GeneralSecurityException {
@@ -423,13 +575,17 @@ public class ConfigurationApplicationTask {
     @Transactional
     protected List<User> createUsers(
         List<SideEffect> sideEffects, InstallConfiguration installConfiguration, List<UserType> userTypes,
-        List<HostGroup> profiles, boolean action)
+        List<HostGroup> profiles, boolean action, List<ATPLPolicyEntity> policyList
+    )
         throws SQLException, GeneralSecurityException {
         List<User> users = new ArrayList<>();
         Map<Long, Set<Long>> assignments = new HashMap<>();
         if (null != installConfiguration.getUsers()) {
             for (var userDTO : installConfiguration.getUsers()) {
-
+                if (userDTO.getPassword() == null || userDTO.getPassword().isEmpty()) {
+                    log.warn("User {} has no password");
+                    userDTO.setPassword(UUID.randomUUID().toString());
+                }
                 // set the UserType from the configuration
                 if (null != userDTO.getAuthorizationType()) {
                     for (UserType type : userTypes) {
@@ -448,6 +604,9 @@ public class ConfigurationApplicationTask {
                     userService.getUserType(UserType.builder().id(userDTO.getAuthorizationType().getId()).build());
 
                 User user = User.from(userDTO, type.get());
+
+                
+
                 User finalUser = user;
                 userService.findByUsername(user.getUsername()).ifPresentOrElse(
                     user1 -> {
@@ -455,8 +614,8 @@ public class ConfigurationApplicationTask {
                     },
                     () -> {
                         if (action) {
-                            var usr  = userService.addUscer(user);
-                            user.setId(usr.getId());
+                            var usr  = userService.addUscer(finalUser);
+                            finalUser.setId(usr.getId());
                         }
                         sideEffects.add(SideEffect.builder().sideEffectDescription("Creating user " + userDTO.getUsername()).type(
                             SideEffectType.UPDATE_DATABASE).asset("Users").build());
@@ -512,6 +671,21 @@ public class ConfigurationApplicationTask {
 
                         }
                     }
+                }
+                if (action){
+                    user = userService.getUser(user.getId());
+                    var definition = userDTO.getAtlpDefinition();
+                    if (null != definition && !definition.isEmpty()) {
+                    Optional<ATPLPolicyEntity> policy = policyList.stream()
+                        .filter(p -> p.getPolicyId().equals(definition))
+                        .findFirst();
+                    if (policy.isPresent()) {
+                        atplPolicyService.assignPolicyToUser(user, policy.get());
+                    } else {
+                        log.warn("No ATPL policy found for user {} with policy id {}", user.getUsername(),
+                            definition);
+                    }
+                }
                 }
             }
         }
@@ -577,7 +751,7 @@ public class ConfigurationApplicationTask {
             .id(0L)
             .authorizationType(UserType.createSuperUser())
             .username("SYSTEM")
-            .password(UUID.randomUUID().toString() + "." + UUID.randomUUID().toString())
+            .password(UUID.randomUUID() + UUID.randomUUID().toString())
             .build();
 
         if (null == user) {
