@@ -7,17 +7,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@ConditionalOnProperty(name = "provenance.kafka.enabled", havingValue = "true", matchIfMissing = true)
 public class ProvenanceKafkaProducer {
 
     private final KafkaTemplate<String, ProvenanceEvent> kafkaTemplate;
 
-    @Value("${provenance.kafka.topic}")
+    @Value("${provenance.kafka.topic:none}")
     private String topic;
 
     public ProvenanceKafkaProducer(KafkaTemplate<String, ProvenanceEvent> kafkaTemplate) {
@@ -25,6 +27,10 @@ public class ProvenanceKafkaProducer {
     }
 
     public void send(ProvenanceEvent event) {
+        if (topic == null || topic.isEmpty() || "none".equalsIgnoreCase(topic)) {
+            log.warn("Kafka topic is not configured, skipping event send");
+            return;
+        }
         try {
             var future =
                 kafkaTemplate.send(topic, event.getEventId(), event);

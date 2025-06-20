@@ -6,12 +6,10 @@ import java.util.List;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.jcraft.jsch.Identity;
 import io.sentrius.sso.core.dto.UserDTO;
-import io.sentrius.sso.core.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.actors.PrincipalEntity;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
-import io.sentrius.sso.core.model.security.IdentityType;
+import io.sentrius.sso.core.model.security.enums.IdentityType;
 import io.sentrius.sso.core.model.security.UserType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

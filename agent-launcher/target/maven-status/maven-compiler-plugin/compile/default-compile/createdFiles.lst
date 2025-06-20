@@ -1,0 +1,5 @@
+io/sentrius/agent/launcher/api/AgentLauncherController.class
+io/sentrius/agent/launcher/AgentLauncher.class
+io/sentrius/agent/launcher/service/PodLauncherService.class
+io/sentrius/agent/launcher/LauncherConfigOptions.class
+io/sentrius/agent/launcher/service/LauncherSecurityConfig.class

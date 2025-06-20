@@ -17,7 +17,6 @@ import io.sentrius.sso.core.dto.HostSystemDTO;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.model.hostgroup.ProfileConfiguration;
 import io.sentrius.sso.core.model.metadata.TerminalSessionMetadata;
-import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.HostGroupService;

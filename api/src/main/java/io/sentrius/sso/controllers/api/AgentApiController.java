@@ -19,7 +19,7 @@ import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.AgentCommunicationDTO;
 import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
 import io.sentrius.sso.core.model.chat.AgentCommunication;
-import io.sentrius.sso.core.model.security.IdentityType;
+import io.sentrius.sso.core.model.security.enums.IdentityType;
 import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.sessions.SessionLog;

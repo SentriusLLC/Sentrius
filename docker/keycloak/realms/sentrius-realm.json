@@ -36,6 +36,41 @@
       ]
     },
     {
+      "clientId": "sentrius-launcher-service",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "nGkEukexSWTSjklj3sddgvDzYjSkDmeUlM0FJ5Jhh0",
+      "rootUrl": "${ROOT_URL}",
+      "baseUrl": "${ROOT_URL}",
+
+      "redirectUris": [
+        "${REDIRECT_URIS}/*"
+      ],
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.claim": "true",
+        "id.token.claim": "true",
+        "userinfo.token.claim": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "userType",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "userType",
+            "jsonType.label": "String",
+            "user.attribute": "userType"
+          }
+        }
+      ]
+    },
+    {
       "clientId": "java-agents",
       "name": "",
       "description": "",
@@ -220,7 +255,33 @@
         "name": "admin",
         "description": "Administrator role"
       }
-    ]
+    ],
+    "client": {
+        "sentrius-api": [
+            {
+            "name": "user",
+            "description": "Default user role for sentrius-api client"
+            }
+        ],
+        "sentrius-launcher-service": [
+            {
+            "name": "user",
+            "description": "Default user role for sentrius-launcher-service client"
+            }
+        ],
+        "java-agents": [
+            {
+            "name": "user",
+            "description": "Default user role for java-agents client"
+            }
+        ],
+        "ai-agent-assessor": [
+            {
+            "name": "user",
+            "description": "Default user role for ai-agent-assessor client"
+            }
+        ]
+    }
   },
   "users": [
     {
@@ -240,6 +301,57 @@
       "realmRoles": [
         "user"
       ]
+    },
+    {
+      "username": "service-account-sentrius-api",
+      "emailVerified": false,
+      "createdTimestamp": 1745090850622,
+      "enabled": true,
+      "totp": false,
+      "serviceAccountClientId": "sentrius-api",
+      "disableableCredentialTypes": [],
+      "requiredActions": [],
+      "realmRoles": [
+        "default-roles-sentrius"
+      ],
+      "clientRoles": {
+        "realm-management": [
+          "query-groups",
+          "view-clients",
+          "manage-users",
+          "manage-authorization",
+          "view-authorization",
+          "manage-identity-providers",
+          "impersonation",
+          "manage-realm",
+          "view-identity-providers",
+          "view-users",
+          "manage-clients",
+          "view-realm",
+          "create-client",
+          "manage-events",
+          "query-realms",
+          "query-clients",
+          "view-events",
+          "query-users",
+          "realm-admin"
+        ],
+        "broker": [
+          "read-token"
+        ],
+        "account": [
+          "delete-account",
+          "manage-consent",
+          "manage-account-links",
+          "view-applications",
+          "view-profile",
+          "view-groups",
+          "view-consent",
+          "manage-account"
+        ]
+      },
+      "notBefore": 0,
+      "groups": []
     }
   ],
   "identityProviders": [

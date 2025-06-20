@@ -108,11 +108,21 @@ above.
 
 Build the images in your local Docker registry (note this builds all images, including core, api, and any other modules):
 
-    /build-images-local.sh --all --no-cache
+    /build-images.sh --all --no-cache
 
 Run the Helm deployment script to deploy Sentrius to your local Kubernetes cluster:
 
     ./ops-scripts/local/deploy-helm.sh
+
+    
+
+You may wish to forward ports so you can access the services locally. The following commands will forward the necessary ports for the core and api modules:
+    kubectl port-forward -n dev service/sentrius-sentrius 8080:8080
+    kubectl port-forward -n dev service/sentrius-keycloak 8081:8081
+
+This will require that you either change the hostnames in the deploy-helm script or add entries to your /etc/hosts file to point to localhost for the services.
+    127.0.0.1 sentrius-sentrius
+    127.0.0.1 sentrius-keycloak
 
 There is a GCP deployment that is hasn't been tested in some time. You can find it in the ops-scripts/gcp directory.
 

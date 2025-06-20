@@ -292,6 +292,7 @@ data:
     spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
     # Optional: trust package to avoid class cast issues with JSON
     spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
+    sentrius.agent.launcher.service=http://sentrius-agents-launcherservice:8080/
   dynamic.properties: |
     auditorClass=io.sentrius.sso.automation.auditing.AccessTokenAuditor
     twopartyapproval.option.LOCKING_SYSTEMS=true

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-agents-launcherservice
+  namespace: dev
+spec:
+  type: ExternalName
+  externalName: {{ .Values.launcherFQDN }}

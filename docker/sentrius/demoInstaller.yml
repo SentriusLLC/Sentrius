@@ -28,6 +28,8 @@ users:
       userTypeName: jitType
     hostGroups:
       - displayName: testGroup
+
+npes:
   - username: service-account-java-agents
     name: java agents
     authorizationType:

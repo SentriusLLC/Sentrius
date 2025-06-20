@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-launcherservice
+  namespace: {{ .Values.tenant }}
+  labels:
+    {{- include "launcherservice.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: launcherservice
+  template:
+    metadata:
+      labels:
+        app: launcherservice
+    spec:
+      serviceAccountName: {{ .Release.Name }}-launcher
+      initContainers:
+        - name: wait-for-sentrius
+          image: busybox
+          command: [ 'sh', '-c', 'until nc -z {{ .Values.baseRelease }}-sentrius.{{ .Values.sentriusNamespace }}.svc.cluster.local 8080; do echo waiting for api; sleep 2;done;' ]
+      containers:
+        - name: sentrius-agent
+          image: "{{ .Values.launcherservice.image.repository }}:{{ .Values.launcherservice.image.tag }}"
+          imagePullPolicy: {{ .Values.sentriusaiagent.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.sentriusaiagent.port }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ .Release.Name }}-config

@@ -30,6 +30,7 @@ import io.sentrius.sso.core.dto.HostGroupDTO;
 import io.sentrius.sso.core.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.model.hostgroup.ProfileRule;
+import io.sentrius.sso.core.model.security.enums.IdentityType;
 import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.AutomationAccessEnum;
@@ -208,6 +209,7 @@ public class ConfigurationApplicationTask {
 
         createUsers(sideEffects, installConfiguration, userTypes, profiles, action, policyList);
 
+        createNPEs(sideEffects, installConfiguration, userTypes, profiles, action, policyList);
 
 
         // create automation assignments
@@ -603,7 +605,13 @@ public class ConfigurationApplicationTask {
                 var type =
                     userService.getUserType(UserType.builder().id(userDTO.getAuthorizationType().getId()).build());
 
+                if (userDTO.getUserId() == null || userDTO.getUserId().isEmpty()) {
+                    userDTO.setUserId(UUID.randomUUID().toString());
+                }
+
                 User user = User.from(userDTO, type.get());
+
+                user.setIdentityType(IdentityType.NON_PERSON_ENTITY);
 
                 
 
@@ -686,6 +694,134 @@ public class ConfigurationApplicationTask {
                             definition);
                     }
                 }
+                }
+            }
+        }
+        for (var entry : assignments.entrySet()) {
+
+            //UserHostGroupDB.setUsersForHostGroup(entry.getKey(), entry.getValue());
+        }
+        return users;
+    }
+
+    @Transactional
+    protected List<User> createNPEs(
+        List<SideEffect> sideEffects, InstallConfiguration installConfiguration, List<UserType> userTypes,
+        List<HostGroup> profiles, boolean action, List<ATPLPolicyEntity> policyList
+    )
+        throws SQLException, GeneralSecurityException {
+        List<User> users = new ArrayList<>();
+        Map<Long, Set<Long>> assignments = new HashMap<>();
+        if (null != installConfiguration.getUsers()) {
+            for (var userDTO : installConfiguration.getUsers()) {
+                if (userDTO.getPassword() == null || userDTO.getPassword().isEmpty()) {
+                    log.warn("User {} has no password");
+                    userDTO.setPassword(UUID.randomUUID().toString());
+                }
+                // set the UserType from the configuration
+                if (null != userDTO.getAuthorizationType()) {
+                    for (UserType type : userTypes) {
+                        if (type.getUserTypeName().equals(userDTO.getAuthorizationType().getUserTypeName())) {
+                            userDTO.setAuthorizationType(type.toDTO());
+                            break;
+                        }
+                    }
+                } else {
+                    userDTO.setAuthorizationType( UserType.createSystemAdmin().toDTO());
+                }
+
+                log.info("Retrieving user type {}, id {}", userDTO.getAuthorizationType().getUserTypeName(),
+                    userDTO.getAuthorizationType().getId());
+                var type =
+                    userService.getUserType(UserType.builder().id(userDTO.getAuthorizationType().getId()).build());
+
+                if (userDTO.getUserId() == null || userDTO.getUserId().isEmpty()) {
+                    userDTO.setUserId(UUID.randomUUID().toString());
+                }
+
+                User user = User.from(userDTO, type.get());
+
+
+
+                User finalUser = user;
+                userService.findByUsername(user.getUsername()).ifPresentOrElse(
+                    user1 -> {
+                        finalUser.setId(user1.getId());
+                    },
+                    () -> {
+                        if (action) {
+                            var usr  = userService.addUscer(finalUser);
+                            finalUser.setId(usr.getId());
+                        }
+                        sideEffects.add(SideEffect.builder().sideEffectDescription("Creating user " + userDTO.getUsername()).type(
+                            SideEffectType.UPDATE_DATABASE).asset("Users").build());
+                    }
+                );
+
+                users.add(user);
+
+                if (null != userDTO.getHostGroups()) {
+                    if (action) {
+                        for (HostGroupDTO profile : userDTO.getHostGroups()) {
+                            for (HostGroup hostGroup : profiles) {
+                                if (hostGroup.getName().equals(profile.getDisplayName())) {
+                                    if (!userRepository.isAssignedToHostGroups(user.getId(), List.of(hostGroup.getId()))) {
+
+
+                                        sideEffects.add(SideEffect.builder().sideEffectDescription(
+                                            "Assigning user " + userDTO.getUsername() + " to Host Enclave " +
+                                                hostGroup.getName()).type(
+                                            SideEffectType.UPDATE_DATABASE).asset("Users").build());
+                                        log.info("Assigning user {} to Host Enclave {}", userDTO.getUsername(),
+                                            hostGroup.getId());
+                                        user.getHostGroups().add(hostGroup);
+                                    }
+                                    break;
+                                }
+                            }
+                            if (null != user.getPassword() ) {
+                                user.setPassword(userService.encodePassword(user.getPassword()));
+                            }
+                            userRepository.save(user);
+                        }
+                    }
+                    else {
+                        for (var profile : userDTO.getHostGroups()) {
+                            for (HostGroup hostGroup : profiles) {
+                                if (hostGroup.getName().equals(profile.getDisplayName())) {
+                                    log.info("Assigning user {} to Host Enclave {}", userDTO.getUsername(),
+                                        hostGroup.getId());
+                                    if (null == hostGroup.getId() || !userRepository.isAssignedToHostGroups(user.getId(),
+                                        List.of(hostGroup.getId()))) {
+                                        sideEffects.add(SideEffect.builder().sideEffectDescription(
+                                            "Assigning user " + userDTO.getUsername() + " to Host Enclave " +
+                                                hostGroup.getName()).type(
+                                            SideEffectType.UPDATE_DATABASE).asset("Users").build());
+                                        log.info("Assigning user {} to Host Enclave {}", userDTO.getUsername(),
+                                            hostGroup.getId()
+                                        );
+                                    }
+                                    break;
+                                }
+                            }
+
+                        }
+                    }
+                }
+                if (action){
+                    user = userService.getUser(user.getId());
+                    var definition = userDTO.getAtlpDefinition();
+                    if (null != definition && !definition.isEmpty()) {
+                        Optional<ATPLPolicyEntity> policy = policyList.stream()
+                            .filter(p -> p.getPolicyId().equals(definition))
+                            .findFirst();
+                        if (policy.isPresent()) {
+                            atplPolicyService.assignPolicyToUser(user, policy.get());
+                        } else {
+                            log.warn("No ATPL policy found for user {} with policy id {}", user.getUsername(),
+                                definition);
+                        }
+                    }
                 }
             }
         }

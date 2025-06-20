@@ -3,12 +3,16 @@ package io.sentrius.sso.controllers.api;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
-import java.sql.SQLException;
+import java.util.List;
+import java.util.Map;
 import io.sentrius.sso.config.ApiPaths;
+import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.AgentRegistrationDTO;
-import io.sentrius.sso.core.model.security.IdentityType;
+import io.sentrius.sso.core.exceptions.ZtatException;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.model.security.enums.IdentityType;
 import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.services.ATPLPolicyService;
@@ -16,6 +20,7 @@ import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.AgentService;
+import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.services.auditing.AuditService;
 import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.security.KeycloakService;
@@ -28,9 +33,9 @@ import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -46,7 +51,7 @@ public class AgentBootstrapController extends BaseController {
     final ZeroTrustAccessTokenService ztatService;
     final ZeroTrustRequestService ztrService;
     final AgentService agentService;
-    private final AgentClientService agentClientService;
+    private final ZeroTrustClientService zeroTrustClientService;
 
 
     @Value("${sentrius.agent.register.bootstrap.allow:false}")
@@ -54,6 +59,9 @@ public class AgentBootstrapController extends BaseController {
 
     @Value("${sentrius.agent.bootstrap.policy:default-policy.yaml}")
     private String defaultPolicyFile;
+
+    @Value("${sentrius.agent.launcher.service:http://sentrius-launcherservice:8080/}")
+    private String sentriusLauncherService;
 
     public AgentBootstrapController(
         UserService userService,
@@ -63,8 +71,8 @@ public class AgentBootstrapController extends BaseController {
         CryptoService cryptoService, SessionTrackingService sessionTrackingService, KeycloakService keycloakService,
         ATPLPolicyService atplPolicyService,
         ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService, AgentService agentService,
-        AgentClientService agentClientService
-    ) {
+        ZeroTrustClientService zeroTrustClientService
+        ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
         this.cryptoService = cryptoService;
@@ -74,7 +82,7 @@ public class AgentBootstrapController extends BaseController {
         this.ztatService = ztatService;
         this.ztrService = ztrService;
         this.agentService = agentService;
-        this.agentClientService = agentClientService;
+        this.zeroTrustClientService = zeroTrustClientService;
     }
 
 
@@ -141,6 +149,22 @@ public class AgentBootstrapController extends BaseController {
         // bootstrap with a default policy
         return ResponseEntity.ok(newDTO);
     }
+
+    @PostMapping("/launcher/create")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<String> launchPod(
+        @RequestBody AgentRegistrationDTO registrationDTO, HttpServletRequest request, HttpServletResponse response
+        ) throws GeneralSecurityException, IOException, ZtatException {
+
+
+        var operatingUser = getOperatingUser(request, response );
+        zeroTrustClientService.callAuthenticatedPostOnApi(sentriusLauncherService,  "agent/launcher/create",
+            registrationDTO);
+        // bootstrap with a default policy
+        return ResponseEntity.ok("{status: 'success'}");
+    }
+
+
 
 
 

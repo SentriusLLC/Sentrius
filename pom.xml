@@ -10,13 +10,14 @@
     <module>provenance-core</module>
     <module>core</module>
     <module>dataplane</module>
-    <module>sentrius-llm-core</module>
-    <module>sentrius-llm-dataplane</module>
+    <module>llm-core</module>
+    <module>llm-dataplane</module>
     <module>provenance-ingestor</module>
     <module>api</module>
     <module>llm-proxy</module>
     <module>analytics</module>
     <module>ai-agent</module>
+    <module>agent-launcher</module>
   </modules>
   <properties>
     <java.version>17</java.version>
@@ -51,10 +52,20 @@
     <flyway-postgres.version>11.6.0</flyway-postgres.version>
     <spring-ai-version>1.0.0-M7</spring-ai-version>
     <neo4j.version>5.28.5</neo4j.version>
+    <kubernetes-version>24.0.0</kubernetes-version>
   </properties>
   <dependencyManagement>
     <dependencies>
-
+      <dependency>
+        <groupId>io.kubernetes</groupId>
+        <artifactId>client-java-api</artifactId>
+        <version>${kubernetes-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.kubernetes</groupId>
+        <artifactId>client-java</artifactId>
+        <version>${kubernetes-version}</version>
+      </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-lang3</artifactId>

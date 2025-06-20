@@ -1,7 +1,7 @@
 package io.sentrius.sso.core.services;
 
 import io.sentrius.sso.core.dto.UserDTO;
-import io.sentrius.sso.core.model.security.IdentityType;
+import io.sentrius.sso.core.model.security.enums.IdentityType;
 import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.repository.ProfileRepository;

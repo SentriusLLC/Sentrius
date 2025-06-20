@@ -388,6 +388,7 @@
 <body>
 <div th:replace="~{fragments/add_system}"></div>
 <div th:replace="~{fragments/add_user}"></div>
+<div th:replace="~{fragments/add_agent}"></div>
 <div th:replace="~{fragments/add_group}"></div>
 <div class="container-fluid">
     <div class="row flex-nowrap">
@@ -468,7 +469,8 @@
                             <div class="card-body">
                                 <!-- Buttons -->
                                 <div class="mb-4 d-flex justify-content-center gap-2">
-                                    <a href="/api/v1/users/list" class="btn btn-danger">Build Automation</a>
+                                    <a href="#" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#agentFormModal">Launch
+                                        Agent</a>
                                     <a href="#" class="btn btn-primary" data-bs-toggle="modal"
                                        data-bs-target="#userFormModal">Usage Patterns</a>
                                     <a href="#" class="btn btn-primary" data-bs-toggle="modal"
@@ -554,6 +556,7 @@
 <script type="module" th:src="@{/js/dashboard.js}"></script>
 <script type="module" th:src="@{/js/add_system.js}" defer></script>
 <script type="module" th:src="@{/js/add_user.js}" defer></script>
+<script type="module" th:src="@{/js/add_agent.js}" defer></script>
 <script type="module" th:src="@{/js/add_group.js}" defer></script>
 <script type="module" th:src="@{/js/dashboard-agents.js}" defer></script>
 

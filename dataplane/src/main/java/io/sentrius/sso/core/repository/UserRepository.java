@@ -3,7 +3,7 @@ package io.sentrius.sso.core.repository;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import io.sentrius.sso.core.model.security.IdentityType;
+import io.sentrius.sso.core.model.security.enums.IdentityType;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import org.springframework.data.jpa.repository.JpaRepository;

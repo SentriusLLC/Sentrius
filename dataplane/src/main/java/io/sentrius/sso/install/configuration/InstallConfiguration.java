@@ -32,6 +32,8 @@ public class InstallConfiguration {
 
   private List<UserDTO> users;
 
+  private List<UserDTO> npes;
+
   @Builder.Default
   private List<RuleDTO> rules = new ArrayList<>();
 

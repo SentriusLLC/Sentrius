@@ -1,8 +1,11 @@
 package io.sentrius.sso.controllers.view;
 
+import java.util.ArrayList;
 import java.util.List;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.dto.AgentDTO;
+import io.sentrius.sso.core.dto.AgentRegistrationDTO;
 import io.sentrius.sso.core.dto.SystemOption;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.dto.UserTypeDTO;
@@ -39,6 +42,13 @@ public class DashboardController extends BaseController {
         return types;
     }
 
+    @ModelAttribute("agentTypeList")
+    public List<String> getAgentTypeList() {
+        List<String> agentTypes = new ArrayList<>();
+        agentTypes.add("Chat Agent");
+        return agentTypes;
+    }
+
     @ModelAttribute("authorizedUser")
     public User getAuthorizedUser() {
         return new User();
@@ -47,6 +57,11 @@ public class DashboardController extends BaseController {
     @ModelAttribute("user")
     public User getUser() {
         return new User();
+    }
+
+    @ModelAttribute("agent")
+    public AgentRegistrationDTO getAgentRegistration() {
+        return AgentRegistrationDTO.builder().build();
     }
 
 

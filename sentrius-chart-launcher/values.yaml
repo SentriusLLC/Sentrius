@@ -1,0 +1,317 @@
+# General settings
+replicaCount: 1
+namespace: default
+
+environment: "gke"  # Can be "gke", "aws", "azure", "local"
+
+tenant: sentrius-demo
+sentriusNamespace: "{{ .Values.tenant }}"
+baseRelease: sentrius-demo
+subdomain: "{{ .Values.tenant }}.sentrius.cloud"
+keycloakSubdomain: keycloak.{{ .Values.subdomain }}
+keycloakHostname: "{{ .Values.keycloakSubdomain }}"
+keycloakDomain: https://{{ .Values.keycloakSubdomain }}
+sentriusDomain: https://{{ .Values.subdomain }}
+keycloakFQDN: sentrius-keycloak.dev.svc.cluster.local
+sentriusFQDN: sentrius-sentrius.dev.svc.cluster.local
+
+certificates:
+  enabled: false  # Disable certs for local; enable for cloud
+  issuer: "letsencrypt-prod"  # Change for cloud environments
+
+
+# Sentrius configuration
+sentrius:
+  image:
+    repository: us-central1-docker.pkg.dev/sentrius-project/sentrius-repo
+    tag: tag
+    pullPolicy: IfNotPresent
+  port: 8080
+  serviceType: ClusterIP
+  ssh:
+    port: 22
+  resources: {}
+  oauth2:
+    client_id: sentrius-api
+    client_secret: nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0
+    authorization_grant_type: authorization_code
+    redirect_uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
+    scope: openid,profile,email
+    issuer_uri: http://keycloak.{{ .Values.subdomain }}/realms/sentrius
+  annotations:
+    gke:
+      cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
+    aws:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    azure:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+
+# Sentrius configuration
+llmproxy:
+  image:
+    repository: us-central1-docker.pkg.dev/sentrius-project/llmproxy-repo
+    tag: tag
+    pullPolicy: IfNotPresent
+  port: 8080
+  serviceType: ClusterIP
+  ssh:
+    port: 22
+  resources: {}
+  oauth2:
+    client_id: sentrius-api
+    client_secret: nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0
+    authorization_grant_type: authorization_code
+    redirect_uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
+    scope: openid,profile,email
+    issuer_uri: http://keycloak.{{ .Values.subdomain }}/realms/sentrius
+  annotations:
+    gke:
+      cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
+    aws:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    azure:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+
+
+sentriusagent:
+  service:
+    type: NodePort
+    nodePort: 30083
+  image:
+    repository: sentrius-agent
+    pullPolicy: IfNotPresent
+  port: 8080
+  oauth2:
+    client_id: java-agents
+    client_secret: e4WgJovH8MzcAvRnFg3rROAbeDIwiYmx
+    authorization_grant_type: client_credentials
+    redirect-uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
+    scope: openid,profile,email
+    issuer-uri: http://keycloak.{{ .Values.subdomain }}/realms/sentrius
+  ssh:
+    port: 22
+  resources: {}
+  config:
+    application: |
+  annotations:
+    gke:
+      cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
+    aws:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    azure:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+
+sentriusaiagent:
+  service:
+    type: NodePort
+    nodePort: 30085
+  image:
+    repository: sentrius-ai-agent
+    pullPolicy: IfNotPresent
+  port: 8080
+  oauth2:
+    client_id: java-agents
+    client_secret: KLJMLKSDJGlkj23@#jasdlkjg@#dsagsagdsag
+    authorization_grant_type: authorization_code
+    redirect-uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
+    scope: openid,profile,email
+    issuer-uri: http://keycloak.{{ .Values.subdomain }}/realms/sentrius
+  ssh:
+    port: 22
+  resources: {}
+  config:
+    application: |
+  annotations:
+    gke:
+      cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
+    aws:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    azure:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+
+launcherservice:
+  service:
+    type: NodePort
+    nodePort: 30087
+  image:
+    repository: sentrius-launcher-service
+    pullPolicy: IfNotPresent
+  port: 8080
+  oauth2:
+    client_id: sentrius-launcher-service
+    client_secret: nGkEukexSWTSjklj3sddgvDzYjSkDmeUlM0FJ5Jhh0
+    authorization_grant_type: authorization_code
+    redirect-uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
+    scope: openid,profile,email
+    issuer-uri: http://keycloak.{{ .Values.subdomain }}/realms/sentrius
+  resources: {}
+  config:
+    application: |
+  annotations:
+    gke:
+      cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
+    aws:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    azure:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+
+# PostgreSQL configuration
+postgres:
+  image:
+    repository: postgres
+    tag: 15
+  port: 5432
+  storageSize: 10Gi
+  env:
+    POSTGRES_DB: sentrius
+
+ssh:
+  image:
+    repository: sentrius-ssh
+    pullPolicy: IfNotPresent
+  port: 22
+
+# Secrets
+secrets:
+  db:
+    username: YWRtaW4=       # admin
+    password: cGFzc3dvcmQ=   # password
+    keystorePassword: c2VudHJpdXM= # sentrius
+
+keycloak:
+  image:
+    repository: sentrius-keycloak
+    pullPolicy: IfNotPresent
+  host: keycloak.default.svc.cluster.local
+  adminUser: admin
+  adminPassword: nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0@1
+  serviceType: ClusterIP
+  port: 8081
+  clientId: sentrius-api
+  clientSecret: nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0
+  db:
+    image: postgres:15
+    user: keycloak
+    password: password
+    database: keycloak
+    storageSize: 10Gi
+  replicas: 1
+  annotations:
+    gke:
+      cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
+    aws:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    azure:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+
+ingress:
+  enabled: true
+  class: "nginx"  # Default for local; override for GKE/AWS
+  tlsEnabled: true  # Enable TLS when supported
+  annotations:
+    gke:  # GKE-specific annotations
+      kubernetes.io/ingress.class: gce
+      networking.gke.io/managed-certificates: wildcard-cert
+      kubernetes.io/ingress.allow-http: "false"
+      ingress.kubernetes.io/force-ssl-redirect: "true"
+    aws:  # AWS-specific annotations for ALB
+      kubernetes.io/ingress.class: alb
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/ssl-redirect: "443"
+    local:  # Local environment annotations (e.g., Minikube)
+      kubernetes.io/ingress.class: nginx
+
+
+
+healthCheck:
+  enabled: true
+  backendConfig:
+    enabled: false  # Only enable for GKE
+  readinessProbe:
+    path: "/actuator/health"
+    port: 8080
+  livenessProbe:
+    path: "/actuator/health"
+    port: 8080
+  keycloak:
+    readinessPath: "/health/ready"
+    livenessPath: "/health/live"
+    port: 8081
+
+version: '3.7'
+
+jaeger:
+  enabled: true
+  provisionDataStore:
+    cassandra: false
+
+  storage:
+    type: memory   # (easy for dev/test)
+
+  collector:
+    enabled: true
+    service:
+      otlp:
+        grpc:
+          enabled: true
+          port: 4317
+        http:
+          enabled: true
+          port: 4318
+
+  agent:
+    enabled: true
+
+  query:
+    enabled: true
+    service:
+      type: ClusterIP
+      ports:
+        - name: http-query
+          port: 16686
+          targetPort: 16686
+
+  ingress:
+    enabled: true
+    host: jaeger.{{ .Values.subdomain }}
+    annotations:
+      kubernetes.io/ingress.class: nginx
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+
+kafka:
+  enabled: true
+  serverName: sentrius-kafka:9092
+  image:
+    repository: bitnami/kafka
+    tag: 3.6.0
+    pullPolicy: IfNotPresent
+  port: 9092
+  # Remove or comment out the zookeeper section
+  # zookeeper:
+  #   enabled: false
+  resources: {}
+  kraft:
+    enabled: true
+    clusterId: "my-cluster-id"  # Use a unique base64-encoded string
+    controllerQuorumVoters: "0@localhost:9093"
+
+neo4j:
+  enabled: true
+  image:
+    repository: neo4j
+    tag: 5.15
+    pullPolicy: IfNotPresent
+  port: 7687
+  httpPort: 7474
+  resources: {}
+  env:
+    NEO4J_AUTH: neo4j/testingsecret
+    NEO4J_server_config_strict__validation__enabled: "true"

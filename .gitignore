@@ -45,13 +45,13 @@ dataplane/target/
 llm-proxy/target/**
 llm-proxy/target/
 llm-dataplane/target/**
-sentrius-llm-dataplane/target/**
-sentrius-llm-core/target/**
+llm-dataplane/target/**
+llm-core/target/**
 provenance-core/target/**
 provenance-ingestor/target/**
 llm-dataplane/target/
-sentrius-llm-dataplane/target/
-sentrius-llm-core/target/
+llm-dataplane/target/
+llm-core/target/
 node/*
 node_modules/*
 api/node_modules/*

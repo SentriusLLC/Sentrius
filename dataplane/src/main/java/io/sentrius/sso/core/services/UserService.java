@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import com.google.common.cache.CacheLoader;
 import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.dto.UserTypeDTO;
-import io.sentrius.sso.core.model.security.IdentityType;
+import io.sentrius.sso.core.model.security.enums.IdentityType;
 import io.sentrius.sso.core.repository.ProfileRepository;
 import io.sentrius.sso.core.repository.UserRepository;
 import io.sentrius.sso.core.model.users.User;
