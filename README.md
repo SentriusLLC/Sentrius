@@ -92,7 +92,7 @@ Installation
 git clone https://github.com/your-organization/sentrius.git
 cd sentrius
 
-Running Sentrius
+#Running Sentrius
 
 Build the projects from root ( mvn clean install ) to ensure all dependencies are resolved and the modules are compiled.
 
@@ -101,7 +101,7 @@ modules. You can run this script from the project root.
 This assumes you have a database available, keycloak running, and the necessary configurations. We now require an 
 OTEL endpoint, along with neo4j and kafka (but these are optional).:
 
-./ops/local/run-sentrius.sh
+    ./ops/local/run-sentrius.sh
 
 It is simpler to run a kubernetes deployment, which is described in the Deployment. To do this, build as you would 
 above.
