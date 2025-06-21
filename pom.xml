@@ -40,7 +40,7 @@
     <guava-version>33.3.1-jre</guava-version>
     <okhttp-version>4.10.0</okhttp-version>
     <jackson-dataformat-xml-version>2.18.2</jackson-dataformat-xml-version>
-    <postgresql-version>42.7.4</postgresql-version>
+    <postgresql-version>42.7.7</postgresql-version>
     <!--<mockito.version>5.10.0</mockito.version> -->
     <keycloak-version>25.0.3</keycloak-version>
     <caffeine-version>3.2.0</caffeine-version>
