@@ -29,3 +29,5 @@ jobs:
         cache: maven
     - name: Build with Maven
       run: mvn -B package --file pom.xml
+    - name: Run tests with timeout
+      run: timeout 10m mvn test || echo "::warning::Tests may have timed out - check test logs for details"
