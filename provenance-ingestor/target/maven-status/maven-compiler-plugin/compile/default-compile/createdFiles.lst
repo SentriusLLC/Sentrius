@@ -1,3 +1,3 @@
 io/sentrius/sso/provenance/ProvenanceEventConsumer.class
-io/sentrius/sso/provenance/ProvenanceIngestor.class
 io/sentrius/sso/provenance/neo4j/Neo4jProvenanceIngestor.class
+io/sentrius/sso/provenance/ProvenanceIngestor.class
