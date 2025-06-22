@@ -136,6 +136,30 @@ You are welcome to run the core and api modules separately, as needed. You can s
     cd api
     mvn spring-boot:run
 
+## Testing
+
+### CI/CD Testing
+
+Sentrius includes comprehensive CI/CD testing for Helm charts and Java builds:
+
+- **Automated testing** runs on every push and pull request via GitHub Actions
+- **Helm chart validation** including linting, template rendering, and schema validation
+- **Integration testing** with Kubernetes clusters for deployment validation
+
+### Local Testing
+
+Test Helm charts locally before deployment:
+
+    # Test all charts
+    ./ops-scripts/test-helm-charts.sh
+    
+    # Test specific aspects
+    ./ops-scripts/test-helm-charts.sh lint      # Lint charts
+    ./ops-scripts/test-helm-charts.sh template  # Test rendering
+    ./ops-scripts/test-helm-charts.sh config    # Test configurations
+
+For detailed testing documentation, see [docs/helm-testing.md](docs/helm-testing.md).
+
 Build the Project
 
 Sentrius uses Maven for its build process. Ensure Maven is installed and then run:

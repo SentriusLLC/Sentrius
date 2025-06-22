@@ -1,8 +1,8 @@
 io/sentrius/sso/genai/Response$Choice.class
-io/sentrius/sso/genai/model/Conversation.class
 io/sentrius/sso/genai/model/Conversation$ConversationBuilder.class
-io/sentrius/sso/genai/Message.class
+io/sentrius/sso/genai/model/Conversation.class
 io/sentrius/sso/genai/model/ApiEndPointRequest$ApiEndPointRequestBuilder.class
+io/sentrius/sso/genai/Message.class
 io/sentrius/sso/genai/Response.class
 io/sentrius/sso/genai/model/TwoPartyRequest.class
 io/sentrius/sso/genai/model/endpoints/RawConversationRequest$RawConversationRequestBuilderImpl.class
