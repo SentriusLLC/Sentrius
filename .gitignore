@@ -55,6 +55,8 @@ llm-core/target/
 node/*
 node_modules/*
 api/node_modules/*
+package-lock.json
+*/package-lock.json
 #api/src/main/resources/static/node/*
 .idea/*
 *.iml
