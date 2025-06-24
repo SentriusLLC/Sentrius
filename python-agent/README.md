@@ -24,7 +24,6 @@ The Python agent mirrors the Java agent architecture with these key components:
 
 ### Agent Framework
 - **BaseAgent**: Abstract base class for all agents
-- **SQLAgent**: Example implementation for SQL operations
 
 ## Configuration
 
@@ -65,14 +64,8 @@ AGENT_HEARTBEAT_INTERVAL=30
 
 ## Usage
 
-### Running the SQL Agent
-```bash
-# With configuration file
-python main.py sql_agent --config config.yaml
-
-# With default configuration (uses environment variables)
-python main.py sql_agent
-```
+### Agent Framework
+The Python agent provides a framework for creating custom agents that integrate with the Sentrius platform. All agents interact through APIs using JWT authentication, working with DTOs from the API and the LLM proxy.
 
 ### Creating Custom Agents
 ```python
@@ -84,10 +77,26 @@ class MyCustomAgent(BaseAgent):
     
     def execute_task(self):
         # Your custom agent logic here
+        # Note: All data access is through Sentrius APIs, not direct database connections
         self.submit_provenance(
             event_type="CUSTOM_TASK",
             details={"task": "custom_operation"}
         )
+        
+    def run(self):
+        # Start the agent lifecycle
+        self.start()
+        self.execute_task()
+        self.stop()
+```
+
+### Running Custom Agents
+```bash
+# With configuration file
+python -c "from my_agent import MyCustomAgent; agent = MyCustomAgent('config.yaml'); agent.run()"
+
+# With environment variables
+python -c "from my_agent import MyCustomAgent; agent = MyCustomAgent(); agent.run()"
 ```
 
 ## API Operations
@@ -115,7 +124,8 @@ The Python agent supports all the same API operations as the Java agent:
 - `PyJWT`: JWT token handling
 - `cryptography`: RSA key generation and encryption
 - `pyyaml`: YAML configuration parsing
-- `langchain`: LLM integration (for SQL agent)
+
+Note: The Python agent accesses data through Sentrius APIs using DTOs and the LLM proxy, not through direct database connections.
 
 ## Installation
 
