@@ -27,7 +27,55 @@ The Python agent mirrors the Java agent architecture with these key components:
 
 ## Configuration
 
-### YAML Configuration
+The Python agent supports multiple configuration approaches, similar to the Java agent:
+
+### Properties-based Configuration (Recommended)
+
+Similar to the Java agent's `application.properties`, you can use a properties file that references agent-specific YAML files:
+
+**application.properties:**
+```properties
+# Keycloak Configuration
+keycloak.realm=sentrius
+keycloak.base-url=${KEYCLOAK_BASE_URL:http://localhost:8180}
+keycloak.client-id=${KEYCLOAK_CLIENT_ID:python-agents}
+keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET:your-client-secret}
+
+# Agent Configuration
+agent.name.prefix=python-agent
+agent.type=python
+agent.callback.url=${AGENT_CALLBACK_URL:http://localhost:8093}
+agent.api.url=${AGENT_API_URL:http://localhost:8080/}
+
+# Agent Definitions - these reference YAML files that define agent behavior
+agent.chat.helper.config=chat-helper.yaml
+agent.chat.helper.enabled=true
+
+agent.data.analyst.config=data-analyst.yaml
+agent.data.analyst.enabled=false
+```
+
+**chat-helper.yaml:**
+```yaml
+description: "Agent that handles chat interactions and provides helpful responses via OpenAI integration."
+context: |
+  You are a helpful agent that is responding to users via a chat interface. Please respond to the user in a friendly and helpful manner.
+  Return responses in the following format:
+  {
+    "previousOperation": "<previousOperation>",
+    "nextOperation": "<nextOperation>",
+    "terminalSummaryForLLM": "<Summary of the terminal thus far for the next LLM assessment>",
+    "responseForUser": "<Response to the user>"
+  }
+```
+
+### Environment Variable Substitution
+
+Properties support environment variable substitution using the `${VARIABLE:default}` syntax:
+- `${KEYCLOAK_BASE_URL:http://localhost:8180}` - Uses `KEYCLOAK_BASE_URL` env var or defaults to `http://localhost:8180`
+- `${KEYCLOAK_CLIENT_ID:python-agents}` - Uses `KEYCLOAK_CLIENT_ID` env var or defaults to `python-agents`
+
+### Legacy YAML Configuration
 ```yaml
 keycloak:
   server_url: "http://localhost:8080"
@@ -64,6 +112,35 @@ AGENT_HEARTBEAT_INTERVAL=30
 
 ## Usage
 
+### Running Agents
+
+#### With Properties Configuration
+```bash
+# Run chat helper agent using default application.properties
+python main.py chat-helper
+
+# Run with custom configuration file
+python main.py chat-helper --config my-app.properties
+
+# Run with task data
+python main.py chat-helper --task-data '{"message": "Hello, how can you help?"}'
+
+# Test mode (no external services)
+TEST_MODE=true python main.py chat-helper
+```
+
+#### Environment Variable Configuration
+```bash
+# Set environment variables
+export KEYCLOAK_BASE_URL=http://localhost:8180
+export KEYCLOAK_CLIENT_ID=python-agents
+export KEYCLOAK_CLIENT_SECRET=your-secret
+export TEST_MODE=false
+
+# Run agent
+python main.py chat-helper
+```
+
 ### Agent Framework
 The Python agent provides a framework for creating custom agents that integrate with the Sentrius platform. All agents interact through APIs using JWT authentication, working with DTOs from the API and the LLM proxy.
 
@@ -72,31 +149,54 @@ The Python agent provides a framework for creating custom agents that integrate 
 from agents.base import BaseAgent
 
 class MyCustomAgent(BaseAgent):
-    def __init__(self, config_path=None):
-        super().__init__("My Custom Agent", config_path=config_path)
+    def __init__(self, config_manager):
+        super().__init__(config_manager, name="my-custom-agent")
+        # Load agent-specific configuration
+        self.agent_definition = config_manager.get_agent_definition('my.custom')
     
-    def execute_task(self):
+    def execute_task(self, task_data=None):
         # Your custom agent logic here
         # Note: All data access is through Sentrius APIs, not direct database connections
         self.submit_provenance(
             event_type="CUSTOM_TASK",
-            details={"task": "custom_operation"}
+            details={"task": "custom_operation", "data": task_data}
         )
         
-    def run(self):
-        # Start the agent lifecycle
-        self.start()
-        self.execute_task()
-        self.stop()
+        # Return structured response
+        return {
+            "status": "completed",
+            "result": "Custom task executed successfully"
+        }
+```
+
+**my-custom.yaml:**
+```yaml
+description: "Custom agent that performs specialized tasks"
+context: |
+  You are a custom agent designed to handle specific business logic.
+  Process requests according to your specialized capabilities.
+```
+
+**Add to application.properties:**
+```properties
+agent.my.custom.config=my-custom.yaml
+agent.my.custom.enabled=true
 ```
 
 ### Running Custom Agents
-```bash
-# With configuration file
-python -c "from my_agent import MyCustomAgent; agent = MyCustomAgent('config.yaml'); agent.run()"
+```python
+# Add to main.py AVAILABLE_AGENTS dict
+from agents.my_custom.my_custom_agent import MyCustomAgent
 
-# With environment variables
-python -c "from my_agent import MyCustomAgent; agent = MyCustomAgent(); agent.run()"
+AVAILABLE_AGENTS = {
+    'chat-helper': ChatHelperAgent,
+    'my-custom': MyCustomAgent,  # Add your agent here
+}
+```
+
+```bash
+# Run your custom agent
+python main.py my-custom --task-data '{"operation": "process_data"}'
 ```
 
 ## API Operations
