@@ -6,15 +6,15 @@ Sentrius is zero trust (and if you want AI assisted) management system. to prote
 into several maven projects. Currently we only support SSH, but RDP is in the works. Agents can be leveraged to monitor and control SSH sessions, ensuring that all connections are secure and compliant with your organization's policies.
 sub-projects:
 
-    core – Handles the core functionalities (e.g., SSH session management, RDP, zero trust policy enforcement).
+    core – Handles the core functionalities (e.g., SSH session management, zero trust policy enforcement).
     api – Provides a RESTful API layer to interface with the core module.
-    dataplane -- offers dataplane functionality for secure data transfer and processing.
-    llm-proxy -- A proxy service that integrates with large language models (LLMs) to enhance security and compliance in SSH sessions.
-    llm-dataplane -- A data processing layer that leverages LLMs for advanced analysis and decision-making in SSH 
-sessions.
-    ops-scripts -- Contains operational scripts for deployment and management tasks.
-    ai-agent -- java based agent to monitor and control the ssh sessions.
-    python-agent -- python based agent to monitor and control the ssh sessions and act on behalf of user  (TBD).
+    dataplane – Offers dataplane functionality for secure data transfer and processing.
+    llm-proxy – A proxy service that integrates with large language models (LLMs) to enhance security and compliance in SSH sessions.
+    llm-dataplane – A data processing layer that leverages LLMs for advanced analysis and decision-making in SSH sessions.
+    ops-scripts – Contains operational scripts for deployment and management tasks.
+    ai-agent – Java-based intelligent agent framework for monitoring and controlling SSH sessions.
+    agent-launcher – Service for dynamically launching and managing agents.
+    python-agent – Python-based agent framework for SSH session monitoring and user assistance.
 
 Internally, Sentrius may still be referenced by its former name, SSO (SecureShellOps), in certain scripts or configurations.
 Table of Contents
@@ -25,9 +25,11 @@ Table of Contents
     Installation
     Configuration
     Running Sentrius
+    Helm Chart Deployment
+    Testing
+    Custom Agents
     Usage
     API Documentation
-    Deployment to Google Kubernetes Engine (GKE)
     Contributing
     License
     Contact
@@ -210,29 +212,308 @@ SSH Settings
 
 Feel free to structure your configs based on your environment (dev/test/prod). For large-scale deployments, we recommend using a secure secrets manager (HashiCorp Vault, AWS Secrets Manager, etc.) to avoid storing sensitive information in plain text.
 
+## Helm Chart Deployment
 
-Sentrius can be containerized and deployed to a Kubernetes cluster. You can use the provided Helm script in ops-scripts/gcp/deploy-helm.sh to manage the deployment.
+Sentrius provides comprehensive Helm charts for Kubernetes deployment across multiple environments. There are two main charts available:
 
-    Build Docker Image (if needed)
-    Make sure to build and tag your Docker image, then push it to a container registry accessible by GKE (e.g., Google Container Registry).
+### Available Charts
 
-    Configure GKE
-    Ensure you are logged into your Google Cloud account and have set the correct context for your GKE cluster.
+1. **sentrius-chart** - Complete Sentrius deployment with all services
+2. **sentrius-chart-launcher** - Lightweight chart focused on the launcher service
 
-    Run the Helm Deployment Script
-    From the project root (or from ops-scripts/gcp), run:
+### Quick Start
 
-    ./ops-scripts/gcp/deploy-helm.sh <helm-release-name> <gcp-project-id> <any-other-key-or-params>
+#### Local Deployment
 
-        <helm-release-name> is the name you want to assign to the Helm release in your cluster.
-        <gcp-project-id> is your Google Cloud Platform project ID.
-        You may supply additional parameters (keys, environment variables, or overrides) as needed.
+```bash
+# Build all images
+./build-images.sh --all --no-cache
 
-This script will:
+# Deploy to local Kubernetes cluster
+./ops-scripts/local/deploy-helm.sh
 
-    Deploy the required Kubernetes resources (Deployments, Services, etc.) for both core and api modules.
-    Apply zero trust security rules configuration as specified.
-    Expose the api service, typically via a LoadBalancer or an Ingress (depending on your Helm chart configuration).
+# Forward ports for local access
+kubectl port-forward -n dev service/sentrius-sentrius 8080:8080
+kubectl port-forward -n dev service/sentrius-keycloak 8081:8081
+```
+
+Add to `/etc/hosts` for local development:
+```
+127.0.0.1 sentrius-sentrius
+127.0.0.1 sentrius-keycloak
+```
+
+#### GCP/GKE Deployment
+
+```bash
+# Deploy to GKE cluster
+./ops-scripts/gcp/deploy-helm.sh <helm-release-name> <gcp-project-id> <any-other-params>
+```
+
+### Chart Configuration
+
+#### Key Configuration Options
+
+**Environment Settings:**
+- `environment`: Set to "local", "gke", "aws", or "azure"
+- `tenant`: Your tenant identifier
+- `subdomain`: Domain for your deployment
+
+**Core Services:**
+- `sentrius.image.repository`: Core Sentrius image repository
+- `llmproxy.image.repository`: LLM proxy image repository
+- `postgres.storageSize`: Database storage allocation
+
+**Ingress Configuration:**
+```yaml
+ingress:
+  enabled: true
+  class: "nginx"  # or "gce" for GKE
+  tlsEnabled: true
+  annotations:
+    gke:
+      kubernetes.io/ingress.class: gce
+      networking.gke.io/managed-certificates: wildcard-cert
+```
+
+**Agent Configuration:**
+```yaml
+sentriusagent:
+  image:
+    repository: sentrius-agent
+  oauth2:
+    client_id: java-agents
+    client_secret: your-secret
+
+sentriusaiagent:
+  image:
+    repository: sentrius-ai-agent
+  oauth2:
+    client_id: java-agents
+```
+
+#### Custom Values Example
+
+Create a `my-values.yaml` file:
+```yaml
+environment: "gke"
+tenant: "my-company"
+subdomain: "my-company.sentrius.cloud"
+
+sentrius:
+  image:
+    repository: "my-registry/sentrius"
+    tag: "v1.0.0"
+
+postgres:
+  storageSize: "20Gi"
+
+ingress:
+  enabled: true
+  tlsEnabled: true
+  class: "gce"
+```
+
+Deploy with custom values:
+```bash
+helm install my-sentrius sentrius-chart -f my-values.yaml
+```
+
+### Multi-Environment Support
+
+The charts support multiple deployment environments with different configurations:
+
+**Local Development:**
+- Uses NodePort services
+- Minimal resource requirements
+- In-memory storage options
+
+**GKE (Google Cloud):**
+- Uses LoadBalancer services
+- Managed certificates
+- Persistent storage
+
+**AWS:**
+- ALB ingress support
+- EBS storage classes
+- AWS-specific annotations
+
+**Azure:**
+- Azure Load Balancer integration
+- Azure disk storage
+- Azure-specific networking
+
+### Helm Testing
+
+For comprehensive testing documentation including CI/CD testing, local testing, and troubleshooting, see [docs/helm-testing.md](docs/helm-testing.md).
+
+## Custom Agents
+
+Sentrius supports both Java and Python-based custom agents that can extend the platform's functionality for monitoring, automation, and user assistance.
+
+### Java Agents
+
+Java agents are built using the Spring Boot framework and integrate with the Sentrius ecosystem through the agent launcher service.
+
+#### Creating a Custom Java Agent
+
+1. **Create a new Spring Boot module** following the pattern of existing agents:
+   ```
+   my-custom-agent/
+   ├── src/main/java/
+   │   └── io/sentrius/agent/mycustom/
+   │       ├── MyCustomAgent.java
+   │       └── MyCustomAgentConfig.java
+   └── pom.xml
+   ```
+
+2. **Implement the Agent Interface:**
+   ```java
+   @Component
+   @ConditionalOnProperty(name = "agents.mycustom.enabled", havingValue = "true")
+   public class MyCustomAgent implements ApplicationListener<ApplicationReadyEvent> {
+       
+       @Autowired
+       private AgentService agentService;
+       
+       @Override
+       public void onApplicationEvent(ApplicationReadyEvent event) {
+           // Register agent and start processing
+           agentService.register(this);
+       }
+   }
+   ```
+
+3. **Configuration Properties:**
+   ```java
+   @ConfigurationProperties(prefix = "agents.mycustom")
+   @Data
+   public class MyCustomAgentConfig {
+       private boolean enabled = false;
+       private String name = "my-custom-agent";
+       private String description = "Custom agent for specialized tasks";
+   }
+   ```
+
+4. **Add to application.properties:**
+   ```properties
+   agents.mycustom.enabled=true
+   agents.mycustom.name=my-custom-agent
+   agents.mycustom.description=Custom agent for specialized tasks
+   ```
+
+5. **Deploy with Helm Chart:**
+   ```yaml
+   # Add to values.yaml
+   mycustomagent:
+     image:
+       repository: my-custom-agent
+       tag: latest
+     oauth2:
+       client_id: java-agents
+       client_secret: your-secret
+   ```
+
+#### Java Agent Features
+
+- **Zero Trust Integration**: Automatic ZTAT (Zero Trust Access Token) handling
+- **Provenance Tracking**: Built-in event logging and audit trails
+- **LLM Integration**: Access to language models through the LLM proxy
+- **Session Monitoring**: Real-time SSH session monitoring capabilities
+- **RESTful APIs**: Full access to Sentrius APIs and data
+
+### Python Agents
+
+Python agents provide a flexible framework for creating custom automation and user assistance tools.
+
+#### Creating a Custom Python Agent
+
+1. **Set up the agent structure:**
+   ```python
+   # agents/my_custom/my_custom_agent.py
+   from agents.base import BaseAgent
+
+   class MyCustomAgent(BaseAgent):
+       def __init__(self, config_manager):
+           super().__init__(config_manager, name="my-custom-agent")
+           self.agent_definition = config_manager.get_agent_definition('my.custom')
+       
+       def execute_task(self, task_data=None):
+           # Your custom logic here
+           self.submit_provenance(
+               event_type="CUSTOM_TASK",
+               details={"task": "custom_operation", "data": task_data}
+           )
+           
+           return {
+               "status": "completed",
+               "result": "Custom task executed successfully"
+           }
+   ```
+
+2. **Create agent configuration:**
+   ```yaml
+   # my-custom.yaml
+   description: "Custom agent that performs specialized tasks"
+   context: |
+     You are a custom agent designed to handle specific business logic.
+     Process requests according to your specialized capabilities.
+   ```
+
+3. **Add to application.properties:**
+   ```properties
+   agent.my.custom.config=my-custom.yaml
+   agent.my.custom.enabled=true
+   ```
+
+4. **Register in main.py:**
+   ```python
+   from agents.my_custom.my_custom_agent import MyCustomAgent
+
+   AVAILABLE_AGENTS = {
+       'chat-helper': ChatHelperAgent,
+       'my-custom': MyCustomAgent,  # Add your agent here
+   }
+   ```
+
+5. **Run your custom agent:**
+   ```bash
+   python main.py my-custom --task-data '{"operation": "process_data"}'
+   ```
+
+#### Python Agent Features
+
+- **API Integration**: Full access to Sentrius APIs using JWT authentication
+- **Configuration Management**: Support for properties files and YAML configurations
+- **LLM Proxy Access**: Integration with language models for AI-powered tasks
+- **Provenance Submission**: Automatic event tracking and audit logging
+- **Keycloak Authentication**: Built-in OAuth2/JWT token management
+
+#### Running Python Agents
+
+```bash
+# With properties configuration
+python main.py my-custom --config my-app.properties
+
+# With environment variables
+export KEYCLOAK_BASE_URL=http://localhost:8180
+export KEYCLOAK_CLIENT_ID=python-agents
+python main.py my-custom
+
+# Test mode (no external services)
+TEST_MODE=true python main.py my-custom
+```
+
+### Agent Development Best Practices
+
+1. **Authentication**: Always use proper OAuth2/JWT authentication
+2. **Provenance**: Submit detailed provenance events for audit trails
+3. **Error Handling**: Implement robust error handling and logging
+4. **Configuration**: Use environment-specific configurations
+5. **Testing**: Test agents in isolation before integration
+6. **Documentation**: Document agent capabilities and configuration options
+
+For detailed Python agent documentation, see [python-agent/README.md](python-agent/README.md).
 
 Contributing
 
