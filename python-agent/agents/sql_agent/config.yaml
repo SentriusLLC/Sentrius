@@ -1,0 +1,26 @@
+# SQL Agent Configuration
+# Sentrius Agent Configuration
+keycloak:
+  server_url: "http://localhost:8080"
+  realm: "sentrius"
+  client_id: "python-agent"
+  client_secret: "your-client-secret"
+
+agent:
+  name_prefix: "sql-agent"
+  agent_type: "python"
+  callback_url: "http://localhost:8081"
+  api_url: "http://localhost:8080"
+  heartbeat_interval: 30
+
+llm:
+  enabled: false
+  provider: "openai"
+  model: "gpt-3.5-turbo"
+  api_key: null
+  endpoint: null
+
+# SQL-specific configuration
+database_url: "postgresql://user:password@localhost:5432/database"
+questions_file: "agents/sql_agent/questions.yaml"
+model_name: "gpt-3.5-turbo"
