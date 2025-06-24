@@ -301,8 +301,8 @@ public class UserService {
      * @param userId The ID of the user.
      * @return The user object if found.
      */
-    public User getUser(Long userId) {
-        return userRepository.getById(userId);
+    public Optional<User> getUser(Long userId) {
+        return userRepository.findById(userId);
     }
 
     /**

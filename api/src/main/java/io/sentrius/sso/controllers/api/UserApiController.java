@@ -142,9 +142,19 @@ public class UserApiController extends BaseController {
             log.info("Deleting non-person entity user with id: {}", userId);
             String userIdStr = cryptoService.decrypt(userId);
             var usr = userService.getUserByUserid(userIdStr);
+            if (usr.getId() < 0) {
+                log.info("User with id {} is a system user and cannot be deleted", usr.getId());
+                return "redirect:/sso/v1/users/list?message=" + MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR);
+
+            }
             userService.deleteUser(usr.getId());
         } else {
             Long id = Long.parseLong(cryptoService.decrypt(userId));
+            if (id < 0) {
+                log.info("User with id {} is a system user and cannot be deleted", id);
+                return "redirect:/sso/v1/users/list?message=" +
+                    MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR);
+            }
             userService.deleteUser(id);
         }
         return "redirect:/sso/v1/users/list?message=" + MessagingUtil.getMessageId(MessagingUtil.USER_DELETE_SUCCESS);

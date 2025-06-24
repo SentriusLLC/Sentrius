@@ -237,17 +237,26 @@ export function switchToAgent(agentName,agentId, sessionId, agentHost) {
 
 export function sendMessage(event) {
     console.log("Send message event:", event);
-    if (event.key !== "Enter") return;
+    if (event.key !== "Enter"){
+        console.log("Key pressed is not Enter, ignoring.");
+        return;
+    }
 
     const input = document.getElementById("chat-input");
     const messageText = input.value.trim();
-    if (!messageText) return;
+    if (!messageText) {
+        console.log("Empty message, ignoring.");
+        return;
+    }
 
     const container = document.getElementById("chat-container");
     const agentId = container.dataset.agentId;
     const session = chatSessions.get(agentId);
     if (session) {
         session.send(messageText);
+    } else {
+        console.error("No active chat session found for agent:", agentId);
+        return;
     }
 
     input.value = "";

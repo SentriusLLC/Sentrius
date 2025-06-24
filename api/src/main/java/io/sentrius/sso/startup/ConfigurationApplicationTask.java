@@ -189,6 +189,8 @@ public class ConfigurationApplicationTask {
 
         // first we create the admin user, then the user types followed by all users
         sideEffects.addAll(createAdminUser(installConfiguration, action));
+        sideEffects.addAll(createSystemAdmin(installConfiguration, action));
+
 
         createSystemUser(installConfiguration);
 
@@ -681,7 +683,7 @@ public class ConfigurationApplicationTask {
                     }
                 }
                 if (action){
-                    user = userService.getUser(user.getId());
+                    user = userService.getUser(user.getId()).orElseThrow();
                     var definition = userDTO.getAtlpDefinition();
                     if (null != definition && !definition.isEmpty()) {
                     Optional<ATPLPolicyEntity> policy = policyList.stream()
@@ -809,7 +811,7 @@ public class ConfigurationApplicationTask {
                     }
                 }
                 if (action){
-                    user = userService.getUser(user.getId());
+                    user = userService.getUser(user.getId()).orElseThrow();
                     var definition = userDTO.getAtlpDefinition();
                     if (null != definition && !definition.isEmpty()) {
                         Optional<ATPLPolicyEntity> policy = policyList.stream()
@@ -863,6 +865,50 @@ public class ConfigurationApplicationTask {
                             userService.getUserType(UserType.createSuperUser());
                         if (type.isEmpty()){
                             type = Optional.of( userService.saveUserType(UserType.createSuperUser()) );
+                        }
+
+                        userService.addUscer(User.from(user, type.get()));
+                    } catch (NoSuchAlgorithmException e) {
+                        throw new RuntimeException(e);
+                    }
+
+                    // insert default admin user
+
+                }
+            }
+        );
+
+
+        return sideEffects;
+    }
+
+    @Transactional
+    public  List<SideEffect> createSystemAdmin(InstallConfiguration installConfiguration, boolean action) throws NoSuchAlgorithmException {
+
+        var user = installConfiguration.getSystemUser();
+
+        if (null == user) {
+            throw new IllegalStateException("Admin user not found in configuration");
+        }
+        List<SideEffect> sideEffects = new ArrayList<>();
+        userService.findByUsername("SYSTEM").ifPresentOrElse(
+            user1 -> {
+                // ignore
+            },
+            () -> {
+                sideEffects.add(SideEffect.builder().sideEffectDescription("Creating admin user " + user.getUsername()).type(
+                    SideEffectType.UPDATE_DATABASE).asset("Users").build());
+                if (action) {
+                    try {
+                        user.setUserId("SYSTEM");
+                        user.setPassword(userService.encodePassword(UUID.randomUUID().toString()));
+                        user.setAuthorizationType(UserType.createSystemAdmin().toDTO());
+                        user.setIdentityType(IdentityType.NON_PERSON_ENTITY.toString());
+
+                        var type =
+                            userService.getUserType(UserType.createSystemAdmin());
+                        if (type.isEmpty()){
+                            type = Optional.of( userService.saveUserType(UserType.createSystemAdmin()) );
                         }
 
                         userService.addUscer(User.from(user, type.get()));

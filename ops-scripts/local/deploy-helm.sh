@@ -61,6 +61,7 @@ helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${T
     --set sentriusNamespace=${TENANT} \
     --set keycloakFQDN=sentrius-keycloak.${TENANT}.svc.cluster.local \
     --set sentriusFQDN=sentrius-sentrius.${TENANT}.svc.cluster.local \
+    --set llmProxyFQDN=sentrius-llmproxy.${TENANT}.svc.cluster.local \
     --set subdomain="sentrius-sentrius" \
     --set keycloakSubdomain="sentrius-keycloak" \
     --set keycloakHostname="sentrius-keycloak:8081" \

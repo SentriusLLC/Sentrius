@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.sentrius.sso.core.dto.HostSystemDTO;
@@ -44,6 +45,14 @@ public class InstallConfiguration {
           .authorizationType(UserType.createSuperUser().toDTO())
           .username("admin")
           .password("changeme")
+          .build();
+
+  @Builder.Default
+  private UserDTO systemUser =
+      UserDTO.builder()
+          .authorizationType(UserType.createSystemAdmin().toDTO())
+          .username("SYSTEM")
+          .password(UUID.randomUUID().toString())
           .build();
 
   @Builder.Default private List<UserTypeDTO> userTypes = new ArrayList<>();
