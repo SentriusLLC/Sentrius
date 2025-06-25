@@ -9,8 +9,10 @@ subdomain: "{{ .Values.tenant }}.sentrius.cloud"
 keycloakSubdomain: "keycloak.{{ .Values.tenant }}.sentrius.cloud"
 keycloakHostname: "keycloak.{{ .Values.tenant }}.sentrius.cloud"
 keycloakDomain: "https://keycloak.{{ .Values.tenant }}.sentrius.cloud"
+keycloakInternalDomain: http://sentrius-keycloak:8081 # Internal cluster communication
 sentriusDomain: "https://{{ .Values.tenant }}.sentrius.cloud"
 launcherFQDN: sentrius-launcher-service.dev.svc.cluster.local
+
 
 
 certificates:

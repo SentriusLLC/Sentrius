@@ -118,6 +118,7 @@ if [[ "$ENABLE_TLS" == "true" ]]; then
     KEYCLOAK_SUBDOMAIN="keycloak-${TENANT}.local"
     KEYCLOAK_HOSTNAME="${KEYCLOAK_SUBDOMAIN}"
     KEYCLOAK_DOMAIN="https://${KEYCLOAK_SUBDOMAIN}"
+    KEYCLOAK_INTERNAL_DOMAIN="http://sentrius-keycloak:8081"  # Internal cluster communication
     SENTRIUS_DOMAIN="https://${SUBDOMAIN}"
     CERTIFICATES_ENABLED="true"
     INGRESS_TLS_ENABLED="true"
@@ -128,6 +129,7 @@ else
     KEYCLOAK_SUBDOMAIN="sentrius-keycloak"
     KEYCLOAK_HOSTNAME="sentrius-keycloak:8081"
     KEYCLOAK_DOMAIN="http://sentrius-keycloak:8081"
+    KEYCLOAK_INTERNAL_DOMAIN="http://sentrius-keycloak:8081"  # Same as external for HTTP
     SENTRIUS_DOMAIN="http://sentrius-sentrius:8080"
     CERTIFICATES_ENABLED="false"
     INGRESS_TLS_ENABLED="false"
@@ -185,6 +187,7 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set keycloakSubdomain="${KEYCLOAK_SUBDOMAIN}" \
     --set keycloakHostname="${KEYCLOAK_HOSTNAME}" \
     --set keycloakDomain="${KEYCLOAK_DOMAIN}" \
+    --set keycloakInternalDomain="${KEYCLOAK_INTERNAL_DOMAIN}" \
     --set sentriusDomain="${SENTRIUS_DOMAIN}" \
     --set certificates.enabled=${CERTIFICATES_ENABLED} \
     --set ingress.tlsEnabled=${INGRESS_TLS_ENABLED} \
@@ -218,6 +221,7 @@ helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${T
     --set keycloakSubdomain="${KEYCLOAK_SUBDOMAIN}" \
     --set keycloakHostname="${KEYCLOAK_HOSTNAME}" \
     --set keycloakDomain="${KEYCLOAK_DOMAIN}" \
+    --set keycloakInternalDomain="${KEYCLOAK_INTERNAL_DOMAIN}" \
     --set sentriusDomain="${SENTRIUS_DOMAIN}" \
     --set integrationproxy.image.repository="sentrius-llmproxy" \
     --set integrationproxy.image.pullPolicy="Never" \
