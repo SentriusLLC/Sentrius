@@ -145,6 +145,114 @@
         .checkbox-group input[type="checkbox"] {
             margin-right: 8px;
         }
+        
+        /* Endpoint Builder Styles */
+        .endpoint-builder {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 15px;
+        }
+        
+        .endpoint-rule {
+            background: #2b2b2b;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .endpoint-rule h6 {
+            color: #f8f9fa;
+            margin-bottom: 10px;
+        }
+        
+        .quick-templates {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        /* Trust Score Visual Enhancements */
+        .trust-score-preview {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+        
+        .score-indicator {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, #dc3545 0deg, #ffc107 72deg, #28a745 108deg, #28a745 360deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .score-bar {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: #1e1e1e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .score-text {
+            font-size: 24px;
+            font-weight: bold;
+            color: #f8f9fa;
+        }
+        
+        .weightings-container {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 15px;
+        }
+        
+        .weight-input-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .weight-slider {
+            flex: 1;
+        }
+        
+        .weight-number {
+            width: 80px;
+        }
+        
+        .weight-percentage {
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .weighting-total {
+            margin-top: 15px;
+            padding: 10px;
+            background: #2b2b2b;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .weight-total {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
     </style>
 </head>
 <body>
@@ -327,44 +435,120 @@
                                     </div>
                                 </div>
 
+                                <!-- Endpoint Access Management Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('endpoints')">
+                                        <h4><i class="fas fa-network-wired"></i> Endpoint Access Management</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-endpoints"></i>
+                                    </div>
+                                    <div class="section-content" id="endpoints">
+                                        <div class="form-group">
+                                            <label>Allowed Endpoints</label>
+                                            <div class="endpoint-builder">
+                                                <div id="endpoints-container">
+                                                    <!-- Dynamic endpoint rules will be added here -->
+                                                </div>
+                                                <button type="button" class="btn-add" onclick="addEndpointRule()">Add Endpoint Rule</button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-group mt-4">
+                                            <label>Quick Templates</label>
+                                            <div class="quick-templates">
+                                                <button type="button" class="btn btn-outline-info btn-sm me-2" onclick="addCommonEndpoints('web-server')">Web Server Endpoints</button>
+                                                <button type="button" class="btn btn-outline-info btn-sm me-2" onclick="addCommonEndpoints('api-service')">API Service Endpoints</button>
+                                                <button type="button" class="btn btn-outline-info btn-sm me-2" onclick="addCommonEndpoints('database')">Database Endpoints</button>
+                                                <button type="button" class="btn btn-outline-info btn-sm" onclick="addCommonEndpoints('admin')">Admin Endpoints</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <!-- Trust Score Section -->
                                 <div class="section-card">
                                     <div class="section-header" onclick="toggleSection('trust-score')">
-                                        <h4><i class="fas fa-chart-line"></i> Trust Score</h4>
+                                        <h4><i class="fas fa-chart-line"></i> Trust Score Configuration</h4>
                                         <i class="fas fa-chevron-down chevron" id="chevron-trust-score"></i>
                                     </div>
                                     <div class="section-content" id="trust-score">
-                                        <div class="form-group">
-                                            <label for="trust_score_minimum">Minimum Trust Score</label>
-                                            <input type="number" class="form-control" id="trust_score_minimum" name="trust_score.minimum" min="0" max="100">
-                                        </div>
-                                        <h5>Weightings</h5>
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <div class="form-group">
-                                                    <label for="weight_identity">Identity Weight</label>
-                                                    <input type="number" class="form-control" id="weight_identity" name="trust_score.weightings.identity" min="0" max="1" step="0.1">
+                                                    <label for="trust_score_minimum">Minimum Trust Score (0-100)</label>
+                                                    <input type="number" class="form-control" id="trust_score_minimum" name="trust_score.minimum" min="0" max="100" value="75">
+                                                    <small class="text-muted">Agents below this score will be denied access</small>
                                                 </div>
                                             </div>
                                             <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label for="weight_provenance">Provenance Weight</label>
-                                                    <input type="number" class="form-control" id="weight_provenance" name="trust_score.weightings.provenance" min="0" max="1" step="0.1">
+                                                <div class="trust-score-preview">
+                                                    <div class="score-indicator" id="score-indicator">
+                                                        <div class="score-bar" id="score-bar"></div>
+                                                        <span class="score-text" id="score-text">75</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label for="weight_runtime">Runtime Weight</label>
-                                                    <input type="number" class="form-control" id="weight_runtime" name="trust_score.weightings.runtime" min="0" max="1" step="0.1">
+                                        
+                                        <h5 class="mt-4">Component Weightings <small class="text-muted">(must total 1.0)</small></h5>
+                                        <div class="weightings-container">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="weight_identity">Identity Weight <span class="weight-percentage" id="identity-percentage">30%</span></label>
+                                                        <div class="weight-input-container">
+                                                            <input type="range" class="form-range weight-slider" id="weight_identity" name="trust_score.weightings.identity" min="0" max="1" step="0.05" value="0.3" oninput="updateWeightings()">
+                                                            <input type="number" class="form-control weight-number" value="0.3" min="0" max="1" step="0.05" onchange="syncSlider('weight_identity', this.value)">
+                                                        </div>
+                                                        <small class="text-muted">How much identity verification matters</small>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="weight_provenance">Provenance Weight <span class="weight-percentage" id="provenance-percentage">25%</span></label>
+                                                        <div class="weight-input-container">
+                                                            <input type="range" class="form-range weight-slider" id="weight_provenance" name="trust_score.weightings.provenance" min="0" max="1" step="0.05" value="0.25" oninput="updateWeightings()">
+                                                            <input type="number" class="form-control weight-number" value="0.25" min="0" max="1" step="0.05" onchange="syncSlider('weight_provenance', this.value)">
+                                                        </div>
+                                                        <small class="text-muted">How much code source verification matters</small>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label for="weight_behavior">Behavior Weight</label>
-                                                    <input type="number" class="form-control" id="weight_behavior" name="trust_score.weightings.behavior" min="0" max="1" step="0.1">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="weight_runtime">Runtime Weight <span class="weight-percentage" id="runtime-percentage">35%</span></label>
+                                                        <div class="weight-input-container">
+                                                            <input type="range" class="form-range weight-slider" id="weight_runtime" name="trust_score.weightings.runtime" min="0" max="1" step="0.05" value="0.35" oninput="updateWeightings()">
+                                                            <input type="number" class="form-control weight-number" value="0.35" min="0" max="1" step="0.05" onchange="syncSlider('weight_runtime', this.value)">
+                                                        </div>
+                                                        <small class="text-muted">How much runtime security matters</small>
+                                                    </div>
                                                 </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="weight_behavior">Behavior Weight <span class="weight-percentage" id="behavior-percentage">10%</span></label>
+                                                        <div class="weight-input-container">
+                                                            <input type="range" class="form-range weight-slider" id="weight_behavior" name="trust_score.weightings.behavior" min="0" max="1" step="0.05" value="0.1" oninput="updateWeightings()">
+                                                            <input type="number" class="form-control weight-number" value="0.1" min="0" max="1" step="0.05" onchange="syncSlider('weight_behavior', this.value)">
+                                                        </div>
+                                                        <small class="text-muted">How much past behavior matters</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="weighting-total">
+                                            Total Weight: <span id="total-weight" class="weight-total">1.00</span>
+                                            <span id="weight-warning" class="text-warning" style="display: none;">⚠ Weights should total 1.0</span>
+                                        </div>
+                                        
+                                        <div class="mt-3">
+                                            <h6>Quick Presets</h6>
+                                            <div class="preset-buttons">
+                                                <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="applyTrustPreset('balanced')">Balanced</button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="applyTrustPreset('security-focused')">Security Focused</button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="applyTrustPreset('identity-focused')">Identity Focused</button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="applyTrustPreset('behavior-focused')">Behavior Focused</button>
                                             </div>
                                         </div>
                                     </div>
@@ -438,10 +622,46 @@
                                 <div>
                                     <button type="button" class="btn btn-secondary" onclick="loadExistingPolicy()">Load Existing Policy</button>
                                     <button type="button" class="btn btn-warning" onclick="validatePolicy()">Validate</button>
+                                    <button type="button" class="btn btn-info" onclick="testEndpoint()">Test Endpoint</button>
                                 </div>
                                 <div>
                                     <button type="button" class="btn btn-success" onclick="savePolicy()">Save Policy</button>
                                     <button type="button" class="btn btn-primary" onclick="exportPolicy()">Export JSON</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Endpoint Testing Modal -->
+                            <div class="modal fade" id="endpointTestModal" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content bg-dark">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Test Endpoint Access</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="form-group">
+                                                <label for="test_method">HTTP Method</label>
+                                                <select class="form-control" id="test_method">
+                                                    <option value="GET">GET</option>
+                                                    <option value="POST">POST</option>
+                                                    <option value="PUT">PUT</option>
+                                                    <option value="DELETE">DELETE</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="test_path">Path</label>
+                                                <input type="text" class="form-control" id="test_path" placeholder="/api/v1/data">
+                                            </div>
+                                            <div id="test_result" class="mt-3" style="display: none;">
+                                                <h6>Test Result:</h6>
+                                                <div id="test_output" class="json-preview" style="max-height: 200px;"></div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            <button type="button" class="btn btn-primary" onclick="runEndpointTest()">Run Test</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -467,6 +687,7 @@
 <script>
     let primitiveCounter = 0;
     let composedCounter = 0;
+    let endpointCounter = 0;
 
     // Toggle section visibility
     function toggleSection(sectionId) {
@@ -568,6 +789,162 @@
     function removeComposed(button) {
         button.parentElement.remove();
         updatePreview();
+    }
+
+    // Add endpoint rule
+    function addEndpointRule() {
+        const container = document.getElementById('endpoints-container');
+        const endpointDiv = document.createElement('div');
+        endpointDiv.className = 'endpoint-rule';
+        endpointDiv.innerHTML = `
+            <h6>Endpoint Rule ${endpointCounter + 1}</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Method</label>
+                        <select class="form-control" name="endpoints[${endpointCounter}].method">
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="DELETE">DELETE</option>
+                            <option value="*">Any</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Path Pattern</label>
+                        <input type="text" class="form-control" name="endpoints[${endpointCounter}].path" placeholder="/api/v1/data/*">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label>Action</label>
+                        <select class="form-control" name="endpoints[${endpointCounter}].action">
+                            <option value="allow">Allow</option>
+                            <option value="deny">Deny</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <input type="text" class="form-control" name="endpoints[${endpointCounter}].description" placeholder="What this endpoint rule does">
+            </div>
+            <button type="button" class="btn-remove" onclick="removeEndpointRule(this)">Remove Rule</button>
+        `;
+        
+        container.appendChild(endpointDiv);
+        endpointCounter++;
+        updatePreview();
+    }
+
+    // Remove endpoint rule
+    function removeEndpointRule(button) {
+        button.parentElement.remove();
+        updatePreview();
+    }
+
+    // Add common endpoint templates
+    function addCommonEndpoints(template) {
+        const templates = {
+            'web-server': [
+                { method: 'GET', path: '/', action: 'allow', description: 'Home page' },
+                { method: 'GET', path: '/static/*', action: 'allow', description: 'Static assets' },
+                { method: 'GET', path: '/health', action: 'allow', description: 'Health check' }
+            ],
+            'api-service': [
+                { method: 'GET', path: '/api/v1/*', action: 'allow', description: 'API endpoints' },
+                { method: 'POST', path: '/api/v1/*', action: 'allow', description: 'API creation' },
+                { method: 'GET', path: '/docs', action: 'allow', description: 'API documentation' }
+            ],
+            'database': [
+                { method: 'GET', path: '/api/v1/query', action: 'allow', description: 'Database queries' },
+                { method: 'POST', path: '/api/v1/query', action: 'allow', description: 'Database operations' },
+                { method: '*', path: '/admin/*', action: 'deny', description: 'Block admin access' }
+            ],
+            'admin': [
+                { method: 'GET', path: '/admin/dashboard', action: 'allow', description: 'Admin dashboard' },
+                { method: 'POST', path: '/admin/config', action: 'allow', description: 'Configuration updates' },
+                { method: 'DELETE', path: '/admin/*', action: 'deny', description: 'Block dangerous operations' }
+            ]
+        };
+
+        const rules = templates[template] || [];
+        rules.forEach(rule => {
+            addEndpointRule();
+            const containers = document.querySelectorAll('#endpoints-container .endpoint-rule');
+            const container = containers[containers.length - 1];
+            
+            container.querySelector('select[name*=".method"]').value = rule.method;
+            container.querySelector('input[name*=".path"]').value = rule.path;
+            container.querySelector('select[name*=".action"]').value = rule.action;
+            container.querySelector('input[name*=".description"]').value = rule.description;
+        });
+        
+        updatePreview();
+    }
+
+    // Update trust score weightings
+    function updateWeightings() {
+        const identity = parseFloat(document.getElementById('weight_identity').value);
+        const provenance = parseFloat(document.getElementById('weight_provenance').value);
+        const runtime = parseFloat(document.getElementById('weight_runtime').value);
+        const behavior = parseFloat(document.getElementById('weight_behavior').value);
+        
+        // Update percentage displays
+        document.getElementById('identity-percentage').textContent = Math.round(identity * 100) + '%';
+        document.getElementById('provenance-percentage').textContent = Math.round(provenance * 100) + '%';
+        document.getElementById('runtime-percentage').textContent = Math.round(runtime * 100) + '%';
+        document.getElementById('behavior-percentage').textContent = Math.round(behavior * 100) + '%';
+        
+        // Update corresponding number inputs
+        const sliders = document.querySelectorAll('.weight-slider');
+        const numbers = document.querySelectorAll('.weight-number');
+        sliders.forEach((slider, index) => {
+            numbers[index].value = slider.value;
+        });
+        
+        // Calculate total
+        const total = identity + provenance + runtime + behavior;
+        document.getElementById('total-weight').textContent = total.toFixed(2);
+        
+        // Show warning if not equal to 1.0
+        const warning = document.getElementById('weight-warning');
+        if (Math.abs(total - 1.0) > 0.01) {
+            warning.style.display = 'inline';
+            document.getElementById('total-weight').style.color = '#ffc107';
+        } else {
+            warning.style.display = 'none';
+            document.getElementById('total-weight').style.color = '#28a745';
+        }
+        
+        updatePreview();
+    }
+
+    // Sync slider with number input
+    function syncSlider(sliderId, value) {
+        document.getElementById(sliderId).value = value;
+        updateWeightings();
+    }
+
+    // Apply trust score presets
+    function applyTrustPreset(preset) {
+        const presets = {
+            'balanced': { identity: 0.25, provenance: 0.25, runtime: 0.25, behavior: 0.25 },
+            'security-focused': { identity: 0.15, provenance: 0.15, runtime: 0.6, behavior: 0.1 },
+            'identity-focused': { identity: 0.5, provenance: 0.2, runtime: 0.2, behavior: 0.1 },
+            'behavior-focused': { identity: 0.2, provenance: 0.2, runtime: 0.2, behavior: 0.4 }
+        };
+        
+        const config = presets[preset];
+        if (config) {
+            document.getElementById('weight_identity').value = config.identity;
+            document.getElementById('weight_provenance').value = config.provenance;
+            document.getElementById('weight_runtime').value = config.runtime;
+            document.getElementById('weight_behavior').value = config.behavior;
+            updateWeightings();
+        }
     }
 
     // Convert FormData to proper policy object
@@ -680,6 +1057,11 @@
             if (policy.capabilities.composed) {
                 policy.capabilities.composed = Object.values(policy.capabilities.composed).filter(c => c && c.id);
             }
+        }
+
+        // Convert arrays for endpoints
+        if (policy.endpoints) {
+            policy.endpoints = Object.values(policy.endpoints).filter(e => e && e.path);
         }
 
         return policy;
@@ -946,6 +1328,61 @@
         }
     }
 
+    // Test endpoint access
+    function testEndpoint() {
+        const policy = formDataToPolicyObject();
+        if (!policy.policy_id) {
+            alert('Please set a policy ID first.');
+            return;
+        }
+        
+        // Show the modal (assuming Bootstrap 5)
+        const modal = new bootstrap.Modal(document.getElementById('endpointTestModal'));
+        modal.show();
+    }
+
+    // Run endpoint test
+    function runEndpointTest() {
+        try {
+            const policy = formDataToPolicyObject();
+            const method = document.getElementById('test_method').value;
+            const path = document.getElementById('test_path').value;
+            
+            if (!path) {
+                alert('Please enter a path to test.');
+                return;
+            }
+            
+            const testRequest = {
+                policy_id: policy.policy_id,
+                method: method,
+                path: path
+            };
+            
+            const csrfToken = document.getElementById('csrf-token').textContent;
+            
+            fetch('/api/v1/policies/test-endpoint', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify(testRequest)
+            })
+            .then(response => response.json())
+            .then(result => {
+                document.getElementById('test_result').style.display = 'block';
+                document.getElementById('test_output').textContent = JSON.stringify(result, null, 2);
+            })
+            .catch(error => {
+                document.getElementById('test_result').style.display = 'block';
+                document.getElementById('test_output').textContent = 'Error: ' + error.message;
+            });
+        } catch (error) {
+            alert('Error testing endpoint: ' + error.message);
+        }
+    }
+
     // Load existing policy
     function loadExistingPolicy() {
         const input = document.createElement('input');
@@ -988,6 +1425,14 @@
         const form = document.getElementById('atpl-form');
         form.addEventListener('input', updatePreview);
         form.addEventListener('change', updatePreview);
+        
+        // Initialize trust score controls
+        updateWeightings();
+        
+        // Add listener for trust score minimum changes
+        document.getElementById('trust_score_minimum').addEventListener('input', function() {
+            document.getElementById('score-text').textContent = this.value;
+        });
         
         // Initial preview update
         updatePreview();

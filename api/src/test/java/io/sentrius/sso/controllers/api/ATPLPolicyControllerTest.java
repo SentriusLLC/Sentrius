@@ -3,6 +3,7 @@ package io.sentrius.sso.controllers.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.trust.ATPLPolicy;
+import io.sentrius.sso.core.trust.CapabilitySet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -67,9 +69,15 @@ class ATPLPolicyControllerTest {
 
     @Test
     void validateValidPolicyReturnsSuccess() {
+        CapabilitySet capabilities = CapabilitySet.builder()
+            .primitives(List.of())
+            .composed(List.of())
+            .build();
+            
         ATPLPolicy validPolicy = ATPLPolicy.builder()
             .version("v0")
             .policyId("test-policy")
+            .capabilities(capabilities)
             .build();
 
         ResponseEntity<?> result = controller.validatePolicy(validPolicy);

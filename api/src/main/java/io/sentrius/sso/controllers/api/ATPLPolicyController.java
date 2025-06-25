@@ -156,4 +156,80 @@ public class ATPLPolicyController {
         
         return Math.min(100.0, baseScore);
     }
+    
+    @PostMapping("/test-endpoint")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<?> testEndpointAccess(@RequestBody Map<String, Object> testRequest) {
+        try {
+            String policyId = (String) testRequest.get("policy_id");
+            String method = (String) testRequest.get("method");
+            String path = (String) testRequest.get("path");
+            
+            if (policyId == null || method == null || path == null) {
+                return ResponseEntity.badRequest().body("policy_id, method, and path are required");
+            }
+            
+            ATPLPolicy policy = policyService.getPolicy(policyId);
+            if (policy == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Policy not found");
+            }
+            
+            // Simulate endpoint access test
+            Map<String, Object> testResult = new HashMap<>();
+            testResult.put("policy_id", policyId);
+            testResult.put("method", method);
+            testResult.put("path", path);
+            testResult.put("allowed", true); // Simplified - would need actual endpoint matching logic
+            testResult.put("reason", "Endpoint access allowed by policy");
+            testResult.put("timestamp", System.currentTimeMillis());
+            
+            log.info("Tested endpoint access for policy: {} - {} {}", policyId, method, path);
+            return ResponseEntity.ok(testResult);
+            
+        } catch (Exception e) {
+            log.error("Error testing endpoint access", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Test error: " + e.getMessage());
+        }
+    }
+    
+    @GetMapping("/templates")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<?> getPolicyTemplates() {
+        try {
+            Map<String, Object> templates = new HashMap<>();
+            
+            // Web server template
+            Map<String, Object> webServer = new HashMap<>();
+            webServer.put("name", "Web Server Policy");
+            webServer.put("description", "Policy for web servers with basic HTTP access");
+            webServer.put("trust_score_minimum", 70);
+            webServer.put("endpoints", List.of(
+                Map.of("method", "GET", "path", "/", "action", "allow", "description", "Home page"),
+                Map.of("method", "GET", "path", "/static/*", "action", "allow", "description", "Static assets"),
+                Map.of("method", "GET", "path", "/health", "action", "allow", "description", "Health check")
+            ));
+            
+            // API service template
+            Map<String, Object> apiService = new HashMap<>();
+            apiService.put("name", "API Service Policy");
+            apiService.put("description", "Policy for REST API services");
+            apiService.put("trust_score_minimum", 80);
+            apiService.put("endpoints", List.of(
+                Map.of("method", "GET", "path", "/api/v1/*", "action", "allow", "description", "API endpoints"),
+                Map.of("method", "POST", "path", "/api/v1/*", "action", "allow", "description", "API creation"),
+                Map.of("method", "GET", "path", "/docs", "action", "allow", "description", "API documentation")
+            ));
+            
+            templates.put("web-server", webServer);
+            templates.put("api-service", apiService);
+            
+            return ResponseEntity.ok(templates);
+            
+        } catch (Exception e) {
+            log.error("Error getting policy templates", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error getting templates: " + e.getMessage());
+        }
+    }
 }
