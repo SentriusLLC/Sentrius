@@ -40,7 +40,7 @@ if [[ -z "$TENANT" ]]; then
     exit 1
 fi
 
-# Function to check if cert-manager is installed
+# Function to check if cert-manager is installed and ready
 check_cert_manager() {
     echo "Checking if cert-manager is installed..."
     
@@ -61,6 +61,10 @@ check_cert_manager() {
                 echo "ERROR: cert-manager installation timed out"
                 exit 1
             fi
+            
+            # Wait for cert-manager CRDs to be available
+            echo "Waiting for cert-manager CRDs to be ready..."
+            wait_for_cert_manager_crds
             echo "cert-manager installed successfully ✓"
         else
             echo "ERROR: cert-manager is not installed in your cluster."
@@ -85,7 +89,52 @@ check_cert_manager() {
         fi
         
         echo "cert-manager is installed ✓"
+        
+        # Even if cert-manager is installed, make sure CRDs and webhook are ready
+        echo "Verifying cert-manager CRDs and webhook are ready..."
+        wait_for_cert_manager_crds
     fi
+}
+
+# Function to wait for cert-manager CRDs and webhook to be ready
+wait_for_cert_manager_crds() {
+    local max_attempts=30
+    local attempt=1
+    
+    while [[ $attempt -le $max_attempts ]]; do
+        # Check if Certificate CRD is available and webhook is ready
+        if kubectl get crd certificates.cert-manager.io >/dev/null 2>&1 && \
+           kubectl get crd clusterissuers.cert-manager.io >/dev/null 2>&1; then
+            
+            # Test if we can actually create cert-manager resources by doing a dry-run
+            echo "Testing cert-manager webhook readiness..."
+            kubectl create --dry-run=server -o yaml - <<EOF >/dev/null 2>&1
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: test-issuer
+spec:
+  selfSigned: {}
+EOF
+            if [[ $? -eq 0 ]]; then
+                echo "cert-manager CRDs and webhook are ready ✓"
+                return 0
+            fi
+        fi
+        
+        echo "Waiting for cert-manager CRDs and webhook to be ready (attempt $attempt/$max_attempts)..."
+        sleep 10
+        ((attempt++))
+    done
+    
+    echo "ERROR: cert-manager CRDs or webhook are not ready after $((max_attempts * 10)) seconds"
+    echo "This may indicate an issue with cert-manager installation."
+    echo ""
+    echo "Try running these commands to check cert-manager status:"
+    echo "  kubectl get pods -n cert-manager"
+    echo "  kubectl logs -n cert-manager -l app.kubernetes.io/name=cert-manager"
+    echo "  kubectl get crd | grep cert-manager"
+    exit 1
 }
 
 # Configure TLS settings
