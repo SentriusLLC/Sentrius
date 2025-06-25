@@ -129,7 +129,13 @@ public class AgentService {
                         dtoBuilder.agentName(heartbeat.getAgentName());
                         var callback = callbackUrls.get(heartbeat.getAgentId());
                         if (callback != null) {
-                            dtoBuilder.agentCallback(callback);
+                            try {
+                            
+                            var encryptedCallback = cryptoService.encrypt(callback); // Ensure callback is decrypted
+                            dtoBuilder.agentCallback(encryptedCallback);
+                            } catch (GeneralSecurityException e) {
+                                throw new RuntimeException("Error encrypting callback URL", e);
+                            }
                         }
                     }
                     if (encryptId){

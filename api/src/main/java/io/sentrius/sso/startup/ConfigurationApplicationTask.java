@@ -683,16 +683,16 @@ public class ConfigurationApplicationTask {
                     }
                 }
                 if (action){
-                    user = userService.getUser(user.getId()).orElseThrow();
+                    var newUser = userService.getUser(user.getId());
                     var definition = userDTO.getAtlpDefinition();
                     if (null != definition && !definition.isEmpty()) {
                     Optional<ATPLPolicyEntity> policy = policyList.stream()
                         .filter(p -> p.getPolicyId().equals(definition))
                         .findFirst();
-                    if (policy.isPresent()) {
-                        atplPolicyService.assignPolicyToUser(user, policy.get());
+                    if (policy.isPresent() & newUser.isPresent()) {
+                        atplPolicyService.assignPolicyToUser(newUser.get(), policy.get());
                     } else {
-                        log.warn("No ATPL policy found for user {} with policy id {}", user.getUsername(),
+                        log.warn("No ATPL policy found for user {} with policy id {}", newUser.get().getUsername(),
                             definition);
                     }
                 }
@@ -811,16 +811,16 @@ public class ConfigurationApplicationTask {
                     }
                 }
                 if (action){
-                    user = userService.getUser(user.getId()).orElseThrow();
+                    var newUser = userService.getUser(user.getId());
                     var definition = userDTO.getAtlpDefinition();
                     if (null != definition && !definition.isEmpty()) {
                         Optional<ATPLPolicyEntity> policy = policyList.stream()
                             .filter(p -> p.getPolicyId().equals(definition))
                             .findFirst();
                         if (policy.isPresent()) {
-                            atplPolicyService.assignPolicyToUser(user, policy.get());
+                            atplPolicyService.assignPolicyToUser(newUser.get(), policy.get());
                         } else {
-                            log.warn("No ATPL policy found for user {} with policy id {}", user.getUsername(),
+                            log.warn("No ATPL policy found for user {} with policy id {}", newUser.get().getUsername(),
                                 definition);
                         }
                     }

@@ -73,7 +73,10 @@ class ChatSession {
 
 
         // Step 3: Open WebSocket with ZTAT token
-        const uri = `${phost}/api/v1/chat/attach/subscribe?sessionId=${encodeURIComponent(this.sessionId)}&chatGroupId=${this.chatGroupId}&ztat=${encodeURIComponent(jwt)}`;
+        //const uri = `${phost}/api/v1/chat/attach/subscribe?sessionId=${encodeURIComponent(this.sessionId)}&chatGroupId=${this.chatGroupId}&ztat=${encodeURIComponent(jwt)}`;
+        //const uri = `/api/v1/agents/ws/${encodeURIComponent(phost)}/${encodeURIComponent(this.sessionId)}/${encodeURIComponent(this.chatGroupId)}/${encodeURIComponent(jwt)}`;
+        const uri = `/api/v1/agents/ws?phost=${encodeURIComponent(phost)}&sessionId=${encodeURIComponent(this.sessionId)}&chatGroupId=${encodeURIComponent(this.chatGroupId)}&jwt=${encodeURIComponent(jwt)}`;
+
         console.log("Connecting to chat server with ZTAT at:", uri);
         this.connection = new WebSocket(uri);
 

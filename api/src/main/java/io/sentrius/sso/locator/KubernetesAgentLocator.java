@@ -9,16 +9,12 @@ import java.net.URI;
 @Component
 public class KubernetesAgentLocator {
 
-    @Value("${sentrius.agent.namespace}")
-    private String agentNamespace;
 
-    @Value("${sentrius.agent.port:8080}")
-    private int agentPort;
-
-    public URI resolveWebSocketUri(String agentId) {
+    public URI resolveWebSocketUri(String host, String sessionId, String chatGroupId, String ztat) {
         // DNS: sentrius-agent-[ID].[namespace].svc.cluster.local
-        String fqdn = String.format("ws://sentrius-agent-%s.%s.svc.cluster.local:%d/ws",
-            agentId, agentNamespace, agentPort);
+        ///api/v1/chat/attach/subscribe?sessionId=${encodeURIComponent(this.sessionId)}&chatGroupId=${this.chatGroupId}&ztat=${encodeURIComponent(jwt)
+        String fqdn = String.format("%s/api/v1/chat/attach/subscribe?sessionId=%s&chatGroupId=%s&ztat=%s",
+            host,  sessionId, chatGroupId, ztat);
         return URI.create(fqdn);
     }
 }

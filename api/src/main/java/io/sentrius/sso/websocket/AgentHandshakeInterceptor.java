@@ -7,6 +7,8 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 
 import java.util.Map;
 
+import org.springframework.web.util.UriComponentsBuilder;
+
 public class AgentHandshakeInterceptor implements HandshakeInterceptor {
 
     @Override
@@ -15,12 +17,16 @@ public class AgentHandshakeInterceptor implements HandshakeInterceptor {
                                    WebSocketHandler wsHandler,
                                    Map<String, Object> attributes) {
 
-        String path = request.getURI().getPath();  // e.g. /api/v1/agents/ws/agent-123
-        String[] segments = path.split("/");
-        String agentId = segments[segments.length - 1];  // assumes agentId is at the end
+        String query = request.getURI().getQuery();
+        Map<String, String> queryParams = UriComponentsBuilder.fromUri(request.getURI()).build().getQueryParams().toSingleValueMap();
 
-        attributes.put("agentId", agentId);
+        attributes.put("host", queryParams.get("phost"));
+        attributes.put("sessionId", queryParams.get("sessionId"));
+        attributes.put("chatGroupId", queryParams.get("chatGroupId"));
+        attributes.put("ztat", queryParams.get("ztat"));
+
         return true;
+
     }
 
     @Override
