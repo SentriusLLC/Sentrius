@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - ATPL Configuration</title>
+    <style>
+        .atpl-form-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            background: #1e1e1e;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+        
+        .section-card {
+            background: #2b2b2b;
+            border: 1px solid #444;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            padding: 15px;
+        }
+        
+        .section-header {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #333;
+            border-radius: 5px;
+        }
+        
+        .section-header:hover {
+            background: #3a3a3a;
+        }
+        
+        .section-content {
+            display: none;
+            padding: 10px 0;
+        }
+        
+        .section-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            color: #f8f9fa;
+            font-weight: 500;
+            margin-bottom: 5px;
+            display: block;
+        }
+        
+        .form-control {
+            background-color: #2b2b2b;
+            border: 1px solid #444;
+            color: #eaeaea;
+            border-radius: 4px;
+            padding: 8px 12px;
+        }
+        
+        .form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        .dynamic-list {
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 5px;
+        }
+        
+        .list-item {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .list-item input {
+            flex: 1;
+            margin-right: 10px;
+        }
+        
+        .btn-remove {
+            background: #dc3545;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .btn-add {
+            background: #28a745;
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .json-preview {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 15px;
+            max-height: 600px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #f8f9fa;
+        }
+        
+        .actions-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: #333;
+            border-radius: 5px;
+        }
+        
+        .chevron {
+            transition: transform 0.3s ease;
+        }
+        
+        .chevron.rotated {
+            transform: rotate(180deg);
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+<div id="csrf-token" style="display: none;" th:text="${_csrf.token}"></div>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
+                <div class="atpl-form-container">
+                    <h2 class="text-center mb-4">Agent Trust Policy Language (ATPL) Configuration</h2>
+                    
+                    <div class="row">
+                        <!-- Form Column -->
+                        <div class="col-md-8">
+                            <form id="atpl-form">
+                                <!-- Basic Information Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('basic-info')">
+                                        <h4><i class="fas fa-info-circle"></i> Basic Information</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-basic-info"></i>
+                                    </div>
+                                    <div class="section-content active" id="basic-info">
+                                        <div class="form-group">
+                                            <label for="version">Version (required)</label>
+                                            <input type="text" class="form-control" id="version" name="version" value="v0" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="policy_id">Policy ID (required)</label>
+                                            <input type="text" class="form-control" id="policy_id" name="policy_id" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="description">Description</label>
+                                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Match Criteria Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('match-criteria')">
+                                        <h4><i class="fas fa-filter"></i> Match Criteria</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-match-criteria"></i>
+                                    </div>
+                                    <div class="section-content" id="match-criteria">
+                                        <div class="form-group">
+                                            <label>Agent Tags</label>
+                                            <div class="dynamic-list" id="agent-tags-list">
+                                                <!-- Dynamic agent tags will be added here -->
+                                            </div>
+                                            <button type="button" class="btn-add" onclick="addListItem('agent-tags-list', 'agent_tags')">Add Agent Tag</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Identity Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('identity')">
+                                        <h4><i class="fas fa-id-card"></i> Identity</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-identity"></i>
+                                    </div>
+                                    <div class="section-content" id="identity">
+                                        <div class="form-group">
+                                            <label for="identity_issuer">Issuer</label>
+                                            <input type="text" class="form-control" id="identity_issuer" name="identity.issuer">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="identity_subject_prefix">Subject Prefix</label>
+                                            <input type="text" class="form-control" id="identity_subject_prefix" name="identity.subject_prefix">
+                                        </div>
+                                        <div class="checkbox-group">
+                                            <input type="checkbox" id="identity_mfa_required" name="identity.mfa_required">
+                                            <label for="identity_mfa_required">MFA Required</label>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="identity_certificate_authority">Certificate Authority</label>
+                                            <input type="text" class="form-control" id="identity_certificate_authority" name="identity.certificate_authority">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Capabilities Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('capabilities')">
+                                        <h4><i class="fas fa-cogs"></i> Capabilities (required)</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-capabilities"></i>
+                                    </div>
+                                    <div class="section-content" id="capabilities">
+                                        <h5>Primitive Capabilities</h5>
+                                        <div id="primitives-container">
+                                            <!-- Dynamic primitive capabilities will be added here -->
+                                        </div>
+                                        <button type="button" class="btn-add" onclick="addPrimitive()">Add Primitive Capability</button>
+                                        
+                                        <h5 class="mt-4">Composed Capabilities</h5>
+                                        <div id="composed-container">
+                                            <!-- Dynamic composed capabilities will be added here -->
+                                        </div>
+                                        <button type="button" class="btn-add" onclick="addComposed()">Add Composed Capability</button>
+                                    </div>
+                                </div>
+
+                                <!-- Trust Score Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('trust-score')">
+                                        <h4><i class="fas fa-chart-line"></i> Trust Score</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-trust-score"></i>
+                                    </div>
+                                    <div class="section-content" id="trust-score">
+                                        <div class="form-group">
+                                            <label for="trust_score_minimum">Minimum Trust Score</label>
+                                            <input type="number" class="form-control" id="trust_score_minimum" name="trust_score.minimum" min="0" max="100">
+                                        </div>
+                                        <h5>Weightings</h5>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="weight_identity">Identity Weight</label>
+                                                    <input type="number" class="form-control" id="weight_identity" name="trust_score.weightings.identity" min="0" max="1" step="0.1">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="weight_provenance">Provenance Weight</label>
+                                                    <input type="number" class="form-control" id="weight_provenance" name="trust_score.weightings.provenance" min="0" max="1" step="0.1">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="weight_runtime">Runtime Weight</label>
+                                                    <input type="number" class="form-control" id="weight_runtime" name="trust_score.weightings.runtime" min="0" max="1" step="0.1">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="weight_behavior">Behavior Weight</label>
+                                                    <input type="number" class="form-control" id="weight_behavior" name="trust_score.weightings.behavior" min="0" max="1" step="0.1">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Actions Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('actions')">
+                                        <h4><i class="fas fa-play"></i> Actions</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-actions"></i>
+                                    </div>
+                                    <div class="section-content" id="actions">
+                                        <div class="form-group">
+                                            <label for="on_success">On Success</label>
+                                            <select class="form-control" id="on_success" name="actions.on_success">
+                                                <option value="">Select action</option>
+                                                <option value="allow">Allow</option>
+                                                <option value="log">Log</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="on_failure">On Failure</label>
+                                            <select class="form-control" id="on_failure" name="actions.on_failure">
+                                                <option value="">Select action</option>
+                                                <option value="deny">Deny</option>
+                                                <option value="log">Log</option>
+                                                <option value="alert">Alert</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="on_marginal">On Marginal</label>
+                                            <input type="text" class="form-control" id="on_marginal" name="actions.on_marginal" placeholder="String or object with ztat_provider">
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+
+                            <div class="actions-bar">
+                                <div>
+                                    <button type="button" class="btn btn-secondary" onclick="loadExistingPolicy()">Load Existing Policy</button>
+                                    <button type="button" class="btn btn-warning" onclick="validatePolicy()">Validate</button>
+                                </div>
+                                <div>
+                                    <button type="button" class="btn btn-success" onclick="savePolicy()">Save Policy</button>
+                                    <button type="button" class="btn btn-primary" onclick="exportPolicy()">Export JSON</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- JSON Preview Column -->
+                        <div class="col-md-4">
+                            <div class="section-card">
+                                <h5><i class="fas fa-eye"></i> Live JSON Preview</h5>
+                                <div class="json-preview" id="json-preview">
+                                    {
+                                      "version": "v0"
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let primitiveCounter = 0;
+    let composedCounter = 0;
+
+    // Toggle section visibility
+    function toggleSection(sectionId) {
+        const content = document.getElementById(sectionId);
+        const chevron = document.getElementById('chevron-' + sectionId);
+        
+        content.classList.toggle('active');
+        chevron.classList.toggle('rotated');
+    }
+
+    // Add list item to dynamic lists
+    function addListItem(containerId, fieldName) {
+        const container = document.getElementById(containerId);
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'list-item';
+        
+        itemDiv.innerHTML = `
+            <input type="text" class="form-control" name="${fieldName}[]" placeholder="Enter value">
+            <button type="button" class="btn-remove" onclick="removeListItem(this)">Remove</button>
+        `;
+        
+        container.appendChild(itemDiv);
+        updatePreview();
+    }
+
+    // Remove list item
+    function removeListItem(button) {
+        button.parentElement.remove();
+        updatePreview();
+    }
+
+    // Add primitive capability
+    function addPrimitive() {
+        const container = document.getElementById('primitives-container');
+        const primitiveDiv = document.createElement('div');
+        primitiveDiv.className = 'section-card';
+        primitiveDiv.innerHTML = `
+            <h6>Primitive Capability ${primitiveCounter + 1}</h6>
+            <div class="form-group">
+                <label>ID</label>
+                <input type="text" class="form-control" name="capabilities.primitives[${primitiveCounter}].id" required>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <input type="text" class="form-control" name="capabilities.primitives[${primitiveCounter}].description">
+            </div>
+            <div class="form-group">
+                <label>Tags</label>
+                <div class="dynamic-list" id="primitive-tags-${primitiveCounter}">
+                </div>
+                <button type="button" class="btn-add" onclick="addListItem('primitive-tags-${primitiveCounter}', 'capabilities.primitives[${primitiveCounter}].tags')">Add Tag</button>
+            </div>
+            <button type="button" class="btn-remove" onclick="removePrimitive(this)">Remove Primitive</button>
+        `;
+        
+        container.appendChild(primitiveDiv);
+        primitiveCounter++;
+        updatePreview();
+    }
+
+    // Add composed capability
+    function addComposed() {
+        const container = document.getElementById('composed-container');
+        const composedDiv = document.createElement('div');
+        composedDiv.className = 'section-card';
+        composedDiv.innerHTML = `
+            <h6>Composed Capability ${composedCounter + 1}</h6>
+            <div class="form-group">
+                <label>ID</label>
+                <input type="text" class="form-control" name="capabilities.composed[${composedCounter}].id" required>
+            </div>
+            <div class="form-group">
+                <label>Includes</label>
+                <div class="dynamic-list" id="composed-includes-${composedCounter}">
+                </div>
+                <button type="button" class="btn-add" onclick="addListItem('composed-includes-${composedCounter}', 'capabilities.composed[${composedCounter}].includes')">Add Include</button>
+            </div>
+            <div class="form-group">
+                <label>Tags</label>
+                <div class="dynamic-list" id="composed-tags-${composedCounter}">
+                </div>
+                <button type="button" class="btn-add" onclick="addListItem('composed-tags-${composedCounter}', 'capabilities.composed[${composedCounter}].tags')">Add Tag</button>
+            </div>
+            <button type="button" class="btn-remove" onclick="removeComposed(this)">Remove Composed</button>
+        `;
+        
+        container.appendChild(composedDiv);
+        composedCounter++;
+        updatePreview();
+    }
+
+    // Remove primitive capability
+    function removePrimitive(button) {
+        button.parentElement.remove();
+        updatePreview();
+    }
+
+    // Remove composed capability
+    function removeComposed(button) {
+        button.parentElement.remove();
+        updatePreview();
+    }
+
+    // Update JSON preview
+    function updatePreview() {
+        const form = document.getElementById('atpl-form');
+        const formData = new FormData(form);
+        const policy = {};
+
+        // Build policy object from form data
+        for (let [key, value] of formData.entries()) {
+            if (value.trim() === '') continue;
+            
+            const keys = key.split('.');
+            let current = policy;
+            
+            for (let i = 0; i < keys.length - 1; i++) {
+                if (!current[keys[i]]) current[keys[i]] = {};
+                current = current[keys[i]];
+            }
+            
+            // Handle arrays and special cases
+            const lastKey = keys[keys.length - 1];
+            if (key.includes('[]')) {
+                const arrayKey = lastKey.replace('[]', '');
+                if (!current[arrayKey]) current[arrayKey] = [];
+                current[arrayKey].push(value);
+            } else if (key.includes('[') && key.includes(']')) {
+                // Handle indexed arrays
+                const match = lastKey.match(/(\w+)\[(\d+)\]/);
+                if (match) {
+                    const arrayKey = match[1];
+                    const index = parseInt(match[2]);
+                    if (!current[arrayKey]) current[arrayKey] = [];
+                    if (!current[arrayKey][index]) current[arrayKey][index] = {};
+                    // Handle nested properties in arrays
+                    const remainingKey = key.substring(key.lastIndexOf('.') + 1);
+                    current[arrayKey][index][remainingKey.split('.').pop()] = value;
+                }
+            } else {
+                current[lastKey] = value;
+            }
+        }
+
+        // Handle checkboxes separately
+        const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            const keys = checkbox.name.split('.');
+            let current = policy;
+            
+            for (let i = 0; i < keys.length - 1; i++) {
+                if (!current[keys[i]]) current[keys[i]] = {};
+                current = current[keys[i]];
+            }
+            
+            current[keys[keys.length - 1]] = checkbox.checked;
+        });
+
+        // Display formatted JSON
+        document.getElementById('json-preview').textContent = JSON.stringify(policy, null, 2);
+    }
+
+    // Save policy
+    function savePolicy() {
+        const form = document.getElementById('atpl-form');
+        const formData = new FormData(form);
+        
+        // Convert form data to JSON
+        const policy = {};
+        // ... (implement conversion logic similar to updatePreview)
+        
+        const csrfToken = document.getElementById('csrf-token').textContent;
+        
+        fetch('/api/v1/policies', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify(policy)
+        })
+        .then(response => {
+            if (response.ok) {
+                alert('Policy saved successfully!');
+            } else {
+                throw new Error('Failed to save policy');
+            }
+        })
+        .catch(error => {
+            alert('Error saving policy: ' + error.message);
+        });
+    }
+
+    // Export policy as JSON file
+    function exportPolicy() {
+        const previewContent = document.getElementById('json-preview').textContent;
+        const blob = new Blob([previewContent], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'atpl-policy.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // Load existing policy
+    function loadExistingPolicy() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,.yaml,.yml';
+        
+        input.onchange = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const policy = JSON.parse(e.target.result);
+                    populateFormFromPolicy(policy);
+                } catch (error) {
+                    alert('Error parsing policy file: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        };
+        
+        input.click();
+    }
+
+    // Populate form from policy object
+    function populateFormFromPolicy(policy) {
+        // Clear existing form
+        document.getElementById('atpl-form').reset();
+        
+        // Populate basic fields
+        if (policy.version) document.getElementById('version').value = policy.version;
+        if (policy.policy_id) document.getElementById('policy_id').value = policy.policy_id;
+        if (policy.description) document.getElementById('description').value = policy.description;
+        
+        // ... (implement more detailed population logic)
+        
+        updatePreview();
+    }
+
+    // Validate policy
+    function validatePolicy() {
+        updatePreview();
+        const previewContent = document.getElementById('json-preview').textContent;
+        
+        try {
+            const policy = JSON.parse(previewContent);
+            
+            // Basic validation
+            const errors = [];
+            if (!policy.version) errors.push('Version is required');
+            if (!policy.policy_id) errors.push('Policy ID is required');
+            if (!policy.capabilities) errors.push('Capabilities section is required');
+            
+            if (errors.length > 0) {
+                alert('Validation errors:\n' + errors.join('\n'));
+            } else {
+                alert('Policy validation passed!');
+            }
+        } catch (error) {
+            alert('Invalid JSON: ' + error.message);
+        }
+    }
+
+    // Initialize form
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add change listeners to update preview
+        const form = document.getElementById('atpl-form');
+        form.addEventListener('input', updatePreview);
+        form.addEventListener('change', updatePreview);
+        
+        // Initial preview update
+        updatePreview();
+    });
+</script>
+</body>
+</html>
