@@ -230,19 +230,36 @@ Sentrius provides comprehensive Helm charts for Kubernetes deployment across mul
 # Build all images
 ./build-images.sh --all --no-cache
 
-# Deploy to local Kubernetes cluster
+# Deploy to local Kubernetes cluster (HTTP)
 ./ops-scripts/local/deploy-helm.sh
 
-# Forward ports for local access
+# OR deploy with TLS enabled for secure transport
+./ops-scripts/local/deploy-helm.sh --tls
+
+# Forward ports for local access (HTTP deployment)
 kubectl port-forward -n dev service/sentrius-sentrius 8080:8080
 kubectl port-forward -n dev service/sentrius-keycloak 8081:8081
 ```
 
-Add to `/etc/hosts` for local development:
+**For HTTP deployment**, add to `/etc/hosts`:
 ```
 127.0.0.1 sentrius-sentrius
 127.0.0.1 sentrius-keycloak
 ```
+
+**For TLS deployment**, add to `/etc/hosts`:
+```
+127.0.0.1 sentrius-dev.local
+127.0.0.1 keycloak-dev.local
+```
+
+**TLS Requirements:**
+- Install cert-manager in your cluster:
+  ```bash
+  kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+  ```
+- Access via: `https://sentrius-dev.local` and `https://keycloak-dev.local`
+- Self-signed certificates will be automatically generated
 
 #### GCP/GKE Deployment
 
@@ -275,6 +292,20 @@ ingress:
     gke:
       kubernetes.io/ingress.class: gce
       networking.gke.io/managed-certificates: wildcard-cert
+```
+
+**TLS/SSL Configuration:**
+```yaml
+certificates:
+  enabled: true  # Enable certificate generation
+  issuer: "letsencrypt-prod"  # For AWS/Azure (cert-manager)
+
+# For local development with self-signed certificates:
+environment: local
+certificates:
+  enabled: true
+ingress:
+  tlsEnabled: true
 ```
 
 **Agent Configuration:**
