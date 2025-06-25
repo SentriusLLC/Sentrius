@@ -9,6 +9,7 @@
       "secret": "nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0",
       "rootUrl": "${ROOT_URL}",
       "baseUrl": "${ROOT_URL}",
+      "serviceAccountsEnabled": true,
       "redirectUris": [
         "${REDIRECT_URIS}/*"
       ],

@@ -28,10 +28,18 @@ public class PodLauncherService {
     @Value("${sentrius.agent.registry.version}")
     private String agentVersion;
 
+    @Value("${sentrius.agent.callback.format.url:http://sentrius-agent-%s.%s.svc.cluster.local:8090}")
+    private String callbackFormatUrl;
+
     public PodLauncherService() throws IOException {
         ApiClient client = Config.defaultClient(); // in-cluster or kubeconfig
         this.coreV1Api = new CoreV1Api(client);
     }
+
+    private String buildAgentCallbackUrl(String agentId) {
+        return String.format(callbackFormatUrl, agentId, agentNamespace);
+    }
+
 
     public V1Pod launchAgentPod(String agentId, String callbackUrl) throws Exception {
         if (agentRegistry != null ) {
@@ -41,6 +49,8 @@ public class PodLauncherService {
                 agentRegistry += "/";
             }
         }
+
+        var constructedCallbackUrl = buildAgentCallbackUrl(agentId);
 
         String image = String.format("%ssentrius-launchable-agent:%s", agentRegistry, agentVersion);
 
@@ -56,7 +66,9 @@ public class PodLauncherService {
                     .imagePullPolicy("IfNotPresent")
 
                     .args(List.of("--spring.config.location=file:/config/agent.properties",
-                        "--agent.namePrefix=" + agentId, "--agent.ai.config=/config/chat-helper.yaml", "--agent.listen.websocket=true"))
+                        "--agent.namePrefix=" + agentId, "--agent.ai.config=/config/chat-helper.yaml", "--agent.listen.websocket=true",
+                        "--agent.callback.url=" + constructedCallbackUrl
+                        ))
                     .resources(new V1ResourceRequirements()
                         .limits(Map.of(
                             "cpu", Quantity.fromString("500m"),

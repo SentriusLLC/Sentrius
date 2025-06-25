@@ -3,11 +3,13 @@ package io.sentrius.sso.controllers.api;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -40,6 +42,7 @@ import io.sentrius.sso.provenance.ProvenanceEvent;
 import io.sentrius.sso.provenance.kafka.ProvenanceKafkaProducer;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
 import org.jetbrains.annotations.NotNull;
@@ -172,7 +175,7 @@ public class AgentApiController extends BaseController {
 
         // Approve the request if the agent has an active policy ( and it is known and allowed ).
         if (atplPolicyService.getPolicy(operatingUser).isPresent()) {
-            var admin = userService.getUser(UserType.createSystemAdmin().getId());
+            var admin = createOrGetSystemAdmin();
             var approval = ztatService.approveOpsAccessToken(ztatRequest, admin);
 
             return ResponseEntity.ok(Map.of("ztat_token", approval.getToken().toString(), "communication_id",communicationId ));
@@ -185,6 +188,21 @@ public class AgentApiController extends BaseController {
         }
 
 
+
+    }
+
+    @Transactional
+    protected synchronized User createOrGetSystemAdmin() throws NoSuchAlgorithmException {
+        var admin = userService.getUserByUsername("SYSTEM");
+        if (null == admin){
+                var systemAdmin = User.builder()
+                    .username("SYSTEM")
+                    .name("System Admin")
+                    .userId("SYSTEM")
+                    .emailAddress("email").password( userService.encodePassword(UUID.randomUUID().toString())).authorizationType(UserType.createSystemAdmin()).identityType(IdentityType.NON_PERSON_ENTITY);
+                return userService.save(systemAdmin.build());
+        }
+        return admin;
 
     }
 

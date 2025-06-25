@@ -75,8 +75,8 @@ public class EnclaveApiController extends BaseController {
         List<User> newUserList = new ArrayList<>();
         for(var userId : (List<String>) payload.get("userIds")) {
             var u = userService.getUser(Long.valueOf(userId));
-            if (null != u) {
-                newUserList.add(u);
+            if (u.isPresent()) {
+                newUserList.add(u.get());
             }
         }
         hg.setUsers(newUserList);

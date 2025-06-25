@@ -14,6 +14,7 @@ keycloakDomain: https://{{ .Values.keycloakSubdomain }}
 sentriusDomain: https://{{ .Values.subdomain }}
 keycloakFQDN: sentrius-keycloak.dev.svc.cluster.local
 sentriusFQDN: sentrius-sentrius.dev.svc.cluster.local
+llmProxyFQDN: sentrius-llmproxy.dev.svc.cluster.local
 
 certificates:
   enabled: false  # Disable certs for local; enable for cloud

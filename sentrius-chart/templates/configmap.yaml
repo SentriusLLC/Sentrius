@@ -288,11 +288,68 @@ data:
     spring.kafka.properties.retry.backoff.ms=1000
     provenance.kafka.topic=sentrius-provenance
     spring.kafka.bootstrap-servers=sentrius-kafka:9092
-    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
-    spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
-    # Optional: trust package to avoid class cast issues with JSON
-    spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
     sentrius.agent.launcher.service=http://sentrius-agents-launcherservice:8080/
+    sentrius.agent.register.bootstrap.allow=true
+    sentrius.agent.bootstrap.policy=default-policy.yaml
+  default-policy.yaml: |
+    ---
+    version: "v0"
+    description: "Default Policy For Unregistered Agents ( if configured )"
+    match:
+      agent_tags:
+        - "env:prod"
+        - "classification:observer"
+    behavior:
+      minimum_positive_runs: 5
+      max_incidents: 1
+      incident_types:
+        denylist:
+          - "policy_violation"
+    actions:
+      on_success: "allow"
+      on_failure: "deny"
+      on_marginal:
+        action: "require_ztat"
+        ztat_provider: "ztat-service.internal"
+    capabilities:
+      primitives:
+        - id: "accessLLM"
+          description: "access llm"
+          endpoint:
+            - "/api/v1/chat/completions"
+      composed:
+    ztat:
+      provider: "ztat-service.internal"
+      ttl: "5m"
+      approved_issuers:
+        - "http://localhost:8080/"
+      key_binding: "RSA2048"
+      approval_required: true
+    policy_id: "f3326ce2-f46f-405d-94b6-bda2b26db423"
+    identity:
+      issuer: "https://keycloak.test.sentrius.cloud"
+      subject_prefix: "agent-"
+      mfa_required: true
+      certificate_authority: "Sentrius-CA"
+    provenance:
+      source: "https://test.sentrius.cloud"
+      signature_required: true
+      approved_committers:
+        - "alice@example.com"
+    runtime:
+      enclave_required: true
+      attestation_type: "aws-nitro"
+      verified_at_boot: true
+      allow_drift: true
+    trust_score:
+      minimum: 80
+      marginalThreshold: 50
+      weightings:
+        identity: 0.5
+        provenance: 0.2
+        runtime: 0.3
+        behavior: 0.2
+
   dynamic.properties: |
     auditorClass=io.sentrius.sso.automation.auditing.AccessTokenAuditor
     twopartyapproval.option.LOCKING_SYSTEMS=true
