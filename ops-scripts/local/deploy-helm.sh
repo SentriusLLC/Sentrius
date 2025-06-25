@@ -7,6 +7,7 @@ source ${SCRIPT_DIR}/../../.local.env
 
 TENANT=dev
 ENABLE_TLS=false
+INSTALL_CERT_MANAGER=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -15,14 +16,19 @@ while [[ $# -gt 0 ]]; do
             ENABLE_TLS=true
             shift
             ;;
+        --install-cert-manager)
+            INSTALL_CERT_MANAGER=true
+            shift
+            ;;
         --tenant)
             TENANT="$2"
             shift 2
             ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--tls] [--tenant TENANT_NAME]"
+            echo "Usage: $0 [--tls] [--install-cert-manager] [--tenant TENANT_NAME]"
             echo "  --tls: Enable TLS/SSL for secure transport"
+            echo "  --install-cert-manager: Automatically install cert-manager if not present"
             echo "  --tenant: Specify tenant name (default: dev)"
             exit 1
             ;;
@@ -34,12 +40,58 @@ if [[ -z "$TENANT" ]]; then
     exit 1
 fi
 
+# Function to check if cert-manager is installed
+check_cert_manager() {
+    echo "Checking if cert-manager is installed..."
+    
+    # Check if cert-manager CRDs are available
+    kubectl api-resources --api-group=cert-manager.io >/dev/null 2>&1
+    if [[ $? -ne 0 ]]; then
+        if [[ "$INSTALL_CERT_MANAGER" == "true" ]]; then
+            echo "cert-manager not found. Installing cert-manager..."
+            kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+            if [[ $? -ne 0 ]]; then
+                echo "ERROR: Failed to install cert-manager"
+                exit 1
+            fi
+            
+            echo "Waiting for cert-manager to be ready..."
+            kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=120s
+            if [[ $? -ne 0 ]]; then
+                echo "ERROR: cert-manager installation timed out"
+                exit 1
+            fi
+            echo "cert-manager installed successfully ✓"
+        else
+            echo "ERROR: cert-manager is not installed in your cluster."
+            echo ""
+            echo "TLS deployment requires cert-manager to be installed first."
+            echo "To install cert-manager, run:"
+            echo "  kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml"
+            echo ""
+            echo "Then wait for cert-manager to be ready:"
+            echo "  kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=120s"
+            echo ""
+            echo "Alternatively, re-run this script with --install-cert-manager --tls to auto-install cert-manager"
+            exit 1
+        fi
+    else
+        # Check if cert-manager pods are running
+        kubectl get pods -n cert-manager >/dev/null 2>&1
+        if [[ $? -ne 0 ]]; then
+            echo "ERROR: cert-manager namespace not found. cert-manager may not be properly installed."
+            echo "Please install cert-manager first using the command above."
+            exit 1
+        fi
+        
+        echo "cert-manager is installed ✓"
+    fi
+}
+
 # Configure TLS settings
 if [[ "$ENABLE_TLS" == "true" ]]; then
     echo "Deploying with TLS enabled..."
-    echo "Note: TLS requires cert-manager to be installed in your cluster"
-    echo "For minikube, you can install cert-manager with:"
-    echo "  kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml"
+    check_cert_manager
     SUBDOMAIN="sentrius-${TENANT}.local"
     KEYCLOAK_SUBDOMAIN="keycloak-${TENANT}.local"
     KEYCLOAK_HOSTNAME="${KEYCLOAK_SUBDOMAIN}"

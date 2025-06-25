@@ -236,6 +236,9 @@ Sentrius provides comprehensive Helm charts for Kubernetes deployment across mul
 # OR deploy with TLS enabled for secure transport
 ./ops-scripts/local/deploy-helm.sh --tls
 
+# OR deploy with TLS and auto-install cert-manager
+./ops-scripts/local/deploy-helm.sh --tls --install-cert-manager
+
 # Forward ports for local access (HTTP deployment)
 kubectl port-forward -n dev service/sentrius-sentrius 8080:8080
 kubectl port-forward -n dev service/sentrius-keycloak 8081:8081
@@ -254,10 +257,9 @@ kubectl port-forward -n dev service/sentrius-keycloak 8081:8081
 ```
 
 **TLS Requirements:**
-- Install cert-manager in your cluster:
-  ```bash
-  kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
-  ```
+- cert-manager must be installed in your cluster. You can:
+  - Install manually: `kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml`
+  - Use auto-install flag: `./ops-scripts/local/deploy-helm.sh --tls --install-cert-manager`
 - Access via: `https://sentrius-dev.local` and `https://keycloak-dev.local`
 - Self-signed certificates will be automatically generated
 
