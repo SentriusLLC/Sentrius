@@ -6,7 +6,7 @@ source ${SCRIPT_DIR}/base.sh
 source ${SCRIPT_DIR}/../../.local.env
 
 TENANT=dev
-ENABLE_TLS=false
+ENABLE_TLS=true
 INSTALL_CERT_MANAGER=false
 
 # Parse command line arguments
@@ -118,7 +118,7 @@ if [[ "$ENABLE_TLS" == "true" ]]; then
     KEYCLOAK_SUBDOMAIN="keycloak-${TENANT}.local"
     KEYCLOAK_HOSTNAME="${KEYCLOAK_SUBDOMAIN}"
     KEYCLOAK_DOMAIN="https://${KEYCLOAK_SUBDOMAIN}"
-    KEYCLOAK_INTERNAL_DOMAIN="http://sentrius-keycloak:8081"  # Internal cluster communication
+    KEYCLOAK_INTERNAL_DOMAIN="https://${KEYCLOAK_SUBDOMAIN}"  # Internal cluster communication
     SENTRIUS_DOMAIN="https://${SUBDOMAIN}"
     CERTIFICATES_ENABLED="true"
     INGRESS_TLS_ENABLED="true"
