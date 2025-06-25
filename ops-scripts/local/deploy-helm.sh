@@ -2,14 +2,62 @@
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-
 source ${SCRIPT_DIR}/base.sh
 source ${SCRIPT_DIR}/../../.local.env
 
 TENANT=dev
+ENABLE_TLS=false
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --tls)
+            ENABLE_TLS=true
+            shift
+            ;;
+        --tenant)
+            TENANT="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--tls] [--tenant TENANT_NAME]"
+            echo "  --tls: Enable TLS/SSL for secure transport"
+            echo "  --tenant: Specify tenant name (default: dev)"
+            exit 1
+            ;;
+    esac
+done
+
 if [[ -z "$TENANT" ]]; then
-    echo "Must provide first argument for tenant name" 1>&2
+    echo "Must provide tenant name" 1>&2
     exit 1
+fi
+
+# Configure TLS settings
+if [[ "$ENABLE_TLS" == "true" ]]; then
+    echo "Deploying with TLS enabled..."
+    echo "Note: TLS requires cert-manager to be installed in your cluster"
+    echo "For minikube, you can install cert-manager with:"
+    echo "  kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml"
+    SUBDOMAIN="sentrius-${TENANT}.local"
+    KEYCLOAK_SUBDOMAIN="keycloak-${TENANT}.local"
+    KEYCLOAK_HOSTNAME="${KEYCLOAK_SUBDOMAIN}"
+    KEYCLOAK_DOMAIN="https://${KEYCLOAK_SUBDOMAIN}"
+    SENTRIUS_DOMAIN="https://${SUBDOMAIN}"
+    CERTIFICATES_ENABLED="true"
+    INGRESS_TLS_ENABLED="true"
+    ENVIRONMENT="local"
+else
+    echo "Deploying with HTTP (no TLS)..."
+    SUBDOMAIN="sentrius-sentrius"
+    KEYCLOAK_SUBDOMAIN="sentrius-keycloak"
+    KEYCLOAK_HOSTNAME="sentrius-keycloak:8081"
+    KEYCLOAK_DOMAIN="http://sentrius-keycloak:8081"
+    SENTRIUS_DOMAIN="http://sentrius-sentrius:8080"
+    CERTIFICATES_ENABLED="false"
+    INGRESS_TLS_ENABLED="false"
+    ENVIRONMENT="local"
 fi
 
 # Check if namespace exists
@@ -58,11 +106,14 @@ fi
 
 helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set tenant=${TENANT} \
-    --set subdomain="sentrius-sentrius" \
-    --set keycloakSubdomain="sentrius-keycloak" \
-    --set keycloakHostname="sentrius-keycloak:8081" \
-    --set keycloakDomain="http://sentrius-keycloak:8081" \
-    --set sentriusDomain="http://sentrius-sentrius:8080" \
+    --set environment=${ENVIRONMENT} \
+    --set subdomain="${SUBDOMAIN}" \
+    --set keycloakSubdomain="${KEYCLOAK_SUBDOMAIN}" \
+    --set keycloakHostname="${KEYCLOAK_HOSTNAME}" \
+    --set keycloakDomain="${KEYCLOAK_DOMAIN}" \
+    --set sentriusDomain="${SENTRIUS_DOMAIN}" \
+    --set certificates.enabled=${CERTIFICATES_ENABLED} \
+    --set ingress.tlsEnabled=${INGRESS_TLS_ENABLED} \
     --set launcherFQDN=sentrius-agents-launcherservice.${TENANT}-agents.svc.cluster.local \
     --set integrationproxy.image.repository="sentrius-integration-proxy" \
     --set integrationproxy.image.pullPolicy="Never" \
@@ -88,14 +139,14 @@ helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${T
     --set sentriusNamespace=${TENANT} \
     --set keycloakFQDN=sentrius-keycloak.${TENANT}.svc.cluster.local \
     --set sentriusFQDN=sentrius-sentrius.${TENANT}.svc.cluster.local \
-    --set integrationproxyFQDN=sentrius-integrationproxy.${TENANT}.svc.cluster.local \
-    --set subdomain="sentrius-sentrius" \
-    --set keycloakSubdomain="sentrius-keycloak" \
-    --set keycloakHostname="sentrius-keycloak:8081" \
-    --set keycloakDomain="http://sentrius-keycloak:8081" \
-    --set sentriusDomain="http://sentrius-sentrius:8080" \
-    --set integrationproxy.image.repository="sentrius-integration-proxy" \
-    --set integrationproxy.image.pullPolicy="IfNotPresent" \
+    --set integrationproxyFQDN=sentrius-llmproxy.${TENANT}.svc.cluster.local \
+    --set subdomain="${SUBDOMAIN}" \
+    --set keycloakSubdomain="${KEYCLOAK_SUBDOMAIN}" \
+    --set keycloakHostname="${KEYCLOAK_HOSTNAME}" \
+    --set keycloakDomain="${KEYCLOAK_DOMAIN}" \
+    --set sentriusDomain="${SENTRIUS_DOMAIN}" \
+    --set integrationproxy.image.repository="sentrius-llmproxy" \
+    --set integrationproxy.image.pullPolicy="Never" \
     --set sentrius.image.repository="sentrius" \
     --set sentrius.image.pullPolicy="Never" \
     --set keycloak.image.pullPolicy="Never" \

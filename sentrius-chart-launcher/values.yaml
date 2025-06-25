@@ -5,13 +5,13 @@ namespace: default
 environment: "gke"  # Can be "gke", "aws", "azure", "local"
 
 tenant: sentrius-demo
-sentriusNamespace: "{{ .Values.tenant }}"
+sentriusNamespace: "sentrius-demo"
 baseRelease: sentrius-demo
-subdomain: "{{ .Values.tenant }}.sentrius.cloud"
-keycloakSubdomain: keycloak.{{ .Values.subdomain }}
-keycloakHostname: "{{ .Values.keycloakSubdomain }}"
-keycloakDomain: https://{{ .Values.keycloakSubdomain }}
-sentriusDomain: https://{{ .Values.subdomain }}
+subdomain: "sentrius-demo.sentrius.cloud"
+keycloakSubdomain: "keycloak.sentrius-demo.sentrius.cloud"
+keycloakHostname: "keycloak.sentrius-demo.sentrius.cloud"
+keycloakDomain: https://keycloak.sentrius-demo.sentrius.cloud
+sentriusDomain: https://sentrius-demo.sentrius.cloud
 keycloakFQDN: sentrius-keycloak.dev.svc.cluster.local
 sentriusFQDN: sentrius-sentrius.dev.svc.cluster.local
 llmProxyFQDN: sentrius-llmproxy.dev.svc.cluster.local

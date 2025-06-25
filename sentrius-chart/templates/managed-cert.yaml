@@ -24,4 +24,24 @@ spec:
     - "{{ .Values.tenant }}.sentrius.cloud"
     - "keycloak.{{ .Values.tenant }}.sentrius.cloud"
 {{- end }}
+{{- else if and (eq .Values.environment "local") (.Values.certificates.enabled) }}
+---
+# Self-signed certificate for local development
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-cert-{{ .Values.tenant }}
+  namespace: {{ .Values.tenant }}
+spec:
+  secretName: wildcard-cert-{{ .Values.tenant }}
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+  commonName: "{{ .Values.subdomain }}"
+  dnsNames:
+    - "{{ .Values.keycloakSubdomain }}"
+    - "{{ .Values.subdomain }}"
+  subject:
+    organizations:
+      - sentrius-local
 {{- end }}
