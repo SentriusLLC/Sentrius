@@ -202,6 +202,84 @@
                                     </div>
                                 </div>
 
+                                <!-- Provenance Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('provenance')">
+                                        <h4><i class="fas fa-code-branch"></i> Provenance</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-provenance"></i>
+                                    </div>
+                                    <div class="section-content" id="provenance">
+                                        <div class="form-group">
+                                            <label for="provenance_source">Source</label>
+                                            <input type="text" class="form-control" id="provenance_source" name="provenance.source">
+                                        </div>
+                                        <div class="checkbox-group">
+                                            <input type="checkbox" id="provenance_signature_required" name="provenance.signature_required">
+                                            <label for="provenance_signature_required">Signature Required</label>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Approved Committers</label>
+                                            <div class="dynamic-list" id="approved-committers-list">
+                                                <!-- Dynamic approved committers will be added here -->
+                                            </div>
+                                            <button type="button" class="btn-add" onclick="addListItem('approved-committers-list', 'provenance.approved_committers')">Add Approved Committer</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Runtime Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('runtime')">
+                                        <h4><i class="fas fa-microchip"></i> Runtime</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-runtime"></i>
+                                    </div>
+                                    <div class="section-content" id="runtime">
+                                        <div class="checkbox-group">
+                                            <input type="checkbox" id="runtime_enclave_required" name="runtime.enclave_required">
+                                            <label for="runtime_enclave_required">Enclave Required</label>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="runtime_attestation_type">Attestation Type</label>
+                                            <select class="form-control" id="runtime_attestation_type" name="runtime.attestation_type">
+                                                <option value="">Select attestation type</option>
+                                                <option value="tpm">TPM</option>
+                                                <option value="sgx">SGX</option>
+                                                <option value="sev">SEV</option>
+                                                <option value="none">None</option>
+                                            </select>
+                                        </div>
+                                        <div class="checkbox-group">
+                                            <input type="checkbox" id="runtime_verified_at_boot" name="runtime.verified_at_boot">
+                                            <label for="runtime_verified_at_boot">Verified at Boot</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Behavior Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('behavior')">
+                                        <h4><i class="fas fa-chart-bar"></i> Behavior</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-behavior"></i>
+                                    </div>
+                                    <div class="section-content" id="behavior">
+                                        <div class="form-group">
+                                            <label for="behavior_minimum_positive_runs">Minimum Positive Runs</label>
+                                            <input type="number" class="form-control" id="behavior_minimum_positive_runs" name="behavior.minimum_positive_runs" min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="behavior_max_incidents">Max Incidents</label>
+                                            <input type="number" class="form-control" id="behavior_max_incidents" name="behavior.max_incidents" min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Incident Types Denylist</label>
+                                            <div class="dynamic-list" id="incident-types-denylist">
+                                                <!-- Dynamic incident types will be added here -->
+                                            </div>
+                                            <button type="button" class="btn-add" onclick="addListItem('incident-types-denylist', 'behavior.incident_types.denylist')">Add Incident Type</button>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <!-- Identity Section -->
                                 <div class="section-card">
                                     <div class="section-header" onclick="toggleSection('identity')">
@@ -319,6 +397,38 @@
                                         <div class="form-group">
                                             <label for="on_marginal">On Marginal</label>
                                             <input type="text" class="form-control" id="on_marginal" name="actions.on_marginal" placeholder="String or object with ztat_provider">
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- ZTAT Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('ztat')">
+                                        <h4><i class="fas fa-key"></i> ZTAT (Zero Trust Access Token)</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-ztat"></i>
+                                    </div>
+                                    <div class="section-content" id="ztat">
+                                        <div class="form-group">
+                                            <label for="ztat_provider">Provider</label>
+                                            <input type="text" class="form-control" id="ztat_provider" name="ztat.provider">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="ztat_ttl">TTL (seconds)</label>
+                                            <input type="number" class="form-control" id="ztat_ttl" name="ztat.ttl" min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Approved Issuers</label>
+                                            <div class="dynamic-list" id="approved-issuers-list">
+                                                <!-- Dynamic approved issuers will be added here -->
+                                            </div>
+                                            <button type="button" class="btn-add" onclick="addListItem('approved-issuers-list', 'ztat.approved_issuers')">Add Approved Issuer</button>
+                                        </div>
+                                        <div class="checkbox-group">
+                                            <input type="checkbox" id="ztat_key_binding" name="ztat.key_binding">
+                                            <label for="ztat_key_binding">Key Binding</label>
+                                        </div>
+                                        <div class="checkbox-group">
+                                            <input type="checkbox" id="ztat_approval_required" name="ztat.approval_required">
+                                            <label for="ztat_approval_required">Approval Required</label>
                                         </div>
                                     </div>
                                 </div>
@@ -460,44 +570,91 @@
         updatePreview();
     }
 
-    // Update JSON preview
-    function updatePreview() {
+    // Convert FormData to proper policy object
+    function formDataToPolicyObject() {
         const form = document.getElementById('atpl-form');
         const formData = new FormData(form);
         const policy = {};
 
-        // Build policy object from form data
-        for (let [key, value] of formData.entries()) {
-            if (value.trim() === '') continue;
-            
-            const keys = key.split('.');
-            let current = policy;
+        // Helper function to set nested object properties
+        function setNestedProperty(obj, path, value) {
+            const keys = path.split('.');
+            let current = obj;
             
             for (let i = 0; i < keys.length - 1; i++) {
-                if (!current[keys[i]]) current[keys[i]] = {};
-                current = current[keys[i]];
+                const key = keys[i];
+                if (!current[key]) current[key] = {};
+                current = current[key];
             }
             
-            // Handle arrays and special cases
             const lastKey = keys[keys.length - 1];
-            if (key.includes('[]')) {
-                const arrayKey = lastKey.replace('[]', '');
-                if (!current[arrayKey]) current[arrayKey] = [];
-                current[arrayKey].push(value);
-            } else if (key.includes('[') && key.includes(']')) {
-                // Handle indexed arrays
+            
+            // Handle array notation [index]
+            if (lastKey.includes('[') && lastKey.includes(']')) {
                 const match = lastKey.match(/(\w+)\[(\d+)\]/);
                 if (match) {
                     const arrayKey = match[1];
                     const index = parseInt(match[2]);
+                    
                     if (!current[arrayKey]) current[arrayKey] = [];
                     if (!current[arrayKey][index]) current[arrayKey][index] = {};
-                    // Handle nested properties in arrays
-                    const remainingKey = key.substring(key.lastIndexOf('.') + 1);
-                    current[arrayKey][index][remainingKey.split('.').pop()] = value;
+                    
+                    return current[arrayKey][index];
+                }
+            }
+            
+            return current;
+        }
+
+        // Process form data
+        for (let [key, value] of formData.entries()) {
+            if (value.trim() === '') continue;
+            
+            if (key.includes('[]')) {
+                // Handle arrays
+                const arrayKey = key.replace('[]', '');
+                const keys = arrayKey.split('.');
+                let current = policy;
+                
+                for (let i = 0; i < keys.length - 1; i++) {
+                    if (!current[keys[i]]) current[keys[i]] = {};
+                    current = current[keys[i]];
+                }
+                
+                const lastKey = keys[keys.length - 1];
+                if (!current[lastKey]) current[lastKey] = [];
+                current[lastKey].push(value);
+            } else if (key.includes('[') && key.includes(']')) {
+                // Handle indexed arrays for capabilities
+                const baseKey = key.substring(0, key.indexOf('['));
+                const match = key.match(/\[(\d+)\]\.(\w+)/);
+                
+                if (match) {
+                    const index = parseInt(match[1]);
+                    const property = match[2];
+                    
+                    const keys = baseKey.split('.');
+                    let current = policy;
+                    
+                    for (let i = 0; i < keys.length; i++) {
+                        if (!current[keys[i]]) current[keys[i]] = {};
+                        current = current[keys[i]];
+                    }
+                    
+                    if (!current[index]) current[index] = {};
+                    current[index][property] = value;
                 }
             } else {
-                current[lastKey] = value;
+                // Handle regular nested properties
+                const keys = key.split('.');
+                let current = policy;
+                
+                for (let i = 0; i < keys.length - 1; i++) {
+                    if (!current[keys[i]]) current[keys[i]] = {};
+                    current = current[keys[i]];
+                }
+                
+                current[keys[keys.length - 1]] = value;
             }
         }
 
@@ -515,54 +672,278 @@
             current[keys[keys.length - 1]] = checkbox.checked;
         });
 
-        // Display formatted JSON
-        document.getElementById('json-preview').textContent = JSON.stringify(policy, null, 2);
+        // Convert arrays for capabilities
+        if (policy.capabilities) {
+            if (policy.capabilities.primitives) {
+                policy.capabilities.primitives = Object.values(policy.capabilities.primitives).filter(p => p && p.id);
+            }
+            if (policy.capabilities.composed) {
+                policy.capabilities.composed = Object.values(policy.capabilities.composed).filter(c => c && c.id);
+            }
+        }
+
+        return policy;
+    }
+
+    // Update JSON preview
+    function updatePreview() {
+        try {
+            const policy = formDataToPolicyObject();
+            document.getElementById('json-preview').textContent = JSON.stringify(policy, null, 2);
+        } catch (error) {
+            document.getElementById('json-preview').textContent = 'Error generating preview: ' + error.message;
+        }
     }
 
     // Save policy
     function savePolicy() {
-        const form = document.getElementById('atpl-form');
-        const formData = new FormData(form);
-        
-        // Convert form data to JSON
-        const policy = {};
-        // ... (implement conversion logic similar to updatePreview)
-        
-        const csrfToken = document.getElementById('csrf-token').textContent;
-        
-        fetch('/api/v1/policies', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken
-            },
-            body: JSON.stringify(policy)
-        })
-        .then(response => {
-            if (response.ok) {
-                alert('Policy saved successfully!');
-            } else {
-                throw new Error('Failed to save policy');
+        try {
+            const policy = formDataToPolicyObject();
+            
+            // Basic validation
+            if (!policy.version || !policy.policy_id) {
+                alert('Version and Policy ID are required fields.');
+                return;
             }
-        })
-        .catch(error => {
-            alert('Error saving policy: ' + error.message);
-        });
+            
+            const csrfToken = document.getElementById('csrf-token').textContent;
+            
+            fetch('/api/v1/policies', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify(policy)
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.text();
+                } else {
+                    throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                }
+            })
+            .then(data => {
+                alert('Policy saved successfully: ' + data);
+            })
+            .catch(error => {
+                alert('Error saving policy: ' + error.message);
+                console.error('Save error:', error);
+            });
+        } catch (error) {
+            alert('Error preparing policy: ' + error.message);
+            console.error('Preparation error:', error);
+        }
+    }
+
+    // Validate policy
+    function validatePolicy() {
+        try {
+            const policy = formDataToPolicyObject();
+            
+            const csrfToken = document.getElementById('csrf-token').textContent;
+            
+            fetch('/api/v1/policies/validate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify(policy)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.valid) {
+                    alert('Policy validation passed!');
+                } else {
+                    alert('Validation errors:\n' + result.errors.join('\n'));
+                }
+            })
+            .catch(error => {
+                // Fallback to client-side validation
+                const errors = [];
+                if (!policy.version) errors.push('Version is required');
+                if (!policy.policy_id) errors.push('Policy ID is required');
+                if (!policy.capabilities) errors.push('Capabilities section is required');
+                
+                if (errors.length > 0) {
+                    alert('Validation errors:\n' + errors.join('\n'));
+                } else {
+                    alert('Policy validation passed! (client-side validation)');
+                }
+            });
+        } catch (error) {
+            alert('Error validating policy: ' + error.message);
+        }
+    }
+
+    // Populate form from policy object
+    function populateFormFromPolicy(policy) {
+        // Clear existing form
+        document.getElementById('atpl-form').reset();
+        
+        // Clear dynamic lists
+        document.getElementById('agent-tags-list').innerHTML = '';
+        document.getElementById('approved-committers-list').innerHTML = '';
+        document.getElementById('incident-types-denylist').innerHTML = '';
+        document.getElementById('approved-issuers-list').innerHTML = '';
+        document.getElementById('primitives-container').innerHTML = '';
+        document.getElementById('composed-container').innerHTML = '';
+        
+        // Reset counters
+        primitiveCounter = 0;
+        composedCounter = 0;
+        
+        // Populate basic fields
+        if (policy.version) document.getElementById('version').value = policy.version;
+        if (policy.policy_id) document.getElementById('policy_id').value = policy.policy_id;
+        if (policy.description) document.getElementById('description').value = policy.description;
+        
+        // Populate match criteria
+        if (policy.match && policy.match.agent_tags) {
+            policy.match.agent_tags.forEach(tag => {
+                addListItem('agent-tags-list', 'agent_tags');
+                const inputs = document.querySelectorAll('#agent-tags-list input');
+                inputs[inputs.length - 1].value = tag;
+            });
+        }
+        
+        // Populate identity
+        if (policy.identity) {
+            if (policy.identity.issuer) document.getElementById('identity_issuer').value = policy.identity.issuer;
+            if (policy.identity.subject_prefix) document.getElementById('identity_subject_prefix').value = policy.identity.subject_prefix;
+            if (policy.identity.mfa_required) document.getElementById('identity_mfa_required').checked = policy.identity.mfa_required;
+            if (policy.identity.certificate_authority) document.getElementById('identity_certificate_authority').value = policy.identity.certificate_authority;
+        }
+        
+        // Populate provenance
+        if (policy.provenance) {
+            if (policy.provenance.source) document.getElementById('provenance_source').value = policy.provenance.source;
+            if (policy.provenance.signature_required) document.getElementById('provenance_signature_required').checked = policy.provenance.signature_required;
+            if (policy.provenance.approved_committers) {
+                policy.provenance.approved_committers.forEach(committer => {
+                    addListItem('approved-committers-list', 'provenance.approved_committers');
+                    const inputs = document.querySelectorAll('#approved-committers-list input');
+                    inputs[inputs.length - 1].value = committer;
+                });
+            }
+        }
+        
+        // Populate runtime
+        if (policy.runtime) {
+            if (policy.runtime.enclave_required) document.getElementById('runtime_enclave_required').checked = policy.runtime.enclave_required;
+            if (policy.runtime.attestation_type) document.getElementById('runtime_attestation_type').value = policy.runtime.attestation_type;
+            if (policy.runtime.verified_at_boot) document.getElementById('runtime_verified_at_boot').checked = policy.runtime.verified_at_boot;
+        }
+        
+        // Populate behavior
+        if (policy.behavior) {
+            if (policy.behavior.minimum_positive_runs) document.getElementById('behavior_minimum_positive_runs').value = policy.behavior.minimum_positive_runs;
+            if (policy.behavior.max_incidents) document.getElementById('behavior_max_incidents').value = policy.behavior.max_incidents;
+            if (policy.behavior.incident_types && policy.behavior.incident_types.denylist) {
+                policy.behavior.incident_types.denylist.forEach(incident => {
+                    addListItem('incident-types-denylist', 'behavior.incident_types.denylist');
+                    const inputs = document.querySelectorAll('#incident-types-denylist input');
+                    inputs[inputs.length - 1].value = incident;
+                });
+            }
+        }
+        
+        // Populate capabilities
+        if (policy.capabilities) {
+            if (policy.capabilities.primitives) {
+                policy.capabilities.primitives.forEach(primitive => {
+                    addPrimitive();
+                    const containers = document.querySelectorAll('#primitives-container .section-card');
+                    const container = containers[containers.length - 1];
+                    
+                    if (primitive.id) container.querySelector('input[name*=".id"]').value = primitive.id;
+                    if (primitive.description) container.querySelector('input[name*=".description"]').value = primitive.description;
+                    
+                    if (primitive.tags) {
+                        const tagsList = container.querySelector('.dynamic-list');
+                        primitive.tags.forEach(tag => {
+                            addListItem(tagsList.id, tagsList.id.replace('-', '.').replace('primitive.tags.', 'capabilities.primitives[' + (primitiveCounter - 1) + '].tags'));
+                            const inputs = tagsList.querySelectorAll('input');
+                            inputs[inputs.length - 1].value = tag;
+                        });
+                    }
+                });
+            }
+            
+            if (policy.capabilities.composed) {
+                policy.capabilities.composed.forEach(composed => {
+                    addComposed();
+                    const containers = document.querySelectorAll('#composed-container .section-card');
+                    const container = containers[containers.length - 1];
+                    
+                    if (composed.id) container.querySelector('input[name*=".id"]').value = composed.id;
+                    
+                    if (composed.includes) {
+                        const includesList = container.querySelector('.dynamic-list');
+                        composed.includes.forEach(include => {
+                            addListItem(includesList.id, includesList.id.replace('-', '.').replace('composed.includes.', 'capabilities.composed[' + (composedCounter - 1) + '].includes'));
+                            const inputs = includesList.querySelectorAll('input');
+                            inputs[inputs.length - 1].value = include;
+                        });
+                    }
+                });
+            }
+        }
+        
+        // Populate trust score
+        if (policy.trust_score) {
+            if (policy.trust_score.minimum) document.getElementById('trust_score_minimum').value = policy.trust_score.minimum;
+            if (policy.trust_score.weightings) {
+                if (policy.trust_score.weightings.identity) document.getElementById('weight_identity').value = policy.trust_score.weightings.identity;
+                if (policy.trust_score.weightings.provenance) document.getElementById('weight_provenance').value = policy.trust_score.weightings.provenance;
+                if (policy.trust_score.weightings.runtime) document.getElementById('weight_runtime').value = policy.trust_score.weightings.runtime;
+                if (policy.trust_score.weightings.behavior) document.getElementById('weight_behavior').value = policy.trust_score.weightings.behavior;
+            }
+        }
+        
+        // Populate actions
+        if (policy.actions) {
+            if (policy.actions.on_success) document.getElementById('on_success').value = policy.actions.on_success;
+            if (policy.actions.on_failure) document.getElementById('on_failure').value = policy.actions.on_failure;
+            if (policy.actions.on_marginal) document.getElementById('on_marginal').value = policy.actions.on_marginal;
+        }
+        
+        // Populate ZTAT
+        if (policy.ztat) {
+            if (policy.ztat.provider) document.getElementById('ztat_provider').value = policy.ztat.provider;
+            if (policy.ztat.ttl) document.getElementById('ztat_ttl').value = policy.ztat.ttl;
+            if (policy.ztat.key_binding) document.getElementById('ztat_key_binding').checked = policy.ztat.key_binding;
+            if (policy.ztat.approval_required) document.getElementById('ztat_approval_required').checked = policy.ztat.approval_required;
+            if (policy.ztat.approved_issuers) {
+                policy.ztat.approved_issuers.forEach(issuer => {
+                    addListItem('approved-issuers-list', 'ztat.approved_issuers');
+                    const inputs = document.querySelectorAll('#approved-issuers-list input');
+                    inputs[inputs.length - 1].value = issuer;
+                });
+            }
+        }
+        
+        updatePreview();
     }
 
     // Export policy as JSON file
     function exportPolicy() {
-        const previewContent = document.getElementById('json-preview').textContent;
-        const blob = new Blob([previewContent], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'atpl-policy.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        try {
+            const policy = formDataToPolicyObject();
+            const blob = new Blob([JSON.stringify(policy, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = (policy.policy_id || 'atpl-policy') + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            alert('Error exporting policy: ' + error.message);
+        }
     }
 
     // Load existing policy
@@ -578,8 +959,19 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
-                    const policy = JSON.parse(e.target.result);
+                    let policy;
+                    const content = e.target.result;
+                    
+                    if (file.name.endsWith('.json')) {
+                        policy = JSON.parse(content);
+                    } else {
+                        // For YAML files, we could add YAML parsing here
+                        alert('YAML support not implemented yet. Please use JSON files.');
+                        return;
+                    }
+                    
                     populateFormFromPolicy(policy);
+                    alert('Policy loaded successfully!');
                 } catch (error) {
                     alert('Error parsing policy file: ' + error.message);
                 }
@@ -588,45 +980,6 @@
         };
         
         input.click();
-    }
-
-    // Populate form from policy object
-    function populateFormFromPolicy(policy) {
-        // Clear existing form
-        document.getElementById('atpl-form').reset();
-        
-        // Populate basic fields
-        if (policy.version) document.getElementById('version').value = policy.version;
-        if (policy.policy_id) document.getElementById('policy_id').value = policy.policy_id;
-        if (policy.description) document.getElementById('description').value = policy.description;
-        
-        // ... (implement more detailed population logic)
-        
-        updatePreview();
-    }
-
-    // Validate policy
-    function validatePolicy() {
-        updatePreview();
-        const previewContent = document.getElementById('json-preview').textContent;
-        
-        try {
-            const policy = JSON.parse(previewContent);
-            
-            // Basic validation
-            const errors = [];
-            if (!policy.version) errors.push('Version is required');
-            if (!policy.policy_id) errors.push('Policy ID is required');
-            if (!policy.capabilities) errors.push('Capabilities section is required');
-            
-            if (errors.length > 0) {
-                alert('Validation errors:\n' + errors.join('\n'));
-            } else {
-                alert('Policy validation passed!');
-            }
-        } catch (error) {
-            alert('Invalid JSON: ' + error.message);
-        }
     }
 
     // Initialize form
