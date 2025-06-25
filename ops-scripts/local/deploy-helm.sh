@@ -44,14 +44,20 @@ fi
 check_cert_manager() {
     echo "Checking if cert-manager is installed..."
     
-    # Check if cert-manager CRDs are available
-    kubectl api-resources --api-group=cert-manager.io >/dev/null 2>&1
-    if [[ $? -ne 0 ]]; then
+    # Check if cert-manager deployments are present
+    if ! kubectl get deployment cert-manager -n cert-manager >/dev/null 2>&1 || \
+       ! kubectl get deployment cert-manager-webhook -n cert-manager >/dev/null 2>&1 || \
+       ! kubectl get deployment cert-manager-cainjector -n cert-manager >/dev/null 2>&1; then
         if [[ "$INSTALL_CERT_MANAGER" == "true" ]]; then
-            echo "cert-manager not found. Installing cert-manager..."
-            kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+            echo "cert-manager components not found. Installing via Helm..."
+            helm repo add jetstack https://charts.jetstack.io
+            helm repo update
+            helm upgrade --install cert-manager jetstack/cert-manager \
+              --namespace cert-manager \
+              --create-namespace \
+              --set installCRDs=true
             if [[ $? -ne 0 ]]; then
-                echo "ERROR: Failed to install cert-manager"
+                echo "ERROR: Failed to install cert-manager with Helm"
                 exit 1
             fi
             
@@ -67,27 +73,11 @@ check_cert_manager() {
             wait_for_cert_manager_crds
             echo "cert-manager installed successfully ✓"
         else
-            echo "ERROR: cert-manager is not installed in your cluster."
-            echo ""
-            echo "TLS deployment requires cert-manager to be installed first."
-            echo "To install cert-manager, run:"
-            echo "  kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml"
-            echo ""
-            echo "Then wait for cert-manager to be ready:"
-            echo "  kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=120s"
-            echo ""
-            echo "Alternatively, re-run this script with --install-cert-manager --tls to auto-install cert-manager"
+            echo "ERROR: cert-manager is not fully installed in your cluster."
+            echo "You can install it manually or rerun this script with --install-cert-manager --tls"
             exit 1
         fi
     else
-        # Check if cert-manager pods are running
-        kubectl get pods -n cert-manager >/dev/null 2>&1
-        if [[ $? -ne 0 ]]; then
-            echo "ERROR: cert-manager namespace not found. cert-manager may not be properly installed."
-            echo "Please install cert-manager first using the command above."
-            exit 1
-        fi
-        
         echo "cert-manager is installed ✓"
         
         # Even if cert-manager is installed, make sure CRDs and webhook are ready
