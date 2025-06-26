@@ -87,5 +87,23 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-keycloak-secrets
                   key: client-secret
-          command: ["/opt/keycloak/bin/kc.sh"]
-          args: ["start-dev", "--proxy=edge", "--import-realm", "--health-enabled=true"]
+            - name: SENTRIUS_API_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: sentrius-api-client-secret
+            - name: SENTRIUS_LAUNCHER_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: sentrius-launcher-service-client-secret
+            - name: JAVA_AGENTS_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: java-agents-client-secret
+            - name: AI_AGENT_ASSESSOR_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: ai-agent-assessor-client-secret

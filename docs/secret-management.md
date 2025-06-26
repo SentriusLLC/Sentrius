@@ -49,6 +49,28 @@ Application properties files now use environment variables with fallback default
 - `DATABASE_PASSWORD` - Database password (defaults to "password")
 - `KEYSTORE_PASSWORD` - Keystore password (defaults to "keystorepassword")
 
+## Keycloak Realm Dynamic Configuration
+
+The Keycloak Docker container now supports dynamic realm configuration with automatic secret injection:
+
+### How It Works
+
+1. **Template Processing**: The Keycloak realm configuration uses a template file (`sentrius-realm.json.template`) with environment variable placeholders
+2. **Runtime Substitution**: During container startup, secrets are injected via environment variables:
+   - `SENTRIUS_API_CLIENT_SECRET` - Secret for sentrius-api client
+   - `SENTRIUS_LAUNCHER_CLIENT_SECRET` - Secret for sentrius-launcher-service client
+   - `JAVA_AGENTS_CLIENT_SECRET` - Secret for java-agents client
+   - `AI_AGENT_ASSESSOR_CLIENT_SECRET` - Secret for ai-agent-assessor client
+3. **Helm Integration**: The Helm chart automatically generates these secrets and passes them to the Keycloak container
+4. **Fallback Generation**: If no secrets are provided, the container generates secure random defaults
+
+### Build Integration
+
+When building the Keycloak container with `./build-images.sh --sentrius-keycloak`, the system:
+- Includes the realm template and processing script
+- Configures automatic secret substitution during startup
+- Ensures consistency between Helm-generated OAuth2 secrets and Keycloak realm configuration
+
 ## Production Deployment
 
 For production environments, it is recommended to:

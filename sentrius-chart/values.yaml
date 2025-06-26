@@ -194,6 +194,17 @@ keycloak:
     database: keycloak
     storageSize: 10Gi
   replicas: 1
+  # Realm client secrets - used for Keycloak realm template processing
+  realm:
+    clients:
+      sentriusApi:
+        client_secret: ""  # Dynamically generated if not provided
+      sentriusLauncher:
+        client_secret: ""  # Dynamically generated if not provided
+      javaAgents:
+        client_secret: ""  # Dynamically generated if not provided
+      aiAgentAssessor:
+        client_secret: ""  # Dynamically generated if not provided
   annotations:
     gke:
       cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'

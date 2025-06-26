@@ -6,7 +6,7 @@
       "clientId": "sentrius-api",
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
-      "secret": "CHANGE_ME_AFTER_IMPORT",
+      "secret": "${SENTRIUS_API_CLIENT_SECRET}",
       "rootUrl": "${ROOT_URL}",
       "baseUrl": "${ROOT_URL}",
       "serviceAccountsEnabled": true,
@@ -40,7 +40,7 @@
       "clientId": "sentrius-launcher-service",
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
-      "secret": "CHANGE_ME_AFTER_IMPORT",
+      "secret": "${SENTRIUS_LAUNCHER_CLIENT_SECRET}",
       "rootUrl": "${ROOT_URL}",
       "baseUrl": "${ROOT_URL}",
 
@@ -81,7 +81,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "CHANGE_ME_AFTER_IMPORT",
+      "secret": "${JAVA_AGENTS_CLIENT_SECRET}",
       "redirectUris": [
         "${REDIRECT_URIS}/*"
       ],
@@ -168,7 +168,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "CHANGE_ME_AFTER_IMPORT",
+      "secret": "${AI_AGENT_ASSESSOR_CLIENT_SECRET}",
       "redirectUris": [
         "${REDIRECT_URIS}/*"
       ],
