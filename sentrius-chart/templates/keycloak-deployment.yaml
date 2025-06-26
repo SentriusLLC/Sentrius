@@ -43,7 +43,10 @@ spec:
             - name: KEYCLOAK_ADMIN
               value: {{ .Values.keycloak.adminUser }}
             - name: KEYCLOAK_ADMIN_PASSWORD
-              value: {{ .Values.keycloak.adminPassword }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-keycloak-secrets
+                  key: admin-password
             - name: KC_DB
               value: postgres
             - name: KC_DB_URL_HOST
@@ -53,7 +56,10 @@ spec:
             - name: KC_DB_USERNAME
               value: {{ .Values.keycloak.db.user }}
             - name: KC_DB_PASSWORD
-              value: {{ .Values.keycloak.db.password }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-keycloak-secrets
+                  key: db-password
             - name: KC_HOSTNAME
               value: {{ .Values.keycloakHostname }}
             - name: KC_HOSTNAME_STRICT
@@ -75,6 +81,9 @@ spec:
             - name: GOOGLE_CLIENT_ID
               value: {{ .Values.keycloak.clientId }}
             - name: GOOGLE_CLIENT_SECRET
-              value: {{ .Values.keycloak.clientSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-keycloak-secrets
+                  key: client-secret
           command: [ "/opt/keycloak/bin/kc.sh" ]
           args: [ "start-dev", "--proxy=edge", "--import-realm", "--health-enabled=true"]

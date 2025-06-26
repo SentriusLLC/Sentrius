@@ -44,7 +44,7 @@ data:
     agent.api.url={{ .Values.sentriusDomain }}
     # Keycloak configuration
     spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.sentriusagent.oauth2.client_id }}
-    spring.security.oauth2.client.registration.keycloak.client-secret={{ .Values.sentriusagent.oauth2.client_secret }}
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
     spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.sentriusagent.oauth2.authorization_grant_type }}
     spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
     spring.security.oauth2.client.registration.keycloak.scope={{ .Values.sentriusagent.oauth2.scope }}
@@ -96,7 +96,7 @@ data:
     agent.api.url={{ .Values.sentriusDomain }}
     # Keycloak configuration
     spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.sentriusagent.oauth2.client_id }}
-    spring.security.oauth2.client.registration.keycloak.client-secret={{ .Values.sentriusagent.oauth2.client_secret }}
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
     spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.sentriusagent.oauth2.authorization_grant_type }}
     spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
     spring.security.oauth2.client.registration.keycloak.scope={{ .Values.sentriusagent.oauth2.scope }}
@@ -177,7 +177,7 @@ data:
     agent.api.url={{ .Values.sentriusDomain }}
     # Keycloak configuration
     spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.sentriusagent.oauth2.client_id }}
-    spring.security.oauth2.client.registration.keycloak.client-secret={{ .Values.sentriusagent.oauth2.client_secret }}
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
     spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.sentriusagent.oauth2.authorization_grant_type }}
     spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
     spring.security.oauth2.client.registration.keycloak.scope={{ .Values.sentriusagent.oauth2.scope }}
@@ -254,7 +254,7 @@ data:
     management.endpoint.health.show-details=always
     # Keycloak configuration
     spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.sentrius.oauth2.client_id }}
-    spring.security.oauth2.client.registration.keycloak.client-secret={{ .Values.sentrius.oauth2.client_secret }}
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
     spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.sentrius.oauth2.authorization_grant_type }}
     spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
     spring.security.oauth2.client.registration.keycloak.scope={{ .Values.sentrius.oauth2.scope }}
