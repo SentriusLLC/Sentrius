@@ -4,7 +4,7 @@ The JIRA Proxy Controller provides a secure interface to interact with JIRA inst
 
 ## Overview
 
-The JIRA proxy is implemented in the `llm-proxy` module and provides authenticated access to JIRA functionality for agents and compliance tools. It follows the same security patterns as the existing OpenAI proxy.
+The JIRA proxy is implemented in the `integration-proxy` module and provides authenticated access to JIRA functionality for agents and compliance tools. It follows the same security patterns as the existing OpenAI proxy.
 
 ## Authentication
 

@@ -9,7 +9,7 @@ sub-projects:
     core – Handles the core functionalities (e.g., SSH session management, zero trust policy enforcement).
     api – Provides a RESTful API layer to interface with the core module.
     dataplane – Offers dataplane functionality for secure data transfer and processing.
-    llm-proxy – A proxy service that integrates with large language models (LLMs) to enhance security and compliance in SSH sessions.
+    integration-proxy – A proxy service that integrates with large language models (LLMs) to enhance security and compliance in SSH sessions.
     llm-dataplane – A data processing layer that leverages LLMs for advanced analysis and decision-making in SSH sessions.
     ops-scripts – Contains operational scripts for deployment and management tasks.
     ai-agent – Java-based intelligent agent framework for monitoring and controlling SSH sessions.

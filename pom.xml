@@ -14,7 +14,7 @@
     <module>llm-dataplane</module>
     <module>provenance-ingestor</module>
     <module>api</module>
-    <module>llm-proxy</module>
+    <module>integration-proxy</module>
     <module>analytics</module>
     <module>ai-agent</module>
     <module>agent-launcher</module>

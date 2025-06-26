@@ -46,7 +46,7 @@ curl -X PUT \
 
 echo -e "\n\nAPI endpoint testing completed."
 echo "Note: These tests will fail with authentication errors unless you have:"
-echo "1. A running instance of the llm-proxy service"
+echo "1. A running instance of the integration-proxy service"
 echo "2. A valid JWT token"
 echo "3. A configured JIRA integration"
 

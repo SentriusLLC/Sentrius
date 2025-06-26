@@ -59,7 +59,7 @@ update_sentrius_ssh=false
 update_sentrius_keycloak=false
 update_sentrius_agent=false
 update_sentrius_ai_agent=false
-update_llmproxy=false
+update_integrationproxy=false
 no_cache=false  # Default: use cache
 
 
@@ -70,8 +70,8 @@ while [[ "$#" -gt 0 ]]; do
         --sentrius-keycloak) update_sentrius_keycloak=true ;;
         --sentrius-agent) update_sentrius_agent=true ;;
         --sentrius-ai-agent) update_sentrius_ai_agent=true ;;
-        --sentrius-llmproxy) update_llmproxy=true ;;
-        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_llmproxy=true ;;
+        --sentrius-integration-proxy) update_integrationproxy=true ;;
+        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_integrationproxy=true ;;
         --no-cache) no_cache=true ;;  # Set no_cache to true if the flag is passed
         *) echo "Unknown flag: $1"; exit 1 ;;
     esac
@@ -140,14 +140,14 @@ if $update_sentrius_ai_agent; then
     #minikube image load sentrius-ai-agent:latest
 fi
 
-if $update_llmproxy; then
-    cp llm-proxy/target/sentrius-llm-proxy-*.jar docker/llmproxy/llmproxy.jar
+if $update_integrationproxy; then
+    cp integration-proxy/target/sentrius-integration-proxy-*.jar docker/integrationproxy/llmproxy.jar
     LLMPROXY_VERSION=$(increment_patch_version $LLMPROXY_VERSION)
-    build_image "sentrius-llmproxy" "$LLMPROXY_VERSION" "./docker/llmproxy"
-    rm docker/llmproxy/llmproxy.jar
+    build_image "sentrius-integration-proxy" "$LLMPROXY_VERSION" "./docker/integrationproxy"
+    rm docker/integrationproxy/llmproxy.jar
     update_env_var "LLMPROXY_VERSION" "$LLMPROXY_VERSION"
     ## for local, replace minikube with docker
-    docker tag sentrius-llmproxy:$LLMPROXY_VERSION sentrius-llmproxy:latest
+    docker tag sentrius-integration-proxy:$LLMPROXY_VERSION sentrius-integration-proxy:latest
     echo "Loading image into minikube"
     #minikube image load sentrius-ai-agent:LLMPROXY_VERSION
     #minikube image load sentrius-ai-agent:latest

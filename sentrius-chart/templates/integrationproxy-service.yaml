@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}-llmproxy
+  name: {{ .Release.Name }}-integrationproxy
   namespace: {{ .Values.tenant }}
   annotations:
     {{- if eq .Values.environment "gke" }}
@@ -16,7 +16,7 @@ metadata:
     {{- end }}
     {{- end }}
   labels:
-    app: llmproxy
+    app: integrationproxy
 spec:
   type: {{ .Values.sentrius.serviceType }}
   ports:
@@ -24,7 +24,7 @@ spec:
       port: {{ .Values.sentrius.port }}
       targetPort: {{ .Values.sentrius.port }} # Port used inside the container
       {{- if eq .Values.sentrius.serviceType "NodePort" }}
-      nodePort: {{ .Values.llmproxy.nodePort | default 30080  }}
+      nodePort: {{ .Values.integrationproxy.nodePort | default 30080  }}
       {{- end }}
   selector:
-    app: sentrius
+    app: integrationproxy

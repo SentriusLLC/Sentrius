@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}-llmproxy
+  name: {{ .Release.Name }}-integrationproxy
   labels:
     {{- include "sentrius.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: llmproxy
+      app: integrationproxy
   template:
     metadata:
       labels:
-        app: llmproxy
+        app: integrationproxy
     spec:
       initContainers:
         - name: wait-for-postgres
@@ -20,8 +20,8 @@ spec:
           command: [ 'sh', '-c', 'until nc -z {{ .Release.Name }}-sentrius 8080; do echo waiting for postgres; sleep 2;
           done;' ]
       containers:
-        - name: llmproxy
-          image: "{{ .Values.llmproxy.image.repository }}:{{ .Values.llmproxy.image.tag }}"
+        - name: integrationproxy
+          image: "{{ .Values.integrationproxy.image.repository }}:{{ .Values.integrationproxy.image.tag }}"
           imagePullPolicy: {{ .Values.sentrius.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.sentrius.port }}
