@@ -7,6 +7,9 @@ import io.sentrius.sso.mcp.service.MCPProxyService;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
+import io.sentrius.sso.core.services.agents.AgentClientService;
+import io.sentrius.sso.core.services.agents.AgentExecutionService;
+import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.provenance.kafka.ProvenanceKafkaProducer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,6 +43,15 @@ public class MCPProxyServiceTest {
     private ZeroTrustRequestService ztrService;
     
     @Mock
+    private AgentClientService agentClientService;
+    
+    @Mock
+    private AgentExecutionService agentExecutionService;
+    
+    @Mock
+    private ZeroTrustClientService zeroTrustClientService;
+    
+    @Mock
     private ProvenanceKafkaProducer provenanceKafkaProducer;
     
     @Mock
@@ -55,6 +67,9 @@ public class MCPProxyServiceTest {
             keycloakService,
             ztatService,
             ztrService,
+            agentClientService,
+            agentExecutionService,
+            zeroTrustClientService,
             provenanceKafkaProducer,
             restTemplate,
             objectMapper
