@@ -10,33 +10,35 @@ spec:
   selector:
     matchLabels:
       app: keycloak
-      release: {{ .Release.Name }}
   template:
     metadata:
       labels:
         app: keycloak
-        release: {{ .Release.Name }}
     spec:
+      initContainers:
+        - name: wait-for-keycloak-db
+          image: busybox
+          command: ['sh', '-c', 'until nc -z keycloak-db 5432; do echo waiting for keycloak-db; sleep 2; done;']
       containers:
         - name: keycloak
           image: "{{ .Values.keycloak.image.repository }}:{{ .Values.keycloak.image.tag }}"
           imagePullPolicy: "{{ .Values.keycloak.image.pullPolicy }}"
           ports:
-            - containerPort: 8081
-          {{- if not (eq .Values.environment "gke") }}
+            - containerPort: {{ .Values.keycloak.port }}
           readinessProbe:
             httpGet:
               path: {{ .Values.healthCheck.keycloak.readinessPath }}
-              port: {{ .Values.healthCheck.keycloak.port }}
-            initialDelaySeconds: 5
+              port: {{ .Values.keycloak.port }}
+            initialDelaySeconds: 30
             periodSeconds: 10
+            timeoutSeconds: 5
           livenessProbe:
             httpGet:
               path: {{ .Values.healthCheck.keycloak.livenessPath }}
-              port: {{ .Values.healthCheck.keycloak.port }}
-            initialDelaySeconds: 5
+              port: {{ .Values.keycloak.port }}
+            initialDelaySeconds: 60
             periodSeconds: 10
-          {{- end }}
+            timeoutSeconds: 5
           env:
             - name: KC_HTTP_PORT
               value: "8081"
@@ -61,7 +63,7 @@ spec:
                   name: {{ .Release.Name }}-keycloak-secrets
                   key: db-password
             - name: KC_HOSTNAME
-              value: {{ .Values.keycloakHostname }}
+              value: "keycloak.{{ .Values.tenant }}.sentrius.cloud"
             - name: KC_HOSTNAME_STRICT
               value: "false"
             - name: KEYCLOAK_LOGLEVEL
@@ -85,5 +87,5 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-keycloak-secrets
                   key: client-secret
-          command: [ "/opt/keycloak/bin/kc.sh" ]
-          args: [ "start-dev", "--proxy=edge", "--import-realm", "--health-enabled=true"]
+          command: ["/opt/keycloak/bin/kc.sh"]
+          args: ["start-dev", "--proxy=edge", "--import-realm", "--health-enabled=true"]

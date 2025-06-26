@@ -6,10 +6,10 @@ environment: "gke"  # Can be "gke", "aws", "azure", "local"
 
 tenant: sentrius-demo
 subdomain: "{{ .Values.tenant }}.sentrius.cloud"
-keycloakSubdomain: keycloak.{{ .Values.subdomain }}
-keycloakHostname: "{{ .Values.keycloakSubdomain }}"
-keycloakDomain: https://{{ .Values.keycloakSubdomain }}
-sentriusDomain: https://{{ .Values.subdomain }}
+keycloakSubdomain: "keycloak.{{ .Values.tenant }}.sentrius.cloud"
+keycloakHostname: "keycloak.{{ .Values.tenant }}.sentrius.cloud"
+keycloakDomain: "https://keycloak.{{ .Values.tenant }}.sentrius.cloud"
+sentriusDomain: "https://{{ .Values.tenant }}.sentrius.cloud"
 launcherFQDN: sentrius-launcher-service.dev.svc.cluster.local
 
 
@@ -203,7 +203,7 @@ keycloak:
       service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
 ingress:
-  enabled: false  # Temporarily disabled during secret refactoring
+  enabled: true
   class: "nginx"  # Default for local; override for GKE/AWS
   tlsEnabled: true  # Enable TLS when supported
   annotations:
