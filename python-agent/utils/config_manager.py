@@ -65,12 +65,22 @@ class ConfigManager:
             agent_name = config_key.replace('.config', '').replace('agent.', '')
             
             try:
+                # Try the path as specified first
                 yaml_path = Path(yaml_file)
+                
+                # If not found and path starts with "python-agent/", try without that prefix
+                if not yaml_path.exists() and yaml_file.startswith("python-agent/"):
+                    yaml_path = Path(yaml_file.replace("python-agent/", ""))
+                
+                # If still not found and doesn't have prefix, try with prefix
+                if not yaml_path.exists() and not yaml_file.startswith("python-agent/"):
+                    yaml_path = Path(f"python-agent/{yaml_file}")
+                
                 if yaml_path.exists():
                     with open(yaml_path, 'r') as f:
                         config = yaml.safe_load(f)
                         self.agent_configs[agent_name] = config
-                        logger.info(f"Loaded agent config for {agent_name} from {yaml_file}")
+                        logger.info(f"Loaded agent config for {agent_name} from {yaml_path}")
                 else:
                     logger.warning(f"Agent config file {yaml_file} not found for {agent_name}")
             except Exception as e:
