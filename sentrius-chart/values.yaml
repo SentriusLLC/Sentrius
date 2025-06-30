@@ -45,9 +45,9 @@ sentrius:
       service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
 # Sentrius configuration
-llmproxy:
+integrationproxy:
   image:
-    repository: us-central1-docker.pkg.dev/sentrius-project/llmproxy-repo
+    repository: us-central1-docker.pkg.dev/sentrius-project/integration-proxy-repo
     tag: tag
     pullPolicy: IfNotPresent
   port: 8080

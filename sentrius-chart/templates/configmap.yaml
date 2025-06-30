@@ -54,7 +54,7 @@ data:
     otel.traces.exporter=otlp
     otel.metrics.exporter=none
     otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
-    otel.resource.attributes.service.name=llm-proxy
+    otel.resource.attributes.service.name=integration-proxy
     otel.traces.sampler=always_on
     otel.exporter.otlp.timeout=10s
     otel.exporter.otlp.protocol=grpc

@@ -74,7 +74,7 @@ update_sentrius_ssh=false
 update_sentrius_keycloak=false
 update_sentrius_agent=false
 update_sentrius_ai_agent=false
-update_llmproxy=false
+update_integrationproxy=false
 update_launcher=false
 
 while [[ "$#" -gt 0 ]]; do
@@ -85,8 +85,8 @@ while [[ "$#" -gt 0 ]]; do
         --sentrius-agent) update_sentrius_agent=true ;;
         --sentrius-ai-agent) update_sentrius_ai_agent=true ;;
         --sentrius-launcher-service) update_launcher=true ;;
-        --sentrius-llmproxy) update_llmproxy=true ;;
-        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_llmproxy=true; update_launcher=true ;;
+        --sentrius-integration-proxy) update_integrationproxy=true ;;
+        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_integrationproxy=true; update_launcher=true ;;
         --no-cache) NO_CACHE=true ;;
         *) echo "Unknown flag: $1"; exit 1 ;;
     esac
@@ -138,11 +138,11 @@ if $update_sentrius_ai_agent; then
     rm docker/sentrius-launchable-agent/agent.jar
 fi
 
-if $update_llmproxy; then
-    cp llm-proxy/target/sentrius-llm-proxy-*.jar docker/llmproxy/llmproxy.jar
+if $update_integrationproxy; then
+    cp integration-proxy/target/sentrius-integration-proxy-*.jar docker/integrationproxy/llmproxy.jar
     LLMPROXY_VERSION=$(increment_patch_version $LLMPROXY_VERSION)
-    build_image "sentrius-llmproxy" "$LLMPROXY_VERSION" "./docker/llmproxy"
-    rm docker/llmproxy/llmproxy.jar
+    build_image "sentrius-integration-proxy" "$LLMPROXY_VERSION" "./docker/integrationproxy"
+    rm docker/integrationproxy/llmproxy.jar
     update_env_var "LLMPROXY_VERSION" "$LLMPROXY_VERSION"
 fi
 

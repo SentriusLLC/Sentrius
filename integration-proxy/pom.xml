@@ -8,7 +8,7 @@
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>sentrius-llm-proxy</artifactId>
+    <artifactId>sentrius-integration-proxy</artifactId>
 
 
     <properties>
