@@ -24,16 +24,23 @@ class BaseAgent(ABC):
             keycloak_config = config_manager.get_keycloak_config()
             
             # Create SentriusAgentConfig from the loaded configuration
+            from services.config import KeycloakConfig, AgentConfig, LLMConfig
+            
             self.config = SentriusAgentConfig(
-                keycloak_server_url=keycloak_config['server_url'],
-                keycloak_realm=keycloak_config['realm'],
-                keycloak_client_id=keycloak_config['client_id'],
-                keycloak_client_secret=keycloak_config['client_secret'],
-                agent_name_prefix=agent_config['name_prefix'],
-                agent_type=agent_config['agent_type'],
-                agent_callback_url=agent_config['callback_url'],
-                api_url=agent_config['api_url'],
-                heartbeat_interval=agent_config['heartbeat_interval']
+                keycloak=KeycloakConfig(
+                    server_url=keycloak_config['server_url'],
+                    realm=keycloak_config['realm'],
+                    client_id=keycloak_config['client_id'],
+                    client_secret=keycloak_config['client_secret']
+                ),
+                agent=AgentConfig(
+                    name_prefix=agent_config['name_prefix'],
+                    agent_type=agent_config['agent_type'],
+                    callback_url=agent_config['callback_url'],
+                    api_url=agent_config['api_url'],
+                    heartbeat_interval=agent_config['heartbeat_interval']
+                ),
+                llm=LLMConfig()  # Default LLM config
             )
             
             # Initialize Sentrius agent

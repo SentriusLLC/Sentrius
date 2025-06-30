@@ -8,6 +8,7 @@ sys.path.append(str(Path(__file__).parent))
 
 from utils.config_manager import ConfigManager
 from agents.chat_helper.chat_helper_agent import ChatHelperAgent
+from agents.mcp.mcp_agent import MCPAgent
 
 # Configure logging
 logging.basicConfig(
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 AVAILABLE_AGENTS = {
     'chat-helper': ChatHelperAgent,
+    'mcp': MCPAgent,
 }
 
 
