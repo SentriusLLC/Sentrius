@@ -47,7 +47,7 @@ sentrius:
 # Sentrius configuration
 integrationproxy:
   image:
-    repository: us-central1-docker.pkg.dev/sentrius-project/integration-proxy-repo
+    repository: sentrius-integration-proxy
     tag: tag
     pullPolicy: IfNotPresent
   port: 8080

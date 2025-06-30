@@ -1,4 +1,4 @@
-package io.sentrius.sso.mcp;
+package io.sentrius.sso.controllers.api.mcp;
 
 import io.sentrius.sso.mcp.model.MCPRequest;
 import io.sentrius.sso.mcp.model.MCPResponse;
