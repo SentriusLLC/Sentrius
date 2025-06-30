@@ -113,7 +113,7 @@ data:
     otel.exporter.otlp.protocol=grpc
     management.endpoints.web.exposure.include=health
     management.endpoint.health.show-details=always
-    agent.open.ai.endpoint=http://llmproxy:8080/
+    agent.open.ai.endpoint=http://sentrius-integrationproxy:8080/
     agent.ai.config=assessor-config.yaml
     provenance.kafka.topic=sentrius-provenance
     # Serialization
