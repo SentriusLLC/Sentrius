@@ -3,6 +3,7 @@ package io.sentrius.sso.core.services;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -34,6 +35,7 @@ public class ATPLPolicyService {
     @Transactional
     public ATPLPolicyEntity savePolicy(ATPLPolicy policy) {
         try {
+            log.info("Saving policy {}", policy);
             String yaml = yamlMapper.writeValueAsString(policy);
 
             ATPLPolicyEntity entity = ATPLPolicyEntity.builder()
@@ -219,4 +221,19 @@ public class ATPLPolicyService {
         assignment.setUser(operatingUser);
         return agentPolicyAssignmentRepository.save(assignment);
     }
+
+    public List<ATPLPolicy> getAllPolicies() {
+        return repository.findLatestPerPolicyId().stream()
+            .map(entity -> {
+                try {
+                    return yamlMapper.readValue(entity.getYaml(), ATPLPolicy.class);
+                } catch (Exception e) {
+                    log.error("Failed to deserialize ATPL policy", e);
+                    return null;
+                }
+            })
+            .filter(Objects::nonNull)
+            .toList();
+    }
+
 }

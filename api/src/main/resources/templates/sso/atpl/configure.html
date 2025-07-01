@@ -1438,5 +1438,18 @@
         updatePreview();
     });
 </script>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const loadedPolicyId = /*[[${policy.policyId != null}]]*/ false;
+    const loadedPolicy = /*[[${policy}]]*/ false;
+
+    if (loadedPolicyId) {
+        populateFormFromPolicy(loadedPolicy);
+        console.log('Policy loaded from server');
+        // You could trigger a visual cue or notification here
+    }
+    /*]]>*/
+</script>
 </body>
 </html>

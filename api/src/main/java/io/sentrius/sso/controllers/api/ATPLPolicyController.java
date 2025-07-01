@@ -36,6 +36,7 @@ public class ATPLPolicyController {
                 return ResponseEntity.badRequest().body("Missing required fields: policy_id and version.");
             }
 
+            log.info("Saving policy {}", policy);
             policyService.savePolicy(policy);
             return ResponseEntity.status(HttpStatus.CREATED).body("Policy uploaded successfully.");
 
