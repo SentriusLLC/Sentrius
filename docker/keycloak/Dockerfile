@@ -14,37 +14,18 @@ RUN /opt/keycloak/bin/kc.sh build
 FROM quay.io/keycloak/keycloak:24.0.1
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
 
-# Install gettext for envsubst command
-USER root
-RUN microdnf install -y gettext && microdnf clean all
-USER keycloak
-
 # Copy realm template and processing script
 COPY ./realms/sentrius-realm.json.template /opt/keycloak/data/import/sentrius-realm.json.template
 COPY ./process-realm-template.sh /opt/keycloak/bin/process-realm-template.sh
+COPY ./startup.sh /opt/keycloak/bin/startup.sh
 
-# Make the script executable
+# Make scripts executable and ensure data directory is writable
 USER root
-RUN chmod +x /opt/keycloak/bin/process-realm-template.sh
+RUN chmod +x /opt/keycloak/bin/process-realm-template.sh && \
+    chmod +x /opt/keycloak/bin/startup.sh && \
+    chown -R keycloak:keycloak /opt/keycloak/data
 USER keycloak
 
 RUN ls -l /opt/keycloak/data/import/sentrius-realm.json.template
 
-# Create startup script that processes template then starts Keycloak
-COPY <<'EOF' /opt/keycloak/bin/startup.sh
-#!/bin/bash
-echo "Starting Keycloak with dynamic realm processing..."
-
-# Process the realm template
-/opt/keycloak/bin/process-realm-template.sh
-
-# Start Keycloak with the processed realm
-exec /opt/keycloak/bin/kc.sh start-dev --proxy=passthrough --import-realm --import-realm-overwrite=true --health-enabled=true
-EOF
-
-USER root
-RUN chmod +x /opt/keycloak/bin/startup.sh
-USER keycloak
-
 ENTRYPOINT ["/opt/keycloak/bin/startup.sh"]
-

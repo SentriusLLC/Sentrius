@@ -25,10 +25,20 @@ echo "  Template: $REALM_TEMPLATE"
 echo "  Output: $REALM_OUTPUT"
 
 # Set default values for secrets if not provided
-export SENTRIUS_API_CLIENT_SECRET="${SENTRIUS_API_CLIENT_SECRET:-default-api-secret-$(openssl rand -hex 16)}"
-export SENTRIUS_LAUNCHER_CLIENT_SECRET="${SENTRIUS_LAUNCHER_CLIENT_SECRET:-default-launcher-secret-$(openssl rand -hex 16)}"
-export JAVA_AGENTS_CLIENT_SECRET="${JAVA_AGENTS_CLIENT_SECRET:-default-agents-secret-$(openssl rand -hex 16)}"
-export AI_AGENT_ASSESSOR_CLIENT_SECRET="${AI_AGENT_ASSESSOR_CLIENT_SECRET:-default-assessor-secret-$(openssl rand -hex 16)}"
+if command -v openssl >/dev/null 2>&1; then
+    # Use openssl if available
+    export SENTRIUS_API_CLIENT_SECRET="${SENTRIUS_API_CLIENT_SECRET:-default-api-secret-$(openssl rand -hex 16)}"
+    export SENTRIUS_LAUNCHER_CLIENT_SECRET="${SENTRIUS_LAUNCHER_CLIENT_SECRET:-default-launcher-secret-$(openssl rand -hex 16)}"
+    export JAVA_AGENTS_CLIENT_SECRET="${JAVA_AGENTS_CLIENT_SECRET:-default-agents-secret-$(openssl rand -hex 16)}"
+    export AI_AGENT_ASSESSOR_CLIENT_SECRET="${AI_AGENT_ASSESSOR_CLIENT_SECRET:-default-assessor-secret-$(openssl rand -hex 16)}"
+else
+    # Fallback to simple random generation using date and process ID
+    RAND_SUFFIX=$(date +%s%N | cut -b1-13)$$
+    export SENTRIUS_API_CLIENT_SECRET="${SENTRIUS_API_CLIENT_SECRET:-default-api-secret-${RAND_SUFFIX}}"
+    export SENTRIUS_LAUNCHER_CLIENT_SECRET="${SENTRIUS_LAUNCHER_CLIENT_SECRET:-default-launcher-secret-${RAND_SUFFIX}a}"
+    export JAVA_AGENTS_CLIENT_SECRET="${JAVA_AGENTS_CLIENT_SECRET:-default-agents-secret-${RAND_SUFFIX}b}"
+    export AI_AGENT_ASSESSOR_CLIENT_SECRET="${AI_AGENT_ASSESSOR_CLIENT_SECRET:-default-assessor-secret-${RAND_SUFFIX}c}"
+fi
 
 # Set default values for other placeholders
 export ROOT_URL="${ROOT_URL:-http://localhost:8080}"
@@ -42,8 +52,17 @@ echo "  SENTRIUS_LAUNCHER_CLIENT_SECRET: ${SENTRIUS_LAUNCHER_CLIENT_SECRET:0:8}.
 echo "  JAVA_AGENTS_CLIENT_SECRET: ${JAVA_AGENTS_CLIENT_SECRET:0:8}..."
 echo "  AI_AGENT_ASSESSOR_CLIENT_SECRET: ${AI_AGENT_ASSESSOR_CLIENT_SECRET:0:8}..."
 
-# Use envsubst to replace environment variables
-envsubst < "$REALM_TEMPLATE" > "$REALM_OUTPUT"
+# Use sed to replace environment variables (since envsubst may not be available)
+# Replace ${VAR} with actual values
+sed -e "s|\${SENTRIUS_API_CLIENT_SECRET}|${SENTRIUS_API_CLIENT_SECRET}|g" \
+    -e "s|\${SENTRIUS_LAUNCHER_CLIENT_SECRET}|${SENTRIUS_LAUNCHER_CLIENT_SECRET}|g" \
+    -e "s|\${JAVA_AGENTS_CLIENT_SECRET}|${JAVA_AGENTS_CLIENT_SECRET}|g" \
+    -e "s|\${AI_AGENT_ASSESSOR_CLIENT_SECRET}|${AI_AGENT_ASSESSOR_CLIENT_SECRET}|g" \
+    -e "s|\${ROOT_URL}|${ROOT_URL}|g" \
+    -e "s|\${REDIRECT_URIS}|${REDIRECT_URIS}|g" \
+    -e "s|\${GOOGLE_CLIENT_ID}|${GOOGLE_CLIENT_ID}|g" \
+    -e "s|\${GOOGLE_CLIENT_SECRET}|${GOOGLE_CLIENT_SECRET}|g" \
+    "$REALM_TEMPLATE" > "$REALM_OUTPUT"
 
 if [ $? -eq 0 ]; then
     echo "Realm template processed successfully: $REALM_OUTPUT"
