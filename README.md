@@ -3,7 +3,8 @@ Sentrius
 ![image](docs/images/mainscreen.png)
 
 Sentrius is zero trust (and if you want AI assisted) management system. to protect your infrastructure. It is split 
-into several maven projects. Currently we only support SSH, but RDP is in the works. Agents can be leveraged to monitor and control SSH sessions, ensuring that all connections are secure and compliant with your organization's policies.
+into several maven projects. Agents can be leveraged to monitor and control infra ( SSH, APIs, RDP eventually), ensuring that all connections are secure and compliant with your organization's policies.
+Agents can access external resources ( like LLMs or integrations ) via a zero trust assisted access token. 
 sub-projects:
 
     core – Handles the core functionalities (e.g., SSH session management, zero trust policy enforcement).
