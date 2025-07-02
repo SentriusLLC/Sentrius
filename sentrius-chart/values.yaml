@@ -220,6 +220,10 @@ ingress:
   class: "nginx"  # Default for local; override for GKE/AWS
   tlsEnabled: true  # Enable TLS when supported
   annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+  # Environment-specific annotation sets (use via --set-file or values override)
+  annotationSets:
     gke:  # GKE-specific annotations
       kubernetes.io/ingress.class: gce
       networking.gke.io/managed-certificates: wildcard-cert
@@ -231,8 +235,8 @@ ingress:
       alb.ingress.kubernetes.io/ssl-redirect: "443"
     local:  # Local environment annotations (e.g., Minikube)
       kubernetes.io/ingress.class: nginx
-      nginx.ingress.kubernetes.io/ssl-redirect: "{{ .Values.certificates.enabled | quote }}"
-      nginx.ingress.kubernetes.io/force-ssl-redirect: "{{ .Values.certificates.enabled | quote }}"
+      nginx.ingress.kubernetes.io/ssl-redirect: "{{ .Values.certificates.enabled }}"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "{{ .Values.certificates.enabled }}"
       nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
 
 

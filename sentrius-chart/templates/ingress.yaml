@@ -5,18 +5,15 @@ metadata:
   name: managed-cert-ingress-{{ .Values.tenant }}
   namespace: {{ .Values.tenant }}
   annotations:
-    {{- if eq .Values.environment "gke" }}
-    {{- range $key, $value := .Values.ingress.annotations.gke }}
-    {{ $key }}: "{{ $value }}"
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
     {{- end }}
-    {{- else if eq .Values.environment "aws" }}
-    {{- range $key, $value := .Values.ingress.annotations.aws }}
-    {{ $key }}: "{{ $value }}"
-    {{- end }}
-    {{- else if eq .Values.environment "local" }}
-    {{- range $key, $value := .Values.ingress.annotations.local }}
-    {{ $key }}: "{{ $value }}"
-    {{- end }}
+    {{- if .Values.certificates.enabled }}
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    {{- else }}
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
     {{- end }}
 spec:
   {{- if .Values.ingress.tlsEnabled }}

@@ -60,6 +60,9 @@ if ! kubectl get deployment cert-manager -n cert-manager >/dev/null 2>&1 || \
             echo "ERROR: Failed to install cert-manager with Helm"
             exit 1
         fi
+        echo "Waiting for cert-manager to be ready..."
+        kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=cert-manager -n cert-manager --timeout=300s
+        kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=webhook -n cert-manager --timeout=300s
     else
         echo "ERROR: cert-manager is not fully installed in your cluster."
         echo "You can install it manually or rerun this script with --install-cert-manager --tls"
@@ -67,47 +70,6 @@ if ! kubectl get deployment cert-manager -n cert-manager >/dev/null 2>&1 || \
     fi
 fi
 
-}
-
-# Function to wait for cert-manager CRDs and webhook to be ready
-wait_for_cert_manager_crds() {
-    local max_attempts=30
-    local attempt=1
-    
-    while [[ $attempt -le $max_attempts ]]; do
-        # Check if Certificate CRD is available and webhook is ready
-        if kubectl get crd certificates.cert-manager.io >/dev/null 2>&1 && \
-           kubectl get crd clusterissuers.cert-manager.io >/dev/null 2>&1; then
-            
-            # Test if we can actually create cert-manager resources by doing a dry-run
-            echo "Testing cert-manager webhook readiness..."
-            kubectl create --dry-run=server -o yaml - <<EOF >/dev/null 2>&1
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
-metadata:
-  name: test-issuer
-spec:
-  selfSigned: {}
-EOF
-            if [[ $? -eq 0 ]]; then
-                echo "cert-manager CRDs and webhook are ready ✓"
-                return 0
-            fi
-        fi
-        
-        echo "Waiting for cert-manager CRDs and webhook to be ready (attempt $attempt/$max_attempts)..."
-        sleep 10
-        ((attempt++))
-    done
-    
-    echo "ERROR: cert-manager CRDs or webhook are not ready after $((max_attempts * 10)) seconds"
-    echo "This may indicate an issue with cert-manager installation."
-    echo ""
-    echo "Try running these commands to check cert-manager status:"
-    echo "  kubectl get pods -n cert-manager"
-    echo "  kubectl logs -n cert-manager -l app.kubernetes.io/name=cert-manager"
-    echo "  kubectl get crd | grep cert-manager"
-    exit 1
 }
 
 # Configure TLS settings
@@ -118,7 +80,7 @@ if [[ "$ENABLE_TLS" == "true" ]]; then
     KEYCLOAK_SUBDOMAIN="keycloak-${TENANT}.local"
     KEYCLOAK_HOSTNAME="${KEYCLOAK_SUBDOMAIN}"
     KEYCLOAK_DOMAIN="https://${KEYCLOAK_SUBDOMAIN}"
-    KEYCLOAK_INTERNAL_DOMAIN="https://${KEYCLOAK_SUBDOMAIN}"  # Internal cluster communication
+    KEYCLOAK_INTERNAL_DOMAIN="http://sentrius-keycloak:8081"  # Internal cluster communication uses HTTP
     SENTRIUS_DOMAIN="https://${SUBDOMAIN}"
     CERTIFICATES_ENABLED="true"
     INGRESS_TLS_ENABLED="true"
