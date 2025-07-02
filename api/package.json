@@ -14,7 +14,7 @@
     "@fullcalendar/timegrid": "^6.1.12",
     "@popperjs/core": "^2.11.8",
     "@stomp/stompjs": "^7.0.0",
-    "bootstrap": "^5.3.1",
+    "bootstrap": "latest-5",
     "bootstrap5-tags": "latest",
     "browserify": "^17.0.1",
     "datatables": "^1.10.18",
