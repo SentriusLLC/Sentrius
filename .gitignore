@@ -51,3 +51,8 @@ package-lock.json
 cp.env.bak
 .generated.env
 api/node_modules/
+
+
+# Ignore generated frontend assets
+api/src/main/resources/static/node/
+api/node
