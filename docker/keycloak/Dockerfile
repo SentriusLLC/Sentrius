@@ -14,10 +14,18 @@ RUN /opt/keycloak/bin/kc.sh build
 FROM quay.io/keycloak/keycloak:24.0.1
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
 
-COPY ./realms/sentrius-realm.json /opt/keycloak/data/import/sentrius-realm.json
+# Copy realm template and processing script
+COPY ./realms/sentrius-realm.json.template /opt/keycloak/data/import/sentrius-realm.json.template
+COPY ./process-realm-template.sh /opt/keycloak/bin/process-realm-template.sh
+COPY ./startup.sh /opt/keycloak/bin/startup.sh
 
-RUN ls -l /opt/keycloak/data/import/sentrius-realm.json
+# Make scripts executable and ensure data directory is writable
+USER root
+RUN chmod +x /opt/keycloak/bin/process-realm-template.sh && \
+    chmod +x /opt/keycloak/bin/startup.sh && \
+    chown -R keycloak:keycloak /opt/keycloak/data
+USER keycloak
 
-ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
-CMD ["start-dev", "--proxy=passthrough", "--import-realm", "--import-realm-overwrite=true", "--health-enabled=true"]
+RUN ls -l /opt/keycloak/data/import/sentrius-realm.json.template
 
+ENTRYPOINT ["/opt/keycloak/bin/startup.sh"]

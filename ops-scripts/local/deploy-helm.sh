@@ -29,6 +29,32 @@ fi
 #    --set sentrius-keycloak.image.pullPolicy="Never" \
 #    --set sentrius-bad-ssh.image.pullPolicy="Never" \
 
+# Load any previously generated password from .generated.env
+GENERATED_ENV_PATH="${SCRIPT_DIR}/../../.generated.env"
+if [[ -f "$GENERATED_ENV_PATH" ]]; then
+    source "$GENERATED_ENV_PATH"
+fi
+
+# Generate Keycloak DB password if not set and secret doesn't exist
+if [[ -z "$KEYCLOAK_DB_PASSWORD" ]]; then
+    echo "🔎 Checking if keycloak secret already exists..."
+    if kubectl get secret "${TENANT}-keycloak-secrets" --namespace "${TENANT}" >/dev/null 2>&1; then
+        echo "✅ Found existing keycloak secret; extracting DB password..."
+        KEYCLOAK_DB_PASSWORD=$(kubectl get secret "${TENANT}-keycloak-secrets" --namespace "${TENANT}" -o jsonpath="{.data.db-password}" | base64 --decode)
+
+        if [[ -z "$KEYCLOAK_DB_PASSWORD" ]]; then
+            echo "❌ Secret exists but db-password is empty; exiting for safety"
+            exit 1
+        fi
+    else
+        echo "⚠️ No existing secret found; generating new Keycloak DB password..."
+        KEYCLOAK_DB_PASSWORD=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)
+
+        # Persist it to .generated.env so it doesn't change between runs
+        echo "KEYCLOAK_DB_PASSWORD=${KEYCLOAK_DB_PASSWORD}" > "$GENERATED_ENV_PATH"
+    fi
+fi
+
 
 helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set tenant=${TENANT} \
@@ -41,6 +67,7 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set integrationproxy.image.repository="sentrius-integration-proxy" \
     --set integrationproxy.image.pullPolicy="Never" \
     --set sentrius.image.repository="sentrius" \
+    --set keycloak.db.password="${KEYCLOAK_DB_PASSWORD}" \
     --set sentrius.image.pullPolicy="Never" \
     --set keycloak.image.pullPolicy="Never" \
     --set ssh.image.pullPolicy="Never" \

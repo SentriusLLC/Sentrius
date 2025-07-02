@@ -17,33 +17,40 @@ spec:
         app: keycloak
         release: {{ .Release.Name }}
     spec:
+      initContainers:
+        - name: wait-for-keycloak-db
+          image: busybox
+          command: ['sh', '-c', 'until nc -z keycloak-db 5432; do echo waiting for keycloak-db; sleep 2; done;']
       containers:
         - name: keycloak
           image: "{{ .Values.keycloak.image.repository }}:{{ .Values.keycloak.image.tag }}"
           imagePullPolicy: "{{ .Values.keycloak.image.pullPolicy }}"
           ports:
-            - containerPort: 8081
-          {{- if not (eq .Values.environment "gke") }}
+            - containerPort: {{ .Values.keycloak.port }}
           readinessProbe:
             httpGet:
               path: {{ .Values.healthCheck.keycloak.readinessPath }}
-              port: {{ .Values.healthCheck.keycloak.port }}
-            initialDelaySeconds: 5
+              port: {{ .Values.keycloak.port }}
+            initialDelaySeconds: 30
             periodSeconds: 10
+            timeoutSeconds: 5
           livenessProbe:
             httpGet:
               path: {{ .Values.healthCheck.keycloak.livenessPath }}
-              port: {{ .Values.healthCheck.keycloak.port }}
-            initialDelaySeconds: 5
+              port: {{ .Values.keycloak.port }}
+            initialDelaySeconds: 60
             periodSeconds: 10
-          {{- end }}
+            timeoutSeconds: 5
           env:
             - name: KC_HTTP_PORT
               value: "8081"
             - name: KEYCLOAK_ADMIN
               value: {{ .Values.keycloak.adminUser }}
             - name: KEYCLOAK_ADMIN_PASSWORD
-              value: {{ .Values.keycloak.adminPassword }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-keycloak-secrets
+                  key: admin-password
             - name: KC_DB
               value: postgres
             - name: KC_DB_URL_HOST
@@ -53,7 +60,10 @@ spec:
             - name: KC_DB_USERNAME
               value: {{ .Values.keycloak.db.user }}
             - name: KC_DB_PASSWORD
-              value: {{ .Values.keycloak.db.password }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-keycloak-secrets
+                  key: db-password
             - name: KC_HOSTNAME
               value: {{ .Values.keycloakHostname }}
             - name: KC_HOSTNAME_STRICT
@@ -75,6 +85,27 @@ spec:
             - name: GOOGLE_CLIENT_ID
               value: {{ .Values.keycloak.clientId }}
             - name: GOOGLE_CLIENT_SECRET
-              value: {{ .Values.keycloak.clientSecret }}
-          command: [ "/opt/keycloak/bin/kc.sh" ]
-          args: [ "start-dev", "--proxy=edge", "--import-realm", "--health-enabled=true"]
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-keycloak-secrets
+                  key: client-secret
+            - name: SENTRIUS_API_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: sentrius-api-client-secret
+            - name: SENTRIUS_LAUNCHER_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: sentrius-launcher-service-client-secret
+            - name: JAVA_AGENTS_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: java-agents-client-secret
+            - name: AI_AGENT_ASSESSOR_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: ai-agent-assessor-client-secret

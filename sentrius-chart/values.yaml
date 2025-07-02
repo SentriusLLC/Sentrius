@@ -6,10 +6,10 @@ environment: "gke"  # Can be "gke", "aws", "azure", "local"
 
 tenant: sentrius-demo
 subdomain: "{{ .Values.tenant }}.sentrius.cloud"
-keycloakSubdomain: keycloak.{{ .Values.subdomain }}
-keycloakHostname: "{{ .Values.keycloakSubdomain }}"
-keycloakDomain: https://{{ .Values.keycloakSubdomain }}
-sentriusDomain: https://{{ .Values.subdomain }}
+keycloakSubdomain: "keycloak.{{ .Values.tenant }}.sentrius.cloud"
+keycloakHostname: "keycloak.{{ .Values.tenant }}.sentrius.cloud"
+keycloakDomain: "https://keycloak.{{ .Values.tenant }}.sentrius.cloud"
+sentriusDomain: "https://{{ .Values.tenant }}.sentrius.cloud"
 launcherFQDN: sentrius-launcher-service.dev.svc.cluster.local
 
 
@@ -31,7 +31,7 @@ sentrius:
   resources: {}
   oauth2:
     client_id: sentrius-api
-    client_secret: nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0
+    client_secret: ""  # To be set via environment variable or external secret
     authorization_grant_type: authorization_code
     redirect_uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     scope: openid,profile,email
@@ -57,7 +57,7 @@ integrationproxy:
   resources: {}
   oauth2:
     client_id: sentrius-api
-    client_secret: nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0
+    client_secret: ""  # To be set via environment variable or external secret
     authorization_grant_type: authorization_code
     redirect_uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     scope: openid,profile,email
@@ -81,7 +81,7 @@ sentriusagent:
   port: 8080
   oauth2:
     client_id: java-agents
-    client_secret: e4WgJovH8MzcAvRnFg3rROAbeDIwiYmx
+    client_secret: ""  # To be set via environment variable or external secret
     authorization_grant_type: client_credentials
     redirect-uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     scope: openid,profile,email
@@ -109,7 +109,7 @@ sentriusaiagent:
   port: 8080
   oauth2:
     client_id: java-agents
-    client_secret: KLJMLKSDJGlkj23@#jasdlkjg@#dsagsagdsag
+    client_secret: ""  # To be set via environment variable or external secret
     authorization_grant_type: authorization_code
     redirect-uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     scope: openid,profile,email
@@ -137,7 +137,7 @@ launcherservice:
   port: 8080
   oauth2:
     client_id: sentrius-launcher-service
-    client_secret: nGkEukexSWTSjklj3sddgvDzYjSkDmeUlM0FJ5Jhh0
+    client_secret: ""  # To be set via environment variable or external secret
     authorization_grant_type: authorization_code
     redirect-uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     scope: openid,profile,email
@@ -169,12 +169,12 @@ ssh:
     pullPolicy: IfNotPresent
   port: 22
 
-# Secrets
+# Secrets - Use external secret management or environment variables
 secrets:
   db:
-    username: YWRtaW4=       # admin
-    password: cGFzc3dvcmQ=   # password
-    keystorePassword: c2VudHJpdXM= # sentrius
+    username: ""       # To be provided via environment variable or external secret
+    password: ""       # To be provided via environment variable or external secret  
+    keystorePassword: ""  # To be provided via environment variable or external secret
 
 keycloak:
   image:
@@ -182,18 +182,29 @@ keycloak:
     pullPolicy: IfNotPresent
   host: keycloak.default.svc.cluster.local
   adminUser: admin
-  adminPassword: nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0@1
+  adminPassword: ""  # To be set via environment variable or external secret
   serviceType: ClusterIP
   port: 8081
   clientId: sentrius-api
-  clientSecret: nGkEukexSWTvDzYjSkDmeUlM0FJ5Jhh0
+  clientSecret: ""  # To be set via environment variable or external secret
   db:
     image: postgres:15
     user: keycloak
-    password: password
+    password: ""  # To be set via environment variable or external secret
     database: keycloak
     storageSize: 10Gi
   replicas: 1
+  # Realm client secrets - used for Keycloak realm template processing
+  realm:
+    clients:
+      sentriusApi:
+        client_secret: ""  # Dynamically generated if not provided
+      sentriusLauncher:
+        client_secret: ""  # Dynamically generated if not provided
+      javaAgents:
+        client_secret: ""  # Dynamically generated if not provided
+      aiAgentAssessor:
+        client_secret: ""  # Dynamically generated if not provided
   annotations:
     gke:
       cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
@@ -311,5 +322,5 @@ neo4j:
   httpPort: 7474
   resources: {}
   env:
-    NEO4J_AUTH: neo4j/testingsecret
+    NEO4J_AUTH: ""  # To be set via environment variable (e.g., neo4j/your-secure-password)
     NEO4J_server_config_strict__validation__enabled: "true"

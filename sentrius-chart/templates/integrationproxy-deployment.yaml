@@ -58,6 +58,11 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-db-secret
                   key: keystore-password
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: integrationproxy-client-secret
 
       volumes:
         - name: config-volume

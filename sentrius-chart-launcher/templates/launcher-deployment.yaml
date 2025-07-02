@@ -29,6 +29,12 @@ spec:
           volumeMounts:
             - name: config-volume
               mountPath: /config
+          env:
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: launcherservice-client-secret
       volumes:
         - name: config-volume
           configMap:
