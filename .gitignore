@@ -50,3 +50,4 @@ package-lock.json
 .env.bak
 cp.env.bak
 .generated.env
+api/node_modules/
