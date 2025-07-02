@@ -200,8 +200,8 @@
         </dependency>
     </dependencies>
 
+
     <build>
-        <pluginManagement>
             <plugins>
                 <plugin>
                     <groupId>com.github.eirslett</groupId>
@@ -222,7 +222,7 @@
                             </goals>
                             <phase>generate-resources</phase>
                             <configuration>
-                                <arguments>clean-install</arguments>
+                                <arguments>install</arguments>
                             </configuration>
                         </execution>
                         <execution>
@@ -279,6 +279,5 @@
                     <artifactId>maven-project-info-reports-plugin</artifactId>
                 </plugin>
             </plugins>
-        </pluginManagement>
     </build>
 </project>
