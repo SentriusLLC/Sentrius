@@ -41,8 +41,10 @@ else
 fi
 
 # Set default values for other placeholders
-export ROOT_URL="${ROOT_URL:-http://localhost:8080}"
-export REDIRECT_URIS="${REDIRECT_URIS:-http://localhost:8080}"
+# set in helm chart
+#export ROOT_URL="${ROOT_URL:-http://localhost:8080}"
+# set in helm chart
+#export REDIRECT_URIS="${REDIRECT_URIS:-http://localhost:8080}"
 export GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-}"
 export GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET:-}"
 
@@ -58,11 +60,13 @@ sed -e "s|\${SENTRIUS_API_CLIENT_SECRET}|${SENTRIUS_API_CLIENT_SECRET}|g" \
     -e "s|\${SENTRIUS_LAUNCHER_CLIENT_SECRET}|${SENTRIUS_LAUNCHER_CLIENT_SECRET}|g" \
     -e "s|\${JAVA_AGENTS_CLIENT_SECRET}|${JAVA_AGENTS_CLIENT_SECRET}|g" \
     -e "s|\${AI_AGENT_ASSESSOR_CLIENT_SECRET}|${AI_AGENT_ASSESSOR_CLIENT_SECRET}|g" \
-    -e "s|\${ROOT_URL}|${ROOT_URL}|g" \
-    -e "s|\${REDIRECT_URIS}|${REDIRECT_URIS}|g" \
     -e "s|\${GOOGLE_CLIENT_ID}|${GOOGLE_CLIENT_ID}|g" \
     -e "s|\${GOOGLE_CLIENT_SECRET}|${GOOGLE_CLIENT_SECRET}|g" \
     "$REALM_TEMPLATE" > "$REALM_OUTPUT"
+
+  # these two are set helm chart
+  #    -e "s|\${ROOT_URL}|${ROOT_URL}|g" \
+  #    -e "s|\${REDIRECT_URIS}|${REDIRECT_URIS}|g" \
 
 if [ $? -eq 0 ]; then
     echo "Realm template processed successfully: $REALM_OUTPUT"

@@ -49,3 +49,4 @@ package-lock.json
 .settings/*
 .env.bak
 cp.env.bak
+.generated.env

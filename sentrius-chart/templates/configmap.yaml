@@ -74,6 +74,7 @@ data:
     spring.kafka.properties.max.block.ms=500
     spring.kafka.properties.metadata.max.age.ms=10000
     spring.kafka.properties.retry.backoff.ms=1000
+    bootstrap-servers=sentrius-kafka:9092:
   ai-agent-application.properties: |
     spring.main.web-application-type=servlet
     spring.thymeleaf.enabled=true
@@ -131,6 +132,7 @@ data:
     spring.kafka.properties.max.block.ms=500
     spring.kafka.properties.metadata.max.age.ms=10000
     spring.kafka.properties.retry.backoff.ms=1000
+    bootstrap-servers=sentrius-kafka:9092:
 
   analysis-agent-application.properties: |
     keystore.file=sso.jceks
@@ -201,6 +203,7 @@ data:
     # Reliability
     spring.kafka.producer.retries=5
     spring.kafka.producer.acks=all
+    bootstrap-servers=sentrius-kafka:9092:
 
     # Timeout tuning
     spring.kafka.producer.request-timeout-ms=10000

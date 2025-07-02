@@ -10,10 +10,12 @@ spec:
   selector:
     matchLabels:
       app: keycloak
+      release: {{ .Release.Name }}
   template:
     metadata:
       labels:
         app: keycloak
+        release: {{ .Release.Name }}
     spec:
       initContainers:
         - name: wait-for-keycloak-db
@@ -63,7 +65,7 @@ spec:
                   name: {{ .Release.Name }}-keycloak-secrets
                   key: db-password
             - name: KC_HOSTNAME
-              value: "keycloak.{{ .Values.tenant }}.sentrius.cloud"
+              value: {{ .Values.keycloakHostname }}
             - name: KC_HOSTNAME_STRICT
               value: "false"
             - name: KEYCLOAK_LOGLEVEL
