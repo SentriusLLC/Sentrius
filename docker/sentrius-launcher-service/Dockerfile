@@ -12,11 +12,11 @@ WORKDIR /app
 
 COPY dev-certs/sentrius-ca.crt /tmp/sentrius-ca.crt
 
-RUN if [ "$INCLUDE_DEV_CERTS" = "true" ] && [ -f /tmp/empty-sentrius-ca.crt ]; then \
+RUN if [ "$INCLUDE_DEV_CERTS" = "true" ] && [ -f /tmp/sentrius-ca.crt ]; then \
       echo "Importing dev CA cert..." && \
       keytool -import -noprompt -trustcacerts \
         -alias sentrius-local-ca \
-        -file /tmp/empty-sentrius-ca.crt \
+        -file /tmp/sentrius-ca.crt \
         -keystore "$JAVA_HOME/lib/security/cacerts" \
         -storepass changeit ; \
     else \

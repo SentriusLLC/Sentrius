@@ -21,7 +21,7 @@ public class WebSocketRouteConfig {
     @Bean
     public WebSocketHandlerMapping webSocketMapping() {
         Map<String, WebSocketHandler> map = new HashMap<>();
-        map.put("/api/v1/agents/ws/{host}/{sessionId}/{chatGroupId}/{ztat}", agentWebSocketProxyHandler);
+        map.put("/api/v1/agents/ws", agentWebSocketProxyHandler);
 
         WebSocketHandlerMapping mapping = new WebSocketHandlerMapping();
         mapping.setUrlMap(map);
