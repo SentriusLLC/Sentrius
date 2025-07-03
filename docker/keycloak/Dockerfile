@@ -1,13 +1,21 @@
 FROM quay.io/keycloak/keycloak:24.0.1 as builder
 
+# Declare the argument
+ARG INCLUDE_DEV_CERTS=false
+
+# Set environment so you can use in RUN
+ENV INCLUDE_DEV_CERTS=${INCLUDE_DEV_CERTS}
+
 # Enable health and metrics support
 ENV KC_HEALTH_ENABLED=true
 ENV KC_METRICS_ENABLED=true
-
 # Configure a database vendor
 ENV KC_DB=postgres
 
 WORKDIR /opt/keycloak
+
+# Copy certs if needed
+
 
 RUN /opt/keycloak/bin/kc.sh build
 

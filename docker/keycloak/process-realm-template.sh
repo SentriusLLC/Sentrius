@@ -45,7 +45,7 @@ fi
 #export ROOT_URL="${ROOT_URL:-http://localhost:8080}"
 # set in helm chart
 #export REDIRECT_URIS="${REDIRECT_URIS:-http://localhost:8080}"
-export GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-}"
+export GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:google-oauth-sentrius}"
 export GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET:-}"
 
 echo "Substituting environment variables in realm template..."

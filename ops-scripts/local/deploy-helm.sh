@@ -3,11 +3,27 @@
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 source ${SCRIPT_DIR}/base.sh
+source ${SCRIPT_DIR}/../base/base.sh
 source ${SCRIPT_DIR}/../../.local.env
-
+CERT_DIR="${SCRIPT_DIR}/../../docker/dev-certs"
+CERT_FILE="${CERT_DIR}/sentrius-ca.crt"
+KEY_FILE="${CERT_DIR}/sentrius-ca.key"
 TENANT=dev
-ENABLE_TLS=true
+ENABLE_TLS=false
 INSTALL_CERT_MANAGER=false
+ENV_TARGET="local"  # default mode
+CERT_DIR="${SCRIPT_DIR}/../../docker/dev-certs"
+
+# --- Load and back up environment file ---
+ENV_FILE="${SCRIPT_DIR}/../../.$ENV_TARGET.env"
+source "$ENV_FILE"
+cp "$ENV_FILE" "$ENV_FILE.bak"
+
+
+GENERATED_ENV_PATH="${SCRIPT_DIR}/../../.generated.env"
+if [[ -f "$GENERATED_ENV_PATH" ]]; then
+    source "$GENERATED_ENV_PATH"
+fi
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -39,6 +55,42 @@ if [[ -z "$TENANT" ]]; then
     echo "Must provide tenant name" 1>&2
     exit 1
 fi
+
+
+if [[ "$ENABLE_TLS" == "true"  ]]; then
+  if [[ ! -f "$CERT_FILE" || ! -f "$KEY_FILE" ]]; then
+      echo "🔧 Generating dev TLS certificate..."
+      openssl req -x509 -newkey rsa:2048 -nodes \
+          -keyout "$KEY_FILE" \
+          -out "$CERT_FILE" \
+          -days 365 \
+          -subj "/CN=sentrius-dev-ca" \
+          -addext "basicConstraints=critical,CA:TRUE" \
+          -addext "keyUsage=critical,keyCertSign,cRLSign"
+
+
+      echo "Creating dev CA secret in cluster"
+      kubectl -n cert-manager delete secret sentrius-dev-ca 2>/dev/null || true
+      kubectl -n cert-manager create secret tls sentrius-dev-ca \
+        --cert="$CERT_DIR/sentrius-ca.crt" \
+        --key="$CERT_DIR/sentrius-ca.key"
+
+      echo "Rebuilding docker images with dev certs included"
+
+      ${SCRIPT_DIR}/../base/build-images.sh --all --include-dev-certs
+
+  else
+      echo "✅ Dev cert already exists at $CERT_FILE"
+
+
+      echo "Creating dev CA secret in cluster"
+      kubectl -n cert-manager delete secret sentrius-dev-ca 2>/dev/null || true
+      kubectl -n cert-manager create secret tls sentrius-dev-ca \
+        --cert="$CERT_DIR/sentrius-ca.crt" \
+        --key="$CERT_DIR/sentrius-ca.key"
+  fi
+fi
+
 
 # Function to check if cert-manager is installed and ready
 check_cert_manager() {
@@ -78,9 +130,9 @@ if [[ "$ENABLE_TLS" == "true" ]]; then
     check_cert_manager
     SUBDOMAIN="sentrius-${TENANT}.local"
     KEYCLOAK_SUBDOMAIN="keycloak-${TENANT}.local"
-    KEYCLOAK_HOSTNAME="${KEYCLOAK_SUBDOMAIN}"
+    KEYCLOAK_HOSTNAME=${KEYCLOAK_SUBDOMAIN}
     KEYCLOAK_DOMAIN="https://${KEYCLOAK_SUBDOMAIN}"
-    KEYCLOAK_INTERNAL_DOMAIN="http://sentrius-keycloak:8081"  # Internal cluster communication uses HTTP
+    KEYCLOAK_INTERNAL_DOMAIN="https://${KEYCLOAK_SUBDOMAIN}"
     SENTRIUS_DOMAIN="https://${SUBDOMAIN}"
     CERTIFICATES_ENABLED="true"
     INGRESS_TLS_ENABLED="true"
@@ -91,7 +143,7 @@ else
     KEYCLOAK_SUBDOMAIN="sentrius-keycloak"
     KEYCLOAK_HOSTNAME="sentrius-keycloak:8081"
     KEYCLOAK_DOMAIN="http://sentrius-keycloak:8081"
-    KEYCLOAK_INTERNAL_DOMAIN="http://sentrius-keycloak:8081"  # Same as external for HTTP
+    KEYCLOAK_INTERNAL_DOMAIN="http://sentrius-keycloak:8081"
     SENTRIUS_DOMAIN="http://sentrius-sentrius:8080"
     CERTIFICATES_ENABLED="false"
     INGRESS_TLS_ENABLED="false"
@@ -116,10 +168,7 @@ fi
 #    --set sentrius-bad-ssh.image.pullPolicy="Never" \
 
 # Load any previously generated password from .generated.env
-GENERATED_ENV_PATH="${SCRIPT_DIR}/../../.generated.env"
-if [[ -f "$GENERATED_ENV_PATH" ]]; then
-    source "$GENERATED_ENV_PATH"
-fi
+
 
 # Generate Keycloak DB password if not set and secret doesn't exist
 if [[ -z "$KEYCLOAK_DB_PASSWORD" ]]; then

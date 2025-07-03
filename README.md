@@ -117,8 +117,8 @@ Run the Helm deployment script to deploy Sentrius to your local Kubernetes clust
 
     ./ops-scripts/local/deploy-helm.sh
 
-    
 
+## If Not using TLS
 You may wish to forward ports so you can access the services locally. The following commands will forward the necessary ports for the core and api modules:
     kubectl port-forward -n dev service/sentrius-sentrius 8080:8080
     kubectl port-forward -n dev service/sentrius-keycloak 8081:8081
@@ -126,6 +126,15 @@ You may wish to forward ports so you can access the services locally. The follow
 This will require that you either change the hostnames in the deploy-helm script or add entries to your /etc/hosts file to point to localhost for the services.
     127.0.0.1 sentrius-sentrius
     127.0.0.1 sentrius-keycloak
+
+## If Using TLS
+The deploy script will automatically install cert-manager and create self-signed certificates for the services. You can access the services via:
+
+    https://sentrius-dev.local
+    https://keycloak-dev.local
+
+Add these to /etc/hosts file pointing to your minikube or local cluster IP.
+    
 
 There is a GCP deployment that is hasn't been tested in some time. You can find it in the ops-scripts/gcp directory.
 

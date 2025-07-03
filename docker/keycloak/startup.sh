@@ -5,4 +5,4 @@ echo "Starting Keycloak with dynamic realm processing..."
 /opt/keycloak/bin/process-realm-template.sh
 
 # Start Keycloak with the processed realm
-exec /opt/keycloak/bin/kc.sh start-dev --proxy=passthrough --import-realm --import-realm-overwrite=true --health-enabled=true
+exec /opt/keycloak/bin/kc.sh start-dev --proxy=edge --import-realm --import-realm-overwrite=true --health-enabled=true

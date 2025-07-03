@@ -33,7 +33,7 @@ data:
     spring.servlet.multipart.max-request-size=10MB
     server.error.whitelabel.enabled=false
     keycloak.realm=sentrius
-    keycloak.base-url={{ .Values.keycloakDomain }}
+    keycloak.base-url={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}
     agent.api.url={{ .Values.sentriusDomain }}
     # Keycloak configuration
     spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.launcherservice.oauth2.client_id }}
@@ -41,8 +41,8 @@ data:
     spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.launcherservice.oauth2.authorization_grant_type }}
     spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
     spring.security.oauth2.client.registration.keycloak.scope={{ .Values.launcherservice.oauth2.scope }}
-    spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakDomain }}/realms/sentrius
-    spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakDomain }}/realms/sentrius
+    spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
     # otel.traces.exporter=none
     otel.metrics.exporter=none
     otel.logs.exporter=none
