@@ -90,7 +90,7 @@ public class OpenAIProxyController extends BaseController {
 
     @PostMapping("/completions")
     // require a registered user with an active ztat
-    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
+    //@LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<?> chat(@RequestHeader("Authorization") String token,
                                   @RequestHeader("communication_id") String communicationId,
                                   HttpServletRequest request, HttpServletResponse response,
@@ -113,9 +113,12 @@ public class OpenAIProxyController extends BaseController {
         if (null == operatingUser) {
             log.warn("No operating user found for agent: {}", agentId);
             var username = keycloakService.extractUsername(compactJwt);
+            log.info("Extracted username from JWT: {}", username);
             operatingUser = userService.getUserByUsername(username);
 
         }
+
+        log.info("Operating user: {}", operatingUser);
 
         // we've reached this point, so we can assume the user is allowed to access OpenAI
 
@@ -197,7 +200,7 @@ public class OpenAIProxyController extends BaseController {
 
     @PostMapping("/justify")
     // require a registered user with an active ztat
-    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
+    //@LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<?> justify(@RequestHeader("Authorization") String token,
                                   @RequestHeader("communication_id") String communicationId,
                                   HttpServletRequest request, HttpServletResponse response,

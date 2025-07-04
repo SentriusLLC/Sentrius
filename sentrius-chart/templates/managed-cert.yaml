@@ -10,6 +10,7 @@ spec:
   domains:
     - "{{ .Values.subdomain }}"
     - "{{ .Values.keycloakSubdomain }}"
+    - "{{ .Values.agentproxySubdomain }}"
 {{- else if or (eq .Values.environment "aws") (eq .Values.environment "azure") }}
 # Cert-Manager Certificate for AWS or Azure
 apiVersion: cert-manager.io/v1
@@ -24,6 +25,7 @@ spec:
   dnsNames:
     - "{{ .Values.subdomain }}"
     - "{{ .Values.keycloakSubdomain }}"
+    - "{{ .Values.agentproxySubdomain }}"
 {{- end }}
 {{- else if and (eq .Values.environment "local") (.Values.certificates.enabled) }}
 ---
@@ -48,6 +50,7 @@ spec:
   dnsNames:
     - "{{ .Values.subdomain }}"
     - "{{ .Values.keycloakSubdomain }}"
+    - "{{ .Values.agentproxySubdomain }}"
   subject:
     organizations:
       - sentrius-local

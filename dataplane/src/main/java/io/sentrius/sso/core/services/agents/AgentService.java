@@ -32,6 +32,7 @@ import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.provenance.ProvenanceEvent;
 import io.sentrius.sso.provenance.kafka.ProvenanceKafkaProducer;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpEntity;
@@ -46,6 +47,7 @@ import org.springframework.web.client.RestTemplate;
 
 @Service
 @Slf4j
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class AgentService {
 
     private final AgentCommunicationRepository agentCommunicationRepository;
@@ -129,13 +131,8 @@ public class AgentService {
                         dtoBuilder.agentName(heartbeat.getAgentName());
                         var callback = callbackUrls.get(heartbeat.getAgentId());
                         if (callback != null) {
-                            try {
-                            
-                            var encryptedCallback = cryptoService.encrypt(callback); // Ensure callback is decrypted
-                            dtoBuilder.agentCallback(encryptedCallback);
-                            } catch (GeneralSecurityException e) {
-                                throw new RuntimeException("Error encrypting callback URL", e);
-                            }
+
+                            dtoBuilder.agentCallback(callback);
                         }
                     }
                     if (encryptId){

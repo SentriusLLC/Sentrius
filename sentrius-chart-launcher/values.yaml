@@ -15,7 +15,8 @@ keycloakInternalDomain: http://sentrius-keycloak:8081 # Internal cluster communi
 sentriusDomain: https://sentrius-demo.sentrius.cloud
 keycloakFQDN: sentrius-keycloak.dev.svc.cluster.local
 sentriusFQDN: sentrius-sentrius.dev.svc.cluster.local
-llmProxyFQDN: sentrius-llmproxy.dev.svc.cluster.local
+integrationproxyFQDN: sentrius-integrationproxy.dev.svc.cluster.local
+agentProxyFQDN: sentrius-agentproxy.dev.svc.cluster.local
 
 certificates:
   enabled: false  # Disable certs for local; enable for cloud
@@ -225,6 +226,9 @@ ingress:
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
       nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
+      nginx.ingress.kubernetes.io/enable-websocket: "true"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 
 
 

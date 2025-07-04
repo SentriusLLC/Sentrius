@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-agentproxy
+  labels:
+    {{- include "sentrius.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: agentproxy
+  template:
+    metadata:
+      labels:
+        app: agentproxy
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: [ 'sh', '-c', 'until nc -z {{ .Release.Name }}-sentrius 8080; do echo waiting for postgres; sleep 2;
+          done;' ]
+      containers:
+        - name: agentproxy
+          image: "{{ .Values.agentproxy.image.repository }}:{{ .Values.agentproxy.image.tag }}"
+          imagePullPolicy: {{ .Values.agentproxy.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.agentproxy.port }}
+          {{- if not (eq .Values.environment "gke") }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.readinessProbe.path }}
+              port: {{ .Values.healthCheck.readinessProbe.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.livenessProbe.path }}
+              port: {{ .Values.healthCheck.livenessProbe.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          {{- end }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+          env:
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: keystore-password
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: agentproxy-client-secret
+
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ .Release.Name }}-config

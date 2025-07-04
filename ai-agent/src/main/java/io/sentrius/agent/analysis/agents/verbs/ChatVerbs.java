@@ -2,6 +2,9 @@ package io.sentrius.agent.analysis.agents.verbs;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import com.fasterxml.jackson.core.JsonParser;
@@ -67,7 +70,7 @@ public class ChatVerbs {
 
             }
             String terminalResponse = new String(terminalHelperStream.readAllBytes());
-            InputStream is = getClass().getClassLoader().getResourceAsStream(agentConfigFile);
+            InputStream is = getStream(agentConfigFile);
             if (is == null) {
                 throw new RuntimeException(agentConfigFile +  " not found on classpath");
             }
@@ -113,7 +116,7 @@ public class ChatVerbs {
 
             }
             String terminalResponse = new String(terminalHelperStream.readAllBytes());
-            InputStream is = getClass().getClassLoader().getResourceAsStream(agentConfigFile);
+            InputStream is = getStream(agentConfigFile);
             if (is == null) {
                 throw new RuntimeException(agentConfigFile +  " not found on classpath");
             }
@@ -172,7 +175,7 @@ public class ChatVerbs {
 
             }
             String terminalResponse = new String(terminalHelperStream.readAllBytes());
-            InputStream is = getClass().getClassLoader().getResourceAsStream(agentConfigFile);
+            InputStream is = getStream(agentConfigFile);
             if (is == null) {
                 throw new RuntimeException(agentConfigFile +  " not found on classpath");
             }
@@ -214,4 +217,16 @@ public class ChatVerbs {
             }
         return null;
     }
+
+    private InputStream getStream(String requestedPath) throws IOException {
+        Path path = Paths.get(requestedPath); // 🔁 Replace with your actual path
+
+        if (!Files.exists(path)) {
+            throw new RuntimeException("File not found at path: " + path.toAbsolutePath());
+        }
+
+        return Files.newInputStream(path);
+
+    }
+
 }

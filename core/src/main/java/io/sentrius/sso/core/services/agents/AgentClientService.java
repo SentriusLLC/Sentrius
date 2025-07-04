@@ -21,11 +21,13 @@ import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.provenance.ProvenanceEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 @Slf4j
 @Service
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class AgentClientService {
 
     final ZeroTrustClientService zeroTrustClientService;

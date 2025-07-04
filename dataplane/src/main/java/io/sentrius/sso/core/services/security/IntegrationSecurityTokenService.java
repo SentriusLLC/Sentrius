@@ -26,12 +26,9 @@ public class IntegrationSecurityTokenService {
     @Transactional(readOnly = true)
     public List<IntegrationSecurityToken> findAll() {
         return repository.findAll().stream().map(token -> {
-            try {
-                // decrypt the connecting info
-                token.setConnectionInfo(cryptoService.decrypt(token.getConnectionInfo()));
-            } catch (GeneralSecurityException e) {
-                throw new RuntimeException(e);
-            }
+            // decrypt the connecting info
+            //token.setConnectionInfo(cryptoService.decrypt(token.getConnectionInfo()));
+            token.setConnectionInfo(token.getConnectionInfo());
             return token;
         }).toList();
     }
@@ -40,24 +37,20 @@ public class IntegrationSecurityTokenService {
     public Optional<IntegrationSecurityToken> findById(Long id) {
         var token = repository.findById(id);
         if (token.isPresent()) {
-            try {
-                IntegrationSecurityToken unmanaged = IntegrationSecurityToken.builder()
-                    .id(token.get().getId())
-                    .connectionType(token.get().getConnectionType())
-                    .connectionInfo(cryptoService.decrypt(token.get().getConnectionInfo()))
-                    .build();
-                // decrypt the connecting info
-                return Optional.of(unmanaged);
-            } catch (GeneralSecurityException e) {
-                throw new RuntimeException(e);
-            }
+            IntegrationSecurityToken unmanaged = IntegrationSecurityToken.builder()
+                .id(token.get().getId())
+                .connectionType(token.get().getConnectionType())
+                .connectionInfo(token.get().getConnectionInfo())
+                .build();
+            // decrypt the connecting info
+            return Optional.of(unmanaged);
         }
         return token;
     }
 
     @Transactional
     public IntegrationSecurityToken save(IntegrationSecurityToken token) throws GeneralSecurityException {
-        token.setConnectionInfo( cryptoService.encrypt(token.getConnectionInfo()));
+      //  token.setConnectionInfo( cryptoService.encrypt(token.getConnectionInfo()));
         return repository.save(token);
     }
 
@@ -69,17 +62,14 @@ public class IntegrationSecurityTokenService {
     @Transactional(readOnly = true)
     public List<IntegrationSecurityToken> findByConnectionType(String connectionType) {
         return repository.findByConnectionType(connectionType).stream().map(token -> {
-            try {
-                // decrypt the connecting info
-                IntegrationSecurityToken unmanaged = IntegrationSecurityToken.builder()
-                    .id(token.getId())
-                    .connectionType(token.getConnectionType())
-                    .connectionInfo(cryptoService.decrypt(token.getConnectionInfo()))
-                    .build();
-                return unmanaged;
-            } catch (GeneralSecurityException e) {
-                throw new RuntimeException(e);
-            }
+            // decrypt the connecting info
+            IntegrationSecurityToken unmanaged = IntegrationSecurityToken.builder()
+                .id(token.getId())
+                .connectionType(token.getConnectionType())
+                .connectionInfo(token.getConnectionInfo())
+              //  .connectionInfo(cryptoService.decrypt(token.getConnectionInfo()))
+                .build();
+            return unmanaged;
         }).toList();
     }
 }

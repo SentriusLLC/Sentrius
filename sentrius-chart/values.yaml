@@ -12,7 +12,8 @@ keycloakDomain: "https://keycloak.{{ .Values.tenant }}.sentrius.cloud"
 keycloakInternalDomain: http://sentrius-keycloak:8081 # Internal cluster communication
 sentriusDomain: "https://{{ .Values.tenant }}.sentrius.cloud"
 launcherFQDN: sentrius-launcher-service.dev.svc.cluster.local
-
+agentproxySubdomain: "agentproxy.{{ .Values.tenant }}.sentrius.cloud"
+agentproxyDomain: "https://agentproxy.{{ .Values.tenant }}.sentrius.cloud"
 
 
 certificates:
@@ -72,6 +73,30 @@ integrationproxy:
     azure:
       service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
+agentproxy:
+  image:
+    repository: sentrius-agent-proxy
+    tag: tag
+    pullPolicy: IfNotPresent
+  port: 8080
+  serviceType: ClusterIP
+  ssh:
+    port: 22
+  resources: {}
+  oauth2:
+    client_id: sentrius-agent-proxy
+    client_secret: ""  # To be set via environment variable or external secret
+    authorization_grant_type: authorization_code
+    redirect_uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
+    scope: openid,profile,email
+    issuer_uri: http://keycloak.{{ .Values.subdomain }}/realms/sentrius
+  annotations:
+    gke:
+      cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
+    aws:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    azure:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
 sentriusagent:
   service:
@@ -110,7 +135,7 @@ sentriusaiagent:
     pullPolicy: IfNotPresent
   port: 8080
   oauth2:
-    client_id: java-agents
+    client_id: ai-agent-assessor
     client_secret: ""  # To be set via environment variable or external secret
     authorization_grant_type: authorization_code
     redirect-uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak

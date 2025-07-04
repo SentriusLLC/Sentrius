@@ -300,4 +300,37 @@ public class ZeroTrustAccessTokenService {
   public void addCommunicationLink(RequestCommunicationLink link) {
     ztatRequestService.addCommunicationLink(link);
   }
+
+  public boolean isOpsActive(String ztat) {
+    var status = ztatRequestService.getOpsTokenStatus(ztat);
+    if (status.isPresent()) {
+      var lastUpdated = null != status.get().getZtatRequest().getLastUpdated() ?
+          status.get().getZtatRequest().getLastUpdated().getTime() : System.currentTimeMillis();
+      var currentTime = System.currentTimeMillis();
+      if (systemOptions.getMaxJitUses() > 0
+          && status.get().getUses() >= systemOptions.getMaxJitUses()) {
+        log.info("JIT request has reached max uses: " + ztat);
+        return false;
+      } else if ((currentTime - lastUpdated) > systemOptions.getMaxJitDurationMs()) {
+        log.info("JIT request has exceeded time: " + status);
+        return false;
+      } else {
+        return true;
+      }
+    }else {
+      log.info("{} Not present", ztat);
+      return false;
+    }
+
+  }
+
+  public boolean incremenOpsUses(String ztat) {
+    var status = ztatRequestService.getOpsTokenStatus(ztat);
+    if (status.isPresent()) {
+      log.info("incrementing uses for ops ztat: " + ztat);
+      ztatRequestService.incrementAccessTokenUses(status.get());
+      return true;
+    }
+    return false;
+  }
 }

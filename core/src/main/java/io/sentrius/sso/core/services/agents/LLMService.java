@@ -3,9 +3,11 @@ package io.sentrius.sso.core.services.agents;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Service;
 
 @Service
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class LLMService {
 
     final ZeroTrustClientService zeroTrustClientService;

@@ -37,4 +37,14 @@ spec:
                 name: {{ .Release.Name }}-sentrius
                 port:
                   number: 8080
+    - host: "{{ .Values.agentproxySubdomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-agentproxy
+                port:
+                  number: 8080
 {{- end }}

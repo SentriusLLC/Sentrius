@@ -133,4 +133,6 @@ data:
     agents.ai.chat.agent.enabled=true
     sentrius.agent.callback.format.url=http://sentrius-agent-%s.%s.svc.cluster.local:8090
     agent.api.url={{ .Values.sentriusDomain }}
-    agent.open.ai.endpoint=http://sentrius-llmproxy:8084/
+    agent.open.ai.endpoint=http://sentrius-integrationproxy:8080/
+    agent.listen.websocket=true
+    server.port=8090

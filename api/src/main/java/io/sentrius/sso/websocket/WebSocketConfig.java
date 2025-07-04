@@ -14,7 +14,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
     private final TerminalWSHandler customWebSocketHandler;
     private final AuditSocketHandler auditSocketHandler;
     private final ChatWSHandler chatWSHandler;
-    private final AgentWebSocketProxyHandler agentProxyHandler;
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(customWebSocketHandler, "/api/v1/ssh/terminal/subscribe")

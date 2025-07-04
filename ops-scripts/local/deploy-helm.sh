@@ -129,21 +129,25 @@ if [[ "$ENABLE_TLS" == "true" ]]; then
     echo "Deploying with TLS enabled..."
     check_cert_manager
     SUBDOMAIN="sentrius-${TENANT}.local"
+    APROXY_SUBDOMAIN="agentproxy-${TENANT}.local"
     KEYCLOAK_SUBDOMAIN="keycloak-${TENANT}.local"
     KEYCLOAK_HOSTNAME=${KEYCLOAK_SUBDOMAIN}
     KEYCLOAK_DOMAIN="https://${KEYCLOAK_SUBDOMAIN}"
     KEYCLOAK_INTERNAL_DOMAIN="https://${KEYCLOAK_SUBDOMAIN}"
     SENTRIUS_DOMAIN="https://${SUBDOMAIN}"
+    APROXY_DOMAIN="https://${APROXY_SUBDOMAIN}"
     CERTIFICATES_ENABLED="true"
     INGRESS_TLS_ENABLED="true"
     ENVIRONMENT="local"
 else
     echo "Deploying with HTTP (no TLS)..."
     SUBDOMAIN="sentrius-sentrius"
+    APROXY_SUBDOMAIN="sentrius-agentproxy"
     KEYCLOAK_SUBDOMAIN="sentrius-keycloak"
     KEYCLOAK_HOSTNAME="sentrius-keycloak:8081"
     KEYCLOAK_DOMAIN="http://sentrius-keycloak:8081"
     KEYCLOAK_INTERNAL_DOMAIN="http://sentrius-keycloak:8081"
+    APROXY_DOMAIN="http://sentrius-agentproxy:8080"
     SENTRIUS_DOMAIN="http://sentrius-sentrius:8080"
     CERTIFICATES_ENABLED="false"
     INGRESS_TLS_ENABLED="false"
@@ -195,15 +199,19 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set tenant=${TENANT} \
     --set environment=${ENVIRONMENT} \
     --set subdomain="${SUBDOMAIN}" \
+    --set agentproxySubdomain="${APROXY_SUBDOMAIN}" \
     --set keycloakSubdomain="${KEYCLOAK_SUBDOMAIN}" \
     --set keycloakHostname="${KEYCLOAK_HOSTNAME}" \
     --set keycloakDomain="${KEYCLOAK_DOMAIN}" \
     --set keycloakInternalDomain="${KEYCLOAK_INTERNAL_DOMAIN}" \
     --set sentriusDomain="${SENTRIUS_DOMAIN}" \
+    --set agentproxyDomain="${APROXY_DOMAIN}" \
     --set certificates.enabled=${CERTIFICATES_ENABLED} \
     --set ingress.tlsEnabled=${INGRESS_TLS_ENABLED} \
     --set launcherFQDN=sentrius-agents-launcherservice.${TENANT}-agents.svc.cluster.local \
     --set integrationproxy.image.repository="sentrius-integration-proxy" \
+    --set agentproxy.image.pullPolicy="Never" \
+    --set agentproxy.image.tag=${AGENTPROXY_VERSION} \
     --set integrationproxy.image.pullPolicy="Never" \
     --set sentrius.image.repository="sentrius" \
     --set keycloak.db.password="${KEYCLOAK_DB_PASSWORD}" \
@@ -227,14 +235,17 @@ helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${T
     --set sentriusNamespace=${TENANT} \
     --set keycloakFQDN=sentrius-keycloak.${TENANT}.svc.cluster.local \
     --set sentriusFQDN=sentrius-sentrius.${TENANT}.svc.cluster.local \
-    --set integrationproxyFQDN=sentrius-llmproxy.${TENANT}.svc.cluster.local \
+    --set integrationproxyFQDN=sentrius-integrationproxy.${TENANT}.svc.cluster.local \
+    --set agentproxyFQDN=sentrius-llmproxy.${TENANT}.svc.cluster.local \
     --set subdomain="${SUBDOMAIN}" \
+    --set agentproxySubdomain="${APROXY_SUBDOMAIN}" \
+    --set agentproxyDomain="${APROXY_DOMAIN}" \
     --set keycloakSubdomain="${KEYCLOAK_SUBDOMAIN}" \
     --set keycloakHostname="${KEYCLOAK_HOSTNAME}" \
     --set keycloakDomain="${KEYCLOAK_DOMAIN}" \
     --set keycloakInternalDomain="${KEYCLOAK_INTERNAL_DOMAIN}" \
     --set sentriusDomain="${SENTRIUS_DOMAIN}" \
-    --set integrationproxy.image.repository="sentrius-llmproxy" \
+    --set integrationproxy.image.repository="sentrius-integration-proxy" \
     --set integrationproxy.image.pullPolicy="Never" \
     --set sentrius.image.repository="sentrius" \
     --set sentrius.image.pullPolicy="Never" \

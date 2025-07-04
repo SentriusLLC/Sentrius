@@ -6,14 +6,19 @@ import java.security.PublicKey;
 import java.security.Signature;
 import java.time.ZoneOffset;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+import io.sentrius.sso.config.AppConfig;
+import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.AgentDTO;
 import io.sentrius.sso.core.dto.ztat.UserTokenDTO;
 import io.sentrius.sso.core.dto.ztat.UserTokenResponse;
 import io.sentrius.sso.core.dto.ztat.ZtatChallengeRequest;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.services.security.CryptoService;
@@ -47,6 +52,7 @@ public class ChatApiController extends BaseController {
     final ChatLogRepository chatLogRepository;
     final AgentService agentService;
     final ZtatTokenService tokenService;
+    final AppConfig appConfig;
 
     public ChatApiController(
         UserService userService,
@@ -54,7 +60,7 @@ public class ChatApiController extends BaseController {
         ErrorOutputService errorOutputService,
         AuditService auditService,
         CryptoService cryptoService, SessionTrackingService sessionTrackingService, ChatLogRepository chatLogRepository,
-        AgentService agentService, ZtatTokenService tokenService
+        AgentService agentService, ZtatTokenService tokenService, AppConfig appConfig
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
@@ -63,10 +69,26 @@ public class ChatApiController extends BaseController {
         this.chatLogRepository = chatLogRepository;
         this.agentService = agentService;
         this.tokenService = tokenService;
+        this.appConfig = appConfig;
     }
 
     public SessionLog createSession(@RequestParam String username, @RequestParam String ipAddress) {
         return auditService.createSession(username, ipAddress);
+    }
+
+    @GetMapping("/config")
+    @LimitAccess(applicationAccess = ApplicationAccessEnum.CAN_LOG_IN)
+    public Map<String, String> getChatConfig() {
+        Map<String, String> config = new HashMap<>();
+        var agentProxyUrl = appConfig.getAgentProxyExternalUrl();
+        if (agentProxyUrl != null ) {
+            config.put("agentProxyUrl", agentProxyUrl);
+            if (agentProxyUrl.startsWith("http")) {
+                var wssUrl = agentProxyUrl.replace("http", "ws");
+                config.put("agentProxyWsUrl", wssUrl);
+            }
+        }
+        return config;
     }
 
     @GetMapping("/history")

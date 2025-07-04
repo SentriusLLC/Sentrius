@@ -91,6 +91,7 @@ update_sentrius_agent=false
 update_sentrius_ai_agent=false
 update_integrationproxy=false
 update_launcher=false
+update_agent_proxy=false
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -101,7 +102,8 @@ while [[ "$#" -gt 0 ]]; do
         --sentrius-ai-agent) update_sentrius_ai_agent=true ;;
         --sentrius-launcher-service) update_launcher=true ;;
         --sentrius-integration-proxy) update_integrationproxy=true ;;
-        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_integrationproxy=true; update_launcher=true ;;
+        --sentrius-agent-proxy) update_agent_proxy=true ;;
+        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_integrationproxy=true; update_launcher=true; update_agent_proxy=true; ;;
         --no-cache) NO_CACHE=true ;;
         --include-dev-certs) INCLUDE_DEV_CERTS=true ;;
         *) echo "Unknown flag: $1"; exit 1 ;;
@@ -120,6 +122,7 @@ if $update_sentrius; then
     cp api/target/sentrius-api-*.jar docker/sentrius/sentrius.jar
     SENTRIUS_VERSION=$(increment_patch_version $SENTRIUS_VERSION)
     build_image "sentrius" "$SENTRIUS_VERSION" "${SCRIPT_DIR}/../../docker/sentrius/"
+    rm docker/sentrius/sentrius.jar
     update_env_var "SENTRIUS_VERSION" "$SENTRIUS_VERSION"
 fi
 
@@ -169,4 +172,12 @@ if $update_launcher; then
     build_image "sentrius-launcher-service" "$LAUNCHER_VERSION" "${SCRIPT_DIR}/../../docker/sentrius-launcher-service"
     rm docker/sentrius-launcher-service/launcher.jar
     update_env_var "LAUNCHER_VERSION" "$LAUNCHER_VERSION"
+fi
+
+if $update_agent_proxy; then
+    cp agent-proxy/target/sentrius-agent-proxy-*.jar docker/agent-proxy/agentproxy.jar
+    AGENTPROXY_VERSION=$(increment_patch_version $AGENTPROXY_VERSION)
+    build_image "sentrius-agent-proxy" "$AGENTPROXY_VERSION" "${SCRIPT_DIR}/../../docker/agent-proxy"
+    rm docker/agent-proxy/agentproxy.jar
+    update_env_var "AGENTPROXY_VERSION" "$AGENTPROXY_VERSION"
 fi
