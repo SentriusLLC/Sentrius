@@ -109,11 +109,13 @@ public class AgentService {
             .filter(heartbeat -> {
                 var user = userService.getUserByUsername(heartbeat.getAgentName());
                 log.info("Agent {}: {}", heartbeat.getAgentId(), user);
-                log.info("Excluding {}: {}", heartbeat.getAgentId(), filteredIds);
+                log.info("Excluding {}: {} -- include/exclude {}", heartbeat.getAgentId(), filteredIds, include);
                 if (include){
+                    log.info("Including {}: {}", heartbeat.getAgentId(), filteredIds);
                     return user != null && filteredIds.contains(user.getUserId());
                 }
                 else {
+                    log.info("Excluding {}: {}", heartbeat.getAgentId(), filteredIds);
                     return user != null && !filteredIds.contains(user.getUserId());
                 }
             })

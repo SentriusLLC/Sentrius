@@ -137,7 +137,9 @@ public class AgentApiController extends BaseController {
             log.warn("Heartbeat status is empty");
             return ResponseEntity.status(HttpStatus.SC_BAD_REQUEST).body("Heartbeat status is empty");
         }
+
         agentService.recordHeartbeat(operatingUser.getUserId(),status.getName(), status);
+        agentService.setCallBack(operatingUser, status.getAgentUrl());
         log.info("Heartbeat status recorded for agent: {} {}", agentId, status);
         return ResponseEntity.ok(Map.of("status", "success"));
     }
