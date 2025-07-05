@@ -161,7 +161,7 @@ public class AgentBootstrapController extends BaseController {
         zeroTrustClientService.callAuthenticatedPostOnApi(sentriusLauncherService,  "agent/launcher/create",
             registrationDTO);
         // bootstrap with a default policy
-        return ResponseEntity.ok("{status: 'success'}");
+        return ResponseEntity.ok("{\"status\": \"success\"}");
     }
 
 

@@ -28,7 +28,6 @@ data:
     #flyway configuration
     spring.main.web-application-type=reactive
     spring.flyway.enabled=false
-    #spring.datasource.url=jdbc:h2:mem:testdb
     logging.level.org.springframework.web=INFO
     logging.level.org.springframework.security=INFO
     logging.level.io.sentrius=DEBUG
@@ -83,7 +82,6 @@ data:
     spring.freemarker.enabled=false
     #flyway configuration
     spring.flyway.enabled=false
-    #spring.datasource.url=jdbc:h2:mem:testdb
     spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
     spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
     spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
@@ -153,7 +151,6 @@ data:
     spring.freemarker.enabled=false
     #flyway configuration
     spring.flyway.enabled=false
-    #spring.datasource.url=jdbc:h2:mem:testdb
     logging.level.org.springframework.web=INFO
     logging.level.org.springframework.security=INFO
     logging.level.io.sentrius=DEBUG
@@ -235,7 +232,6 @@ data:
     # Thymeleaf settings
     spring.thymeleaf.prefix=classpath:/templates/
     spring.thymeleaf.suffix=.html
-    #spring.datasource.url=jdbc:h2:mem:testdb
     logging.level.org.springframework.web=INFO
     logging.level.org.springframework.security=INFO
     logging.level.io.sentrius=DEBUG
@@ -284,6 +280,7 @@ data:
     spring.kafka.properties.metadata.max.age.ms=10000
     spring.kafka.properties.retry.backoff.ms=1000
   api-application.properties: |
+    org.springframework.context.ApplicationListener=your.package.DbEnvPrinter
     keystore.file=sso.jceks
     keystore.password=${KEYSTORE_PASSWORD}
     keystore.alias=KEYBOX-ENCRYPTION_KEY
@@ -312,7 +309,6 @@ data:
     # Thymeleaf settings
     spring.thymeleaf.prefix=classpath:/templates/
     spring.thymeleaf.suffix=.html
-    #spring.datasource.url=jdbc:h2:mem:testdb
     logging.level.org.springframework.web=INFO
     logging.level.org.springframework.security=INFO
     logging.level.io.sentrius=DEBUG

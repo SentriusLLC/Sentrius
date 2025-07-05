@@ -189,10 +189,50 @@ if [[ -z "$KEYCLOAK_DB_PASSWORD" ]]; then
         echo "⚠️ No existing secret found; generating new Keycloak DB password..."
         KEYCLOAK_DB_PASSWORD=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)
 
-        # Persist it to .generated.env so it doesn't change between runs
-        echo "KEYCLOAK_DB_PASSWORD=${KEYCLOAK_DB_PASSWORD}" > "$GENERATED_ENV_PATH"
     fi
 fi
+
+# Generate Keycloak client secret if not already present
+if [[ -z "$KEYCLOAK_CLIENT_SECRET" ]]; then
+    echo "🔎 Checking if keycloak secret already exists..."
+    if kubectl get secret "${TENANT}-keycloak-secrets" --namespace "${TENANT}" >/dev/null 2>&1; then
+        echo "✅ Found existing keycloak secret; extracting client secret..."
+        KEYCLOAK_CLIENT_SECRET=$(kubectl get secret "${TENANT}-keycloak-secrets" --namespace "${TENANT}" -o jsonpath="{.data.client-secret}" | base64 --decode)
+    else
+        echo "⚠️ No existing secret found; generating new Keycloak client secret..."
+        KEYCLOAK_CLIENT_SECRET=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)
+    fi
+fi
+
+# Generate Keycloak admin password if not already present
+if [[ -z "$KEYCLOAK_ADMIN_PASSWORD" ]]; then
+    echo "🔎 Checking if keycloak secret already exists..."
+    if kubectl get secret "${TENANT}-keycloak-secrets" --namespace "${TENANT}" >/dev/null 2>&1; then
+        echo "✅ Found existing keycloak secret; extracting admin password..."
+        KEYCLOAK_ADMIN_PASSWORD=$(kubectl get secret "${TENANT}-keycloak-secrets" --namespace "${TENANT}" -o jsonpath="{.data.admin-password}" | base64 --decode)
+    else
+        echo "⚠️ No existing secret found; generating new Keycloak admin password..."
+        KEYCLOAK_ADMIN_PASSWORD=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)
+    fi
+fi
+
+if [[ -z "$DB_PASSWORD" ]]; then
+  DB_PASSWORD=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)
+fi
+
+if [[ -z "$KEYSTORE_PASSWORD" ]]; then
+  KEYSTORE_PASSWORD=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)
+fi
+
+
+# Save them to .generated.env so they persist across runs
+cat <<EOF > "$GENERATED_ENV_PATH"
+KEYCLOAK_DB_PASSWORD=${KEYCLOAK_DB_PASSWORD}
+KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+DB_PASSWORD=${DB_PASSWORD}
+KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
+EOF
 
 
 helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
@@ -205,6 +245,8 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set keycloakDomain="${KEYCLOAK_DOMAIN}" \
     --set keycloakInternalDomain="${KEYCLOAK_INTERNAL_DOMAIN}" \
     --set sentriusDomain="${SENTRIUS_DOMAIN}" \
+    --set secrets.db.password="${DB_PASSWORD}" \
+    --set secrets.db.keystorePassword="${KEYSTORE_PASSWORD}" \
     --set agentproxyDomain="${APROXY_DOMAIN}" \
     --set certificates.enabled=${CERTIFICATES_ENABLED} \
     --set ingress.tlsEnabled=${INGRESS_TLS_ENABLED} \
@@ -247,6 +289,8 @@ helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${T
     --set sentriusDomain="${SENTRIUS_DOMAIN}" \
     --set integrationproxy.image.repository="sentrius-integration-proxy" \
     --set integrationproxy.image.pullPolicy="Never" \
+    --set secrets.db.password="${DB_PASSWORD}" \
+    --set secrets.db.keystorePassword="${KEYSTORE_PASSWORD}" \
     --set sentrius.image.repository="sentrius" \
     --set sentrius.image.pullPolicy="Never" \
     --set keycloak.image.pullPolicy="Never" \

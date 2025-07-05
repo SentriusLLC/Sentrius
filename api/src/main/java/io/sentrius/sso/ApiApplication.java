@@ -12,6 +12,13 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @EntityScan(basePackages = "io.sentrius.sso.core.model") // Replace with your actual entity package
 public class ApiApplication {
   public static void main(String[] args) {
-    SpringApplication.run(ApiApplication.class, args);
+
+      String user = System.getenv("SPRING_DATASOURCE_USERNAME");
+      String pass = System.getenv("SPRING_DATASOURCE_PASSWORD");
+
+      System.out.println("🔐 SPRING_DATASOURCE_USERNAME = " + user);
+      System.out.println("🔐 SPRING_DATASOURCE_PASSWORD2 = " + pass);
+
+      SpringApplication.run(ApiApplication.class, args);
   }
 }
