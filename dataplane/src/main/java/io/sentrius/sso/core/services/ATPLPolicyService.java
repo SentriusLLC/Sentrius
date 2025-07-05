@@ -74,6 +74,17 @@ public class ATPLPolicyService {
             .orElse(Optional.empty());
     }
 
+    @Transactional
+    public Optional<ATPLPolicyEntity> getLatestPolicyEntity(String policyId) {
+        return repository.findAllByPolicyId(policyId).stream()
+            .max(Comparator.comparingInt(entity -> {
+                String v = entity.getVersion();
+                return v != null && v.startsWith("v")
+                    ? Integer.parseInt(v.substring(1))
+                    : 0;
+            }));
+    }
+
     public Optional<ATPLPolicy> getPolicy(User operatingUser) {
         List<AgentPolicyAssignment> assignments = agentPolicyAssignmentRepository.findByUserUsernameOrderByAssignedAtDesc(operatingUser.getUsername());
 

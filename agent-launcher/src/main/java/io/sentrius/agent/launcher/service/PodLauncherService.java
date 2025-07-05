@@ -43,17 +43,18 @@ public class PodLauncherService {
 
 
     public V1Pod launchAgentPod(String agentId, String callbackUrl) throws Exception {
+        var myAgentRegistry = "";
         if (agentRegistry != null ) {
             if ("local".equalsIgnoreCase(agentRegistry)) {
-                agentRegistry = "";
+                myAgentRegistry = "";
             } else if (!agentRegistry.endsWith("/")) {
-                agentRegistry += "/";
+                myAgentRegistry += "/";
             }
         }
 
         var constructedCallbackUrl = buildAgentCallbackUrl(agentId);
 
-        String image = String.format("%ssentrius-launchable-agent:%s", agentRegistry, agentVersion);
+        String image = String.format("%ssentrius-launchable-agent:%s", myAgentRegistry, agentVersion);
 
         log.info("Launching agent pod with ID: {}, Image: {}, Callback URL: {}", agentId, image, callbackUrl);
         V1Pod pod = new V1Pod()

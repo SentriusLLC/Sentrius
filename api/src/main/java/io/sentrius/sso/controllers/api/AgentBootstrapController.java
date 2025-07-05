@@ -5,6 +5,8 @@ import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.sentrius.sso.config.ApiPaths;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
@@ -27,6 +29,7 @@ import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
+import io.sentrius.sso.core.trust.ATPLPolicy;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
@@ -52,7 +55,7 @@ public class AgentBootstrapController extends BaseController {
     final ZeroTrustRequestService ztrService;
     final AgentService agentService;
     private final ZeroTrustClientService zeroTrustClientService;
-
+    private final ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
 
     @Value("${sentrius.agent.register.bootstrap.allow:false}")
     private boolean allowRegistration;
@@ -133,9 +136,19 @@ public class AgentBootstrapController extends BaseController {
                         throw new RuntimeException(defaultPolicyFile + "not found on classpath");
 
                     }
+
+
                     String defaultYaml = new String(terminalHelperStream.readAllBytes());
+                    ATPLPolicy policy = yamlMapper.readValue(defaultYaml, ATPLPolicy.class);
+                    var latest = atplPolicyService.getLatestPolicyEntity( policy.getPolicyId() );
+                    if (latest.isEmpty() ) {
+                        var addedPolicy = atplPolicyService.createPolicy(user, defaultYaml);
+                    }
+                    else {
+                        atplPolicyService.assignPolicyToUser(user, latest.get());
+                    }
                     log.info("Default policy file: {}", defaultPolicyFile);
-                    var policy = atplPolicyService.createPolicy(user, defaultYaml);
+
                 }
 
             }
