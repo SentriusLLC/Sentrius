@@ -77,6 +77,12 @@ public class VerbRegistry {
         }
     }
 
+    public boolean isVerbRegistered(String verb) {
+        synchronized (this) {
+            return verbs.containsKey(verb);
+        }
+    }
+
     public VerbResponse execute(AgentExecution agentExecution, VerbResponse priorResponse, String verb,
                                 Map<String, Object> args)
         throws Exception {

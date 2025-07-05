@@ -296,7 +296,7 @@ public class AgentApiController extends BaseController {
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN}, allowedIdentityTypes = {IdentityType.NON_PERSON_ENTITY})
     public ResponseEntity<?> justifyOperations(
         @RequestHeader("Authorization") String token,
-        @RequestHeader("communication_id") String communicationId,
+        @RequestHeader("X-Communication-Id") String communicationId,
         @RequestParam("requestId") String requestId,
         HttpServletRequest request, HttpServletResponse response) throws SQLException, GeneralSecurityException {
 
@@ -342,7 +342,7 @@ public class AgentApiController extends BaseController {
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN}, allowedIdentityTypes = {IdentityType.NON_PERSON_ENTITY})
     public ResponseEntity<?> justifyAccess(
         @RequestHeader("Authorization") String token,
-        @RequestHeader("communication_id") String communicationId,
+        @RequestHeader("X-Communication-Id") String communicationId,
         @RequestParam("requestId") String requestId,
         HttpServletRequest request, HttpServletResponse response) throws SQLException, GeneralSecurityException {
 
@@ -509,7 +509,7 @@ public class AgentApiController extends BaseController {
         HttpServletRequest request,
         HttpServletResponse response,
         @RequestHeader("Authorization") String token,
-        @RequestHeader("communication_id") String communicationId,
+        @RequestHeader("X-Communication-Id") String communicationId,
         @RequestParam("requestId") String requestId,
         @RequestBody AgentCommunicationDTO comm)
         throws GeneralSecurityException, ExecutionException, InterruptedException {
@@ -578,7 +578,7 @@ public class AgentApiController extends BaseController {
         HttpServletRequest request,
         HttpServletResponse response,
         @RequestHeader("Authorization") String token,
-        @RequestHeader("communication_id") String communicationId,
+        @RequestHeader("X-Communication-Id") String communicationId,
         @RequestParam("id") Long previousId)
         throws GeneralSecurityException, ExecutionException, InterruptedException {
 
@@ -650,7 +650,7 @@ public class AgentApiController extends BaseController {
         HttpServletRequest request,
         HttpServletResponse response,
         @RequestHeader("Authorization") String token,
-        @RequestHeader("communication_id") String communicationId)
+        @RequestHeader("X-Communication-Id") String communicationId)
         throws GeneralSecurityException, ExecutionException, InterruptedException {
 
         String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;

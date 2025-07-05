@@ -735,6 +735,12 @@
                 <input type="text" class="form-control" name="capabilities.primitives[${primitiveCounter}].description">
             </div>
             <div class="form-group">
+                <label>Endpoints</label>
+                <div class="dynamic-list" id="primitive-endpoints-${primitiveCounter}">
+                </div>
+                <button type="button" class="btn-add" onclick="addListItem('primitive-endpoints-${primitiveCounter}', 'capabilities.primitives[${primitiveCounter}].endpoints')">Add Endpoint</button>
+            </div>
+            <div class="form-group">
                 <label>Tags</label>
                 <div class="dynamic-list" id="primitive-tags-${primitiveCounter}">
                 </div>
@@ -947,90 +953,62 @@
         }
     }
 
-    // Convert FormData to proper policy object
     function formDataToPolicyObject() {
         const form = document.getElementById('atpl-form');
         const formData = new FormData(form);
         const policy = {};
 
-        // Helper function to set nested object properties
-        function setNestedProperty(obj, path, value) {
-            const keys = path.split('.');
-            let current = obj;
-            
-            for (let i = 0; i < keys.length - 1; i++) {
-                const key = keys[i];
-                if (!current[key]) current[key] = {};
-                current = current[key];
-            }
-            
-            const lastKey = keys[keys.length - 1];
-            
-            // Handle array notation [index]
-            if (lastKey.includes('[') && lastKey.includes(']')) {
-                const match = lastKey.match(/(\w+)\[(\d+)\]/);
-                if (match) {
-                    const arrayKey = match[1];
-                    const index = parseInt(match[2]);
-                    
-                    if (!current[arrayKey]) current[arrayKey] = [];
-                    if (!current[arrayKey][index]) current[arrayKey][index] = {};
-                    
-                    return current[arrayKey][index];
-                }
-            }
-            
-            return current;
-        }
-
-        // Process form data
         for (let [key, value] of formData.entries()) {
             if (value.trim() === '') continue;
-            
+
+            // Fix: Properly merge primitives and their tags into the same object
+            if (key.includes('[') && key.includes(']')) {
+                const match = key.match(/([^.]+)\[(\d+)\]\.(.+)/);
+                if (match) {
+                    const arrayKey = match[1]; // e.g., 'primitives'
+                    const index = parseInt(match[2]);
+                    const propertyPath = match[3]; // e.g., 'tags' or 'description'
+
+                    if (!policy.capabilities) policy.capabilities = {};
+                    if (!policy.capabilities[arrayKey]) policy.capabilities[arrayKey] = [];
+                    if (!policy.capabilities[arrayKey][index]) policy.capabilities[arrayKey][index] = {};
+
+                    // Support array properties (e.g., tags[])
+                    if (propertyPath.endsWith('[]')) {
+                        const prop = propertyPath.replace('[]', '');
+                        if (!policy.capabilities[arrayKey][index][prop]) policy.capabilities[arrayKey][index][prop] = [];
+                        policy.capabilities[arrayKey][index][prop].push(value);
+                    } else {
+                        policy.capabilities[arrayKey][index][propertyPath] = value;
+                    }
+                    continue;
+                }
+            }
+
+            // Handle arrays for other fields
             if (key.includes('[]')) {
-                // Handle arrays
                 const arrayKey = key.replace('[]', '');
                 const keys = arrayKey.split('.');
                 let current = policy;
-                
+
                 for (let i = 0; i < keys.length - 1; i++) {
                     if (!current[keys[i]]) current[keys[i]] = {};
                     current = current[keys[i]];
                 }
-                
+
                 const lastKey = keys[keys.length - 1];
                 if (!current[lastKey]) current[lastKey] = [];
                 current[lastKey].push(value);
-            } else if (key.includes('[') && key.includes(']')) {
-                // Handle indexed arrays for capabilities
-                const baseKey = key.substring(0, key.indexOf('['));
-                const match = key.match(/\[(\d+)\]\.(\w+)/);
-                
-                if (match) {
-                    const index = parseInt(match[1]);
-                    const property = match[2];
-                    
-                    const keys = baseKey.split('.');
-                    let current = policy;
-                    
-                    for (let i = 0; i < keys.length; i++) {
-                        if (!current[keys[i]]) current[keys[i]] = {};
-                        current = current[keys[i]];
-                    }
-                    
-                    if (!current[index]) current[index] = {};
-                    current[index][property] = value;
-                }
             } else {
                 // Handle regular nested properties
                 const keys = key.split('.');
                 let current = policy;
-                
+
                 for (let i = 0; i < keys.length - 1; i++) {
                     if (!current[keys[i]]) current[keys[i]] = {};
                     current = current[keys[i]];
                 }
-                
+
                 current[keys[keys.length - 1]] = value;
             }
         }
@@ -1040,12 +1018,12 @@
         checkboxes.forEach(checkbox => {
             const keys = checkbox.name.split('.');
             let current = policy;
-            
+
             for (let i = 0; i < keys.length - 1; i++) {
                 if (!current[keys[i]]) current[keys[i]] = {};
                 current = current[keys[i]];
             }
-            
+
             current[keys[keys.length - 1]] = checkbox.checked;
         });
 
@@ -1184,7 +1162,7 @@
         // Populate match criteria
         if (policy.match && policy.match.agent_tags) {
             policy.match.agent_tags.forEach(tag => {
-                addListItem('agent-tags-list', 'agent_tags');
+                addListItem('agent-tags-list', 'match.agent_tags');
                 const inputs = document.querySelectorAll('#agent-tags-list input');
                 inputs[inputs.length - 1].value = tag;
             });
@@ -1241,7 +1219,20 @@
                     
                     if (primitive.id) container.querySelector('input[name*=".id"]').value = primitive.id;
                     if (primitive.description) container.querySelector('input[name*=".description"]').value = primitive.description;
-                    
+
+                    if (primitive.endpoints) {
+                        const tagsList = container.querySelector('.dynamic-list');
+                        primitive.endpoints.forEach(endpoint => {
+                            addListItem(
+                                tagsList.id,
+                                'capabilities.primitives[' + (primitiveCounter - 1) + '].endpoint'
+                            );
+                            const inputs = tagsList.querySelectorAll('input');
+                            inputs[inputs.length - 1].value = endpoint;
+                        });
+                    }
+
+
                     if (primitive.tags) {
                         const tagsList = container.querySelector('.dynamic-list');
                         primitive.tags.forEach(tag => {

@@ -116,10 +116,13 @@ public class AccessControlAspect {
                 }
                 if (operatingUser.getIdentityType() == IdentityType.NON_PERSON_ENTITY ) {
 
-                    var communicationId = getCurrentHttpRequest().getHeader("communication_id");
+                    var communicationId = getCurrentHttpRequest().getHeader("X-Communication-Id");
                     if (null == communicationId) {
+                        getCurrentHttpRequest().getHeaderNames().asIterator().forEachRemaining(key -> {
+                            log.info("Header: {} = {}", key, getCurrentHttpRequest().getHeader(key));
+                        });
                         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Registration Required to provide " +
-                            "communication_id");
+                            "X-Communication-Id");
                     }
 
                     agentService.saveCommunication(communicationId, operatingUser.getUsername(),
@@ -136,7 +139,7 @@ public class AccessControlAspect {
                     }
                     log.debug("Found policy {} for {}", policy.get().getPolicyId(), operatingUser.getUsername());
                     EndpointRequest endpointRequest = null;
-                    var token = getCurrentHttpRequest().getHeader("ztat_token");
+                    var token = getCurrentHttpRequest().getHeader("X-Ztat-Token");
                     if (null == token) {
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Registration Required");
                     } else {

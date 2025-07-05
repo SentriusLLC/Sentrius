@@ -62,7 +62,7 @@ public class MCPProxyController extends BaseController {
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<?> handleMCPRequest(
             @RequestHeader("Authorization") String token,
-            @RequestHeader("communication_id") String communicationId,
+            @RequestHeader("X-Communication-Id") String communicationId,
             HttpServletRequest request, 
             HttpServletResponse response,
             @RequestBody String rawBody) {

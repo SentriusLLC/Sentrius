@@ -25,6 +25,13 @@ if [[ "$ENV_TARGET" == "local" ]]; then
     eval $(minikube -p minikube docker-env)
 fi
 
+
+GENERATED_ENV_PATH="${SCRIPT_DIR}/../../.generated.env"
+if [[ -f "$GENERATED_ENV_PATH" ]]; then
+    source "$GENERATED_ENV_PATH"
+fi
+
+
 prepare_docker_context() {
     local context_dir=$1
 
@@ -62,6 +69,56 @@ build_image() {
         docker build --no-cache "${BUILD_ARGS[@]}" -t "$name:$version" "$context_dir"
     else
         docker build "${BUILD_ARGS[@]}" -t "$name:$version" "$context_dir"
+    fi
+
+    if [ $? -ne 0 ]; then
+        echo "❌ Failed to build $name"
+        cleanup_docker_context "$context_dir"
+        exit 1
+    fi
+
+    if [[ "$ENV_TARGET" == "gcp" ]]; then
+        REGISTRY="us-central1-docker.pkg.dev/sentrius-project/sentrius-repo"
+        docker tag "$name:$version" "$REGISTRY/$name:$version"
+        docker push "$REGISTRY/$name:$version"
+        echo "✅ Pushed $REGISTRY/$name:$version"
+    else
+        docker tag "$name:$version" "$name:latest"
+        echo "✅ Built locally: $name:$version"
+    fi
+
+    cleanup_docker_context "$context_dir"
+}
+
+build_keycloak_image() {
+    local name=$1
+    local version=$2
+    local context_dir=$3
+
+    echo "Building $name:$version..."
+    prepare_docker_context "$context_dir"
+
+    BUILD_ARGS=()
+    if $INCLUDE_DEV_CERTS; then
+        BUILD_ARGS+=(--build-arg INCLUDE_DEV_CERTS=true)
+    fi
+
+    if $NO_CACHE; then
+        docker build --no-cache "${BUILD_ARGS[@]}" -t "$name:$version" \
+          --build-arg SENTRIUS_API_CLIENT_SECRET="$SENTRIUS_API_CLIENT_SECRET" \
+          --build-arg SENTRIUS_APROXY_CLIENT_SECRET="$SENTRIUS_APROXY_CLIENT_SECRET" \
+          --build-arg SENTRIUS_LAUNCHER_CLIENT_SECRET="$SENTRIUS_LAUNCHER_CLIENT_SECRET" \
+          --build-arg JAVA_AGENTS_CLIENT_SECRET="$JAVA_AGENTS_CLIENT_SECRET" \
+          --build-arg AI_AGENT_ASSESSOR_CLIENT_SECRET="$AI_AGENT_ASSESSOR_CLIENT_SECRET" \
+          "$context_dir"
+    else
+        docker build "${BUILD_ARGS[@]}" -t "$name:$version" \
+          --build-arg SENTRIUS_API_CLIENT_SECRET="$SENTRIUS_API_CLIENT_SECRET" \
+          --build-arg SENTRIUS_APROXY_CLIENT_SECRET="$SENTRIUS_APROXY_CLIENT_SECRET" \
+          --build-arg SENTRIUS_LAUNCHER_CLIENT_SECRET="$SENTRIUS_LAUNCHER_CLIENT_SECRET" \
+          --build-arg JAVA_AGENTS_CLIENT_SECRET="$JAVA_AGENTS_CLIENT_SECRET" \
+          --build-arg AI_AGENT_ASSESSOR_CLIENT_SECRET="$AI_AGENT_ASSESSOR_CLIENT_SECRET" \
+          "$context_dir"
     fi
 
     if [ $? -ne 0 ]; then
@@ -134,7 +191,7 @@ fi
 
 if $update_sentrius_keycloak; then
     SENTRIUS_KEYCLOAK_VERSION=$(increment_patch_version $SENTRIUS_KEYCLOAK_VERSION)
-    build_image "sentrius-keycloak" "$SENTRIUS_KEYCLOAK_VERSION" "${SCRIPT_DIR}/../../docker/keycloak"
+    build_keycloak_image "sentrius-keycloak" "$SENTRIUS_KEYCLOAK_VERSION" "${SCRIPT_DIR}/../../docker/keycloak"
     update_env_var "SENTRIUS_KEYCLOAK_VERSION" "$SENTRIUS_KEYCLOAK_VERSION"
 fi
 

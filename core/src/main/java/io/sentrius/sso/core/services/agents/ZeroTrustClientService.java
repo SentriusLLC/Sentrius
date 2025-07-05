@@ -64,7 +64,7 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", token.getZtatToken());
+        headers.set("X-Ztat-Token", token.getZtatToken());
 
         HttpEntity<ZtatRequestDTO> requestEntity = new HttpEntity<>(headers);
 
@@ -102,8 +102,8 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", token.getZtatToken());
-        headers.set("communication_id", token.getCommunicationId());
+        headers.set("X-Ztat-Token", token.getZtatToken());
+        headers.set("X-Communication-Id", token.getCommunicationId());
 
         log.info("Sending {}", body.toString());
         HttpEntity<T> requestEntity = new HttpEntity<>(body, headers);
@@ -308,8 +308,8 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", token.getZtatToken());
-        headers.set("communication_id", token.getCommunicationId());
+        headers.set("X-Ztat-Token", token.getZtatToken());
+        headers.set("X-Communication-Id", token.getCommunicationId());
 
         HttpEntity<T> requestEntity = new HttpEntity<>(headers);
         if (!apiEndpoint.startsWith("/")) {
@@ -365,8 +365,8 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", token.getZtatToken());
-        headers.set("communication_id", token.getCommunicationId());
+        headers.set("X-Ztat-Token", token.getZtatToken());
+        headers.set("X-Communication-Id", token.getCommunicationId());
 
         log.info("Sending {}", body.toString());
         HttpEntity<T> requestEntity = new HttpEntity<>(body, headers);
@@ -426,8 +426,8 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", token.getZtatToken());
-        headers.set("communication_id", token.getCommunicationId());
+        headers.set("X-Ztat-Token", token.getZtatToken());
+        headers.set("X-Communication-Id", token.getCommunicationId());
 
         HttpEntity<T> requestEntity = new HttpEntity<>(headers);
         if (!apiEndpoint.startsWith("/")) {
@@ -489,8 +489,9 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", token.getZtatToken());
-        headers.set("communication_id", token.getCommunicationId());
+        headers.set("X-Ztat-Token", token.getZtatToken());
+        log.info("Communication ID: {}", token.getCommunicationId());
+        headers.set("X-Communication-Id", token.getCommunicationId());
 
         HttpEntity<T> requestEntity = new HttpEntity<>(headers);
         if (!apiEndpoint.startsWith("/")) {
@@ -535,8 +536,8 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", token.getZtatToken());
-        headers.set("communication_id", token.getCommunicationId());
+        headers.set("X-Ztat-Token", token.getZtatToken());
+        headers.set("X-Communication-Id", token.getCommunicationId());
 
         ZtatRequestDTO requestPayload = ZtatRequestDTO.builder().user(user).command(command).build();
         HttpEntity<ZtatRequestDTO> requestEntity = new HttpEntity<>(requestPayload, headers);
@@ -568,8 +569,8 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", token.getZtatToken());
-        headers.set("communication_id", token.getCommunicationId());
+        headers.set("X-Ztat-Token", token.getZtatToken());
+        headers.set("X-Communication-Id", token.getCommunicationId());
 
         HttpEntity<ZtatRequestDTO> requestEntity = new HttpEntity<>(requestPayload, headers);
 
@@ -601,8 +602,8 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", token.getZtatToken());
-        headers.set("communication_id", token.getCommunicationId());
+        headers.set("X-Ztat-Token", token.getZtatToken());
+        headers.set("X-Communication-Id", token.getCommunicationId());
 
         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
@@ -650,8 +651,8 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
-        headers.set("ztat_token", execution.getZtatToken());
-        headers.set("communication_id", execution.getCommunicationId());
+        headers.set("X-Ztat-Token", execution.getZtatToken());
+        headers.set("X-Communication-Id", execution.getCommunicationId());
 
         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
@@ -676,9 +677,9 @@ public class ZeroTrustClientService {
 
         String keycloakJwt = getKeycloakToken();
         HttpHeaders headers = new HttpHeaders();
-        headers.set("ztat_token", execution.getZtatToken());
+        headers.set("X-Ztat-Token", execution.getZtatToken());
         headers.setBearerAuth(keycloakJwt);
-        headers.set("communication_id", execution.getCommunicationId());
+        headers.set("X-Communication-Id", execution.getCommunicationId());
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         Map<String, String> body = Map.of(

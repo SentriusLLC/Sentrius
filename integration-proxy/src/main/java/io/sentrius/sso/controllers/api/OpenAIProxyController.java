@@ -92,7 +92,7 @@ public class OpenAIProxyController extends BaseController {
     // require a registered user with an active ztat
     //@LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<?> chat(@RequestHeader("Authorization") String token,
-                                  @RequestHeader("communication_id") String communicationId,
+                                  @RequestHeader("X-Communication-Id") String communicationId,
                                   HttpServletRequest request, HttpServletResponse response,
                                   @RequestBody String rawBody) throws JsonProcessingException, HttpException {
 
@@ -202,7 +202,7 @@ public class OpenAIProxyController extends BaseController {
     // require a registered user with an active ztat
     //@LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<?> justify(@RequestHeader("Authorization") String token,
-                                  @RequestHeader("communication_id") String communicationId,
+                                  @RequestHeader("X-Communication-Id") String communicationId,
                                   HttpServletRequest request, HttpServletResponse response,
                                   @RequestBody String rawBody) throws JsonProcessingException, HttpException {
 

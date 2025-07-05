@@ -2,6 +2,18 @@ FROM quay.io/keycloak/keycloak:24.0.1 as builder
 
 # Declare the argument
 ARG INCLUDE_DEV_CERTS=false
+ARG SENTRIUS_API_CLIENT_SECRET
+ARG SENTRIUS_APROXY_CLIENT_SECRET
+ARG SENTRIUS_LAUNCHER_CLIENT_SECRET
+ARG JAVA_AGENTS_CLIENT_SECRET
+ARG AI_AGENT_ASSESSOR_CLIENT_SECRET
+
+ENV SENTRIUS_API_CLIENT_SECRET=$SENTRIUS_API_CLIENT_SECRET
+ENV SENTRIUS_APROXY_CLIENT_SECRET=$SENTRIUS_APROXY_CLIENT_SECRET
+ENV SENTRIUS_LAUNCHER_CLIENT_SECRET=$SENTRIUS_LAUNCHER_CLIENT_SECRET
+ENV JAVA_AGENTS_CLIENT_SECRET=$JAVA_AGENTS_CLIENT_SECRET
+ENV AI_AGENT_ASSESSOR_CLIENT_SECRET=$AI_AGENT_ASSESSOR_CLIENT_SECRET
+
 
 # Set environment so you can use in RUN
 ENV INCLUDE_DEV_CERTS=${INCLUDE_DEV_CERTS}
@@ -16,6 +28,18 @@ WORKDIR /opt/keycloak
 
 # Copy certs if needed
 
+COPY dev-certs/sentrius-ca.crt /tmp/sentrius-ca.crt
+
+RUN if [ "$INCLUDE_DEV_CERTS" = "true" ] && [ -f /tmp/sentrius-ca.crt ]; then \
+      echo "Importing dev CA cert..." && \
+      keytool -import -noprompt -trustcacerts \
+        -alias sentrius-local-ca \
+        -file /tmp/sentrius-ca.crt \
+        -keystore "$JAVA_HOME/lib/security/cacerts" \
+        -storepass changeit ; \
+    else \
+      echo "Skipping cert import"; \
+    fi
 
 RUN /opt/keycloak/bin/kc.sh build
 

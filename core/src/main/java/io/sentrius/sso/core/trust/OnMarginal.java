@@ -9,12 +9,21 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-@AllArgsConstructor
 @Builder
 public class OnMarginal {
 
     private String action;
 
     @JsonProperty("ztat_provider")
-    private String ztatProvider;
+    @Builder.Default
+    private String ztatProvider = "sentrius";
+
+    public OnMarginal(String action, String ztatProvider) {
+        this.action = action;
+        this.ztatProvider = ztatProvider;
+    }
+    public OnMarginal(String action) {
+        this.action = action;
+        this.ztatProvider = "sentrius";
+    }
 }

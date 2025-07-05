@@ -34,7 +34,6 @@ sentrius:
   resources: {}
   oauth2:
     client_id: sentrius-api
-    client_secret: ""  # To be set via environment variable or external secret
     authorization_grant_type: authorization_code
     redirect_uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     scope: openid,profile,email
@@ -60,7 +59,6 @@ integrationproxy:
   resources: {}
   oauth2:
     client_id: sentrius-api
-    client_secret: ""  # To be set via environment variable or external secret
     authorization_grant_type: authorization_code
     redirect_uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     scope: openid,profile,email
@@ -85,7 +83,6 @@ agentproxy:
   resources: {}
   oauth2:
     client_id: sentrius-agent-proxy
-    client_secret: ""  # To be set via environment variable or external secret
     authorization_grant_type: authorization_code
     redirect_uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     scope: openid,profile,email
@@ -108,7 +105,6 @@ sentriusagent:
   port: 8080
   oauth2:
     client_id: java-agents
-    client_secret: ""  # To be set via environment variable or external secret
     authorization_grant_type: client_credentials
     redirect-uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     scope: openid,profile,email
@@ -136,7 +132,6 @@ sentriusaiagent:
   port: 8080
   oauth2:
     client_id: ai-agent-assessor
-    client_secret: ""  # To be set via environment variable or external secret
     authorization_grant_type: authorization_code
     redirect-uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     scope: openid,profile,email
@@ -164,7 +159,6 @@ launcherservice:
   port: 8080
   oauth2:
     client_id: sentrius-launcher-service
-    client_secret: ""  # To be set via environment variable or external secret
     authorization_grant_type: authorization_code
     redirect-uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     scope: openid,profile,email
@@ -233,6 +227,8 @@ keycloak:
       javaAgents:
         client_secret: ""  # Dynamically generated if not provided
       aiAgentAssessor:
+        client_secret: ""  # Dynamically generated if not provided
+      agentProxy:
         client_secret: ""  # Dynamically generated if not provided
   annotations:
     gke:

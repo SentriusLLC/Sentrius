@@ -91,6 +91,11 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-keycloak-secrets
                   key: client-secret
+            - name: SENTRIUS_APROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: agentproxy-client-secret
             - name: SENTRIUS_API_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:

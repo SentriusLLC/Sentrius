@@ -5,6 +5,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source ${SCRIPT_DIR}/base.sh
 source ${SCRIPT_DIR}/../base/base.sh
 source ${SCRIPT_DIR}/../../.local.env
+
 CERT_DIR="${SCRIPT_DIR}/../../docker/dev-certs"
 CERT_FILE="${CERT_DIR}/sentrius-ca.crt"
 KEY_FILE="${CERT_DIR}/sentrius-ca.key"
@@ -19,6 +20,7 @@ ENV_FILE="${SCRIPT_DIR}/../../.$ENV_TARGET.env"
 source "$ENV_FILE"
 cp "$ENV_FILE" "$ENV_FILE.bak"
 
+(source ${SCRIPT_DIR}/../base/generate-secrets.sh)
 
 GENERATED_ENV_PATH="${SCRIPT_DIR}/../../.generated.env"
 if [[ -f "$GENERATED_ENV_PATH" ]]; then
@@ -100,6 +102,7 @@ check_cert_manager() {
 if ! kubectl get deployment cert-manager -n cert-manager >/dev/null 2>&1 || \
    ! kubectl get deployment cert-manager-webhook -n cert-manager >/dev/null 2>&1 || \
    ! kubectl get deployment cert-manager-cainjector -n cert-manager >/dev/null 2>&1; then
+     echo "cert-manager deployments not found in cert-manager namespace."
     if [[ "$INSTALL_CERT_MANAGER" == "true" ]]; then
         echo "cert-manager components not found. Installing via Helm..."
         helm repo add jetstack https://charts.jetstack.io
@@ -204,37 +207,6 @@ if [[ -z "$KEYCLOAK_CLIENT_SECRET" ]]; then
     fi
 fi
 
-# Generate Keycloak admin password if not already present
-if [[ -z "$KEYCLOAK_ADMIN_PASSWORD" ]]; then
-    echo "🔎 Checking if keycloak secret already exists..."
-    if kubectl get secret "${TENANT}-keycloak-secrets" --namespace "${TENANT}" >/dev/null 2>&1; then
-        echo "✅ Found existing keycloak secret; extracting admin password..."
-        KEYCLOAK_ADMIN_PASSWORD=$(kubectl get secret "${TENANT}-keycloak-secrets" --namespace "${TENANT}" -o jsonpath="{.data.admin-password}" | base64 --decode)
-    else
-        echo "⚠️ No existing secret found; generating new Keycloak admin password..."
-        KEYCLOAK_ADMIN_PASSWORD=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)
-    fi
-fi
-
-if [[ -z "$DB_PASSWORD" ]]; then
-  DB_PASSWORD=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)
-fi
-
-if [[ -z "$KEYSTORE_PASSWORD" ]]; then
-  KEYSTORE_PASSWORD=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)
-fi
-
-
-# Save them to .generated.env so they persist across runs
-cat <<EOF > "$GENERATED_ENV_PATH"
-KEYCLOAK_DB_PASSWORD=${KEYCLOAK_DB_PASSWORD}
-KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
-KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
-DB_PASSWORD=${DB_PASSWORD}
-KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
-EOF
-
-
 helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set tenant=${TENANT} \
     --set environment=${ENVIRONMENT} \
@@ -257,6 +229,15 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set integrationproxy.image.pullPolicy="Never" \
     --set sentrius.image.repository="sentrius" \
     --set keycloak.db.password="${KEYCLOAK_DB_PASSWORD}" \
+    --set secrets.db.username="postgres" \
+    --set keycloak.db.password="${KEYCLOAK_DB_PASSWORD}" \
+    --set keycloak.adminPassword="${KEYCLOAK_ADMIN_PASSWORD}" \
+    --set keycloak.clientSecret="${KEYCLOAK_CLIENT_SECRET}" \
+    --set keycloak.realm.clients.sentriusApi.client_secret="${SENTRIUS_API_CLIENT_SECRET}" \
+    --set keycloak.realm.clients.sentriusLauncher.client_secret="${SENTRIUS_LAUNCHER_CLIENT_SECRET}" \
+    --set keycloak.realm.clients.javaAgents.client_secret="${JAVA_AGENTS_CLIENT_SECRET}" \
+    --set keycloak.realm.clients.aiAgentAssessor.client_secret="${AI_AGENT_ASSESSOR_CLIENT_SECRET}" \
+    --set keycloak.realm.clients.agentProxy.client_secret="${SENTRIUS_APROXY_CLIENT_SECRET}" \
     --set sentrius.image.pullPolicy="Never" \
     --set keycloak.image.pullPolicy="Never" \
     --set ssh.image.pullPolicy="Never" \
@@ -291,6 +272,7 @@ helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${T
     --set integrationproxy.image.pullPolicy="Never" \
     --set secrets.db.password="${DB_PASSWORD}" \
     --set secrets.db.keystorePassword="${KEYSTORE_PASSWORD}" \
+    --set launcherservice.oauth2.client_secret="${SENTRIUS_LAUNCHER_CLIENT_SECRET}" \
     --set sentrius.image.repository="sentrius" \
     --set sentrius.image.pullPolicy="Never" \
     --set keycloak.image.pullPolicy="Never" \

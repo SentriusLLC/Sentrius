@@ -100,8 +100,8 @@ public class ATPLPolicyService {
     public boolean allowsEndpoint(ATPLPolicy policy, String endpoint) {
         var f =  policy.getCapabilities().getPrimitives().stream()
             .filter(p -> {
-                log.info("Checking if {} contains {} {} ", p.getEndpoint(), endpoint, p.getEndpoint().contains(endpoint));
-                return p.getEndpoint().contains(endpoint);
+                log.info("Checking if {} contains {} {} ", p.getEndpoints(), endpoint, p.getEndpoints().contains(endpoint));
+                return p.getEndpoints().contains(endpoint);
             })
             .findFirst();
 
@@ -114,7 +114,7 @@ public class ATPLPolicyService {
 
     public TrustScoreResult evaluateScore(LimitAccess limitAccess, ATPLPolicy atplPolicy, String endpoint, User operatingUser) {
         for(var primitive : atplPolicy.getCapabilities().getPrimitives()) {
-            if (primitive.getEndpoint().contains(endpoint)) {
+            if (primitive.getEndpoints().contains(endpoint)) {
                 if (null != primitive.getTags() && primitive.getTags().contains("high_risk")){
                     return TrustScoreResult.MARGINAL;
                 }

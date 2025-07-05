@@ -2,6 +2,7 @@ package io.sentrius.sso.core.trust;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,8 +21,10 @@ public class Capability {
     private String id;
     private String description;
     @Builder.Default
-    private List<String> endpoint = new ArrayList<>();
-    private List<String> tags;
+    @JsonAlias({"endpoint", "endpoints"}) // Accept both
+    private List<String> endpoints = new ArrayList<>();
+    @Builder.Default
+    private List<String> tags = new ArrayList<>();
 
     public String getId() {
         return id;
