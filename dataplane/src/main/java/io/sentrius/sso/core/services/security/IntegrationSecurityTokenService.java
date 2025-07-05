@@ -3,6 +3,7 @@ package io.sentrius.sso.core.services.security;
 
 import io.sentrius.sso.core.model.security.IntegrationSecurityToken;
 import io.sentrius.sso.core.repository.IntegrationSecurityTokenRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,6 +12,7 @@ import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class IntegrationSecurityTokenService {
 
@@ -63,6 +65,7 @@ public class IntegrationSecurityTokenService {
     public List<IntegrationSecurityToken> findByConnectionType(String connectionType) {
         return repository.findByConnectionType(connectionType).stream().map(token -> {
             // decrypt the connecting info
+            log.info("IntegrationSecurityTokenService.findByConnectionType: {}", token);
             IntegrationSecurityToken unmanaged = IntegrationSecurityToken.builder()
                 .id(token.getId())
                 .connectionType(token.getConnectionType())
