@@ -37,6 +37,7 @@ public class SecurityConfig {
                 .pathMatchers("/actuator/**", "/api/v1/agents/ws").permitAll()
                 .anyExchange().authenticated()
             )
+            .csrf(Customizer.withDefaults())
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwtSpec -> jwtSpec.jwtAuthenticationConverter(grantedAuthoritiesExtractor()))
             )
