@@ -117,8 +117,8 @@ Run the Helm deployment script to deploy Sentrius to your local Kubernetes clust
 
     ./ops-scripts/local/deploy-helm.sh
 
-    
 
+## If Not using TLS
 You may wish to forward ports so you can access the services locally. The following commands will forward the necessary ports for the core and api modules:
     kubectl port-forward -n dev service/sentrius-sentrius 8080:8080
     kubectl port-forward -n dev service/sentrius-keycloak 8081:8081
@@ -126,6 +126,15 @@ You may wish to forward ports so you can access the services locally. The follow
 This will require that you either change the hostnames in the deploy-helm script or add entries to your /etc/hosts file to point to localhost for the services.
     127.0.0.1 sentrius-sentrius
     127.0.0.1 sentrius-keycloak
+
+## If Using TLS
+The deploy script will automatically install cert-manager and create self-signed certificates for the services. You can access the services via:
+
+    https://sentrius-dev.local
+    https://keycloak-dev.local
+
+Add these to /etc/hosts file pointing to your minikube or local cluster IP.
+    
 
 There is a GCP deployment that is hasn't been tested in some time. You can find it in the ops-scripts/gcp directory.
 
@@ -230,19 +239,38 @@ Sentrius provides comprehensive Helm charts for Kubernetes deployment across mul
 # Build all images
 ./build-images.sh --all --no-cache
 
-# Deploy to local Kubernetes cluster
+# Deploy to local Kubernetes cluster (HTTP)
 ./ops-scripts/local/deploy-helm.sh
 
-# Forward ports for local access
+# OR deploy with TLS enabled for secure transport
+./ops-scripts/local/deploy-helm.sh --tls
+
+# OR deploy with TLS and auto-install cert-manager
+./ops-scripts/local/deploy-helm.sh --tls --install-cert-manager
+
+# Forward ports for local access (HTTP deployment)
 kubectl port-forward -n dev service/sentrius-sentrius 8080:8080
 kubectl port-forward -n dev service/sentrius-keycloak 8081:8081
 ```
 
-Add to `/etc/hosts` for local development:
+**For HTTP deployment**, add to `/etc/hosts`:
 ```
 127.0.0.1 sentrius-sentrius
 127.0.0.1 sentrius-keycloak
 ```
+
+**For TLS deployment**, add to `/etc/hosts`:
+```
+127.0.0.1 sentrius-dev.local
+127.0.0.1 keycloak-dev.local
+```
+
+**TLS Requirements:**
+- cert-manager must be installed in your cluster. You can:
+  - Install manually: `kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml`
+  - Use auto-install flag: `./ops-scripts/local/deploy-helm.sh --tls --install-cert-manager`
+- Access via: `https://sentrius-dev.local` and `https://keycloak-dev.local`
+- Self-signed certificates will be automatically generated
 
 #### GCP/GKE Deployment
 
@@ -275,6 +303,20 @@ ingress:
     gke:
       kubernetes.io/ingress.class: gce
       networking.gke.io/managed-certificates: wildcard-cert
+```
+
+**TLS/SSL Configuration:**
+```yaml
+certificates:
+  enabled: true  # Enable certificate generation
+  issuer: "letsencrypt-prod"  # For AWS/Azure (cert-manager)
+
+# For local development with self-signed certificates:
+environment: local
+certificates:
+  enabled: true
+ingress:
+  tlsEnabled: true
 ```
 
 **Agent Configuration:**

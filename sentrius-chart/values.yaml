@@ -9,8 +9,11 @@ subdomain: "{{ .Values.tenant }}.sentrius.cloud"
 keycloakSubdomain: "keycloak.{{ .Values.tenant }}.sentrius.cloud"
 keycloakHostname: "keycloak.{{ .Values.tenant }}.sentrius.cloud"
 keycloakDomain: "https://keycloak.{{ .Values.tenant }}.sentrius.cloud"
+keycloakInternalDomain: http://sentrius-keycloak:8081 # Internal cluster communication
 sentriusDomain: "https://{{ .Values.tenant }}.sentrius.cloud"
 launcherFQDN: sentrius-launcher-service.dev.svc.cluster.local
+agentproxySubdomain: "agentproxy.{{ .Values.tenant }}.sentrius.cloud"
+agentproxyDomain: "https://agentproxy.{{ .Values.tenant }}.sentrius.cloud"
 
 
 certificates:
@@ -70,6 +73,30 @@ integrationproxy:
     azure:
       service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
+agentproxy:
+  image:
+    repository: sentrius-agent-proxy
+    tag: tag
+    pullPolicy: IfNotPresent
+  port: 8080
+  serviceType: ClusterIP
+  ssh:
+    port: 22
+  resources: {}
+  oauth2:
+    client_id: sentrius-agent-proxy
+    client_secret: ""  # To be set via environment variable or external secret
+    authorization_grant_type: authorization_code
+    redirect_uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
+    scope: openid,profile,email
+    issuer_uri: http://keycloak.{{ .Values.subdomain }}/realms/sentrius
+  annotations:
+    gke:
+      cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
+    aws:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    azure:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
 sentriusagent:
   service:
@@ -108,7 +135,7 @@ sentriusaiagent:
     pullPolicy: IfNotPresent
   port: 8080
   oauth2:
-    client_id: java-agents
+    client_id: ai-agent-assessor
     client_secret: ""  # To be set via environment variable or external secret
     authorization_grant_type: authorization_code
     redirect-uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
@@ -186,6 +213,8 @@ keycloak:
   serviceType: ClusterIP
   port: 8081
   clientId: sentrius-api
+  google:
+    clientId: google-sentrius-api
   clientSecret: ""  # To be set via environment variable or external secret
   db:
     image: postgres:15
@@ -218,6 +247,10 @@ ingress:
   class: "nginx"  # Default for local; override for GKE/AWS
   tlsEnabled: true  # Enable TLS when supported
   annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+  # Environment-specific annotation sets (use via --set-file or values override)
+  annotationSets:
     gke:  # GKE-specific annotations
       kubernetes.io/ingress.class: gce
       networking.gke.io/managed-certificates: wildcard-cert
@@ -229,6 +262,8 @@ ingress:
       alb.ingress.kubernetes.io/ssl-redirect: "443"
     local:  # Local environment annotations (e.g., Minikube)
       kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+      nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
 
 
 

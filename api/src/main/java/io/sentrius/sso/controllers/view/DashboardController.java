@@ -2,6 +2,7 @@ package io.sentrius.sso.controllers.view;
 
 import java.util.ArrayList;
 import java.util.List;
+import io.sentrius.sso.config.AppConfig;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.AgentDTO;
@@ -13,6 +14,7 @@ import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,10 +29,15 @@ public class DashboardController extends BaseController {
     @Value("${spring.security.oauth2.client.provider.keycloak.issuer-uri}")
     private String issuerUri;
 
+    @Autowired
+    final AppConfig appConfig;
+
     protected DashboardController(
         UserService userService, SystemOptions systemOptions,
-        ErrorOutputService errorOutputService) {
+        ErrorOutputService errorOutputService, AppConfig appConfig
+    ) {
         super(userService, systemOptions, errorOutputService);
+        this.appConfig = appConfig;
     }
 
 

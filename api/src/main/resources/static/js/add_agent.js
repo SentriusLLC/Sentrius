@@ -26,21 +26,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     // Optionally close the modal
                     const modalElement = document.getElementById('agentFormModal');
                     const modal = bootstrap.Modal.getInstance(modalElement);
-                    $("#alertTop").text("User added successfully").show().delay(3000).fadeOut();
+                    $("#alertTop").text("Agent created").show().delay(3000).fadeOut();
                     $("#alertTopError").hide();
                     if (modal) {
                         modal.hide();
                     }
-                    countUsers();
-                    const userTable = document.getElementById("user-table");
-                    if (userTable){
-                        $('#user-table').DataTable().ajax.reload(null, false);
-                    }
                 })
                 .catch((error) => {
                     $("#alertTop").hide();
-                    $("#alertTopError").text("User Not Added").show().delay(3000).fadeOut();
-cd                });
+                    $("#alertTopError").text("Agent not created").show().delay(3000).fadeOut();
+             });
         });
     }
 });

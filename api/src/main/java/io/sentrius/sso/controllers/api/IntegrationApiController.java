@@ -88,7 +88,7 @@ public class IntegrationApiController extends BaseController {
         token = integrationService.save(token);
 
         // excludes the access token
-        return ResponseEntity.ok(new ExternalIntegrationDTO(token));
+        return ResponseEntity.ok(new ExternalIntegrationDTO(token,false ));
     }
 
     @PostMapping("/jira/delete")

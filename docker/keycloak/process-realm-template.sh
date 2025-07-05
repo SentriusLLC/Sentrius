@@ -28,6 +28,7 @@ echo "  Output: $REALM_OUTPUT"
 if command -v openssl >/dev/null 2>&1; then
     # Use openssl if available
     export SENTRIUS_API_CLIENT_SECRET="${SENTRIUS_API_CLIENT_SECRET:-default-api-secret-$(openssl rand -hex 16)}"
+    export SENTRIUS_APROXY_CLIENT_SECRET="${SENTRIUS_APROXY_CLIENT_SECRET:-default-api-secret-$(openssl rand -hex 16)}"
     export SENTRIUS_LAUNCHER_CLIENT_SECRET="${SENTRIUS_LAUNCHER_CLIENT_SECRET:-default-launcher-secret-$(openssl rand -hex 16)}"
     export JAVA_AGENTS_CLIENT_SECRET="${JAVA_AGENTS_CLIENT_SECRET:-default-agents-secret-$(openssl rand -hex 16)}"
     export AI_AGENT_ASSESSOR_CLIENT_SECRET="${AI_AGENT_ASSESSOR_CLIENT_SECRET:-default-assessor-secret-$(openssl rand -hex 16)}"
@@ -35,6 +36,7 @@ else
     # Fallback to simple random generation using date and process ID
     RAND_SUFFIX=$(date +%s%N | cut -b1-13)$$
     export SENTRIUS_API_CLIENT_SECRET="${SENTRIUS_API_CLIENT_SECRET:-default-api-secret-${RAND_SUFFIX}}"
+    export SENTRIUS_APROXY_CLIENT_SECRET="${SENTRIUS_APROXY_CLIENT_SECRET:-default-api-secret-${RAND_SUFFIX}}"
     export SENTRIUS_LAUNCHER_CLIENT_SECRET="${SENTRIUS_LAUNCHER_CLIENT_SECRET:-default-launcher-secret-${RAND_SUFFIX}a}"
     export JAVA_AGENTS_CLIENT_SECRET="${JAVA_AGENTS_CLIENT_SECRET:-default-agents-secret-${RAND_SUFFIX}b}"
     export AI_AGENT_ASSESSOR_CLIENT_SECRET="${AI_AGENT_ASSESSOR_CLIENT_SECRET:-default-assessor-secret-${RAND_SUFFIX}c}"
@@ -45,11 +47,12 @@ fi
 #export ROOT_URL="${ROOT_URL:-http://localhost:8080}"
 # set in helm chart
 #export REDIRECT_URIS="${REDIRECT_URIS:-http://localhost:8080}"
-export GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-}"
+export GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:google-oauth-sentrius}"
 export GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET:-}"
 
 echo "Substituting environment variables in realm template..."
 echo "  SENTRIUS_API_CLIENT_SECRET: ${SENTRIUS_API_CLIENT_SECRET:0:8}..."
+echo "  SENTRIUS_APROXY_CLIENT_SECRET: ${SENTRIUS_APROXY_CLIENT_SECRET:0:8}..."
 echo "  SENTRIUS_LAUNCHER_CLIENT_SECRET: ${SENTRIUS_LAUNCHER_CLIENT_SECRET:0:8}..."
 echo "  JAVA_AGENTS_CLIENT_SECRET: ${JAVA_AGENTS_CLIENT_SECRET:0:8}..."
 echo "  AI_AGENT_ASSESSOR_CLIENT_SECRET: ${AI_AGENT_ASSESSOR_CLIENT_SECRET:0:8}..."
@@ -57,6 +60,7 @@ echo "  AI_AGENT_ASSESSOR_CLIENT_SECRET: ${AI_AGENT_ASSESSOR_CLIENT_SECRET:0:8}.
 # Use sed to replace environment variables (since envsubst may not be available)
 # Replace ${VAR} with actual values
 sed -e "s|\${SENTRIUS_API_CLIENT_SECRET}|${SENTRIUS_API_CLIENT_SECRET}|g" \
+    -e "s|\${SENTRIUS_APROXY_CLIENT_SECRET}|${SENTRIUS_APROXY_CLIENT_SECRET}|g" \
     -e "s|\${SENTRIUS_LAUNCHER_CLIENT_SECRET}|${SENTRIUS_LAUNCHER_CLIENT_SECRET}|g" \
     -e "s|\${JAVA_AGENTS_CLIENT_SECRET}|${JAVA_AGENTS_CLIENT_SECRET}|g" \
     -e "s|\${AI_AGENT_ASSESSOR_CLIENT_SECRET}|${AI_AGENT_ASSESSOR_CLIENT_SECRET}|g" \

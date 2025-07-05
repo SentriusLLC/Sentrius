@@ -32,7 +32,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-oauth2-secrets
-                  key: sentriusaiagent-client-secret
+                  key: ai-agent-assessor-client-secret
       volumes:
         - name: config-volume
           configMap:

@@ -32,6 +32,10 @@ class ChatSession {
     }
 
     async connect() {
+
+        const config = await fetch("/api/v1/chat/config").then(r => r.json());
+
+        console.log("Connecting to chat server at:", this.agentHost);
         const protocol = location.protocol === "https:" ? "wss" : "ws";
         const phost = this.agentHost.replace(/^(https?:\/\/)?/, `${protocol}://`);
         console.log("Connecting to chat server at:", phost);
@@ -70,12 +74,46 @@ class ChatSession {
 
         const { jwt } = await ztatResponse.json();
 
+        let ztatForChat = {};
+        try {
+            const response = await fetch(
+                "/api/v1/agent/connect?session_id=" + this.sessionId,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": csrfToken,
+                        "ZTAT_TOKEN": jwt,
+                    },
+                    credentials: "same-origin"
+                }
+            );
+
+            if (!response.ok) {
+                const body = await response.text();
+                throw new Error(`Request failed: ${response.status} ${response.statusText}\n${body}`);
+            }
+
+            ztatForChat = await response.json(); // or .text() depending on response
+            console.log("ZTAT received:", ztatForChat);
+            if (!ztatForChat.ztat_token) {
+                console.error("Failed to retrieve ZTAT");
+                return;
+            }
+
+
+        } catch (error) {
+            console.error("Failed to fetch ZTAT:", error);
+        }
+
+
 
 
         // Step 3: Open WebSocket with ZTAT token
         //const uri = `${phost}/api/v1/chat/attach/subscribe?sessionId=${encodeURIComponent(this.sessionId)}&chatGroupId=${this.chatGroupId}&ztat=${encodeURIComponent(jwt)}`;
         //const uri = `/api/v1/agents/ws/${encodeURIComponent(phost)}/${encodeURIComponent(this.sessionId)}/${encodeURIComponent(this.chatGroupId)}/${encodeURIComponent(jwt)}`;
-        const uri = `/api/v1/agents/ws?phost=${encodeURIComponent(phost)}&sessionId=${encodeURIComponent(this.sessionId)}&chatGroupId=${encodeURIComponent(this.chatGroupId)}&jwt=${encodeURIComponent(jwt)}`;
+
+        const uri = config.agentProxyWsUrl + `/api/v1/agents/ws?phost=${encodeURIComponent(phost)}&sessionId=${encodeURIComponent(this.sessionId)}&chatGroupId=${encodeURIComponent(this.chatGroupId)}&ztat=${encodeURIComponent(jwt)}&jwt=${encodeURIComponent(ztatForChat.ztat_token)}`;
 
         console.log("Connecting to chat server with ZTAT at:", uri);
         this.connection = new WebSocket(uri);

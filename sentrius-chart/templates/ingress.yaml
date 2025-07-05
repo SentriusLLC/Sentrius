@@ -5,10 +5,19 @@ metadata:
   name: managed-cert-ingress-{{ .Values.tenant }}
   namespace: {{ .Values.tenant }}
   annotations:
-    kubernetes.io/ingress.class: {{ .Values.ingress.class }}
+    {{- toYaml .Values.ingress.annotationSets.local | nindent 4 }}
+    nginx.ingress.kubernetes.io/ssl-redirect: "{{ .Values.certificates.enabled }}"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "{{ .Values.certificates.enabled }}"
 spec:
+  {{- if .Values.ingress.tlsEnabled }}
+  tls:
+    - hosts:
+        - "{{ .Values.keycloakSubdomain }}"
+        - "{{ .Values.subdomain }}"
+      secretName: wildcard-cert-{{ .Values.tenant }}
+  {{- end }}
   rules:
-    - host: {{ .Values.keycloakSubdomain }}
+    - host: "{{ .Values.keycloakSubdomain }}"
       http:
         paths:
           - path: /
@@ -18,7 +27,7 @@ spec:
                 name: {{ .Release.Name }}-keycloak
                 port:
                   number: 8081
-    - host: {{ .Values.tenant }}.sentrius.cloud
+    - host: "{{ .Values.subdomain }}"
       http:
         paths:
           - path: /
@@ -26,6 +35,16 @@ spec:
             backend:
               service:
                 name: {{ .Release.Name }}-sentrius
+                port:
+                  number: 8080
+    - host: "{{ .Values.agentproxySubdomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-agentproxy
                 port:
                   number: 8080
 {{- end }}

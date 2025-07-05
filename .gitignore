@@ -56,3 +56,8 @@ api/node_modules/
 # Ignore generated frontend assets
 api/src/main/resources/static/node/
 api/node
+
+.generated/
+# Ignore Generated keys if they exist
+docker/dev-certs/sentrius-ca.crt
+docker/dev-certs/sentrius-ca.key

@@ -10,11 +10,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 
 @Builder
 @Getter
 @Setter
 @Slf4j
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class KeycloakManager {
     private Keycloak keycloak;
 

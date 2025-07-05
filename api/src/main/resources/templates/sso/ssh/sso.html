@@ -88,7 +88,7 @@
                 chatFocus = true;
                 enableSessionChat();
             } else {
-
+                chatContainer.style.display = (chatContainer.style.display === "none" || chatContainer.style.display === "") ? "flex" : "none";
             }
             //chatContainer.style.display = (chatContainer.style.display === "none" || chatContainer.style.display === "") ? "flex" : "none";
         }

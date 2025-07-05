@@ -26,6 +26,7 @@ import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.sessions.SessionLog;
 import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.model.zt.OpsZeroTrustAcessTokenRequest;
 import io.sentrius.sso.core.model.zt.RequestCommunicationLink;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
 import io.sentrius.sso.core.services.ATPLPolicyService;
@@ -38,6 +39,7 @@ import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
+import io.sentrius.sso.core.utils.ZTATUtils;
 import io.sentrius.sso.provenance.ProvenanceEvent;
 import io.sentrius.sso.provenance.kafka.ProvenanceKafkaProducer;
 import jakarta.servlet.http.HttpServletRequest;
@@ -73,6 +75,7 @@ public class AgentApiController extends BaseController {
     final ZeroTrustRequestService ztrService;
     final AgentService agentService;
     final ProvenanceKafkaProducer provenanceKafkaProducer;
+    private final ZeroTrustRequestService ztatRequestService;
 
     public AgentApiController(
         UserService userService,
@@ -82,7 +85,7 @@ public class AgentApiController extends BaseController {
         CryptoService cryptoService, SessionTrackingService sessionTrackingService, KeycloakService keycloakService,
         ATPLPolicyService atplPolicyService,
         ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService, AgentService agentService,
-        ProvenanceKafkaProducer provenanceKafkaProducer
+        ProvenanceKafkaProducer provenanceKafkaProducer, ZeroTrustRequestService ztatRequestService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
@@ -94,6 +97,7 @@ public class AgentApiController extends BaseController {
         this.ztrService = ztrService;
         this.agentService = agentService;
         this.provenanceKafkaProducer = provenanceKafkaProducer;
+        this.ztatRequestService = ztatRequestService;
     }
 
     public SessionLog createSession(@RequestParam String username, @RequestParam String ipAddress) {
@@ -241,6 +245,36 @@ public class AgentApiController extends BaseController {
 
 
 
+    }
+
+    @PostMapping("/connect")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
+    public ResponseEntity<?> createAgentChatRequest(
+        @RequestParam(name="session_id") String sessionId,
+        HttpServletRequest request, HttpServletResponse response) throws Exception {
+
+
+        var operatingUser = getOperatingUser(request, response );
+
+        ZeroTrustAccessTokenReason reason = ZeroTrustAccessTokenReason.builder()
+            .commandNeed("chat_with_agent")
+            .reasonIdentifier(UUID.randomUUID().toString())
+            .build();
+        var command = "chat_with_agent";
+        var opsRequest =
+            OpsZeroTrustAcessTokenRequest.builder()
+                .commandHash(ZTATUtils.getCommandHash(command))
+                .command(command).user(operatingUser).ztatReason(reason).build();
+
+        var ztatRequest = ztatRequestService.createOpsTATRequest(opsRequest);
+
+
+        // Approve the request if the agent has an active policy ( and it is known and allowed ).
+        var admin = createOrGetSystemAdmin();
+        var approval = ztatService.approveOpsAccessToken(ztatRequest, admin);
+
+        // return the ztat token to the agent
+        return ResponseEntity.ok(Map.of("ztat_token", approval.getToken().toString()));
     }
 
 

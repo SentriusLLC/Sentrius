@@ -5,6 +5,7 @@ import io.sentrius.sso.core.repository.UserRepository;
 import io.sentrius.sso.core.repository.UserTypeRepository;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +13,7 @@ import java.util.Optional;
 
 @Service
 @Slf4j
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class UserAttributeSyncService {
 
     private final KeycloakService keycloakService;

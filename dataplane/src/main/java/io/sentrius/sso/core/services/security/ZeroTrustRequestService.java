@@ -83,6 +83,10 @@ public class ZeroTrustRequestService {
     @Transactional
     public OpsZeroTrustAcessTokenRequest createOpsTATRequest(OpsZeroTrustAcessTokenRequest ztatRequest) {
         try {
+            if (ztatRequest.getZtatReason() != null && ztatRequest.getZtatReason().getId() == null) {
+                // save the reason if it is new
+                ztatRequest.setZtatReason(ztatReasonRepository.save(ztatRequest.getZtatReason()));
+            }
             OpsZeroTrustAcessTokenRequest savedRequest = opsJITRequestRepository.save(ztatRequest);
             log.info("JITRequest created: {}", savedRequest);
             return savedRequest;

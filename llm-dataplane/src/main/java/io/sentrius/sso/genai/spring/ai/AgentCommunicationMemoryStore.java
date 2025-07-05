@@ -10,11 +10,13 @@ import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.genai.Message;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Service;
 
 
 @Slf4j
 @Service
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class AgentCommunicationMemoryStore  {
 
     private final AgentService service;

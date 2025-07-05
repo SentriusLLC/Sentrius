@@ -1,5 +1,6 @@
 package io.sentrius.agent.launcher.service;
 
+import io.kubernetes.client.custom.IntOrString;
 import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
@@ -71,8 +72,8 @@ public class PodLauncherService {
                         ))
                     .resources(new V1ResourceRequirements()
                         .limits(Map.of(
-                            "cpu", Quantity.fromString("500m"),
-                            "memory", Quantity.fromString("512Mi")
+                            "cpu", Quantity.fromString("1000m"),
+                            "memory", Quantity.fromString("1Gi")
                         )))
                         .volumeMounts(List.of(
                             new V1VolumeMount()
@@ -91,6 +92,26 @@ public class PodLauncherService {
                 )));
         pod.getSpec().setOverhead(null);
 
-        return coreV1Api.createNamespacedPod(agentNamespace, pod).execute();
+        var createdPod = coreV1Api.createNamespacedPod(agentNamespace, pod).execute();
+
+        // Create corresponding service for WebSocket routing
+        V1Service service = new V1Service()
+            .metadata(new V1ObjectMeta()
+                .name("sentrius-agent-" + agentId)
+                .labels(Map.of("agentId", agentId)))
+            .spec(new V1ServiceSpec()
+                .selector(Map.of("agentId", agentId))
+                .ports(List.of(new V1ServicePort()
+                    .protocol("TCP")
+                    .port(8090)
+                    .targetPort(new IntOrString(8090))
+                ))
+                .type("ClusterIP")
+            );
+
+        log.info("Created service pod: {} and service {}", createdPod, service);
+        coreV1Api.createNamespacedService(agentNamespace, service).execute();
+
+        return createdPod;
     }
 }

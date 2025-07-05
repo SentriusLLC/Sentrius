@@ -80,10 +80,12 @@ spec:
               value: "true"
             - name: KC_HOSTNAME_STRICT_HTTPS
               value: "false"
+            - name: KEYCLOAK_FRONTEND_URL
+              value: {{ .Values.keycloakDomain }}
             - name: KC_HTTP_ENABLED
               value: "true"
             - name: GOOGLE_CLIENT_ID
-              value: {{ .Values.keycloak.clientId }}
+              value: {{ .Values.keycloak.google.clientId }}
             - name: GOOGLE_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:

@@ -63,7 +63,10 @@ helm lint sentrius-chart-launcher
 
 # Test template rendering
 helm template test sentrius-chart-launcher --dry-run
-helm template test sentrius-chart --set environment=local --set ingress.tlsEnabled=false --dry-run
+helm template test sentrius-chart --set environment=local --dry-run
+
+# Test with TLS enabled
+helm template test sentrius-chart --set environment=local --set ingress.tlsEnabled=true --set certificates.enabled=true --dry-run
 
 # Test with custom values
 helm template test sentrius-chart-launcher \
@@ -74,21 +77,21 @@ helm template test sentrius-chart-launcher \
 
 ## Known Issues
 
-### Sentrius Chart Ingress Template
+### ~~Sentrius Chart Ingress Template~~ (FIXED)
 
-The main `sentrius-chart` has a known issue with the ingress template that causes linting failures. This is a YAML parsing issue in the conditional annotations section. The CI/CD pipeline handles this gracefully:
+~~The main `sentrius-chart` has a known issue with the ingress template that causes linting failures. This is a YAML parsing issue in the conditional annotations section. The CI/CD pipeline handles this gracefully:~~
 
-- Identifies the issue during linting
-- Continues testing other charts
-- Provides warnings rather than failing the entire pipeline
+**UPDATE**: The ingress template YAML parsing issues have been resolved. The chart now passes linting and supports TLS configuration properly.
 
-### Workarounds
+### Previous Workarounds (No Longer Needed)
 
-Until the ingress template is fixed, you can:
+~~Until the ingress template is fixed, you can:~~
 
-1. Use the `sentrius-chart-launcher` which works correctly
-2. Test `sentrius-chart` with `ingress.tlsEnabled=false` 
-3. Use the local deployment scripts which work around the issue
+1. ~~Use the `sentrius-chart-launcher` which works correctly~~
+2. ~~Test `sentrius-chart` with `ingress.tlsEnabled=false`~~  
+3. ~~Use the local deployment scripts which work around the issue~~
+
+**All charts now work correctly with TLS enabled or disabled.**
 
 ## Chart Testing Best Practices
 
