@@ -77,11 +77,11 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
 
         verbRegistry.scanClasspath();
 
-        final UserDTO user = UserDTO.builder()
+        UserDTO user = UserDTO.builder()
             .username(zeroTrustClientService.getUsername())
             .build();
         var execution = agentExecutionService.getAgentExecution(user);
-        
+
         var keyPair = agentKeyService.getKeyPair();
         try {
             agentClientService.heartbeat(execution, execution.getUser().getUsername());
@@ -104,7 +104,7 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
                 log.info("Registering v1.0.2 agent failed. Retrying in 10 seconds...");
 
                 try {
-                    var agentName = agentConfigOptions.getNamePrefix() + "-" + UUID.randomUUID().toString();
+                    var agentName = execution.getUser().getUsername();
                     var base64PublicKey = agentKeyService.getBase64PublicKey(keyPair.getPublic());
                     var agentRegistrationDTO = agentClientService.bootstrap(
                         agentName, base64PublicKey
@@ -119,10 +119,11 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
                         decryptedSecret
                     );
 
-                    final UserDTO newUserDTO = UserDTO.builder()
+                    user = UserDTO.builder()
                         .username(zeroTrustClientService.getUsername())
                         .build();
-                    execution = agentExecutionService.getAgentExecution(newUserDTO);
+
+                    execution = agentExecutionService.getAgentExecution(user);
                 } catch (Exception e1) {
                     log.error("Failed to bootstrap agent", e1);
                 } catch (ZtatException ex) {
@@ -136,15 +137,16 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
             }
         }
 
+        UserDTO finalUser = user;
         workerThread = new Thread(() -> {
             try {
 
-                log.info("Username: {}", user.getUsername());
+                log.info("Username: {}", finalUser.getUsername());
                 log.info("Registering v1.0.2 agent...");
 
 
 
-                var agentExecution = agentExecutionService.getAgentExecution(user);
+                var agentExecution = agentExecutionService.getAgentExecution(finalUser);
                 var response = promptAgent(agentExecution);
                 while (running) {
                     try {
