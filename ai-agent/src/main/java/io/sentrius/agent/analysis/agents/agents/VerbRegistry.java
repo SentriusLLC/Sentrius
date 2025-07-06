@@ -2,6 +2,7 @@ package io.sentrius.agent.analysis.agents.agents;
 
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ScanResult;
+import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
 import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
@@ -9,6 +10,7 @@ import io.sentrius.sso.core.model.verbs.OutputInterpreterIfc;
 import io.sentrius.sso.core.model.verbs.Verb;
 import io.sentrius.sso.core.model.verbs.VerbResponse;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
+import io.sentrius.sso.core.services.capabilities.EndpointScanningService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -18,8 +20,10 @@ import org.springframework.stereotype.Component;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -29,6 +33,8 @@ public class VerbRegistry {
     private final ApplicationContext applicationContext;
 
     private final ZeroTrustClientService zeroTrustClientService;
+    
+    private final EndpointScanningService endpointScanningService;
 
     private final Map<String, AgentVerb> verbs = new HashMap<>();
     private final Map<String, Object> instances = new HashMap<>();
@@ -166,5 +172,31 @@ public class VerbRegistry {
 
     public Map<String, AgentVerb> getVerbs() {
         return new HashMap<>(verbs);
+    }
+    
+    /**
+     * Gets endpoint descriptors for all registered verbs.
+     * This provides integration with the centralized endpoint scanning system.
+     */
+    public List<EndpointDescriptor> getVerbDescriptors() {
+        return endpointScanningService.getAllEndpoints()
+                .stream()
+                .filter(endpoint -> "VERB".equals(endpoint.getType()))
+                .filter(endpoint -> verbs.containsKey(endpoint.getName()))
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Gets all available AI-callable verb descriptors.
+     * This can be used by agents to understand what capabilities are available.
+     */
+    public List<EndpointDescriptor> getAiCallableVerbDescriptors() {
+        return getVerbDescriptors()
+                .stream()
+                .filter(endpoint -> {
+                    Boolean isAiCallable = (Boolean) endpoint.getMetadata().get("isAiCallable");
+                    return isAiCallable != null && isAiCallable;
+                })
+                .collect(Collectors.toList());
     }
 }
