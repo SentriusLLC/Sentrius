@@ -28,19 +28,6 @@ WORKDIR /opt/keycloak
 
 # Copy certs if needed
 
-COPY dev-certs/sentrius-ca.crt /tmp/sentrius-ca.crt
-
-RUN if [ "$INCLUDE_DEV_CERTS" = "true" ] && [ -f /tmp/sentrius-ca.crt ]; then \
-      echo "Importing dev CA cert..." && \
-      keytool -import -noprompt -trustcacerts \
-        -alias sentrius-local-ca \
-        -file /tmp/sentrius-ca.crt \
-        -keystore "$JAVA_HOME/lib/security/cacerts" \
-        -storepass changeit ; \
-    else \
-      echo "Skipping cert import"; \
-    fi
-
 RUN /opt/keycloak/bin/kc.sh build
 
 FROM quay.io/keycloak/keycloak:24.0.1
