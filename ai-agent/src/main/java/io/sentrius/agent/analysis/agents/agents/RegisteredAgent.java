@@ -2,9 +2,12 @@ package io.sentrius.agent.analysis.agents.agents;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
+import io.sentrius.agent.analysis.api.AgentKeyService;
+import io.sentrius.agent.config.AgentConfigOptions;
 import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
@@ -14,6 +17,7 @@ import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.AgentExecutionService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.dto.UserDTO;
+import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +39,9 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
     final VerbRegistry verbRegistry;
     final AgentVerbs agentVerbs;
     final AgentExecutionService agentExecutionService;
+    final AgentConfigOptions agentConfigOptions;
+    final AgentKeyService agentKeyService;
+    private final KeycloakService keycloakService;
 
     private volatile boolean running = true;
     private Thread workerThread;
@@ -74,6 +81,8 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
             .username(zeroTrustClientService.getUsername())
             .build();
         var execution = agentExecutionService.getAgentExecution(user);
+        
+        var keyPair = agentKeyService.getKeyPair();
         try {
             agentClientService.heartbeat(execution, execution.getUser().getUsername());
         } catch (ZtatException e) {
@@ -93,6 +102,32 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
 
                 log.error(e.getMessage());
                 log.info("Registering v1.0.2 agent failed. Retrying in 10 seconds...");
+
+                try {
+                    var agentName = agentConfigOptions.getNamePrefix() + "-" + UUID.randomUUID().toString();
+                    var base64PublicKey = agentKeyService.getBase64PublicKey(keyPair.getPublic());
+                    var agentRegistrationDTO = agentClientService.bootstrap(
+                        agentName, base64PublicKey
+                        , keyPair.getPublic().getAlgorithm()
+                    );
+
+                    var encryptedSecret = agentRegistrationDTO.getClientSecret();
+                    var decryptedSecret = agentKeyService.
+                        decryptWithPrivateKey(encryptedSecret, keyPair.getPrivate());
+                    keycloakService.createKeycloakClient(
+                        agentName,
+                        decryptedSecret
+                    );
+
+                    final UserDTO newUserDTO = UserDTO.builder()
+                        .username(zeroTrustClientService.getUsername())
+                        .build();
+                    execution = agentExecutionService.getAgentExecution(newUserDTO);
+                } catch (Exception e1) {
+                    log.error("Failed to bootstrap agent", e1);
+                } catch (ZtatException ex) {
+                    log.error("Failed to bootstrap agent", ex);
+                }
                 try {
                     Thread.sleep(10_000);
                 } catch (InterruptedException ex) {

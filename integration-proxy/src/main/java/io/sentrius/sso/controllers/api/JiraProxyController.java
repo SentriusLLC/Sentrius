@@ -8,7 +8,7 @@ import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
-import io.sentrius.sso.config.ApplicationConfig;
+import io.sentrius.sso.config.ApplicationEnvironmentConfig;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
@@ -38,7 +38,7 @@ public class JiraProxyController extends BaseController {
     final KeycloakService keycloakService;
     final IntegrationSecurityTokenService integrationSecurityTokenService;
     final RestTemplateBuilder restTemplateBuilder;
-    final ApplicationConfig applicationConfig;
+    final ApplicationEnvironmentConfig applicationConfig;
 
     Tracer tracer = GlobalOpenTelemetry.getTracer("io.sentrius.sso");
 
@@ -49,7 +49,7 @@ public class JiraProxyController extends BaseController {
         KeycloakService keycloakService,
         IntegrationSecurityTokenService integrationSecurityTokenService,
         RestTemplateBuilder restTemplateBuilder,
-        ApplicationConfig applicationConfig
+        ApplicationEnvironmentConfig applicationConfig
     ) {
         super(userService, systemOptions, errorOutputService);
         this.keycloakService = keycloakService;

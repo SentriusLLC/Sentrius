@@ -189,6 +189,7 @@
             selectedUsers.forEach(userId => {
                 const badge = document.createElement('div');
                 badge.className = 'badge';
+
                 badge.dataset.userId = userId;
                 const name = allUsers.get(userId);
                 badge.innerHTML = `User ${name} <span class="remove">&times;</span>`;

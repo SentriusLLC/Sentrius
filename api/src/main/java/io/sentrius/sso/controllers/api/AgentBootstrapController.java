@@ -8,6 +8,7 @@ import java.util.Map;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.sentrius.sso.config.ApiPaths;
+import io.sentrius.sso.config.AppConfig;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
@@ -56,15 +57,8 @@ public class AgentBootstrapController extends BaseController {
     final AgentService agentService;
     private final ZeroTrustClientService zeroTrustClientService;
     private final ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
+    final AppConfig appConfig;
 
-    @Value("${sentrius.agent.register.bootstrap.allow:false}")
-    private boolean allowRegistration;
-
-    @Value("${sentrius.agent.bootstrap.policy:default-policy.yaml}")
-    private String defaultPolicyFile;
-
-    @Value("${sentrius.agent.launcher.service:http://sentrius-launcherservice:8080/}")
-    private String sentriusLauncherService;
 
     public AgentBootstrapController(
         UserService userService,
@@ -74,8 +68,8 @@ public class AgentBootstrapController extends BaseController {
         CryptoService cryptoService, SessionTrackingService sessionTrackingService, KeycloakService keycloakService,
         ATPLPolicyService atplPolicyService,
         ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService, AgentService agentService,
-        ZeroTrustClientService zeroTrustClientService
-        ) {
+        ZeroTrustClientService zeroTrustClientService, AppConfig appConfig
+    ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
         this.cryptoService = cryptoService;
@@ -86,6 +80,7 @@ public class AgentBootstrapController extends BaseController {
         this.ztrService = ztrService;
         this.agentService = agentService;
         this.zeroTrustClientService = zeroTrustClientService;
+        this.appConfig = appConfig;
     }
 
 
@@ -110,7 +105,7 @@ public class AgentBootstrapController extends BaseController {
             .clientId(unencryptedRegistration.getClientId())
             .build();
 
-        if (allowRegistration) {
+        if (appConfig.isAllowRegistration()) {
             log.info("Registering {}", registrationDTO.getAgentName());
             User user = userService.getUserByUsername(newDTO.getAgentName());
             if (user == null) {
@@ -131,9 +126,9 @@ public class AgentBootstrapController extends BaseController {
                     log.info("Creating new user: {}", user);
                     user = userService.save(user);
 
-                try(InputStream terminalHelperStream = getClass().getClassLoader().getResourceAsStream(defaultPolicyFile)) {
+                try(InputStream terminalHelperStream = getClass().getClassLoader().getResourceAsStream(appConfig.getDefaultPolicyFile())) {
                     if (terminalHelperStream == null) {
-                        throw new RuntimeException(defaultPolicyFile + "not found on classpath");
+                        throw new RuntimeException(appConfig.getDefaultPolicyFile() + "not found on classpath");
 
                     }
 
@@ -147,7 +142,7 @@ public class AgentBootstrapController extends BaseController {
                     else {
                         atplPolicyService.assignPolicyToUser(user, latest.get());
                     }
-                    log.info("Default policy file: {}", defaultPolicyFile);
+                    log.info("Default policy file: {}", appConfig.getDefaultPolicyFile());
 
                 }
 
@@ -171,7 +166,7 @@ public class AgentBootstrapController extends BaseController {
 
 
         var operatingUser = getOperatingUser(request, response );
-        zeroTrustClientService.callAuthenticatedPostOnApi(sentriusLauncherService,  "agent/launcher/create",
+        zeroTrustClientService.callAuthenticatedPostOnApi(appConfig.getSentriusLauncherService(),  "agent/launcher/create",
             registrationDTO);
         // bootstrap with a default policy
         return ResponseEntity.ok("{\"status\": \"success\"}");

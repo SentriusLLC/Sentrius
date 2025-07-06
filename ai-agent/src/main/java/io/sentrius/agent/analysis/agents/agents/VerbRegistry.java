@@ -3,6 +3,7 @@ package io.sentrius.agent.analysis.agents.agents;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ScanResult;
 import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
+import io.sentrius.agent.discovery.AgentEndpointDiscoveryService;
 import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
@@ -38,6 +39,8 @@ public class VerbRegistry {
 
     private final Map<String, AgentVerb> verbs = new HashMap<>();
     private final Map<String, Object> instances = new HashMap<>();
+
+    private final AgentEndpointDiscoveryService agentEndpointDiscoveryService;
 
     public void scanClasspath() {
         // Scan the classpath for classes with the @Verb annotation
@@ -173,7 +176,7 @@ public class VerbRegistry {
     public Map<String, AgentVerb> getVerbs() {
         return new HashMap<>(verbs);
     }
-    
+
     /**
      * Gets endpoint descriptors for all registered verbs.
      * This provides integration with the centralized endpoint scanning system.

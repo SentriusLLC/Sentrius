@@ -79,6 +79,7 @@ public class ChatAgent implements ApplicationListener<ApplicationReadyEvent> {
 
         verbRegistry.scanClasspath();
 
+
         var keyPair = agentKeyService.getKeyPair();
 
         try {
