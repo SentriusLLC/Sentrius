@@ -60,6 +60,11 @@ public class KeycloakService {
      */
     public boolean validateJwt(String token) {
         try {
+            if (token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+
+            token = token.trim().replaceAll("\\s+", ""); // remove all whitespace
             var kid = JwtUtil.extractKid(token);
             Objects.requireNonNull(kid, "No 'kid' found in JWT header");
             var publicKey = keycloak.getPublicKey(kid);
@@ -79,6 +84,11 @@ public class KeycloakService {
      * Extract the client ID (agent identity) from a valid JWT.
      */
     public String extractAgentId(String token) {
+        if (token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+
+        token = token.trim().replaceAll("\\s+", ""); // remove all whitespace
         var kid = JwtUtil.extractKid(token);
         Objects.requireNonNull(kid, "No 'kid' found in JWT header");
         var publicKey = keycloak.getPublicKey(kid);
@@ -93,6 +103,11 @@ public class KeycloakService {
     }
 
     public String extractUsername(String token) {
+        if (token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+
+        token = token.trim().replaceAll("\\s+", ""); // remove all whitespace
         var kid = JwtUtil.extractKid(token);
         Objects.requireNonNull(kid, "No 'kid' found in JWT header");
         var publicKey = keycloak.getPublicKey(kid);
@@ -118,6 +133,13 @@ public class KeycloakService {
 
     public AgentRegistrationDTO registerAgentClient(AgentRegistrationDTO agent) {
         ClientsResource clients = keycloak.getKeycloak().realm(realm).clients();
+
+        List<ClientRepresentation> existingClients = clients.findByClientId(agent.getAgentName());
+        if (!existingClients.isEmpty()) {
+            String existingClientId = existingClients.get(0).getId();
+            log.warn("Client with ID '{}' already exists. Removing before re-registration.", agent.getAgentName());
+            clients.get(existingClientId).remove();
+        }
 
         // Step 1: Build client representation
         ClientRepresentation client = new ClientRepresentation();

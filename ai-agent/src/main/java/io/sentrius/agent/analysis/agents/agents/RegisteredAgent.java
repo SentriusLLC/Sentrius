@@ -102,33 +102,6 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
 
                 log.error(e.getMessage());
                 log.info("Registering v1.0.2 agent failed. Retrying in 10 seconds...");
-
-                try {
-                    var agentName = execution.getUser().getUsername();
-                    var base64PublicKey = agentKeyService.getBase64PublicKey(keyPair.getPublic());
-                    var agentRegistrationDTO = agentClientService.bootstrap(
-                        agentName, base64PublicKey
-                        , keyPair.getPublic().getAlgorithm()
-                    );
-
-                    var encryptedSecret = agentRegistrationDTO.getClientSecret();
-                    var decryptedSecret = agentKeyService.
-                        decryptWithPrivateKey(encryptedSecret, keyPair.getPrivate());
-                    keycloakService.createKeycloakClient(
-                        agentName,
-                        decryptedSecret
-                    );
-
-                    user = UserDTO.builder()
-                        .username(zeroTrustClientService.getUsername())
-                        .build();
-
-                    execution = agentExecutionService.getAgentExecution(user);
-                } catch (Exception e1) {
-                    log.error("Failed to bootstrap agent", e1);
-                } catch (ZtatException ex) {
-                    log.error("Failed to bootstrap agent", ex);
-                }
                 try {
                     Thread.sleep(10_000);
                 } catch (InterruptedException ex) {
