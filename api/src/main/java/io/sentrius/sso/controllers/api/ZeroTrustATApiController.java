@@ -327,6 +327,81 @@ public class ZeroTrustATApiController extends BaseController {
         return ResponseEntity.ok(ztatTracker);
     }
 
+    @GetMapping("/list/{state}/{type}")
+    @LimitAccess(ztatAccess = {ZeroTrustAccessTokenEnum.CAN_VIEW_ZTATS})
+    public ResponseEntity<?> listTypedZtatRequests(@RequestHeader("Authorization") String token,
+                                              @PathVariable("type") String type,
+                                               @PathVariable("state") String state,
+                                              HttpServletRequest request, HttpServletResponse response) {
+        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+
+        log.info("Received ZTAT request from agent: {}", compactJwt);
+        if (!keycloakService.validateJwt(compactJwt)) {
+            log.warn("Invalid Keycloak token");
+            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+        }
+
+        // Extract agent identity from the JWT
+        var operatingUser = getOperatingUser(request, response );
+
+        // Extract agent identity from the JWT
+        String agentId = keycloakService.extractAgentId(compactJwt);
+
+        if (null == operatingUser) {
+            log.warn("No operating user found for agent: {}", agentId);
+            var username = keycloakService.extractUsername(compactJwt);
+            operatingUser = userService.getUserByUsername(username);
+
+        }
+        List<ZtatDTO> ztatTracker = new ArrayList<ZtatDTO>();
+        switch(type){
+            case "terminal":
+                if ("denied".equalsIgnoreCase(state)) {
+                    ztatTracker = ztatService.getDeniedJITRequests(operatingUser);
+                } else if ("approved".equalsIgnoreCase(state)) {
+                    ztatTracker = ztatService.getApprovedJITRequests(operatingUser);
+                } else {
+                    ztatTracker = ztatService.getOpenJITRequests(operatingUser);
+                }
+                break;
+            case "ops":
+                if ("denied".equalsIgnoreCase(state)) {
+                    ztatTracker = ztatService.getDeniedOpsJITRequests(operatingUser);
+                } else if ("approved".equalsIgnoreCase(state)) {
+                    ztatTracker = ztatService.getApprovedOpsJITRequests(operatingUser);
+                } else {
+                    ztatTracker = ztatService.getOpenOpsRequests(operatingUser);
+                }
+                break;
+            case "atat":
+                if ("denied".equalsIgnoreCase(state)) {
+                    ztatTracker = ztatService.getDeniedOpsJITRequests(operatingUser);
+                } else if ("approved".equalsIgnoreCase(state)) {
+                    ztatTracker = ztatService.getApprovedOpsJITRequests(operatingUser);
+                } else {
+                    ztatTracker = ztatService.getOpenOpsRequests(operatingUser);
+                }
+                ztatTracker = ztatTracker.stream().filter(dto -> {
+                    if (dto.getCommand().equals("register")) {
+                        return false;
+                    }
+                    try {
+                        if (userService.isNPE(dto.getUserName())){
+                            return true;
+                        }
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                    return false;
+                }).toList();
+                break;
+            default:
+                log.warn("Invalid type: {}", type);
+        }
+        return ResponseEntity.ok(ztatTracker);
+    }
+
     @PostMapping("/jwt/issue")
     public ResponseEntity<UserTokenResponse> issueZtat(@RequestBody UserTokenDTO request) {
         String ztat = tokenService.issueZtat(request.getUserId(), request.getSessionId(), request.getPublicKey());

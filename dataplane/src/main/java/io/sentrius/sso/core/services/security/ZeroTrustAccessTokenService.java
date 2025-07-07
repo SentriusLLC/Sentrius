@@ -277,10 +277,25 @@ public class ZeroTrustAccessTokenService {
     return ztatRequestService.hasJITRequest(command, user.getId(), system.getId());
   }
 
-    public List<ZtatDTO> getOpenJITRequests(User operatingUser) {
-        return ztatRequestService.getOpenAccessTokenRequests(operatingUser);
-    }
+  public List<ZtatDTO> getOpenJITRequests(User operatingUser) {
+      return ztatRequestService.getOpenAccessTokenRequests(operatingUser);
+  }
 
+  public List<ZtatDTO> getDeniedJITRequests(User operatingUser) {
+    return ztatRequestService.getDeniedTerminalAccessTokenRequests(operatingUser);
+  }
+
+  public List<ZtatDTO> getDeniedOpsJITRequests(User operatingUser) {
+    return ztatRequestService.getDeniedOpsAccessTokenRequests(operatingUser);
+  }
+
+  public List<ZtatDTO> getApprovedJITRequests(User operatingUser) {
+    return ztatRequestService.getApprovedTerminalAccessTokenRequests(operatingUser);
+  }
+
+  public List<ZtatDTO> getApprovedOpsJITRequests(User operatingUser) {
+    return ztatRequestService.getApprovedOpsAccessTokenRequests(operatingUser);
+  }
   public List<ZtatDTO> getOpenOpsRequests(User operatingUser) {
       return ztatRequestService.getOpenOpsRequests(operatingUser);
   }
