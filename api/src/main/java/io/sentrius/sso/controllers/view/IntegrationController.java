@@ -35,29 +35,52 @@ public class IntegrationController extends BaseController {
         List<Map<String, String>> integrations = List.of(
             Map.of(
                 "name", "GitHub",
-                "description", "Configure GitHub integration settings",
-                "icon", "fa-brands fa-github", // CSS class for GitHub icon
-                "href", "/sso/v1/integrations/github"
+                "description", "Connect your repositories and manage code integration workflows",
+                "icon", "fa-brands fa-github",
+                "href", "/sso/v1/integrations/github",
+                "badge", "Popular",
+                "badgeType", "popular"
             ),
             Map.of(
                 "name", "JIRA",
-                "description", "Set up JIRA project management integration",
-                "icon", "fa-brands fa-jira", // CSS class for JIRA icon
-                "href", "/sso/v1/integrations/jira"
+                "description", "Streamline project management and issue tracking workflows",
+                "icon", "fa-brands fa-jira",
+                "href", "/sso/v1/integrations/jira",
+                "badge", "Popular",
+                "badgeType", "popular"
             ),
             Map.of(
                 "name", "OpenAI",
-                "description", "OpenAI connector",
-                "icon", "fa-solid fa-robot", // CSS class for Slack icon
-                "href", "/sso/v1/integrations/openai"
-            )
-            /*
+                "description", "Integrate AI capabilities and natural language processing",
+                "icon", "fa-solid fa-robot",
+                "href", "/sso/v1/integrations/openai",
+                "badge", "AI",
+                "badgeType", "new"
+            ),
+            Map.of(
+                "name", "Slack",
+                "description", "Enable team communication and notification workflows",
+                "icon", "fa-brands fa-slack",
+                "href", "/sso/v1/integrations/slack",
+                "badge", "Coming Soon",
+                "badgeType", ""
+            ),
             Map.of(
                 "name", "Database",
-                "description", "Configure database connections",
-                "icon", "fa-solid fa-database", // CSS class for database icon
-                "href", "/sso/v1/integrations/database"
-            )*/
+                "description", "Connect to databases for data integration and analytics",
+                "icon", "fa-solid fa-database",
+                "href", "/sso/v1/integrations/database",
+                "badge", "Coming Soon",
+                "badgeType", ""
+            ),
+            Map.of(
+                "name", "Microsoft Teams",
+                "description", "Integrate with Microsoft Teams for collaboration workflows",
+                "icon", "fa-brands fa-microsoft",
+                "href", "/sso/v1/integrations/teams",
+                "badge", "Coming Soon",
+                "badgeType", ""
+            )
         );
         List<ExternalIntegrationDTO> existingIntegrations = new ArrayList<>();
         integrationService.findAll().forEach(token -> {
@@ -70,6 +93,13 @@ public class IntegrationController extends BaseController {
         model.addAttribute("existingIntegrations", existingIntegrations);
         model.addAttribute("integrations", integrations);
         return "sso/integrations/add_dashboard";
+    }
+
+    @GetMapping("/github")
+    public String createGitHubIntegration(Model model, @RequestParam(name = "id", required = false) Long id) {
+        ExternalIntegrationDTO integration = new ExternalIntegrationDTO();
+        model.addAttribute("githubIntegration", integration);
+        return "sso/integrations/add_github";
     }
 
     @GetMapping("/jira")
