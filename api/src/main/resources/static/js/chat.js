@@ -271,8 +271,12 @@ export function switchToAgent(agentName,agentId, sessionId, agentHost) {
         appendToChatWindow(msg.sender, msg.message);
     });
 
-    container.classList.remove("hidden");
-    container.style.display = "block";
+    // Show container with animation
+    container.style.display = "flex";
+    setTimeout(() => {
+        container.classList.remove("hidden");
+    }, 10);
+    
     console.log("Chat container displayed");
 }
 
@@ -307,14 +311,49 @@ export function appendToChatWindow(sender, message) {
     const chatBox = document.getElementById("chat-messages");
     const div = document.createElement("div");
     div.classList.add("chat-message");
-    div.innerHTML = `<strong>${sender}:</strong> ${message}`;
+    
+    // Determine if message is from user or agent
+    const isUser = sender === "You" || sender === "user";
+    div.classList.add(isUser ? "user" : "agent");
+    
+    // Create message content with modern styling
+    const messageContent = document.createElement("div");
+    messageContent.classList.add("chat-message-content");
+    messageContent.textContent = message;
+    
+    // Add sender name (smaller, less prominent)
+    const senderElement = document.createElement("strong");
+    senderElement.textContent = sender;
+    
+    div.appendChild(senderElement);
+    div.appendChild(messageContent);
+    
     chatBox.appendChild(div);
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 export function toggleChat() {
     const container = document.getElementById("chat-container");
-    container.classList.toggle("hidden");
+    
+    if (container.classList.contains("hidden")) {
+        container.style.display = "flex";
+        // Small delay to ensure display change is processed
+        setTimeout(() => {
+            container.classList.remove("hidden");
+        }, 10);
+        
+        // Focus input when opening
+        setTimeout(() => {
+            const input = document.getElementById("chat-input");
+            if (input) input.focus();
+        }, 300);
+    } else {
+        container.classList.add("hidden");
+        // Hide after animation completes
+        setTimeout(() => {
+            container.style.display = "none";
+        }, 300);
+    }
 }
 
 // =========================
@@ -345,3 +384,4 @@ export async function fetchAvailableAgents() {
 }
 
 window.sendMessage = sendMessage;
+window.toggleChat = toggleChat;
