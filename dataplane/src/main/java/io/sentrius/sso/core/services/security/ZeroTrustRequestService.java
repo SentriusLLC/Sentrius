@@ -269,7 +269,11 @@ public class ZeroTrustRequestService {
         for (ZeroTrustAccessTokenRequest request : openRequests) {
             var dto = convertToDTO(request);
             if (Objects.equals(currentUser.getId(), request.getUser().getId())) {
+                log.info("Current user matches request user: {}", request.getUser().getUsername());
                 dto.setCurrentUser(true);
+            }
+            else {
+                log.info("Current user does not match request user: {} vs {}", currentUser.getUsername(), request.getUser().getUsername());
             }
             ztatTrackerList.add(dto);
         }

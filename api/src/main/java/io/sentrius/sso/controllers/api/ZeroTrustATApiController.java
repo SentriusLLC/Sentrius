@@ -33,6 +33,7 @@ import io.sentrius.sso.core.services.security.EcdsaSignatureUtil;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.security.ZtatTokenService;
+import io.sentrius.sso.core.utils.AccessUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -273,28 +274,27 @@ public class ZeroTrustATApiController extends BaseController {
 
     @GetMapping("/list/{type}")
     @LimitAccess(ztatAccess = {ZeroTrustAccessTokenEnum.CAN_VIEW_ZTATS})
-    public ResponseEntity<?> listZtatRequests(@RequestHeader("Authorization") String token,
+    public ResponseEntity<?> listZtatRequests(@RequestHeader(name= "Authorization", required=false) String token,
         @PathVariable("type") String type,
                                                                 HttpServletRequest request, HttpServletResponse response) {
-        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
-
-
-        log.info("Received ZTAT request from agent: {}", compactJwt);
-        if (!keycloakService.validateJwt(compactJwt)) {
-            log.warn("Invalid Keycloak token");
-            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
-        }
-
-        // Extract agent identity from the JWT
         var operatingUser = getOperatingUser(request, response );
+        if (null != token) {
+            String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
 
-        // Extract agent identity from the JWT
-        String agentId = keycloakService.extractAgentId(compactJwt);
 
-        if (null == operatingUser) {
-            log.warn("No operating user found for agent: {}", agentId);
-            var username = keycloakService.extractUsername(compactJwt);
-            operatingUser = userService.getUserByUsername(username);
+            log.info("Received ZTAT request from agent: {}", compactJwt);
+            if (!keycloakService.validateJwt(compactJwt)) {
+                log.warn("Invalid Keycloak token");
+                return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+            }
+            String agentId = keycloakService.extractAgentId(compactJwt);
+
+            if (null == operatingUser) {
+                log.warn("No operating user found for agent: {}", agentId);
+                var username = keycloakService.extractUsername(compactJwt);
+                operatingUser = userService.getUserByUsername(username);
+
+            }
 
         }
         List<ZtatDTO> ztatTracker = new ArrayList<ZtatDTO>();
@@ -324,36 +324,42 @@ public class ZeroTrustATApiController extends BaseController {
             default:
                 log.warn("Invalid type: {}", type);
         }
+        ztatTracker = decorateTats(ztatTracker, operatingUser);
         return ResponseEntity.ok(ztatTracker);
     }
 
     @GetMapping("/list/{state}/{type}")
     @LimitAccess(ztatAccess = {ZeroTrustAccessTokenEnum.CAN_VIEW_ZTATS})
-    public ResponseEntity<?> listTypedZtatRequests(@RequestHeader("Authorization") String token,
+    public ResponseEntity<?> listTypedZtatRequests(@RequestHeader(name= "Authorization", required=false) String token,
                                               @PathVariable("type") String type,
                                                @PathVariable("state") String state,
                                               HttpServletRequest request, HttpServletResponse response) {
-        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
 
-
-        log.info("Received ZTAT request from agent: {}", compactJwt);
-        if (!keycloakService.validateJwt(compactJwt)) {
-            log.warn("Invalid Keycloak token");
-            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
-        }
-
-        // Extract agent identity from the JWT
         var operatingUser = getOperatingUser(request, response );
+       if (null != token) {
+            String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
 
-        // Extract agent identity from the JWT
-        String agentId = keycloakService.extractAgentId(compactJwt);
 
-        if (null == operatingUser) {
-            log.warn("No operating user found for agent: {}", agentId);
-            var username = keycloakService.extractUsername(compactJwt);
-            operatingUser = userService.getUserByUsername(username);
+            log.info("Received ZTAT request from agent: {}", compactJwt);
+            if (!keycloakService.validateJwt(compactJwt)) {
+                log.warn("Invalid Keycloak token");
+                return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+            }
+               String agentId = keycloakService.extractAgentId(compactJwt);
+
+               if (null == operatingUser) {
+                   log.warn("No operating user found for agent: {}", agentId);
+                   var username = keycloakService.extractUsername(compactJwt);
+                   operatingUser = userService.getUserByUsername(username);
+
+               }
 
         }
+        // Extract agent identity from the JWT
+
+
+        // Extract agent identity from the JWT
+
         List<ZtatDTO> ztatTracker = new ArrayList<ZtatDTO>();
         switch(type){
             case "terminal":
@@ -399,6 +405,7 @@ public class ZeroTrustATApiController extends BaseController {
             default:
                 log.warn("Invalid type: {}", type);
         }
+        ztatTracker = decorateTats(ztatTracker, operatingUser);
         return ResponseEntity.ok(ztatTracker);
     }
 
@@ -439,4 +446,26 @@ public class ZeroTrustATApiController extends BaseController {
         }
     }
 
+    List<ZtatDTO> decorateTats(List<ZtatDTO> tats, User operatingUser){
+        boolean canApprove = AccessUtil.canAccess(operatingUser, ZeroTrustAccessTokenEnum.CAN_APPROVE_ZTATS);
+        boolean canDeny = AccessUtil.canAccess(operatingUser, ZeroTrustAccessTokenEnum.CAN_DENY_ZTATS);
+        if (canApprove || canDeny) {
+            for (var tat : tats) {
+
+                if (tat.getUserName().equals(operatingUser.getUsername())) {
+                    tat.setCurrentUser(true);
+                    if (systemOptions.getCanApproveOwnZtat()) {
+                        tat.setCanApprove(canApprove);
+                        tat.setCanDeny(canDeny);
+                    }
+                }
+                else {
+                    tat.setCanApprove(canApprove);
+                    tat.setCanDeny(canDeny);
+                }
+
+            }
+        }
+        return tats;
+    }
 }
