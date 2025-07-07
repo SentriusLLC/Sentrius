@@ -59,6 +59,31 @@ class IntegrationApiControllerTest {
     }
 
     @Test
+    void addGitHubIntegrationReturnsSuccessForValidDTO() throws JsonProcessingException, GeneralSecurityException {
+        ExternalIntegrationDTO dto = new ExternalIntegrationDTO();
+        dto.setName("TestGitHub");
+        dto.setUsername("testuser");
+        dto.setApiToken("ghp_test-token");
+        dto.setBaseUrl("https://github.com");
+        
+        IntegrationSecurityToken savedToken = IntegrationSecurityToken.builder()
+            .id(1L)
+            .connectionType("github")
+            .name("TestGitHub")
+            .connectionInfo("{\"name\":\"TestGitHub\",\"username\":\"testuser\",\"apiToken\":\"ghp_test-token\",\"baseUrl\":\"https://github.com\"}")
+            .build();
+        
+        when(integrationService.save(any(IntegrationSecurityToken.class))).thenReturn(savedToken);
+
+        ResponseEntity<ExternalIntegrationDTO> result = controller.addGitHubIntegration(request, response, dto);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        assertNotNull(result.getBody());
+        assertEquals("TestGitHub", result.getBody().getName());
+        verify(integrationService).save(any(IntegrationSecurityToken.class));
+    }
+
+    @Test
     void addOpenaiIntegrationReturnsSuccessForValidDTO() throws JsonProcessingException, GeneralSecurityException {
         ExternalIntegrationDTO dto = new ExternalIntegrationDTO();
         dto.setName("TestOpenAI");
