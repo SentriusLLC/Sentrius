@@ -452,18 +452,21 @@ public class ZeroTrustATApiController extends BaseController {
         if (canApprove || canDeny) {
             for (var tat : tats) {
 
-                if (tat.getUserName().equals(operatingUser.getUsername())) {
-                    tat.setCurrentUser(true);
-                    if (systemOptions.getCanApproveOwnZtat()) {
-                        tat.setCanApprove(canApprove);
+                    if (tat.getUserName().equals(operatingUser.getUsername())) {
+                        tat.setCurrentUser(true);
+                        if (systemOptions.getCanApproveOwnZtat()) {
+                            if (tat.getUsesRemaining() > 0) {
+                                tat.setCanApprove(canApprove);
+                            }
+                            tat.setCanDeny(canDeny);
+                        }
+                    }
+                    else {
+                        if (tat.getUsesRemaining() > 0) {
+                            tat.setCanApprove(canApprove);
+                        }
                         tat.setCanDeny(canDeny);
                     }
-                }
-                else {
-                    tat.setCanApprove(canApprove);
-                    tat.setCanDeny(canDeny);
-                }
-
             }
         }
         return tats;

@@ -388,7 +388,8 @@ public class ZeroTrustRequestService {
             List<ZeroTrustAccessTokenApproval> approval = request.getApprovals();
             if (!approval.isEmpty()) {
                 var uses = ztatUseRepository.getUses(approval.get(0));
-                return systemOptions.maxJitUses - uses.size();
+                var usesRemaining = systemOptions.maxJitUses - uses.size();
+                return Math.max(usesRemaining, 0);
             }
 
         return systemOptions.maxJitUses; // Update as needed based on your logic
