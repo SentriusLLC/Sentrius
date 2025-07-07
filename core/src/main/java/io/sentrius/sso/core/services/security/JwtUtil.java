@@ -1,5 +1,6 @@
 package io.sentrius.sso.core.services.security;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Optional;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -87,26 +88,33 @@ public class JwtUtil {
 
     }
 
-    /**
-     * Extract the 'kid' (Key ID) from a JWT header.
-     */
-    public static String extractKid(String jwt)  {
-        // JWT structure: header.payload.signature
+    public static String extractKid(String jwt) {
         try {
+            // Strip "Bearer " prefix if present
+            if (jwt.startsWith("Bearer ")) {
+                jwt = jwt.substring(7);
+            }
             String[] parts = jwt.split("\\.");
+            log.info("JWT parts: header={}, payload={}, signaturePresent={}",
+                parts.length > 0 ? parts[0] : "null",
+                parts.length > 1 ? parts[1] : "null",
+                parts.length == 3);
             if (parts.length != 3) {
                 throw new IllegalArgumentException("Invalid JWT token format");
             }
 
-            var part = parts[0].trim();
-            String headerJson = new String(Base64.getDecoder().decode(part));
+            String headerJson = new String(Base64.getUrlDecoder().decode(parts[0]), StandardCharsets.UTF_8);
             var headerNode = JsonUtil.MAPPER.readTree(headerJson);
 
-            return headerNode.has("kid") ? headerNode.get("kid").asText() : null;
+            if (!headerNode.has("kid")) {
+                throw new RuntimeException("Missing 'kid' in JWT header");
+            }
+
+            return headerNode.get("kid").asText();
         } catch (Exception e) {
-            e.printStackTrace();
-            log.info("Failed to extract 'kid' from JWT {}", jwt);
+            log.error("Failed to extract 'kid' from JWT: {}", jwt, e);
             throw new RuntimeException("Failed to extract 'kid' from JWT", e);
         }
     }
+
 }

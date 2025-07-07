@@ -7,7 +7,7 @@ import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
-import io.sentrius.sso.config.ApplicationConfig;
+import io.sentrius.sso.config.ApplicationEnvironmentConfig;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.dto.ztat.EndpointRequest;
@@ -62,7 +62,7 @@ public class AccessControlAspect {
     private final ZeroTrustRequestService zeroTrustRequestService;
     private final ATPLPolicyService atplPolicyService;
     private final AgentService agentService;
-    private final ApplicationConfig applicationConfig;
+    private final ApplicationEnvironmentConfig applicationConfig;
     private final SystemOptions systemOptions;
     private final ProvenanceKafkaProducer provenanceKafkaProducer;
     static List<String> allowedEndpoints = new ArrayList<>();
@@ -167,7 +167,9 @@ public class AccessControlAspect {
 
                     }
 
-                    if (isAllowedEndpoint(endpoint)) {
+                    if (imputedAccess(operatingUser, accessAnnotation.applicationAccess(),
+                        ApplicationAccessEnum.CAN_LOG_IN ) ||
+                        isAllowedEndpoint(endpoint)) {
                         log.debug("Access Granted to {} at {}", operatingUser, accessAnnotation);
                         return;
                     } else if (null != endpointRequest && containsEndpoint(endpointRequest.getEndpoints(), endpoint)) {
@@ -282,6 +284,22 @@ public class AccessControlAspect {
         }finally{
             span.end();
         }
+    }
+
+    /**
+     * Returns true if the application access is imputed, meaning that there is only one access type in the
+     * applicationAccessEnums array and it matches the access parameter.
+     * @param applicationAccessEnums
+     * @param access
+     * @return
+     */
+    private boolean imputedAccess(User operatingUser, ApplicationAccessEnum[] applicationAccessEnums,
+                                                ApplicationAccessEnum access )
+        throws SQLException, GeneralSecurityException {
+        if (applicationAccessEnums != null && applicationAccessEnums.length == 1) {
+            return applicationAccessEnums[0] == access && canAccess(operatingUser, access);
+        }
+        return false;
     }
 
     private boolean containsEndpoint(List<String> endpoints, String endpoint) {

@@ -355,3 +355,6 @@ neo4j:
   env:
     NEO4J_AUTH: ""  # To be set via environment variable (e.g., neo4j/your-secure-password)
     NEO4J_server_config_strict__validation__enabled: "true"
+
+adminer:
+  enabled: false

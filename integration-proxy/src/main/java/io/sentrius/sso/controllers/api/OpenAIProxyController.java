@@ -9,12 +9,10 @@ import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
-import io.sentrius.sso.config.ApplicationConfig;
-import io.sentrius.sso.core.annotations.LimitAccess;
+import io.sentrius.sso.config.ApplicationEnvironmentConfig;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.integrations.external.ExternalIntegrationDTO;
-import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
@@ -60,7 +58,7 @@ public class OpenAIProxyController extends BaseController {
     final ZeroTrustRequestService ztrService;
     final IntegrationSecurityTokenService integrationSecurityTokenService;
     final AgentService agentService;
-    private final ApplicationConfig applicationConfig;
+    private final ApplicationEnvironmentConfig applicationConfig;
     final AgentCommunicationMemoryStore agentCommunicationMemoryStore;
     final ProvenanceKafkaProducer provenanceKafkaProducer;
 
@@ -72,7 +70,7 @@ public class OpenAIProxyController extends BaseController {
         SessionTrackingService sessionTrackingService, KeycloakService keycloakService,
         ATPLPolicyService atplPolicyService, ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService,
         IntegrationSecurityTokenService integrationSecurityTokenService, AgentService agentService,
-        ApplicationConfig applicationConfig, ProvenanceKafkaProducer provenanceKafkaProducer
+        ApplicationEnvironmentConfig applicationConfig, ProvenanceKafkaProducer provenanceKafkaProducer
     ) {
         super(userService, systemOptions, errorOutputService);
         this.cryptoService = cryptoService;

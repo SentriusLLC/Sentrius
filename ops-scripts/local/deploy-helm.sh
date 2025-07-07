@@ -208,6 +208,7 @@ if [[ -z "$KEYCLOAK_CLIENT_SECRET" ]]; then
 fi
 
 helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
+    --set adminer.enabled=true \
     --set tenant=${TENANT} \
     --set environment=${ENVIRONMENT} \
     --set subdomain="${SUBDOMAIN}" \

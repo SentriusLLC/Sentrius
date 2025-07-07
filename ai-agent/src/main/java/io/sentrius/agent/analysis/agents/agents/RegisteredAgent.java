@@ -2,9 +2,12 @@ package io.sentrius.agent.analysis.agents.agents;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
+import io.sentrius.agent.analysis.api.AgentKeyService;
+import io.sentrius.agent.config.AgentConfigOptions;
 import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
@@ -14,6 +17,7 @@ import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.AgentExecutionService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.dto.UserDTO;
+import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +39,9 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
     final VerbRegistry verbRegistry;
     final AgentVerbs agentVerbs;
     final AgentExecutionService agentExecutionService;
+    final AgentConfigOptions agentConfigOptions;
+    final AgentKeyService agentKeyService;
+    private final KeycloakService keycloakService;
 
     private volatile boolean running = true;
     private Thread workerThread;
@@ -70,10 +77,12 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
 
         verbRegistry.scanClasspath();
 
-        final UserDTO user = UserDTO.builder()
+        UserDTO user = UserDTO.builder()
             .username(zeroTrustClientService.getUsername())
             .build();
         var execution = agentExecutionService.getAgentExecution(user);
+
+        var keyPair = agentKeyService.getKeyPair();
         try {
             agentClientService.heartbeat(execution, execution.getUser().getUsername());
         } catch (ZtatException e) {
@@ -101,15 +110,16 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
             }
         }
 
+        UserDTO finalUser = user;
         workerThread = new Thread(() -> {
             try {
 
-                log.info("Username: {}", user.getUsername());
+                log.info("Username: {}", finalUser.getUsername());
                 log.info("Registering v1.0.2 agent...");
 
 
 
-                var agentExecution = agentExecutionService.getAgentExecution(user);
+                var agentExecution = agentExecutionService.getAgentExecution(finalUser);
                 var response = promptAgent(agentExecution);
                 while (running) {
                     try {

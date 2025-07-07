@@ -12,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.sentrius.sso.core.dto.AgentCommunicationDTO;
@@ -152,9 +153,7 @@ public class AgentService {
 
                 return dtoBuilder.build();
 
-            })
-            .toList();
-
+            }).collect(Collectors.toUnmodifiableList());
     }
 
     @Async

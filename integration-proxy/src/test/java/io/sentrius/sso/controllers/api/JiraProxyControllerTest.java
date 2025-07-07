@@ -1,9 +1,7 @@
 package io.sentrius.sso.controllers.api;
 
-import io.sentrius.sso.config.ApplicationConfig;
+import io.sentrius.sso.config.ApplicationEnvironmentConfig;
 import io.sentrius.sso.core.config.SystemOptions;
-import io.sentrius.sso.core.dto.TicketDTO;
-import io.sentrius.sso.core.integrations.external.ExternalIntegrationDTO;
 import io.sentrius.sso.core.model.security.IntegrationSecurityToken;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.services.ErrorOutputService;
@@ -23,11 +21,9 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -52,7 +48,7 @@ class JiraProxyControllerTest {
     private RestTemplateBuilder restTemplateBuilder;
 
     @Mock
-    private ApplicationConfig applicationConfig;
+    private ApplicationEnvironmentConfig applicationConfig;
 
     @Mock
     private User mockUser;

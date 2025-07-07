@@ -5,12 +5,12 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ApplicationConfig {
+public class ApplicationEnvironmentConfig {
 
     private final String serviceName;
 
     @Autowired
-    public ApplicationConfig(Environment environment) {
+    public ApplicationEnvironmentConfig(Environment environment) {
         this.serviceName = environment.getProperty("otel.resource.attributes.service.name", "unknown-service");
     }
 

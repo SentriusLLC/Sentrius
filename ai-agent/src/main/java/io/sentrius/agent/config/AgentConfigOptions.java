@@ -1,5 +1,6 @@
 package io.sentrius.agent.config;
 
+import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -14,4 +15,5 @@ public class AgentConfigOptions {
 
     private String namePrefix;
     private String type;
+    private List<String> endpoints;
 }
