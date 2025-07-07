@@ -88,6 +88,7 @@ public class ChatApiController extends BaseController {
                 config.put("agentProxyWsUrl", wssUrl);
             }
         }
+        config.put("sentriusLauncherService", appConfig.getSentriusLauncherService());
         return config;
     }
 

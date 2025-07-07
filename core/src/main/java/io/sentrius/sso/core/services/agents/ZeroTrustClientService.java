@@ -220,6 +220,13 @@ public class ZeroTrustClientService {
         return callAuthenticatedPostOnApi(endpoint, apiEndpoint, body, null);
     }
 
+    /**
+     * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
+     */
+    public <T> String callAuthenticatedGetOnApi(String endpoint,@NonNull String apiEndpoint) throws ZtatException {
+        return callAuthenticatedGetOnApi(endpoint, apiEndpoint,  null);
+    }
+
 
 
     /**
@@ -262,6 +269,57 @@ public class ZeroTrustClientService {
         }
         try{
             ResponseEntity<String> response = restTemplate.exchange(builder.build(true).toUriString(), HttpMethod.POST, requestEntity, String.class);
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                return response.getBody(); // This is the ZTAT (JWT or opaque token)
+            } else if (response.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
+                // we need to get
+                throw new ZtatException(response.getBody(), apiEndpoint);
+
+            } else {
+                throw new RuntimeException("Failed to obtain ZTAT: " + response.getStatusCode() + " from " + builder.build(true).toUriString());
+            }
+        } catch (HttpClientErrorException e){
+
+            if (e.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
+                // we need to get
+                throw new ZtatException(e.getResponseBodyAsString(), apiEndpoint);
+
+            } else {
+                log.info("Error: {}", e.getResponseBodyAsString());
+            }
+            throw new RuntimeException(e.getResponseBodyAsString());
+        }
+
+    }
+
+    public <T> String callAuthenticatedGetOnApi(
+        String endpoint, @NonNull String apiEndpoint,
+        Map.Entry<String, List<String>>... params
+    ) throws ZtatException {
+        HttpHeaders headers = new HttpHeaders();
+        String keycloakJwt = getKeycloakToken();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(keycloakJwt);
+
+        log.info("**** EXPOSING JWT {}", keycloakJwt);
+        HttpEntity<T> requestEntity = new HttpEntity<>(headers);
+        if (!apiEndpoint.startsWith("/")) {
+            apiEndpoint = "/" + apiEndpoint;
+        }
+        if (!apiEndpoint.startsWith("/api/v1/")) {
+            apiEndpoint = "/api/v1" + apiEndpoint;
+        }
+        var builder = UriComponentsBuilder.fromUri(URI.create(endpoint))
+            .path(apiEndpoint);
+        if (null != params){
+            for (Map.Entry<String, List<String>> entry : params) {
+                builder.queryParam(entry.getKey(), entry.getValue());
+            }
+        }
+        try{
+            ResponseEntity<String> response = restTemplate.exchange(builder.build(true).toUriString(), HttpMethod.GET,
+                requestEntity, String.class);
 
             if (response.getStatusCode() == HttpStatus.OK) {
                 return response.getBody(); // This is the ZTAT (JWT or opaque token)

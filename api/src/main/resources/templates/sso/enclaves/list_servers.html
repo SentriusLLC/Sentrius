@@ -74,13 +74,12 @@
         <div id="chat-messages"></div>
         <input type="text" id="chat-input" placeholder="Type a message..." onkeydown="sendMessage(event)">
     </div>
+
     <div class="navbar navbar-dark fixed-top navbar-expand-md" role="navigation" xmlns:th="http://www.thymeleaf.org">
         <div class="container bg-dark px-3 py-2" >
             <!-- Brand Logo -->
-            <a class="navbar-brand" href="#" style="padding-left: 45px;">
-                <a href="/sso/v1/dashboard" class="nav-link">
-                    <img th:src="${systemOptions.systemLogoPathSmall}" alt="Logo" class="nav-img">
-                </a>
+            <a class="navbar-brand nav-link" href="/sso/v1/dashboard" style="padding-left: 45px;">
+                <img th:src="${systemOptions.systemLogoPathSmall}" alt="Logo" class="nav-img">
             </a>
 
             <!-- Toggler for Mobile -->
@@ -159,12 +158,20 @@
 </div>
 <script type="module" th:src="@{/js/add_system.js}" defer></script>
 <script type="module" th:src="@{/js/functions.js}"></script>
-<script>
+<script th:inline="javascript">
+
+    let config;
+    fetch("/api/v1/chat/config")
+        .then(r => r.json())
+        .then(data => {
+            config = data;
+            // proceed with code using config here
+        });
 
     function deleteServer(groupId,data) {
         // The API URL you want to call
-        var csrf = "[[${_csrf.token}]]"
-        let terminalsInNewTab = [[${systemOptions.terminalsInNewTab != null ? systemOptions.terminalsInNewTab : false}]];
+        var csrf = /*[[${_csrf.token}]]*/ "";
+        let terminalsInNewTab = /*[[${systemOptions.terminalsInNewTab != null ? systemOptions.terminalsInNewTab : false}]]*/ false;
         console.log("Data: ", data);
         const apiUrl = `/api/v1/enclaves/hosts/delete/${groupId}/${data}`;
 
@@ -197,9 +204,45 @@
             });
     }
 
-    function connectToServer(groupId,data) {
+    function deleteAgent(data) {
         // The API URL you want to call
-        let terminalsInNewTab = [[${systemOptions.terminalsInNewTab != null ? systemOptions.terminalsInNewTab : false}]];
+        var csrf = /*[[${_csrf.token}]]*/ "";
+        console.log("Data: ", data);
+        const apiUrl = `/api/v1/agent/bootstrap/launcher/kill?agentId=${data}`;
+
+        // Perform the API call
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrf // Include the CSRF token in the headers
+            }
+        })
+            .then(response => {
+                if (response.ok) {
+                    // Assuming the API returns a URL to redirect to
+                    return response.json();
+                } else {
+                    throw new Error('Failed to connect to server');
+                }
+            })
+            .then(data => {
+
+                $("#alertTopError").hide();
+                $("#alertTop").text("Agent Deleted").show().delay(3000).fadeOut();
+                $('#agent-table').DataTable().ajax.reload();
+            })
+            .catch(error => {
+                console.log(error);
+                $("#alertTop").hide();
+                $("#alertTopError").text("An unknown error occurred").show().delay(3000).fadeOut();
+            });
+    }
+
+    function connectToServer(groupId,data) {
+        // The API URL yo
+        // u want to call
+        let terminalsInNewTab = /*[[${systemOptions.terminalsInNewTab != null ? systemOptions.terminalsInNewTab : false}]]*/ false;
         console.log("Data: ", data);
         const apiUrl = `/api/v1/enclaves/hosts/connect/${groupId}/${data}`;
 
@@ -326,15 +369,13 @@
                 {
                     data: null,
                     render: function(data, type, row) {
-                        /*
-                        const groupId = row.group ? row.group.groupId : -1; // Access group.id
-                        const id = row.id;
-                        let
-                            ret=`<button class="btn btn-primary" onclick="connectToServer(${groupId}, ${id})">Disconnect</button> `;
+
+                        const id = row.agentName;
+                        let ret=``;
                         if (canDelete) {
-                            ret += `<button class="btn btn-primary" onclick="deleteServer(${groupId}, ${id})">Delete</button>`;
-                        }*/
-                        return "";
+                            ret += `<button class="btn btn-danger" onclick="deleteAgent('${id}')">Kill Agent</button>`;
+                        }
+                        return ret;
                     }
                 }
 

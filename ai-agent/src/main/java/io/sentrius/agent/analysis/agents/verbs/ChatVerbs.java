@@ -112,6 +112,27 @@ public class ChatVerbs {
         } else {
             InputStream terminalHelperStream = getClass().getClassLoader().getResourceAsStream("terminal-helper.json");
             if (terminalHelperStream == null) {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 throw new RuntimeException("assessor-config.yaml not found on classpath");
 
             }

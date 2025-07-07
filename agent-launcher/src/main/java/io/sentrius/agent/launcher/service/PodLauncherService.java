@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
@@ -32,6 +34,10 @@ public class PodLauncherService {
     @Value("${sentrius.agent.callback.format.url:http://sentrius-agent-%s.%s.svc.cluster.local:8090}")
     private String callbackFormatUrl;
 
+
+    Pattern pattern = Pattern.compile("^service-account-(.*?)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
+
+
     public PodLauncherService() throws IOException {
         ApiClient client = Config.defaultClient(); // in-cluster or kubeconfig
         this.coreV1Api = new CoreV1Api(client);
@@ -39,6 +45,74 @@ public class PodLauncherService {
 
     private String buildAgentCallbackUrl(String agentId) {
         return String.format(callbackFormatUrl, agentId, agentNamespace);
+    }
+
+    public List<V1Pod> listAgentPods() throws Exception {
+        var response = coreV1Api.listNamespacedPod(
+            agentNamespace
+        );
+        return response.execute().getItems();
+    }
+
+    public void deleteAllAgentPods() throws Exception {
+        var pods = listAgentPods();
+        for (V1Pod pod : pods) {
+            String podName = pod.getMetadata().getName();
+            String agentId = pod.getMetadata().getLabels().get("agentId");
+
+            log.info("Deleting agent pod: {}", podName);
+            coreV1Api.deleteNamespacedPod(podName, agentNamespace).execute();
+
+            String serviceName = "sentrius-agent-" + agentId;
+            log.info("Deleting agent service: {}", serviceName);
+            try {
+                coreV1Api.deleteNamespacedService(serviceName, agentNamespace).execute();
+            } catch (Exception ex) {
+                log.warn("Could not delete service {}: {}", serviceName, ex.getMessage());
+            }
+        }
+    }
+
+    public void deleteAgentById(String agentId) throws Exception {
+        // Delete all pods with this agentId label
+        var pods = coreV1Api.listNamespacedPod(
+            agentNamespace
+        ).execute().getItems();
+
+        for (V1Pod pod : pods) {
+
+            var labels = pod.getMetadata().getLabels();
+            var podName = pod.getMetadata().getName();
+
+            Matcher matcher = pattern.matcher(agentId);
+
+            if (matcher.matches() && labels != null && labels.containsKey("agentId")) {
+                String name = matcher.group(1);
+
+                var value = labels.get("agentId");
+                if (value.equals(name)) {
+                    log.info("Deleting pod: {}", podName);
+                    coreV1Api.deleteNamespacedPod(podName, agentNamespace).execute();
+                    String serviceName = "sentrius-agent-" + agentId;
+                    log.info("Deleting service: {}", serviceName);
+                    try {
+                        coreV1Api.deleteNamespacedService(serviceName, agentNamespace).execute();
+                    } catch (Exception ex) {
+                        log.warn("Service not found or already deleted: {}", ex.getMessage());
+                    }
+                }else {
+                    log.info("Not Deleting pod: {}", podName);
+                }
+
+
+            } else {
+                log.info("Pod {} does not match agentId pattern or has no agentId label, skipping deletion", podName);
+            }
+
+
+        }
+
+
     }
 
 

@@ -3,10 +3,12 @@ package io.sentrius.sso.controllers.api;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.common.collect.Maps;
 import io.sentrius.sso.config.ApiPaths;
 import io.sentrius.sso.config.AppConfig;
 import io.sentrius.sso.core.annotations.LimitAccess;
@@ -37,10 +39,12 @@ import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
@@ -168,6 +172,21 @@ public class AgentBootstrapController extends BaseController {
         var operatingUser = getOperatingUser(request, response );
         zeroTrustClientService.callAuthenticatedPostOnApi(appConfig.getSentriusLauncherService(),  "agent/launcher/create",
             registrationDTO);
+        // bootstrap with a default policy
+        return ResponseEntity.ok("{\"status\": \"success\"}");
+    }
+
+    @PostMapping("/launcher/kill")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<String> deletePod(
+        @RequestParam(name="agentId") String agentName, HttpServletRequest request, HttpServletResponse response
+    ) throws GeneralSecurityException, IOException, ZtatException {
+
+
+        var operatingUser = getOperatingUser(request, response );
+
+        zeroTrustClientService.callAuthenticatedGetOnApi(appConfig.getSentriusLauncherService(),  "agent/launcher" +
+                "/kill", Maps.immutableEntry("agentId", List.of(agentName)) );
         // bootstrap with a default policy
         return ResponseEntity.ok("{\"status\": \"success\"}");
     }
