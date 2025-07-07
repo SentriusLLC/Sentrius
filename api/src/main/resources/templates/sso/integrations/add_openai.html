@@ -2,58 +2,69 @@
 <html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
 <head>
     <meta th:replace="~{fragments/header}">
-    <title>[[${systemOptions.systemLogoName}]] - Add Integrations</title>
+    <title>[[${systemOptions.systemLogoName}]] - Add OpenAI Integration</title>
 
     <style>
-        .grid {
-            display: grid;
-            gap: 1.5rem;
+        .integration-form {
+            max-width: 600px;
+            margin: 2rem auto;
+            background: var(--bs-dark);
+            border: 1px solid #404040;
+            border-radius: 12px;
+            padding: 2rem;
         }
 
-        .sm\\:grid-cols-2 {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+        .integration-header {
+            text-align: center;
+            margin-bottom: 2rem;
         }
 
-        .lg\\:grid-cols-3 {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+        .integration-icon {
+            font-size: 3rem;
+            color: #0d6efd;
+            margin-bottom: 1rem;
         }
 
-        .xl\\:grid-cols-4 {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+        .form-group {
+            margin-bottom: 1.5rem;
         }
 
-        .card {
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 1rem;
-            transition: background-color 0.2s;
-            text-decoration: none;
-            color: inherit;
+        .form-label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #fff;
         }
 
-        .card:hover {
-            background-color: #f9f9f9;
+        .form-control {
+            background: var(--bs-dark);
+            border: 1px solid #404040;
+            color: #fff;
         }
 
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .form-control:focus {
+            background: var(--bs-dark);
+            border-color: #0d6efd;
+            color: #fff;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
         }
 
-        .card-title {
-            font-size: 1rem;
-            font-weight: 500;
+        .btn-primary {
+            background: linear-gradient(135deg, #0d6efd, #6610f2);
+            border: none;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
         }
 
-        .card-description {
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid #404040;
+            color: #adb5bd;
+        }
+
+        .help-text {
             font-size: 0.875rem;
-            color: #666;
-        }
-
-        .icon {
-            font-size: 1.25rem;
-            color: #888;
+            color: #adb5bd;
+            margin-top: 0.25rem;
         }
     </style>
 
@@ -65,6 +76,13 @@
             const formData = new FormData(form);
             const jsonData = Object.fromEntries(formData.entries());
             var csrf = "[[${_csrf.token}]]"
+            
+            // Show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Connecting...';
+            
             try {
                 const response = await fetch(form.action, {
                     method: "POST",
@@ -76,15 +94,19 @@
                 });
 
                 if (response.ok) {
-                    const redirectUrl = "/sso/v1/integrations"; // Modify as needed
-                    window.location.href = redirectUrl;
+                    submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>Connected!';
+                    setTimeout(() => {
+                        const redirectUrl = "/sso/v1/integrations";
+                        window.location.href = redirectUrl;
+                    }, 1000);
                 } else {
-                    const errorText = await response.text();
-                    alert("Error: " + errorText);
+                    throw new Error("Failed to create integration");
                 }
             } catch (error) {
-                console.error("Request failed", error);
-                alert("Failed to save integration.");
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                console.error("Error:", error);
+                alert("An error occurred while creating the integration.");
             }
         }
     </script>
@@ -97,33 +119,57 @@
         <div class="col py-4">
             <div class="main-content">
                 <div th:replace="~{fragments/alerts}"></div>
-                <div class="container">
-                    <h1>Set Up OpenAI Integration</h1>
+                
+                <div class="integration-form">
+                    <div class="integration-header">
+                        <i class="fa-solid fa-robot integration-icon"></i>
+                        <h1>Connect OpenAI</h1>
+                        <p class="text-muted">Integrate AI capabilities and natural language processing into your workflows.</p>
+                    </div>
+
                     <form th:action="@{/api/v1/integrations/openai/add}" th:object="${openaiIntegration}" method="post" onsubmit="submitIntegration(event)">
-
                         <div class="form-group">
-                            <label for="name">Integration Name</label>
+                            <label for="name" class="form-label">Integration Name</label>
                             <input type="text" id="name" name="name" class="form-control"
-                                   th:field="*{name}" placeholder="Enter your Integration Name" required>
+                                   th:field="*{name}" placeholder="My OpenAI Integration" required>
+                            <div class="help-text">Choose a name to identify this integration</div>
                         </div>
 
                         <div class="form-group">
-                            <label for="username">OpenAI Principal</label>
+                            <label for="username" class="form-label">OpenAI Organization ID</label>
                             <input type="text" id="username" name="username" class="form-control"
-                                   th:field="*{username}" placeholder="Enter your Jira username" required>
+                                   th:field="*{username}" placeholder="org-xxxxxxxxx (optional)">
+                            <div class="help-text">Your OpenAI organization ID (optional for personal accounts)</div>
                         </div>
 
                         <div class="form-group">
-                            <label for="apiToken">Open AI Token</label>
+                            <label for="apiToken" class="form-label">OpenAI API Key</label>
                             <input type="password" id="apiToken" name="apiToken" class="form-control"
-                                   th:field="*{apiToken}" placeholder="Enter your Jira API token" required>
+                                   th:field="*{apiToken}" placeholder="sk-xxxxxxxxx" required>
+                            <div class="help-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Generate an API key at <a href="https://platform.openai.com/api-keys" target="_blank" class="text-primary">OpenAI Platform</a>
+                            </div>
                         </div>
 
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">Save Integration</button>
+                        <div class="form-group">
+                            <label for="baseUrl" class="form-label">API Base URL</label>
+                            <input type="text" id="baseUrl" name="baseUrl" class="form-control"
+                                   th:field="*{baseUrl}" placeholder="https://api.openai.com/v1" value="https://api.openai.com/v1">
+                            <div class="help-text">Use default URL unless you're using a custom endpoint</div>
                         </div>
+
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="/sso/v1/integrations" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-plug me-2"></i>Connect OpenAI
+                            </button>
+                        </div>
+
+                        <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
                     </form>
                 </div>
+
             </div>
         </div>
     </div>

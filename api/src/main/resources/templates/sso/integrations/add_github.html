@@ -2,34 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
 <head>
     <meta th:replace="~{fragments/header}">
-    <title>[[${systemOptions.systemLogoName}]] - Add Integrations</title>
-
-    <style>
-        .grid {
-            display: grid;
-            gap: 1.5rem;
-        }
-
-        .sm\\:grid-cols-2 {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .lg\\:grid-cols-3 {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-
-        .xl\\:grid-cols-4 {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-        }
-
-        .card {
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 1rem;
-            transition: background-color 0.2s;
-            text-decoration: none;
-            color: inherit;
-        }
+    <title>[[${systemOptions.systemLogoName}]] - Add GitHub Integration</title>
 
     <style>
         .integration-form {
@@ -93,7 +66,6 @@
             color: #adb5bd;
             margin-top: 0.25rem;
         }
-
     </style>
 </head>
 <body>
@@ -107,53 +79,47 @@
                 
                 <div class="integration-form">
                     <div class="integration-header">
-                        <i class="fa-brands fa-jira integration-icon"></i>
-                        <h1>Connect JIRA</h1>
-                        <p class="text-muted">Integrate your JIRA instance for streamlined project management and issue tracking.</p>
+                        <i class="fa-brands fa-github integration-icon"></i>
+                        <h1>Connect GitHub</h1>
+                        <p class="text-muted">Integrate your GitHub repositories for seamless code management and workflow automation.</p>
                     </div>
 
-                    <form th:action="@{/api/v1/integrations/jira/add}" th:object="${jiraIntegration}" method="post">
+                    <form th:action="@{/api/v1/integrations/github/add}" th:object="${githubIntegration}" method="post">
                         <div class="form-group">
                             <label for="name" class="form-label">Integration Name</label>
                             <input type="text" id="name" name="name" class="form-control"
-                                   th:field="*{name}" placeholder="My JIRA Integration" required>
+                                   th:field="*{name}" placeholder="My GitHub Integration" required>
                             <div class="help-text">Choose a name to identify this integration</div>
                         </div>
 
                         <div class="form-group">
-                            <label for="baseUrl" class="form-label">JIRA Base URL</label>
+                            <label for="baseUrl" class="form-label">GitHub URL</label>
                             <input type="text" id="baseUrl" name="baseUrl" class="form-control"
-                                   th:field="*{baseUrl}" placeholder="https://your-domain.atlassian.net" required>
-                            <div class="help-text">Your JIRA instance URL</div>
+                                   th:field="*{baseUrl}" placeholder="https://github.com" value="https://github.com" required>
+                            <div class="help-text">For GitHub Enterprise, use your custom domain</div>
                         </div>
 
                         <div class="form-group">
-                            <label for="username" class="form-label">JIRA Username</label>
+                            <label for="username" class="form-label">GitHub Username</label>
                             <input type="text" id="username" name="username" class="form-control"
-                                   th:field="*{username}" placeholder="Enter your JIRA username" required>
+                                   th:field="*{username}" placeholder="Enter your GitHub username" required>
                         </div>
 
                         <div class="form-group">
-                            <label for="apiToken" class="form-label">JIRA API Token</label>
+                            <label for="apiToken" class="form-label">Personal Access Token</label>
                             <input type="password" id="apiToken" name="apiToken" class="form-control"
-                                   th:field="*{apiToken}" placeholder="Enter your JIRA API token" required>
+                                   th:field="*{apiToken}" placeholder="Enter your GitHub personal access token" required>
                             <div class="help-text">
                                 <i class="fas fa-info-circle me-1"></i>
-                                Generate a token at <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" class="text-primary">Atlassian Account Settings</a>
+                                Generate a token at <a href="https://github.com/settings/tokens" target="_blank" class="text-primary">GitHub Settings</a>. 
+                                Required scopes: repo, read:user
                             </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="projectKey" class="form-label">JIRA Project Key</label>
-                            <input type="text" id="projectKey" name="projectKey" class="form-control"
-                                   th:field="*{projectKey}" placeholder="Enter your JIRA project key" required>
-                            <div class="help-text">The key of the project you want to integrate with</div>
                         </div>
 
                         <div class="d-flex gap-2 justify-content-end">
                             <a href="/sso/v1/integrations" class="btn btn-secondary">Cancel</a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-plug me-2"></i>Connect JIRA
+                                <i class="fas fa-plug me-2"></i>Connect GitHub
                             </button>
                         </div>
 
@@ -168,4 +134,3 @@
 
 </body>
 </html>
-

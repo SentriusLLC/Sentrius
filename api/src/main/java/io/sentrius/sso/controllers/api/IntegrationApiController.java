@@ -53,6 +53,25 @@ public class IntegrationApiController extends BaseController {
         this.cryptoService = cryptoService;
     }
 
+    @PostMapping("/github/add")
+    public ResponseEntity<ExternalIntegrationDTO> addGitHubIntegration(HttpServletRequest request, 
+                                                                       HttpServletResponse response,
+                                                                       ExternalIntegrationDTO integrationDTO)
+        throws JsonProcessingException, GeneralSecurityException {
+
+        var json = JsonUtil.MAPPER.writeValueAsString(integrationDTO);
+        IntegrationSecurityToken token = IntegrationSecurityToken.builder()
+            .connectionType("github")
+            .name(integrationDTO.getName())
+            .connectionInfo(json)
+            .build();
+
+        token = integrationService.save(token);
+
+        // excludes the access token
+        return ResponseEntity.ok(new ExternalIntegrationDTO(token));
+    }
+
     @PostMapping("/jira/add")
     public ResponseEntity<ExternalIntegrationDTO> addJiraIntegration(HttpServletRequest request, HttpServletResponse response,
                                                    ExternalIntegrationDTO integrationDTO)
