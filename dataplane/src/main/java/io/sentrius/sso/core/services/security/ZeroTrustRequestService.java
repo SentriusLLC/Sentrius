@@ -269,7 +269,11 @@ public class ZeroTrustRequestService {
         for (ZeroTrustAccessTokenRequest request : openRequests) {
             var dto = convertToDTO(request);
             if (Objects.equals(currentUser.getId(), request.getUser().getId())) {
+                log.info("Current user matches request user: {}", request.getUser().getUsername());
                 dto.setCurrentUser(true);
+            }
+            else {
+                log.info("Current user does not match request user: {} vs {}", currentUser.getUsername(), request.getUser().getUsername());
             }
             ztatTrackerList.add(dto);
         }
@@ -384,7 +388,8 @@ public class ZeroTrustRequestService {
             List<ZeroTrustAccessTokenApproval> approval = request.getApprovals();
             if (!approval.isEmpty()) {
                 var uses = ztatUseRepository.getUses(approval.get(0));
-                return systemOptions.maxJitUses - uses.size();
+                var usesRemaining = systemOptions.maxJitUses - uses.size();
+                return Math.max(usesRemaining, 0);
             }
 
         return systemOptions.maxJitUses; // Update as needed based on your logic

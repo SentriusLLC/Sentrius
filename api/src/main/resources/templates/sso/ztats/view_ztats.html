@@ -86,6 +86,7 @@
                                         <tr><th>Operation</th><th>User</th><th>System</th><th>Actions</th></tr>
                                         </thead>
                                         <tbody>
+                                        <!--
                                         <tr th:each="s : ${openTerminalTats}">
                                             <td th:text="${s.command}"></td>
                                             <td th:text="${s.userName}"></td>
@@ -96,9 +97,10 @@
                                                 <button th:id="'den_btn_' + ${s.id}" class="btn-secondary den_btn"
                                                         th:if="${s.canDeny}">Deny</button>
                                                 <button th:id="'rev_btn_' + ${s.id}" class="btn-secondary rev_btn"
-                                                        th:if="${s.isCurrentUser}">Revoke</button>
+                                                        th:if="${s.currentUser}">Revoke</button>
                                             </td>
                                         </tr>
+                                        -->
                                         </tbody>
                                     </table>
                                 </div>
@@ -110,6 +112,7 @@
                                         <tr><th>Operation</th><th>User</th><th>Actions</th></tr>
                                         </thead>
                                         <tbody>
+                                        <!--
                                         <tr th:each="s : ${openOpsTats}">
                                             <td th:text="${s.summary}"></td>
                                             <td th:text="${s.userName}"></td>
@@ -122,10 +125,11 @@
                                                 </button>
                                                 <button th:id="'ops_rev_btn_' + ${s.id}"
                                                         class="btn-secondary ops_rev_btn"
-                                                        th:if="${s.isCurrentUser}">Revoke
+                                                        th:if="${s.currentUser}">Revoke
                                                 </button>
                                             </td>
                                         </tr>
+                                        -->
                                         </tbody>
                                     </table>
                                 </div>
@@ -150,6 +154,7 @@
                                                 Remaining</th><th>Actions</th></tr>
                                             </thead>
                                             <tbody>
+                                            <!--
                                             <tr th:each="s : ${approvedTerminalTats}">
                                                 <td th:text="${s.command}"></td>
                                                 <td th:text="${s.userName}"></td>
@@ -160,6 +165,7 @@
                                                             th:if="${s.canDeny}">Deny</button>
                                                 </td>
                                             </tr>
+                                            -->
                                             </tbody>
                                         </table>
                                     </div>
@@ -172,6 +178,7 @@
                                             </th></tr>
                                             </thead>
                                             <tbody>
+                                            <!--
                                             <tr th:each="s : ${approvedOpsTats}">
                                                 <td th:text="${s.summary}"></td>
                                                 <td th:text="${s.userName}"></td>
@@ -182,6 +189,7 @@
                                                     </button>
                                                 </td>
                                             </tr>
+                                            -->
                                             </tbody>
                                         </table>
                                     </div>
@@ -189,8 +197,8 @@
                                 </div>
 
 
-                    </div>
-                </div>
+                            </div>
+                        </div>
 
                         <!-- Denied TATs -->
                         <div id="deniedTats" class="tab-pane fade">
@@ -207,6 +215,7 @@
                                             <tr><th>Operation</th><th>User</th><th>System</th><th>Actions</th></tr>
                                             </thead>
                                             <tbody>
+                                            <!--
                                             <tr th:each="s : ${deniedTerminalTats}">
                                                 <td th:text="${s.command}"></td>
                                                 <td th:text="${s.userName}"></td>
@@ -216,6 +225,7 @@
                                                             th:if="${s.canApprove}">Approve</button>
                                                 </td>
                                             </tr>
+                                            -->
                                             </tbody>
                                         </table>
                                     </div>
@@ -227,6 +237,7 @@
                                             <tr><th>Operation</th><th>User</th><th>Actions</th></tr>
                                             </thead>
                                             <tbody>
+                                            <!--
                                             <tr th:each="s : ${deniedOpsTats}">
                                                 <td th:text="${s.summary}"></td>
                                                 <td th:text="${s.userName}"></td>
@@ -237,6 +248,7 @@
                                                     </button>
                                                 </td>
                                             </tr>
+                                            -->
                                             </tbody>
                                         </table>
                                     </div>
@@ -247,46 +259,285 @@
                             </div>
                         </div>
 
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-</div>
 
 <!-- DataTables Initialization -->
 <script>
+    function reloadTerminalTATs() {
+        $.get('/api/v1/zerotrust/accesstoken/list/terminal', function (data) {
+            const $table = $('#open-terminal-table').DataTable();
+            $table.clear();
+
+            for (let s of data) {
+                let actions = '';
+                if (s.canApprove) {
+                    actions += `<button id="app_btn_${s.id}" class="btn-secondary app_btn">Approve</button>`;
+                }
+                if (s.canDeny) {
+                    actions += `<button id="den_btn_${s.id}" class="btn-secondary den_btn">Deny</button>`;
+                }
+                if (s.currentUser) {
+                    actions += `<button id="rev_btn_${s.id}" class="btn-secondary rev_btn">Revoke</button>`;
+                }
+
+                $table.row.add([
+                    s.command,
+                    s.userName,
+                    s.hostName,
+                    actions
+                ]);
+            }
+
+            $table.draw();
+            attachZtatButtonHandlers(); // re-bind the click events
+        });
+
+        $.get('/api/v1/zerotrust/accesstoken/list/approved/terminal', function (data) {
+            const $table = $('#approved-terminal-table').DataTable();
+            $table.clear();
+
+            for (let s of data) {
+                let actions = '';
+                if (s.canApprove) {
+                    actions += `<button id="app_btn_${s.id}" class="btn-secondary app_btn">Approve</button>`;
+                }
+                if (s.canDeny) {
+                    actions += `<button id="den_btn_${s.id}" class="btn-secondary den_btn">Deny</button>`;
+                }
+                if (s.currentUser) {
+                    actions += `<button id="rev_btn_${s.id}" class="btn-secondary rev_btn">Revoke</button>`;
+                }
+
+                $table.row.add([
+                    s.command,
+                    s.userName,
+                    s.hostName,
+                    s.usesRemaining,
+                    actions
+                ]);
+            }
+
+            $table.draw();
+            attachZtatButtonHandlers(); // re-bind the click events
+        });
+
+        $.get('/api/v1/zerotrust/accesstoken/list/denied/terminal', function (data) {
+            const $table = $('#denied-terminal-table').DataTable();
+            $table.clear();
+
+            for (let s of data) {
+                let actions = '';
+                if (s.canApprove) {
+                    actions += `<button id="app_btn_${s.id}" class="btn-secondary app_btn">Approve</button>`;
+                }
+                if (s.canDeny) {
+                    actions += `<button id="den_btn_${s.id}" class="btn-secondary den_btn">Deny</button>`;
+                }
+
+                $table.row.add([
+                    s.command,
+                    s.userName,
+                    s.hostName,
+                    actions
+                ]);
+            }
+
+            $table.draw();
+            attachZtatButtonHandlers(); // re-bind the click events
+        });
+    }
+
+    function reloadOpsTATs() {
+        $.get('/api/v1/zerotrust/accesstoken/list/ops', function (data) {
+            const $table = $('#open-ops-table').DataTable();
+            $table.clear();
+
+            for (let s of data) {
+                let actions = '';
+                if (s.canApprove) {
+                    actions += `<button id="ops_app_btn_${s.id}" class="btn-secondary ops_app_btn">Approve</button>`;
+                }
+                if (s.canDeny) {
+                    actions += `<button id="ops_den_btn_${s.id}" class="btn-secondary ops_den_btn">Deny</button>`;
+                }
+                if (s.currentUser) {
+                    actions += `<button id="ops_rev_btn_${s.id}" class="btn-secondary ops_rev_btn">Revoke</button>`;
+                }
+
+                $table.row.add([
+                    s.summary,
+                    s.userName,
+                    actions
+                ]);
+            }
+
+            $table.draw();
+            attachZtatButtonHandlers(); // re-bind the click events
+        });
+
+        $.get('/api/v1/zerotrust/accesstoken/list/approved/ops', function (data) {
+            const $table = $('#approved-ops-table').DataTable();
+            $table.clear();
+
+            for (let s of data) {
+                let actions = '';
+                if (s.canApprove) {
+                    actions += `<button id="ops_app_btn_${s.id}" class="btn-secondary ops_app_btn">Approve</button>`;
+                }
+                if (s.canDeny) {
+                    actions += `<button id="ops_den_btn_${s.id}" class="btn-secondary ops_den_btn">Deny</button>`;
+                }
+                if (s.currentUser) {
+                    actions += `<button id="ops_rev_btn_${s.id}" class="btn-secondary ops_rev_btn">Revoke</button>`;
+                }
+
+                $table.row.add([
+                    s.summary,
+                    s.userName,
+                    s.usesRemaining,
+                    actions
+                ]);
+            }
+
+            $table.draw();
+            attachZtatButtonHandlers(); // re-bind the click events
+        });
+
+        $.get('/api/v1/zerotrust/accesstoken/list/denied/ops', function (data) {
+            const $table = $('#denied-ops-table').DataTable();
+            $table.clear();
+
+            for (let s of data) {
+                let actions = '';
+                if (s.canApprove) {
+                    actions += `<button id="ops_app_btn_${s.id}" class="btn-secondary ops_app_btn">Approve</button>`;
+                }
+                if (s.canDeny) {
+                    actions += `<button id="ops_den_btn_${s.id}" class="btn-secondary ops_den_btn">Deny</button>`;
+                }
+
+                $table.row.add([
+                    s.summary,
+                    s.userName,
+                    actions
+                ]);
+            }
+
+            $table.draw();
+            attachZtatButtonHandlers(); // re-bind the click events
+        });
+    }
+
+
+    function attachZtatButtonHandlers() {
+        $(".app_btn").off().click(function () {
+            let id = this.id.split("_").pop();
+            $.get('/api/v1/zerotrust/accesstoken/terminal/approve?ztatId=' + id, {}, function () {
+                reloadTerminalTATs();
+            });
+        });
+
+        $(".den_btn").off().click(function () {
+            let id = this.id.split("_").pop();
+            $.get('/api/v1/zerotrust/accesstoken/terminal/deny?ztatId=' + id, {}, function () {
+                reloadTerminalTATs();
+            });
+        });
+
+        $(".rev_btn").off().click(function () {
+            let id = this.id.split("_").pop();
+            $.get('/api/v1/zerotrust/accesstoken/terminal/revoke?ztatId=' + id, {}, function () {
+                reloadTerminalTATs();
+            });
+        });
+
+        $(".ops_app_btn").off().click(function () {
+            let id = this.id.split("_").pop();
+            $.get('/api/v1/zerotrust/accesstoken/ops/approve?ztatId=' + id, {}, function () {
+                reloadOpsTATs();
+            });
+        });
+
+        $(".ops_den_btn").off().click(function () {
+            let id = this.id.split("_").pop();
+            $.get('/api/v1/zerotrust/accesstoken/ops/deny?ztatId=' + id, {}, function () {
+                reloadOpsTATs();
+            });
+        });
+
+        $(".ops_rev_btn").off().click(function () {
+            let id = this.id.split("_").pop();
+            $.get('/api/v1/zerotrust/accesstoken/my/ops/revoke?ztatId=' + id, {}, function () {
+                reloadOpsTATs();
+            });
+        });
+    }
+
+    let openTerminalTable, openOpsTable, approvedTerminalTable, approvedOpsTable, deniedTerminalTable, deniedOpsTable;
+
     $(document).ready(function () {
-        $('#open-terminal-table, #open-ops-table, #approved-terminal-table, #approved-ops-table, #denied-terminal-table, #denied-ops-table').DataTable();
-
-        $(".app_btn").click(function () {
-            let id = this.id.split("_").pop();
-            $.get('/api/v1/zerotrust/accesstoken/terminal/approve?ztatId=' + id, {}, function() {
-                location.reload(); });
+        openTerminalTable = $('#open-terminal-table').DataTable({
+            columns: [
+                { title: "Operation", data: 0 }, // Explicitly map column 0 to array element 0
+                { title: "User", data: 1 },      // Explicitly map column 1 to array element 1
+                { title: "System", data: 2 },
+                { title: "Actions", data: 3 }
+            ]
         });
 
-        $(".den_btn").click(function () {
-            let id = this.id.split("_").pop();
-            $.get('/api/v1/zerotrust/accesstoken/terminal/deny?ztatId='+ id, {}, function() { location.reload(); });
+
+        openOpsTable = $('#open-ops-table').DataTable({
+            columns: [
+                { title: "Summary", data: 0 },
+                { title: "User" ,  data: 1},
+                { title: "Actions",  data: 2 }
+            ]
         });
 
-        $(".rev_btn").click(function () {
-            let id = this.id.split("_").pop();
-            $.get('/api/v1/zerotrust/accesstoken/terminal/revoke?ztatId='+ id, {}, function() { location.reload(); });
+        approvedTerminalTable = $('#approved-terminal-table').DataTable({
+            columns: [
+                { title: "Operation", data: 0 },
+                { title: "User", data: 1 },
+                { title: "System", data: 2 },
+                { title: "Uses Remaining", data: 3 },
+                { title: "Actions", data: 4 }
+            ]
         });
 
-        $(".ops_app_btn").click(function () {
-            let id = this.id.split("_").pop();
-            $.get('/api/v1/zerotrust/accesstoken/ops/approve?ztatId='+ id, {}, function() { location.reload(); });
+
+        approvedOpsTable = $('#approved-ops-table').DataTable({
+            columns: [
+                { title: "Operation", data: 0 },
+                { title: "User", data: 1 },
+                { title: "Uses Remaining", data: 2 },
+                { title: "Actions", data: 3 }
+            ]
         });
 
-        $(".ops_den_btn").click(function () {
-            let id = this.id.split("_").pop();
-            $.get('/api/v1/zerotrust/accesstoken/ops/deny?ztatId='+ id, {}, function() { location.reload(); });
+        deniedTerminalTable = $('#denied-terminal-table').DataTable({
+            columns: [
+                { title: "Operation", data: 0 },
+                { title: "User", data: 1 },
+                { title: "System", data: 2 },
+                { title: "Actions", data: 3 }
+            ]
         });
 
-        $(".ops_rev_btn").click(function () {
-            let id = this.id.split("_").pop();
-            $.get('/api/v1/zerotrust/accesstoken/my/ops/revoke?ztatId='+ id, {}, function() { location.reload(); });
+        deniedOpsTable = $('#denied-ops-table').DataTable({
+            columns: [
+                { title: "Operation", data: 0 },
+                { title: "User", data: 1 },
+                { title: "Actions", data: 2 }
+            ]
         });
+
+
+        attachZtatButtonHandlers();
+        reloadTerminalTATs();
+        reloadOpsTATs();
     });
 </script>
 

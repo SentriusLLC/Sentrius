@@ -14,6 +14,8 @@ ENABLE_TLS=false
 INSTALL_CERT_MANAGER=false
 ENV_TARGET="local"  # default mode
 CERT_DIR="${SCRIPT_DIR}/../../docker/dev-certs"
+# set default to false
+DEPLOY_ADMINER=${DEPLOY_ADMINER:-false}
 
 # --- Load and back up environment file ---
 ENV_FILE="${SCRIPT_DIR}/../../.$ENV_TARGET.env"
@@ -208,7 +210,7 @@ if [[ -z "$KEYCLOAK_CLIENT_SECRET" ]]; then
 fi
 
 helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
-    --set adminer.enabled=true \
+    --set adminer.enabled=${DEPLOY_ADMINER} \
     --set tenant=${TENANT} \
     --set environment=${ENVIRONMENT} \
     --set subdomain="${SUBDOMAIN}" \
