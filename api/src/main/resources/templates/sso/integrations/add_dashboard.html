@@ -242,18 +242,18 @@
                             <tr th:each="s : ${existingIntegrations}">
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <i th:class="${s.connectionType == 'github'} ? 'fa-brands fa-github me-2' : 
-                                                     ${s.connectionType == 'openai'} ? 'fa-solid fa-robot me-2' :
-                                                     ${s.connectionType == 'jira'} ? 'fa-brands fa-jira me-2' : 'fa-solid fa-plug me-2'"
+                                        <i th:class="${s.connectionType == 'github' ? 'fa-brands fa-github me-2' : 
+                                                     s.connectionType == 'openai' ? 'fa-solid fa-robot me-2' :
+                                                     s.connectionType == 'jira' ? 'fa-brands fa-jira me-2' : 'fa-solid fa-plug me-2'}"
                                            style="color: #0d6efd;"></i>
                                         <span th:text="${s.name}"></span>
                                     </div>
                                 </td>
                                 <td>
                                     <span class="badge bg-primary"
-                                          th:text="${s.connectionType == 'github'} ? 'GitHub' : 
-                                                   ${s.connectionType == 'openai'} ? 'OpenAI' :
-                                                   ${s.connectionType == 'jira'} ? 'JIRA' : ${s.connectionType}">
+                                          th:text="${s.connectionType == 'github' ? 'GitHub' : 
+                                                   s.connectionType == 'openai' ? 'OpenAI' :
+                                                   s.connectionType == 'jira' ? 'JIRA' : s.connectionType}">
                                     </span>
                                 </td>
                                 <td>
