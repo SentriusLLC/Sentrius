@@ -116,4 +116,19 @@ public class IntegrationController extends BaseController {
         return "sso/integrations/add_openai";
     }
 
+    @GetMapping("/slack")
+    public String createSlackIntegration(Model model) {
+        return getIntegrationDashboard(model);
+    }
+
+    @GetMapping("/database")
+    public String createDatabaseIntegration(Model model) {
+        return getIntegrationDashboard(model);
+    }
+
+    @GetMapping("/teams")
+    public String createTeamsIntegration(Model model) {
+        return getIntegrationDashboard(model);
+    }
+
 }
