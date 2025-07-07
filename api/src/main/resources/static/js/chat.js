@@ -384,3 +384,4 @@ export async function fetchAvailableAgents() {
 }
 
 window.sendMessage = sendMessage;
+window.toggleChat = toggleChat;
