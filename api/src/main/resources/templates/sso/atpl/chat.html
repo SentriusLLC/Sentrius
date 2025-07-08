@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - ATPL Chat Configuration</title>
+    <style>
+        .chat-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            background: #1e1e1e;
+            border-radius: 15px;
+            padding: 0;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #444;
+        }
+        
+        .chat-header h2 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .chat-header p {
+            color: #aaa;
+            margin: 5px 0 0 0;
+            font-size: 0.9rem;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .message {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            word-wrap: break-word;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .message.user {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        
+        .message.assistant {
+            background: linear-gradient(135deg, #2b2b2b 0%, #3b3b3b 100%);
+            color: #eee;
+            align-self: flex-start;
+            border: 1px solid #444;
+        }
+        
+        .message.system {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            color: white;
+            align-self: center;
+            text-align: center;
+            font-style: italic;
+        }
+        
+        .chat-input-container {
+            padding: 20px;
+            background: #2a2a2a;
+            border-top: 1px solid #444;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #444;
+            border-radius: 24px;
+            background: #1a1a1a;
+            color: #eee;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+        
+        .chat-input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+        
+        .chat-input::placeholder {
+            color: #888;
+        }
+        
+        .send-button {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 24px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            min-width: 80px;
+        }
+        
+        .send-button:hover {
+            background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+            transform: translateY(-1px);
+        }
+        
+        .send-button:disabled {
+            background: #444;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .typing-indicator {
+            display: none;
+            padding: 12px 16px;
+            background: #2b2b2b;
+            border-radius: 12px;
+            align-self: flex-start;
+            border: 1px solid #444;
+            color: #aaa;
+            font-style: italic;
+        }
+        
+        .typing-indicator.active {
+            display: block;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .action-button {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .action-button:hover {
+            background: linear-gradient(135deg, #1e7e34 0%, #155724 100%);
+            transform: translateY(-1px);
+        }
+        
+        .policy-preview {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .policy-preview pre {
+            color: #eee;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin: 0;
+            white-space: pre-wrap;
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .quick-action {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 16px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .quick-action:hover {
+            background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #444;
+            border-radius: 50%;
+            border-top-color: #007bff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div th:replace="~{fragments/navigation}"></div>
+    
+    <div class="container-fluid">
+        <div class="main-content">
+            <div th:replace="~{fragments/alerts}"></div>
+            
+            <div class="chat-container">
+                <div class="chat-header">
+                    <h2><i class="fas fa-robot"></i> ATPL Configuration Assistant</h2>
+                    <p>Let me help you create a comprehensive Agent Trust Policy Language configuration</p>
+                </div>
+                
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message system">
+                        <i class="fas fa-sparkles"></i> Welcome! I'm here to help you create an ATPL policy. 
+                        What kind of agent are you looking to configure?
+                    </div>
+                </div>
+                
+                <div class="chat-input-container">
+                    <div class="quick-actions">
+                        <button class="quick-action" onclick="sendQuickMessage('I want to create a new ATPL policy')">
+                            <i class="fas fa-plus"></i> New Policy
+                        </button>
+                        <button class="quick-action" onclick="sendQuickMessage('What endpoints does my agent need?')">
+                            <i class="fas fa-link"></i> Endpoints
+                        </button>
+                        <button class="quick-action" onclick="sendQuickMessage('What commands should I allow?')">
+                            <i class="fas fa-terminal"></i> Commands
+                        </button>
+                        <button class="quick-action" onclick="sendQuickMessage('Show me existing policies')">
+                            <i class="fas fa-list"></i> Existing Policies
+                        </button>
+                    </div>
+                    
+                    <div class="d-flex w-100 gap-2">
+                        <input type="text" class="chat-input" id="chatInput" 
+                               placeholder="Describe what your agent needs to do..." 
+                               onkeypress="handleKeyPress(event)">
+                        <button class="send-button" id="sendButton" onclick="sendMessage()">
+                            <i class="fas fa-paper-plane"></i> Send
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="typing-indicator" id="typingIndicator">
+                    <div class="loading"></div> Assistant is thinking...
+                </div>
+            </div>
+            
+            <div class="action-buttons mt-3 text-center">
+                <button class="btn btn-success" onclick="generatePolicy()">
+                    <i class="fas fa-magic"></i> Generate Policy
+                </button>
+                <button class="btn btn-secondary" onclick="clearChat()">
+                    <i class="fas fa-trash"></i> Clear Chat
+                </button>
+                <button class="btn btn-info" onclick="exportChat()">
+                    <i class="fas fa-download"></i> Export Chat
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sessionId = 'atpl-chat-' + Date.now();
+        let conversationHistory = [];
+        
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Add user message to chat
+            addMessage(message, 'user');
+            input.value = '';
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            try {
+                const response = await fetch('/api/v1/atpl/chat/message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        sessionId: sessionId,
+                        message: message
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    addMessage('Sorry, I encountered an error: ' + data.error, 'assistant');
+                } else {
+                    const assistantMessage = data.response || 'I received your message and I\'m processing it.';
+                    addMessage(assistantMessage, 'assistant');
+                    
+                    // Add relevant action buttons based on context
+                    addContextualActions(message);
+                }
+                
+            } catch (error) {
+                console.error('Error sending message:', error);
+                addMessage('Sorry, I\'m having trouble connecting right now. Please try again.', 'assistant');
+            }
+            
+            hideTypingIndicator();
+        }
+        
+        function sendQuickMessage(message) {
+            document.getElementById('chatInput').value = message;
+            sendMessage();
+        }
+        
+        function addMessage(text, type) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            if (type === 'user') {
+                messageDiv.innerHTML = `<i class="fas fa-user"></i> ${text}`;
+            } else if (type === 'assistant') {
+                messageDiv.innerHTML = `<i class="fas fa-robot"></i> ${text}`;
+            } else {
+                messageDiv.innerHTML = text;
+            }
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Store in conversation history
+            conversationHistory.push({type: type, message: text, timestamp: new Date()});
+        }
+        
+        function addContextualActions(userMessage) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'action-buttons';
+            
+            const lowerMessage = userMessage.toLowerCase();
+            
+            if (lowerMessage.includes('endpoint')) {
+                actionsDiv.innerHTML += `
+                    <button class="action-button" onclick="sendQuickMessage('I need read-only access to /api/v1/data')">
+                        <i class="fas fa-eye"></i> Read Access
+                    </button>
+                    <button class="action-button" onclick="sendQuickMessage('I need write access to /api/v1/system')">
+                        <i class="fas fa-edit"></i> Write Access
+                    </button>
+                `;
+            }
+            
+            if (lowerMessage.includes('command')) {
+                actionsDiv.innerHTML += `
+                    <button class="action-button" onclick="sendQuickMessage('I need basic file operations like ls, cat, grep')">
+                        <i class="fas fa-file"></i> File Operations
+                    </button>
+                    <button class="action-button" onclick="sendQuickMessage('I need system monitoring commands like ps, top, df')">
+                        <i class="fas fa-chart-line"></i> System Monitoring
+                    </button>
+                `;
+            }
+            
+            if (actionsDiv.innerHTML) {
+                messagesContainer.appendChild(actionsDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }
+        
+        function showTypingIndicator() {
+            document.getElementById('typingIndicator').classList.add('active');
+            document.getElementById('sendButton').disabled = true;
+        }
+        
+        function hideTypingIndicator() {
+            document.getElementById('typingIndicator').classList.remove('active');
+            document.getElementById('sendButton').disabled = false;
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+        
+        async function generatePolicy() {
+            if (conversationHistory.length === 0) {
+                alert('Please have a conversation first to generate a policy.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/v1/atpl/chat/generate-policy', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        sessionId: sessionId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    addMessage('Error generating policy: ' + data.error, 'assistant');
+                } else {
+                    addMessage('Here\'s your generated ATPL policy:', 'assistant');
+                    
+                    // Add policy preview
+                    const messagesContainer = document.getElementById('chatMessages');
+                    const policyDiv = document.createElement('div');
+                    policyDiv.className = 'policy-preview';
+                    policyDiv.innerHTML = `
+                        <pre>${JSON.stringify(data.policy, null, 2)}</pre>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-primary" onclick="copyToClipboard('${JSON.stringify(data.policy)}')">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                            <button class="btn btn-sm btn-success" onclick="savePolicy('${JSON.stringify(data.policy)}')">
+                                <i class="fas fa-save"></i> Save
+                            </button>
+                        </div>
+                    `;
+                    messagesContainer.appendChild(policyDiv);
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+                
+            } catch (error) {
+                console.error('Error generating policy:', error);
+                addMessage('Sorry, I couldn\'t generate the policy right now.', 'assistant');
+            }
+        }
+        
+        function clearChat() {
+            document.getElementById('chatMessages').innerHTML = `
+                <div class="message system">
+                    <i class="fas fa-sparkles"></i> Welcome! I'm here to help you create an ATPL policy. 
+                    What kind of agent are you looking to configure?
+                </div>
+            `;
+            conversationHistory = [];
+            sessionId = 'atpl-chat-' + Date.now();
+        }
+        
+        function exportChat() {
+            const chatData = {
+                sessionId: sessionId,
+                timestamp: new Date().toISOString(),
+                conversation: conversationHistory
+            };
+            
+            const dataStr = JSON.stringify(chatData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = 'atpl-chat-' + new Date().toISOString().split('T')[0] + '.json';
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+        
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Policy copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+        
+        function savePolicy(policyJson) {
+            // This would redirect to the regular ATPL configuration page with the policy pre-filled
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/sso/v1/atpl/save';
+            
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'policy';
+            input.value = policyJson;
+            
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+        }
+        
+        // Initialize focus on input
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('chatInput').focus();
+        });
+    </script>
+</body>
+</html>
