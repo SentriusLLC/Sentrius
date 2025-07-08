@@ -2,10 +2,13 @@ package io.sentrius.sso.core.dto.capabilities;
 
 import java.util.List;
 import java.util.Map;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 /**
  * Represents a unified descriptor for both REST API endpoints and Verb methods.
@@ -15,6 +18,9 @@ import lombok.Setter;
 @Data
 @Getter
 @Setter
+@ToString
+@NoArgsConstructor
+@AllArgsConstructor
 public class EndpointDescriptor {
     private String name;
     private String description;

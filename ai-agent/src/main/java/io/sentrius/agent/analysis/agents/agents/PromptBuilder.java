@@ -25,12 +25,17 @@ public class PromptBuilder {
         this.agentConfig = agentConfig;
     }
 
+    public String buildPrompt(){
+        return buildPrompt(true);
+    }
+
     /**
      * Builds a prompt string that includes roles, context, instructions, and available verbs.
      *
      * @return A formatted prompt string.
      */
-    public String buildPrompt() {
+    public String buildPrompt(boolean applyInstructions)
+    {
         StringBuilder prompt = new StringBuilder();
 
         // Append roles to the prompt
@@ -39,32 +44,34 @@ public class PromptBuilder {
         // Append context to the prompt
         prompt.append("Context: ").append(agentConfig.getContext()).append("\n\n");
 
-        // Append instructions for using the JSON format
-        prompt.append("Instructions: ").append("Respond using this JSON format. Only use verbs provided in " +
-            "Available Verbs. Formulate a complete plan with all possible steps.:\n" +
-            "\n" +
-            "{\n" +
-            "  \"plan\": [\n" +
-            "    {\n" +
-            "      \"verb\": \"list_open_terminals\",\n" +
-            "      \"params\": {}\n" +
-            "    },\n" +
-            "    {\n" +
-            "      \"verb\": \"send_terminal_command\",\n" +
-            "      \"params\": {}\n" +
-            "    }\n" +
-            "  ]\n" +
-            "}\n" );
+        if (applyInstructions) {
+            // Append instructions for using the JSON format
+            prompt.append("Instructions: ").append("Respond using this JSON format. Only use verbs provided in " +
+                "Available Verbs. Formulate a complete plan with all possible steps.:\n" +
+                "\n" +
+                "{\n" +
+                "  \"plan\": [\n" +
+                "    {\n" +
+                "      \"verb\": \"list_open_terminals\",\n" +
+                "      \"params\": {}\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"verb\": \"send_terminal_command\",\n" +
+                "      \"params\": {}\n" +
+                "    }\n" +
+                "  ]\n" +
+                "}\n");
 
-        // Append the list of available verbs
-        prompt.append("Available Verbs:\n");
+            // Append the list of available verbs
+            prompt.append("Available Verbs:\n");
 
-        // Iterate through the verbs in the registry and append their details
-        verbRegistry.getVerbs().forEach((name, verb) -> {
-            prompt.append("- ").append(name);
-            prompt.append(" (").append(buildMethodSignature(verb.getMethod())).append(") - ");
-            prompt.append(verb.getDescription()).append("\n");
-        });
+            // Iterate through the verbs in the registry and append their details
+            verbRegistry.getVerbs().forEach((name, verb) -> {
+                prompt.append("- ").append(name);
+                prompt.append(" (").append(buildMethodSignature(verb.getMethod())).append(") - ");
+                prompt.append(verb.getDescription()).append("\n");
+            });
+        }
 
         return prompt.toString();
     }

@@ -1,6 +1,7 @@
 package io.sentrius.sso.genai;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Objects;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,12 +43,17 @@ public class GenerativeAPI {
     }
 
     public GenerativeAPI(TokenProvider authToken) {
-        this(authToken, new OkHttpClient());
+
+        this(authToken,  new OkHttpClient.Builder()
+            .connectTimeout(Duration.ofSeconds(15))
+            .readTimeout(Duration.ofSeconds(30))
+            .writeTimeout(Duration.ofSeconds(15))
+            .build());
     }
 
     /**
      * Builds the request body for an API endpoint request.
-     *
+     *a
      * @param request the API endpoint request
      * @return the request body as a string
      */
@@ -84,6 +90,7 @@ public class GenerativeAPI {
                     throw new HttpException(response.code(), response.body().string());
                 }
             } else {
+                log.info("body is {}" , response.body());
                 return response.body().string();
             }
         } catch (IOException e) {

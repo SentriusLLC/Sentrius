@@ -78,13 +78,15 @@ public class AgentVerbs {
      * @param verbRegistry The registry containing available verbs and their metadata.
      * @throws JsonProcessingException If there is an error processing JSON during initialization.
      */
-    public AgentVerbs(ZeroTrustClientService zeroTrustClientService, LLMService llmService, VerbRegistry verbRegistry,
+    public AgentVerbs( @Value("${agent.ai.config}") String agentConfigFile,
+                       ZeroTrustClientService zeroTrustClientService, LLMService llmService, VerbRegistry verbRegistry,
                       AgentClientService agentService
     ) throws JsonProcessingException {
         this.zeroTrustClientService = zeroTrustClientService;
         this.llmService = llmService;
         this.verbRegistry = verbRegistry;
         this.agentClientService = agentService;
+        this.agentConfigFile = agentConfigFile;
 
         log.info("Loading agent config from {}", agentConfigFile);
     }
@@ -280,7 +282,7 @@ public class AgentVerbs {
     public List<AssessedTerminal> assessData(AgentExecution execution, List<?> objectList) throws ZtatException, IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream(agentConfigFile);
         if (is == null) {
-            throw new RuntimeException("assessor-config.yaml not found on classpath");
+            throw new RuntimeException("agentConfigFile not found on classpath");
         }
         AgentConfig config = new ObjectMapper(new YAMLFactory()).readValue(is, AgentConfig.class);
 
@@ -288,15 +290,54 @@ public class AgentVerbs {
 
         List<AssessedTerminal> responses = new ArrayList<>();
         log.info("Object list is {}", objectList);
-        for (var obj : objectList) {
+        if (null != objectList) {
+            for (var obj : objectList) {
+                List<Message> messages = new ArrayList<>();
+                var context = config.getContext();
+
+                var userMessage =Message.builder().role("user").content(obj.toString()).build();
+                execution.addMessages(userMessage);
+                messages.add(userMessage);
+
+
+
+                LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
+
+                var resp = llmService.askQuestion(execution, chatRequest);
+                Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
+                log.info("Response is {}", resp);
+                for (Response.Choice choice : response.getChoices()) {
+                    var content = choice.getMessage().getContent();
+                    if (content.startsWith("```json")) {
+                        content = content.substring(7, content.length() - 3);
+                    }
+
+
+                    responses.add(AssessedTerminal.builder().assessment(JsonUtil.MAPPER.readValue(
+                        content,
+                        Assessment.class
+                    )).messages(messages).build());
+                    log.info("content is {}", content);
+                }
+                log.info("Object is {}", obj);
+            }
+        }else {
             List<Message> messages = new ArrayList<>();
             var context = config.getContext();
 
-            messages.add(Message.builder().role("user").content(obj.toString()).build());
-            messages.add(Message.builder().role("system").content(context).build());
+
+            messages.addAll( execution.getMessages());
+
+            var assistantMessage =
+                Message.builder().role("assistant").content("Assess the previous data, but respond with the " +
+                    "following format { \"assessment\"{ sessionId, risk, description} } where description is your " +
+                    "assessment, sessionId is a random UUID or a previously found sessionId, and risk is a measure of" +
+                    " low, medium, and high of the previous data" ).build();
+            execution.addMessages(assistantMessage);
+
 
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
-            execution.addMessages( messages );
+            execution.addMessages(messages);
             var resp = llmService.askQuestion(execution, chatRequest);
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             log.info("Response is {}", resp);
@@ -307,11 +348,12 @@ public class AgentVerbs {
                 }
 
 
-                responses.add(AssessedTerminal.builder().assessment(JsonUtil.MAPPER.readValue(content,
-                    Assessment.class)).messages(messages).build());
+                responses.add(AssessedTerminal.builder().assessment(JsonUtil.MAPPER.readValue(
+                    content,
+                    Assessment.class
+                )).messages(messages).build());
                 log.info("content is {}", content);
             }
-            log.info("Object is {}", obj);
         }
         return responses;
     }

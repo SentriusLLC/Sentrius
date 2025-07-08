@@ -2,7 +2,6 @@ package io.sentrius.agent.analysis.agents.agents;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;

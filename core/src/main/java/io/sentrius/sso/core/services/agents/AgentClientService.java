@@ -11,6 +11,7 @@ import com.google.common.collect.Maps;
 import io.sentrius.sso.core.dto.AgentCommunicationDTO;
 import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
 import io.sentrius.sso.core.dto.AgentRegistrationDTO;
+import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
 import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.AtatRequest;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
@@ -205,6 +206,34 @@ public class AgentClientService {
 
     public String getCallbackUrl() {
         return callbackUrl;
+    }
+
+    public List<EndpointDescriptor> getAvailableEndpoints(TokenDTO token) throws ZtatException, JsonProcessingException {
+        String url = "/api/v1/capabilities/endpoints";
+        Object response = zeroTrustClientService.callGetOnApi(token, url);
+        if (response instanceof String str) {
+            return JsonUtil.MAPPER.readValue(str, new TypeReference<List<EndpointDescriptor>>() {});
+        } else if (response instanceof List<?> list) {
+            // Already deserialized
+            return list.stream()
+                .map(item -> JsonUtil.MAPPER.convertValue(item, EndpointDescriptor.class))
+                .toList();
+        }
+        return List.of();
+    }
+
+    public List<EndpointDescriptor> getAvailableVerbs(TokenDTO token) throws ZtatException, JsonProcessingException {
+        String url = "/api/v1/capabilities/verbs";
+        Object response = zeroTrustClientService.callGetOnApi(token, url);
+        if (response instanceof String str) {
+            return JsonUtil.MAPPER.readValue(str, new TypeReference<List<EndpointDescriptor>>() {});
+        } else if (response instanceof List<?> list) {
+            // Already deserialized
+            return list.stream()
+                .map(item -> JsonUtil.MAPPER.convertValue(item, EndpointDescriptor.class))
+                .toList();
+        }
+        return List.of();
     }
 
 }

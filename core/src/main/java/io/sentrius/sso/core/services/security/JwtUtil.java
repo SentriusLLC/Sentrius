@@ -95,10 +95,7 @@ public class JwtUtil {
                 jwt = jwt.substring(7);
             }
             String[] parts = jwt.split("\\.");
-            log.info("JWT parts: header={}, payload={}, signaturePresent={}",
-                parts.length > 0 ? parts[0] : "null",
-                parts.length > 1 ? parts[1] : "null",
-                parts.length == 3);
+
             if (parts.length != 3) {
                 throw new IllegalArgumentException("Invalid JWT token format");
             }

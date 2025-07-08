@@ -44,6 +44,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 @Service
@@ -84,6 +85,7 @@ public class AgentService {
         this.provenanceKafkaProducer = provenanceKafkaProducer;
     }
 
+    @Transactional
     public void recordHeartbeat(String agentId, String name, AgentHeartbeatDTO heartbeatDTO) {
         AgentHeartbeat heartbeat = repository.findByAgentId(agentId)
             .orElse(new AgentHeartbeat());

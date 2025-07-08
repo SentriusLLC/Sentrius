@@ -7,9 +7,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.sentrius.agent.analysis.agents.agents.AgentConfig;
 import io.sentrius.agent.analysis.agents.agents.AgentVerb;
@@ -78,17 +80,31 @@ public class ChatVerbs {
 
             log.info("Agent config loaded: {}", config);
             PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
-            var prompt = promptBuilder.buildPrompt();
+            var prompt = promptBuilder.buildPrompt(false
+            );
             List<Message> messages = new ArrayList<>();
 
             messages.add(Message.builder().role("system").content(prompt).build());
+            var endpoints = verbRegistry.getEndpoints();
+            ArrayNode endpointArray = JsonUtil.MAPPER.createArrayNode();
+            for (var verb : endpoints) {
+                ObjectNode endpoint = JsonUtil.MAPPER.createObjectNode();
+                endpoint.put("name", verb.getName());
+                
+                endpoint.put("endpoint", verb.getPath());
+                endpointArray.add(endpoint);
+            }
+            messages.add(Message.builder().role("system").content("These are a list of available endpoints, " +
+                "description," +
+                " their " +
+                "name:" + endpointArray).build());
             messages.add(Message.builder().role("system").content("Please ensure your nextOperation abides by the " +
                 "following json format and leave it empty if user's request doesn't require explicit use of system " +
                 "operations" +
                 ". Please summarize prior terminal " +
                 "sessions, using " +
                 "terminal output if needed " +
-                "for clarity of the next LLM request and for the user: " + terminalResponse).build());
+                "for clarity of the next LLM request and for the user. Ensure your response meets this json format: " + terminalResponse).build());
             messages.add(Message.builder().role("user").content(userMessage.getContent()).build());
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
@@ -104,35 +120,21 @@ public class ChatVerbs {
                 }
                 log.info("content is {}", content);
                 if (null != content && !content.isEmpty()) {
-                    var newResponse =   JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readValue(content,
-                        TerminalResponse.class);
-                    return newResponse;
+                    try {
+                        var newResponse = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readValue(
+                            content,
+                            TerminalResponse.class
+                        );
+                        return newResponse;
+                    }catch (JsonParseException e) {
+                        log.error("Failed to parse terminal response: {}", e.getMessage());
+                        return TerminalResponse.builder().responseForUser(content).terminalSummaryForLLM(lastMessage.getTerminalSummaryForLLM()).build();
+                    }
                 }
             }
         } else {
             InputStream terminalHelperStream = getClass().getClassLoader().getResourceAsStream("terminal-helper.json");
             if (terminalHelperStream == null) {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
                 throw new RuntimeException("assessor-config.yaml not found on classpath");
 
             }
@@ -145,13 +147,26 @@ public class ChatVerbs {
 
             log.info("Agent config loaded: {}", config);
             PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
-            var prompt = promptBuilder.buildPrompt();
+            var prompt = promptBuilder.buildPrompt(false);
             List<Message> messages = new ArrayList<>();
 
             messages.add(Message.builder().role("system").content(prompt).build());
+            var endpoints = verbRegistry.getEndpoints();
+            ArrayNode endpointArray = JsonUtil.MAPPER.createArrayNode();
+            for (var verb : endpoints) {
+                ObjectNode endpoint = JsonUtil.MAPPER.createObjectNode();
+                endpoint.put("name", verb.getName());
+                
+                endpoint.put("endpoint", verb.getPath());
+                endpointArray.add(endpoint);
+            }
+            messages.add(Message.builder().role("system").content("These are a list of available endpoints, " +
+                "description," +
+                " their " +
+                "name:" + endpointArray).build());
             messages.add(Message.builder().role("system").content("Please ensure your nextOperation abide by the " +
                 "following json format. Please summarize prior terminal sessions, using terminal output if needed " +
-                "for clarity of the next LLM request and for the user: " + terminalResponse).build());
+                "for clarity of the next LLM request and for the user. Ensure your response meets this json format:  " + terminalResponse).build());
             messages.add(Message.builder().role("assistant").content("prior response: " + lastMessage.getTerminalSummaryForLLM()).build());
             messages.add(Message.builder().role("user").content(userMessage.getContent()).build());
 
@@ -169,9 +184,17 @@ public class ChatVerbs {
                 }
                 log.info("content is {}", content);
                 if (null != content && !content.isEmpty()) {
-                    var newResponse =   JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readValue(content,
-                        TerminalResponse.class);
-                    return newResponse;
+                    try {
+                        var newResponse = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readValue(
+                            content,
+                            TerminalResponse.class
+                        );
+                        return newResponse;
+                    }catch (JsonParseException e) {
+                        log.error("Failed to parse terminal response: {}", e.getMessage());
+                        return TerminalResponse.builder().responseForUser(content).terminalSummaryForLLM(lastMessage.getTerminalSummaryForLLM()).build();
+                    }
+
                 }
             }
         }
@@ -204,10 +227,23 @@ public class ChatVerbs {
 
             log.info("Agent config loaded: {}", config);
             PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
-            var prompt = promptBuilder.buildPrompt();
+            var prompt = promptBuilder.buildPrompt(false);
             List<Message> messages = new ArrayList<>();
 
             messages.add(Message.builder().role("system").content(prompt).build());
+            var endpoints = verbRegistry.getEndpoints();
+            ArrayNode endpointArray = JsonUtil.MAPPER.createArrayNode();
+            for (var verb : endpoints) {
+                ObjectNode endpoint = JsonUtil.MAPPER.createObjectNode();
+                endpoint.put("name", verb.getName());
+                
+                endpoint.put("endpoint", verb.getPath());
+                endpointArray.add(endpoint);
+            }
+            messages.add(Message.builder().role("system").content("These are a list of available endpoints, " +
+                "description," +
+                " their " +
+                    "name:" + endpointArray).build());
             messages.add(Message.builder().role("system").content("You have executed verbs for the previous user " +
                 "messages. Please generate a user response that summarizes the last message.").build());
             if (null != agentVerb ){

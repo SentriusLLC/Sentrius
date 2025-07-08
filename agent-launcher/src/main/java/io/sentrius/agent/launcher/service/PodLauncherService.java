@@ -3,9 +3,11 @@ package io.sentrius.agent.launcher.service;
 import io.kubernetes.client.custom.IntOrString;
 import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.*;
 import io.kubernetes.client.util.Config;
+import io.sentrius.sso.core.dto.AgentRegistrationDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -116,7 +118,7 @@ public class PodLauncherService {
     }
 
 
-    public V1Pod launchAgentPod(String agentId, String callbackUrl) throws Exception {
+    public V1Pod launchAgentPod(AgentRegistrationDTO agent) throws Exception {
         var myAgentRegistry = "";
         if (agentRegistry != null ) {
             if ("local".equalsIgnoreCase(agentRegistry)) {
@@ -124,6 +126,22 @@ public class PodLauncherService {
             } else if (!agentRegistry.endsWith("/")) {
                 myAgentRegistry += "/";
             }
+        }
+        String agentId = agent.getAgentName();
+        String callbackUrl = agent.getAgentCallbackUrl();
+        String agentType = agent.getAgentType();
+        String agentFile= "chat-helper.yaml";
+        // TODO This should be pluggable
+        switch(agentType){
+            case "chat":
+                agentFile = "chat-helper.yaml";
+                break;
+            case "atpl-helper":
+                agentFile = "chat-atpl-helper.yaml";
+                break;
+            case "default":
+            default:
+                agentFile = "chat-helper.yaml";
         }
 
         var constructedCallbackUrl = buildAgentCallbackUrl(agentId);
@@ -142,7 +160,8 @@ public class PodLauncherService {
                     .imagePullPolicy("IfNotPresent")
 
                     .args(List.of("--spring.config.location=file:/config/agent.properties",
-                        "--agent.namePrefix=" + agentId, "--agent.ai.config=/config/chat-helper.yaml", "--agent.listen.websocket=true",
+                        "--agent.namePrefix=" + agentId, "--agent.ai.config=/config/" + agentFile, "--agent.listen" +
+                            ".websocket=true",
                         "--agent.callback.url=" + constructedCallbackUrl
                         ))
                     .resources(new V1ResourceRequirements()
@@ -169,24 +188,34 @@ public class PodLauncherService {
 
         var createdPod = coreV1Api.createNamespacedPod(agentNamespace, pod).execute();
 
-        // Create corresponding service for WebSocket routing
-        V1Service service = new V1Service()
-            .metadata(new V1ObjectMeta()
-                .name("sentrius-agent-" + agentId)
-                .labels(Map.of("agentId", agentId)))
-            .spec(new V1ServiceSpec()
-                .selector(Map.of("agentId", agentId))
-                .ports(List.of(new V1ServicePort()
-                    .protocol("TCP")
-                    .port(8090)
-                    .targetPort(new IntOrString(8090))
-                ))
-                .type("ClusterIP")
-            );
+        try {
+            // Create corresponding service for WebSocket routing
+            V1Service service = new V1Service()
+                .metadata(new V1ObjectMeta()
+                    .name("sentrius-agent-" + agentId)
+                    .labels(Map.of("agentId", agentId)))
+                .spec(new V1ServiceSpec()
+                    .selector(Map.of("agentId", agentId))
+                    .ports(List.of(new V1ServicePort()
+                        .protocol("TCP")
+                        .port(8090)
+                        .targetPort(new IntOrString(8090))
+                    ))
+                    .type("ClusterIP")
+                );
 
-        log.info("Created service pod: {} and service {}", createdPod, service);
-        coreV1Api.createNamespacedService(agentNamespace, service).execute();
+            log.info("Created service pod: {} and service {}", createdPod, service);
+            coreV1Api.createNamespacedService(agentNamespace, service).execute();
 
+        }catch(ApiException e){
+            if (e.getCode() == 409){
+                log.info("Service for agent {} already exists, skipping creation", agentId);
+            }
+            else{
+                throw e;
+            }
+        }
         return createdPod;
     }
+
 }
