@@ -73,7 +73,7 @@ public class VerbRegistry {
             try (
                 ScanResult scanResult = new ClassGraph()
                     .enableAllInfo()
-                    .acceptPackages("io.sentrius.agent.analysis.agents.verbs")
+                    .acceptPackages("io.sentrius.agent.analysis.agents.verbs", "io.sentrius.sso.core.integrations.ticketing")
                     .scan()
             ) {
 
