@@ -229,7 +229,7 @@
             .then(data => {
 
                 $("#alertTopError").hide();
-                $("#alertTop").text("Agent Deleted").show().delay(3000).fadeOut();
+                $("#alertTop").text("Agent Shutdown Initiated").show().delay(3000).fadeOut();
                 $('#agent-table').DataTable().ajax.reload();
             })
             .catch(error => {

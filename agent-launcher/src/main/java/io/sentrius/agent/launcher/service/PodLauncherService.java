@@ -102,7 +102,7 @@ public class PodLauncherService {
                     } catch (Exception ex) {
                         log.warn("Service not found or already deleted: {}", ex.getMessage());
                     }
-                }else {
+                } else {
                     log.info("Not Deleting pod: {}", podName);
                 }
 
@@ -113,9 +113,49 @@ public class PodLauncherService {
 
 
         }
-
-
     }
+
+
+        public String statusById(String agentId) throws Exception {
+            // Delete all pods with this agentId label
+            var pods = coreV1Api.listNamespacedPod(
+                agentNamespace
+            ).execute().getItems();
+
+            for (V1Pod pod : pods) {
+
+                var labels = pod.getMetadata().getLabels();
+                var podName = pod.getMetadata().getName();
+
+                Matcher matcher = pattern.matcher(agentId);
+
+                if (matcher.matches() && labels != null && labels.containsKey("agentId")) {
+                    String name = matcher.group(1);
+
+                    var value = labels.get("agentId");
+                    if (value.equals(name)) {
+                        // get pod status
+                        //
+                        V1PodStatus status = pod.getStatus();
+                        if (status == null) {
+                            log.warn("Pod {} has no status information", podName);
+                            return "Unknown";
+                        }
+                        return status.getPhase(); // e.g., "Running", "Pending", "Failed", "Succeeded"
+
+                    }
+
+
+                }
+
+
+            }
+            return "NotFound";
+        }
+
+
+
+
 
 
     public V1Pod launchAgentPod(AgentRegistrationDTO agent) throws Exception {

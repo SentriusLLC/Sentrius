@@ -15,11 +15,16 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.sentrius.sso.config.ApiPaths;
+import io.sentrius.sso.config.AppConfig;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.AgentCommunicationDTO;
+import io.sentrius.sso.core.dto.AgentDTO;
 import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
+import io.sentrius.sso.core.dto.agents.AgentContextDTO;
+import io.sentrius.sso.core.dto.agents.AgentContextRequestDTO;
+import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.chat.AgentCommunication;
 import io.sentrius.sso.core.model.security.enums.IdentityType;
 import io.sentrius.sso.core.model.security.UserType;
@@ -32,6 +37,8 @@ import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.agents.AgentClientService;
+import io.sentrius.sso.core.services.agents.AgentContextService;
 import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.services.auditing.AuditService;
 import io.sentrius.sso.core.services.security.CryptoService;
@@ -54,6 +61,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -75,7 +83,10 @@ public class AgentApiController extends BaseController {
     final ZeroTrustRequestService ztrService;
     final AgentService agentService;
     final ProvenanceKafkaProducer provenanceKafkaProducer;
-    private final ZeroTrustRequestService ztatRequestService;
+    final ZeroTrustRequestService ztatRequestService;
+    final AgentContextService agentContextService;
+    final AgentClientService agentClientService;
+    final AppConfig appConfig;
 
     public AgentApiController(
         UserService userService,
@@ -85,7 +96,8 @@ public class AgentApiController extends BaseController {
         CryptoService cryptoService, SessionTrackingService sessionTrackingService, KeycloakService keycloakService,
         ATPLPolicyService atplPolicyService,
         ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService, AgentService agentService,
-        ProvenanceKafkaProducer provenanceKafkaProducer, ZeroTrustRequestService ztatRequestService
+        ProvenanceKafkaProducer provenanceKafkaProducer, ZeroTrustRequestService ztatRequestService,
+        AgentContextService agentContextService, AgentClientService agentClientService, AppConfig appConfig
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
@@ -98,6 +110,9 @@ public class AgentApiController extends BaseController {
         this.agentService = agentService;
         this.provenanceKafkaProducer = provenanceKafkaProducer;
         this.ztatRequestService = ztatRequestService;
+        this.agentContextService = agentContextService;
+        this.agentClientService = agentClientService;
+        this.appConfig = appConfig;
     }
 
     public SessionLog createSession(@RequestParam String username, @RequestParam String ipAddress) {
@@ -282,7 +297,7 @@ public class AgentApiController extends BaseController {
 
     @GetMapping("/list")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
-    public ResponseEntity<?> listAgents(HttpServletRequest request, HttpServletResponse response){
+    public ResponseEntity<?> listAgents(HttpServletRequest request, HttpServletResponse response) throws ZtatException {
         var operatingUser = getOperatingUser(request, response );
         if (null == operatingUser) {
             log.warn("No operating user found");
@@ -290,7 +305,24 @@ public class AgentApiController extends BaseController {
         }
         log.info("Received list request from user: {} {}", operatingUser.getUsername(), operatingUser);
         var agents = agentService.getAllAgents(true);
-        return ResponseEntity.ok(agents);
+
+        List<AgentDTO> prunedAgentList = agents.stream().filter(agent -> {
+                try {
+                    String podResponse =
+                        agentClientService.getAgentPodStatus(appConfig.getSentriusLauncherService(), agent.getAgentName());
+                    if (podResponse != null && (podResponse.equalsIgnoreCase("running") || podResponse.equalsIgnoreCase("pending"))){
+                        return true;
+                    } else {
+                        log.info("Agent {} is not running or pending, removing from list. Status is {}",
+                            agent.getAgentName(), podResponse);
+                    }
+                } catch (ZtatException ignored) {
+
+                }
+            return false;
+            }
+        ).toList();
+        return ResponseEntity.ok(prunedAgentList);
 
     }
 
@@ -752,6 +784,40 @@ public class AgentApiController extends BaseController {
             comm.getSourceAgent().equals(operatingUser.getUsername());
         log.info("User {} is allowed to send message to agent {} {}", operatingUser.getUsername(), comm.getTargetAgent(), canSend);
         return canSend;
+    }
+
+    @GetMapping("/context/{contextId}")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<AgentContextDTO> getContext(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        @PathVariable("contextId") String contextId){
+        var databaseContext = agentContextService.getContextOrThrow(UUID.fromString(contextId));
+        return ResponseEntity.ok(AgentContextDTO.builder()
+            .id(databaseContext.getId())
+            .name(databaseContext.getName())
+            .description(databaseContext.getDescription())
+            .context(databaseContext.getContext())
+            .createdAt(databaseContext.getCreatedAt())
+            .updatedAt(databaseContext.getUpdatedAt())
+            .build());
+    }
+
+    @PostMapping("/context")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<AgentContextDTO> createContext(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        AgentContextRequestDTO dtoRequest){
+        var databaseContext = agentContextService.create(dtoRequest);
+        return ResponseEntity.ok(AgentContextDTO.builder()
+            .id(databaseContext.getId())
+            .name(databaseContext.getName())
+            .description(databaseContext.getDescription())
+            .context(databaseContext.getContext())
+            .createdAt(databaseContext.getCreatedAt())
+            .updatedAt(databaseContext.getUpdatedAt())
+            .build());
     }
 
 }

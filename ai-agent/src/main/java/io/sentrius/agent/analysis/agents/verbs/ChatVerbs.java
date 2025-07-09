@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,10 +20,13 @@ import io.sentrius.agent.analysis.agents.agents.PromptBuilder;
 import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
 import io.sentrius.agent.analysis.model.TerminalResponse;
 import io.sentrius.agent.analysis.model.WebSocky;
+import io.sentrius.sso.core.dto.agents.AgentContextDTO;
+import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
 import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.verbs.Verb;
 import io.sentrius.sso.core.services.agents.AgentClientService;
+import io.sentrius.sso.core.services.agents.AgentExecutionService;
 import io.sentrius.sso.core.services.agents.LLMService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.utils.JsonUtil;
@@ -40,8 +44,12 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ChatVerbs {
 
+    private final AgentExecutionService agentExecutionService;
     @Value("${agent.ai.config}")
     private String agentConfigFile;
+
+    @Value("${agent.ai.context.db.id:none}")
+    private String agentDatabaseContext;
 
     final ZeroTrustClientService zeroTrustClientService;
     final LLMService llmService;
@@ -71,40 +79,45 @@ public class ChatVerbs {
                 throw new RuntimeException("assessor-config.yaml not found on classpath");
 
             }
+            AgentConfig config = null;
             String terminalResponse = new String(terminalHelperStream.readAllBytes());
             InputStream is = getStream(agentConfigFile);
             if (is == null) {
-                throw new RuntimeException(agentConfigFile +  " not found on classpath");
+                throw new RuntimeException(agentConfigFile + " not found on classpath");
             }
-            AgentConfig config = new ObjectMapper(new YAMLFactory()).readValue(is, AgentConfig.class);
+            if (agentDatabaseContext != null && !agentDatabaseContext.equals("none")) {
+                AgentContextDTO agentContext = agentClientService.getAgentContext(execution,
+                    agentDatabaseContext);
+               config = AgentConfig.builder().description(agentContext.getDescription())
+                    .context(agentContext.getContext()).build();
+                log.info("Agent context loaded: {}", agentContext);
+            }else {
+
+                config = new ObjectMapper(new YAMLFactory()).readValue(is, AgentConfig.class);
+            }
 
             log.info("Agent config loaded: {}", config);
             PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
             var prompt = promptBuilder.buildPrompt(false
             );
             List<Message> messages = new ArrayList<>();
+            var context = Message.builder().role("system").content(prompt).build();
+            messages.add(context);
 
-            messages.add(Message.builder().role("system").content(prompt).build());
-            var endpoints = verbRegistry.getEndpoints();
-            ArrayNode endpointArray = JsonUtil.MAPPER.createArrayNode();
-            for (var verb : endpoints) {
-                ObjectNode endpoint = JsonUtil.MAPPER.createObjectNode();
-                endpoint.put("name", verb.getName());
-                
-                endpoint.put("endpoint", verb.getPath());
-                endpointArray.add(endpoint);
-            }
-            messages.add(Message.builder().role("system").content("These are a list of available endpoints, " +
-                "description," +
-                " their " +
-                "name:" + endpointArray).build());
+            messages.add(Message.builder().role("system").content("You have executed verbs for the previous user " +
+                "messages. Please generate a user response that summarizes the last message.").build());
+            int size = getMessageSize(context);
+
+            var history = getContextWindow(execution.getMessages(), 1024*96 - (size));
+            messages.addAll(history);
             messages.add(Message.builder().role("system").content("Please ensure your nextOperation abides by the " +
                 "following json format and leave it empty if user's request doesn't require explicit use of system " +
                 "operations" +
                 ". Please summarize prior terminal " +
                 "sessions, using " +
                 "terminal output if needed " +
-                "for clarity of the next LLM request and for the user. Ensure your response meets this json format: " + terminalResponse).build());
+                "for clarity of the next LLM request and for the user. Ensure your all future responses meets this " +
+                "json format: " + terminalResponse).build());
             messages.add(Message.builder().role("user").content(userMessage.getContent()).build());
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
@@ -128,7 +141,7 @@ public class ChatVerbs {
                         return newResponse;
                     }catch (JsonParseException e) {
                         log.error("Failed to parse terminal response: {}", e.getMessage());
-                        return TerminalResponse.builder().responseForUser(content).terminalSummaryForLLM(lastMessage.getTerminalSummaryForLLM()).build();
+                        return TerminalResponse.builder().responseForUser(content).build();
                     }
                 }
             }
@@ -149,30 +162,35 @@ public class ChatVerbs {
             PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
             var prompt = promptBuilder.buildPrompt(false);
             List<Message> messages = new ArrayList<>();
+            var context = Message.builder().role("system").content(prompt).build();
+            messages.add(context);
 
-            messages.add(Message.builder().role("system").content(prompt).build());
-            var endpoints = verbRegistry.getEndpoints();
-            ArrayNode endpointArray = JsonUtil.MAPPER.createArrayNode();
-            for (var verb : endpoints) {
-                ObjectNode endpoint = JsonUtil.MAPPER.createObjectNode();
-                endpoint.put("name", verb.getName());
-                
-                endpoint.put("endpoint", verb.getPath());
-                endpointArray.add(endpoint);
-            }
-            messages.add(Message.builder().role("system").content("These are a list of available endpoints, " +
+            /*
+            var listedEndpoints = Message.builder().role("system").content("These are a list of available endpoints, " +
                 "description," +
                 " their " +
-                "name:" + endpointArray).build());
-            messages.add(Message.builder().role("system").content("Please ensure your nextOperation abide by the " +
-                "following json format. Please summarize prior terminal sessions, using terminal output if needed " +
-                "for clarity of the next LLM request and for the user. Ensure your response meets this json format:  " + terminalResponse).build());
-            messages.add(Message.builder().role("assistant").content("prior response: " + lastMessage.getTerminalSummaryForLLM()).build());
+                "name:" + endpointArray).build();
+            messages.add(listedEndpoints);
+            messages.add(Message.builder().role("system").content("You have executed verbs for the previous user " +
+                "messages. Please generate a user response that summarizes the last message.").build());
+            int size = getMessageSize(context) + getMessageSize(listedEndpoints);
+
+            var history = getContextWindow(execution.getMessages(), 1024*96 - (size));
+            messages.addAll(history);
+
+             */
+            var history = getContextWindow(execution.getMessages(), 1024*96 );
+            messages.addAll(history);
+
+//            messages.add(Message.builder().role("assistant").content("prior response: " + lastMessage
+//            .getTerminalSummaryForLLM()).build());
+
+            execution.addMessages( userMessage );
             messages.add(Message.builder().role("user").content(userMessage.getContent()).build());
 
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
-            execution.addMessages( messages );
+
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             log.info("Response is {}", resp);
             for (Response.Choice choice : response.getChoices()) {
@@ -184,6 +202,8 @@ public class ChatVerbs {
                 }
                 log.info("content is {}", content);
                 if (null != content && !content.isEmpty()) {
+
+                    execution.addMessages( choice.getMessage() );
                     try {
                         var newResponse = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readValue(
                             content,
@@ -202,6 +222,56 @@ public class ChatVerbs {
         return null;
     }
 
+    public List<Message> getContextWindow(List<Message> allMessages, int maxContextSize) {
+        List<Message> systemMessages = new ArrayList<>();
+        List<Message> window = new ArrayList<>();
+        int totalSize = 0;
+
+        // First: collect system messages (or other required ones)
+        for (Message msg : allMessages) {
+            if ("system".equals(msg.role)) {
+                systemMessages.add(msg);
+                totalSize += getMessageSize(msg);
+            }
+        }
+
+        // If system messages already exceed max context, return only those
+        if (totalSize >= maxContextSize) {
+            return systemMessages;
+        }
+
+        int remainingSize = maxContextSize - totalSize;
+
+        // Then: collect non-system messages from the end, up to remainingSize
+        ListIterator<Message> iter = allMessages.listIterator(allMessages.size());
+        while (iter.hasPrevious()) {
+            Message msg = iter.previous();
+
+            if ("system".equals(msg.role)) continue; // already added
+
+            int messageSize = getMessageSize(msg);
+            if (messageSize > remainingSize) break;
+
+            window.add(0, msg); // prepend
+            remainingSize -= messageSize;
+        }
+
+        // Combine system + selected recent messages
+        List<Message> result = new ArrayList<>();
+        result.addAll(systemMessages);
+        result.addAll(window);
+
+        return result;
+    }
+
+
+    private int getMessageSize(Message msg) {
+        int size = 0;
+        if (msg.role != null) size += msg.role.length();
+        if (msg.content != null) size += msg.content.length();
+        if (msg.refusal != null) size += msg.refusal.length();
+        return size;
+    }
 
     public TerminalResponse interpret_plan_response(
         AgentExecution execution, @NonNull WebSocky socketConnection,
@@ -230,27 +300,26 @@ public class ChatVerbs {
             var prompt = promptBuilder.buildPrompt(false);
             List<Message> messages = new ArrayList<>();
 
-            messages.add(Message.builder().role("system").content(prompt).build());
-            var endpoints = verbRegistry.getEndpoints();
-            ArrayNode endpointArray = JsonUtil.MAPPER.createArrayNode();
-            for (var verb : endpoints) {
-                ObjectNode endpoint = JsonUtil.MAPPER.createObjectNode();
-                endpoint.put("name", verb.getName());
-                
-                endpoint.put("endpoint", verb.getPath());
-                endpointArray.add(endpoint);
+            if (execution.getMessages().isEmpty()) {
+                var context = Message.builder().role("system").content(prompt).build();
+                messages.add(context);
+
+
+
             }
-            messages.add(Message.builder().role("system").content("These are a list of available endpoints, " +
-                "description," +
-                " their " +
-                    "name:" + endpointArray).build());
+
             messages.add(Message.builder().role("system").content("You have executed verbs for the previous user " +
                 "messages. Please generate a user response that summarizes the last message.").build());
-            if (null != agentVerb ){
-                messages.add(Message.builder().role("system").content("You have executed verb: " + agentVerb.getName() +
-                    " with the following description: " + agentVerb.getDescription()).build());
+            if (null != agentVerb) {
+                messages.add(
+                    Message.builder().role("system").content("You have executed verb: " + agentVerb.getName() +
+                        " with the following description: " + agentVerb.getDescription()).build());
             }
-            messages.add(Message.builder().role("assistant").content("prior response: " + lastMessage.getTerminalSummaryForLLM()).build());
+
+            var history = getContextWindow(execution.getMessages(), 1024*96 );
+            messages.addAll(history);
+            //messages.add(Message.builder().role("assistant").content("prior response: " + lastMessage
+        // .getTerminalSummaryForLLM()).build());
             messages.add(Message.builder().role("assistant").content(planExecutionOutput).build());
 
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();

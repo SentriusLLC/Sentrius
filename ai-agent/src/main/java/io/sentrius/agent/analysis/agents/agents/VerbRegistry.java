@@ -93,6 +93,7 @@ public class VerbRegistry {
                                         .name(name)
                                         .description(annotation.description())
                                         .method(method)
+                                        .exampleJson(annotation.exampleJson())
                                         .requiresTokenManagement(annotation.requiresTokenManagement())
                                         .returnType(annotation.returnType())
                                         .outputInterpreter(annotation.outputInterpreter())

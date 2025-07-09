@@ -40,6 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -62,6 +63,7 @@ public class AgentBootstrapController extends BaseController {
     private final ZeroTrustClientService zeroTrustClientService;
     private final ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
     final AppConfig appConfig;
+    private final AgentClientService agentClientService;
 
 
     public AgentBootstrapController(
@@ -72,7 +74,8 @@ public class AgentBootstrapController extends BaseController {
         CryptoService cryptoService, SessionTrackingService sessionTrackingService, KeycloakService keycloakService,
         ATPLPolicyService atplPolicyService,
         ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService, AgentService agentService,
-        ZeroTrustClientService zeroTrustClientService, AppConfig appConfig
+        ZeroTrustClientService zeroTrustClientService, AppConfig appConfig,
+        AgentClientService agentClientService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
@@ -85,6 +88,7 @@ public class AgentBootstrapController extends BaseController {
         this.agentService = agentService;
         this.zeroTrustClientService = zeroTrustClientService;
         this.appConfig = appConfig;
+        this.agentClientService = agentClientService;
     }
 
 
@@ -168,7 +172,26 @@ public class AgentBootstrapController extends BaseController {
         @RequestBody AgentRegistrationDTO registrationDTO, HttpServletRequest request, HttpServletResponse response
         ) throws GeneralSecurityException, IOException, ZtatException {
 
+        try{
+            log.info("Launching agent pod with ID: {}", registrationDTO.getAgentName());
 
+            var status = getAgentStatus( registrationDTO.getAgentName(), request, response);
+            if (  status != null ) {
+                var body = status.getBody();
+                if (body != null) {
+
+                    if (body.contains("Running") || body.contains("Pending")) {
+                        log.info("Agent {} is already running or pending", registrationDTO.getAgentName());
+                        return ResponseEntity.ok("{\"status\": \"already exists\"}");
+                    } else {
+                        log.warn("Agent {} is not running, attempting to launch again", registrationDTO.getAgentName());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error getting agent status", e);
+
+        }
         var operatingUser = getOperatingUser(request, response );
         zeroTrustClientService.callAuthenticatedPostOnApi(appConfig.getSentriusLauncherService(),  "agent/launcher/create",
             registrationDTO);
@@ -192,6 +215,19 @@ public class AgentBootstrapController extends BaseController {
     }
 
 
+    @GetMapping("/launcher/status")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<String> getAgentStatus(
+        @RequestParam("agentId") String agentId, HttpServletRequest request, HttpServletResponse response
+    ) throws GeneralSecurityException, IOException, ZtatException {
+
+
+        var operatingUser = getOperatingUser(request, response );
+        String podResponse =
+            agentClientService.getAgentPodStatus(appConfig.getSentriusLauncherService(), agentId);
+        // bootstrap with a default policy
+        return ResponseEntity.ok("{\"status\": \"" + podResponse + "\"}");
+    }
 
 
 

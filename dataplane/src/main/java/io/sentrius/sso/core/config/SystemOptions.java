@@ -3,7 +3,6 @@ package io.sentrius.sso.core.config;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -124,7 +123,7 @@ public class SystemOptions {
   public Boolean enableLLMQuestions = false;
 
 
-  public Boolean sshEnabled = true;
+  public Boolean lockdownEnabled = false;
 
   @Updatable(description = "AI risk score before user sessions are halted. Changes won't apply to currently running " +
       "sessions")

@@ -3,6 +3,8 @@ package io.sentrius.agent.analysis.agents.agents;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.stream.Collectors;
+import io.sentrius.agent.analysis.agents.verbs.ExampleFactory;
+import io.sentrius.sso.core.utils.JsonUtil;
 
 /**
  * The `PromptBuilder` class is responsible for constructing a prompt string
@@ -61,20 +63,49 @@ public class PromptBuilder {
                 "    }\n" +
                 "  ]\n" +
                 "}\n");
-
+        }
             // Append the list of available verbs
-            prompt.append("Available Verbs:\n");
+            prompt.append("Verb operations:\n");
 
             // Iterate through the verbs in the registry and append their details
             verbRegistry.getVerbs().forEach((name, verb) -> {
                 prompt.append("- ").append(name);
                 prompt.append(" (").append(buildMethodSignature(verb.getMethod())).append(") - ");
                 prompt.append(verb.getDescription()).append("\n");
+                // Optionally generate example params based on arg1 class
+                Class<?>[] paramTypes = verb.getMethod().getParameterTypes();
+
+                if (paramTypes.length > 1 && !paramTypes[1].equals(Void.class)) {
+                    var paramName = verb.getMethod().getParameters()[1].getName();
+                    Object example = ExampleFactory.createExample(paramName, paramTypes[1]);  // create a stub from
+                    // your DTO
+                    try {
+                        if (verb.getExampleJson() != null && !verb.getExampleJson().isEmpty()) {
+                            prompt.append("  Example arg1: ").append(verb.getExampleJson()).append("\n");
+                        } else if (example != null) {
+                            // Serialize the example object to JSON
+                            String exampleJson = JsonUtil.MAPPER.writeValueAsString(example);
+                            prompt.append("  Example arg1: ").append(exampleJson).append("\n");
+                        }
+
+                    } catch (Exception e) {
+                        prompt.append("  Example params: [unavailable due to serialization error]\n");
+                    }
+                } else {
+                    prompt.append("  Example params: {}\n");
+                }
             });
-        }
 
         return prompt.toString();
     }
+
+    public static String indent(String input, int spaces) {
+        String indent = " ".repeat(spaces);
+        return Arrays.stream(input.split("\n"))
+            .map(line -> indent + line)
+            .collect(Collectors.joining("\n"));
+    }
+
 
     /**
      * Builds a method signature string for a given method.
@@ -84,6 +115,8 @@ public class PromptBuilder {
      */
     private String buildMethodSignature(Method method) {
         return Arrays.stream(method.getParameters())
+            .filter( p -> !p.getType().getSimpleName().equalsIgnoreCase("TokenDTO") &&
+            !p.getType().getSimpleName().equalsIgnoreCase("AgentExecution"))
             .map(p -> p.getName() + ": " + p.getType().getSimpleName())
             .collect(Collectors.joining(", "));
     }

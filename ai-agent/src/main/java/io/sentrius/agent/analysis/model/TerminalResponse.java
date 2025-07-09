@@ -2,6 +2,7 @@ package io.sentrius.agent.analysis.model;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import io.sentrius.sso.core.dto.HostSystemDTO;
 import io.sentrius.sso.genai.Message;
 import lombok.AllArgsConstructor;
@@ -23,4 +24,6 @@ public class TerminalResponse {
     String nextOperation;
     String terminalSummaryForLLM;
     String responseForUser;
+    @Builder.Default
+    public Map<String, Object> arguments = Map.of();
 }

@@ -1,27 +1,18 @@
 package io.sentrius.agent.analysis.agents.verbs;
 
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.InputStream;
 import java.util.Map;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.collect.Maps;
-import io.sentrius.agent.analysis.agents.interpreters.AsessmentListInterpreter;
-import io.sentrius.agent.analysis.agents.interpreters.TerminalListInterpreter;
-import io.sentrius.agent.analysis.agents.interpreters.TerminalOutputInterpreter;
-import io.sentrius.agent.analysis.model.AssessedTerminal;
-import io.sentrius.sso.core.dto.HostSystemDTO;
-import io.sentrius.sso.core.dto.ztat.AgentExecution;
+import io.sentrius.agent.analysis.agents.interpreters.StringToAtplInterpreter;
+import io.sentrius.sso.core.dto.ztat.AtatRequest;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
-import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.verbs.DefaultInterpreter;
 import io.sentrius.sso.core.model.verbs.Verb;
 import io.sentrius.sso.core.services.agents.LLMService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
+import io.sentrius.sso.core.trust.ATPLPolicy;
 import io.sentrius.sso.core.utils.JsonUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -50,18 +41,50 @@ public class AtplVerbs {
         this.agentVerbs = agentVerbs;
     }
 
+    @Verb(name = "qry_policy_id", description = "Queries by policyId.",
+        inputInterpreter = StringToAtplInterpreter.class,
+        outputInterpreter = DefaultInterpreter.class, requiresTokenManagement = true)
+    public ArrayNode queryPolicyById(TokenDTO token, String policyId) throws ZtatException {
+        try {
+
+            log.info("policy is : {}", policyId);
+            String response = zeroTrustClientService.callGetOnApi(token, "/api/v1/policies/" + policyId);
+            if (response == null) {
+                throw new RuntimeException("Failed to retrieve terminal list");
+            }
+            log.info("Terminal list response: {}", response);
+            return (ArrayNode) JsonUtil.MAPPER.readTree(response);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to retrieve terminal list", e);
+        }
+    }
+
+    @Verb(name = "get_atpl_schema", description = "Gets Schema. No argument required. Returns JSON Schema.",
+        inputInterpreter = DefaultInterpreter.class,
+        outputInterpreter = DefaultInterpreter.class, requiresTokenManagement = true)
+    public String getAtplSchema(TokenDTO token, Map<String,Object> args) throws ZtatException, IOException {
+        InputStream schema = getClass().getClassLoader().getResourceAsStream("atpl-schema.json");
+        if (schema == null) {
+            throw new RuntimeException("atpl-schema.json not found on classpath");
+
+        }
+        return new String(schema.readAllBytes());
+    }
+
     /**
      * Retrieves a list of currently open terminals.
      *
-     * @param args A map of arguments for the operation (currently unused).
      * @return An `ArrayNode` containing the list of open terminals.
      * @throws io.sentrius.sso.core.exceptions.ZtatException If there is an error during the operation.
      */
-    @Verb(name = "save_policy", description = "Saves an ATPL policy.",
+    @Verb(name = "save_policy", description = "Saves an ATPL policy. Accepts ATPL policy in JSON format.",
+        inputInterpreter = StringToAtplInterpreter.class,
         outputInterpreter = DefaultInterpreter.class, requiresTokenManagement = true)
-    public ArrayNode savePolicy(TokenDTO token, Map<String, Object> args) throws ZtatException {
+    public ArrayNode savePolicy(TokenDTO token, ATPLPolicy policy) throws ZtatException {
         try {
-            String response = zeroTrustClientService.callGetOnApi(token, "/ssh/terminal/list/all");
+
+            log.info("policy is : {}", policy);
+            String response = zeroTrustClientService.callPostOnApi("/api/v1/policies", policy);
             if (response == null) {
                 throw new RuntimeException("Failed to retrieve terminal list");
             }

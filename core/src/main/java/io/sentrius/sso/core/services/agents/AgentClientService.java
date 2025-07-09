@@ -11,6 +11,8 @@ import com.google.common.collect.Maps;
 import io.sentrius.sso.core.dto.AgentCommunicationDTO;
 import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
 import io.sentrius.sso.core.dto.AgentRegistrationDTO;
+import io.sentrius.sso.core.dto.agents.AgentContextDTO;
+import io.sentrius.sso.core.dto.agents.AgentContextRequestDTO;
 import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
 import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.AtatRequest;
@@ -18,6 +20,7 @@ import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.services.security.KeycloakService;
+import io.sentrius.sso.core.trust.AgentContext;
 import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.provenance.ProvenanceEvent;
 import lombok.extern.slf4j.Slf4j;
@@ -236,4 +239,44 @@ public class AgentClientService {
         return List.of();
     }
 
+    public String getAgentPodStatus(String launcherService, String agentId) throws ZtatException {
+        return zeroTrustClientService.callAuthenticatedGetOnApi(launcherService,
+            "agent/launcher" +
+                "/status", Maps.immutableEntry("agentId", List.of(agentId)) );
+    }
+
+    public AgentContextDTO getAgentContext(TokenDTO token, String agentContextId) throws ZtatException,
+        JsonProcessingException {
+        String url = "/api/v1/agent/context/" + agentContextId;
+        String response = zeroTrustClientService.callGetOnApi(token, url);
+        if (response != null) {
+            return JsonUtil.MAPPER.readValue(response, AgentContextDTO.class);
+        }
+        return null;
+    }
+
+    public AgentContextDTO createAgentContext(AgentExecution execution, AgentContextRequestDTO dto)
+        throws ZtatException, JsonProcessingException {
+        String url = "/api/v1/agent/context";
+        String response = zeroTrustClientService.callPostOnApi(execution, url, dto, null );
+        if (response != null) {
+            return JsonUtil.MAPPER.readValue(response, AgentContextDTO.class);
+        }
+        return null;
+    }
+
+    public String createAgent(AgentExecution execution, AgentRegistrationDTO registrationDTO)
+        throws ZtatException, JsonProcessingException {
+        String ask = "/agent/bootstrap/launcher/create";
+
+        var acommResponse = zeroTrustClientService.callPostOnApi(ask, registrationDTO);
+        return acommResponse;
+    }
+
+    public String getCreatedAgentStatus(AgentExecution execution, String agentId)
+        throws ZtatException, JsonProcessingException {
+        String ask = "/agent/bootstrap/launcher/status";
+
+        return zeroTrustClientService.callGetOnApi(execution, ask , Maps.immutableEntry("agentId", List.of(agentId)));
+    }
 }

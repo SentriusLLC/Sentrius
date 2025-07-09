@@ -184,8 +184,10 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                 websocketCommunication, userMessage);
                             log.info("Response: {}", response);
                             var newMessage = Session.ChatMessage.newBuilder()
-                                .setMessage(String.format("{\"type\":\"user-message\",\"message\":\"%s\"}",
-                                    response.getResponseForUser()))
+                                .setMessage(response.getResponseForUser()/*String.format("{\"type\":\"user-message\"," +
+                                        "\"message\":\"%s\"}",
+                                    response.getResponseForUser())*/
+                                )
                                 .setSender("agent")
                                 .setChatGroupId("")
                                 .setSessionId(Long.parseLong(websocketCommunication.getSessionId()))
@@ -206,10 +208,11 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                     var lastVerbResponse =
                                         websocketCommunication.getVerbResponses().stream().reduce((prev, next) -> next)
                                             .orElse(null);
+                                    var arguments = response.getArguments();
                                     var executionResponse = verbRegistry.execute(
                                         chatAgent.getAgentExecution(),
                                         lastVerbResponse,
-                                        response.getNextOperation(), Maps.newHashMap()
+                                        response.getNextOperation(), arguments
                                     );
 
                                     var nextResponse = chatVerbs.interpret_plan_response(

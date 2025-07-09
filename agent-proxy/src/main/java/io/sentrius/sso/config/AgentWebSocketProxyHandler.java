@@ -123,22 +123,38 @@ public class AgentWebSocketProxyHandler implements WebSocketHandler {
                     })
                     .as(clientSession::send)
                     .doOnSuccess(aVoid -> log.info("agent -> client completed gracefully")) // Corrected for Mono
-                    .doOnError(e -> log.error("Error in agent -> client stream", e))
+                    .doOnError(e -> {
+                        log.error("Error in agent -> client stream", e);
+                        sessionManager.unregister(agentSession.getId());
+                    })
                     .onErrorResume(e -> {
+                        sessionManager.unregister(agentSession.getId());
                         log.error("Agent to client stream error, closing agent session.", e);
                         return agentSession.close().then(Mono.empty());
                     })
                     .doFinally(sig -> log.info("Agent to client stream finalized: {}", sig));
 
                     return Mono.when(clientToAgent, agentToClient)
-                        .doOnTerminate(() -> log.info("WebSocket proxy connection terminated (client and agent streams completed/cancelled)"))
-                        .doOnError(e -> log.error("Overall proxy connection failed", e))
+                        .doOnTerminate(() -> {
+                            log.info("WebSocket proxy connection terminated (client and agent " +
+                                "streams completed/cancelled)");
+                            sessionManager.unregister(agentSession.getId());
+
+                        })
+                        .doOnError(e -> {
+                            log.error("Overall proxy connection failed", e);
+                            sessionManager.unregister(agentSession.getId());
+
+                        })
                         .doFinally(sig -> {
                             sessionManager.unregister(finalSessionId);
                             log.info("WebSocket proxy stream closed completely: {}. Final session ID: {}", sig, finalSessionId);
                         });
             }
-            ).doOnError(e -> log.error("Failed to establish proxy connection", e));
+            ).doOnError(e -> {
+                log.error("Failed to establish proxy connection", e);
+                sessionManager.unregister(finalSessionId);
+            });
 
 
         } catch (Exception ex) {
