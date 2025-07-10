@@ -10,11 +10,13 @@ import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.verbs.DefaultInterpreter;
 import io.sentrius.sso.core.model.verbs.Verb;
+import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.LLMService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.trust.ATPLPolicy;
 import io.sentrius.sso.core.utils.JsonUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
@@ -23,7 +25,7 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
-public class AtplVerbs {
+public class AtplVerbs extends VerbBase {
 
     final ZeroTrustClientService zeroTrustClientService;
     final LLMService llmService;
@@ -35,7 +37,11 @@ public class AtplVerbs {
      * @param zeroTrustClientService The service for interacting with Zero Trust APIs.
      * @param llmService The service for interacting with the LLM (Large Language Model).
      */
-    public AtplVerbs(ZeroTrustClientService zeroTrustClientService, LLMService llmService, AgentVerbs agentVerbs) {
+    public AtplVerbs(@Value("${agent.ai.config}") String agentConfigFile,
+                     @Value("${agent.ai.context.db.id:none}") String agentDatabaseContext,
+                     ZeroTrustClientService zeroTrustClientService, LLMService llmService, AgentVerbs agentVerbs,
+                     AgentClientService agentClientService) {
+        super(agentConfigFile, agentDatabaseContext, agentClientService);
         this.zeroTrustClientService = zeroTrustClientService;
         this.llmService = llmService;
         this.agentVerbs = agentVerbs;

@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Maps;
 import io.sentrius.sso.core.dto.AgentCommunicationDTO;
 import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
@@ -20,7 +21,6 @@ import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.services.security.KeycloakService;
-import io.sentrius.sso.core.trust.AgentContext;
 import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.provenance.ProvenanceEvent;
 import lombok.extern.slf4j.Slf4j;
@@ -248,9 +248,10 @@ public class AgentClientService {
     public AgentContextDTO getAgentContext(TokenDTO token, String agentContextId) throws ZtatException,
         JsonProcessingException {
         String url = "/api/v1/agent/context/" + agentContextId;
-        String response = zeroTrustClientService.callGetOnApi(token, url);
+        var response = zeroTrustClientService.callGetOnApi(token, url);
         if (response != null) {
-            return JsonUtil.MAPPER.readValue(response, AgentContextDTO.class);
+            AgentContextDTO context = JsonUtil.MAPPER.convertValue(response, AgentContextDTO.class);
+            return context;
         }
         return null;
     }
@@ -269,7 +270,7 @@ public class AgentClientService {
         throws ZtatException, JsonProcessingException {
         String ask = "/agent/bootstrap/launcher/create";
 
-        var acommResponse = zeroTrustClientService.callPostOnApi(ask, registrationDTO);
+        var acommResponse = zeroTrustClientService.callPostOnApi(execution, ask, registrationDTO);
         return acommResponse;
     }
 

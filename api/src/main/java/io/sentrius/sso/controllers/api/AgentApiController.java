@@ -308,6 +308,10 @@ public class AgentApiController extends BaseController {
 
         List<AgentDTO> prunedAgentList = agents.stream().filter(agent -> {
                 try {
+                    if (null == agent.getAgentName() || agent.getAgentName().isEmpty()) {
+                        log.info("Agent {} has no name, removing from list", agent.getAgentId());
+                        return false;
+                    }
                     String podResponse =
                         agentClientService.getAgentPodStatus(appConfig.getSentriusLauncherService(), agent.getAgentName());
                     if (podResponse != null && (podResponse.equalsIgnoreCase("running") || podResponse.equalsIgnoreCase("pending"))){
@@ -808,7 +812,7 @@ public class AgentApiController extends BaseController {
     public ResponseEntity<AgentContextDTO> createContext(
         HttpServletRequest request,
         HttpServletResponse response,
-        AgentContextRequestDTO dtoRequest){
+        @RequestBody AgentContextRequestDTO dtoRequest){
         var databaseContext = agentContextService.create(dtoRequest);
         return ResponseEntity.ok(AgentContextDTO.builder()
             .id(databaseContext.getId())

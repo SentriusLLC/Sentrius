@@ -2,6 +2,7 @@ package io.sentrius.agent.analysis.agents.interpreters;
 
 import java.util.HashMap;
 import java.util.Map;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.sentrius.sso.core.model.verbs.InputInterpreterIfc;
 import io.sentrius.sso.core.model.verbs.OutputInterpreterIfc;
@@ -13,14 +14,20 @@ import lombok.extern.slf4j.Slf4j;
 public class ObjectNodeInterpreter implements InputInterpreterIfc<ObjectNode>, OutputInterpreterIfc {
     @Override
     public ObjectNode interpret(Map<String, Object> input) throws Exception {
+        Object raw = input.containsKey("arg1") ? input.get("arg1") : input;
 
-        Object arg1Value = input.get("arg1");
-        if (arg1Value == null) {
-            throw new IllegalArgumentException("Missing 'arg1' field in arguments map.");
+        JsonNode node = JsonUtil.MAPPER.valueToTree(raw);
+
+        if (node == null || node.isNull()) {
+            throw new IllegalArgumentException("Input is null or could not be converted to ObjectNode");
         }
 
-        // Convert the value under "arg1" to an ObjectNode
-        return JsonUtil.MAPPER.valueToTree(arg1Value);
+        if (!node.isObject()) {
+            throw new IllegalArgumentException("Expected ObjectNode, got: " + node.getNodeType());
+        }
+
+        return (ObjectNode) node;
+
     }
 
     @Override

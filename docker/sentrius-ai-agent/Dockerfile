@@ -1,5 +1,5 @@
 # Use an OpenJDK image as the base
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jdk-jammy
 
 # Declare the argument
 ARG INCLUDE_DEV_CERTS=false

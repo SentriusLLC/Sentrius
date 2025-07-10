@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -167,24 +168,36 @@ public class PodLauncherService {
                 myAgentRegistry += "/";
             }
         }
-        String agentId = agent.getAgentName();
+        String agentId = agent.getAgentName().toLowerCase();
         String callbackUrl = agent.getAgentCallbackUrl();
         String agentType = agent.getAgentType();
-        String agentFile= "chat-helper.yaml";
-        // TODO This should be pluggable
-        switch(agentType){
-            case "chat":
-                agentFile = "chat-helper.yaml";
-                break;
-            case "atpl-helper":
-                agentFile = "chat-atpl-helper.yaml";
-                break;
-            case "default":
-            default:
-                agentFile = "chat-helper.yaml";
-        }
 
         var constructedCallbackUrl = buildAgentCallbackUrl(agentId);
+
+
+        List<String> argList = new ArrayList<>();
+        argList.add("--spring.config.location=file:/config/agent.properties");
+        argList.add("--agent.namePrefix=" + agentId);
+        argList.add("--agent.listen.websocket=true");
+        argList.add("--agent.callback.url=" + constructedCallbackUrl);
+        if (agent.getAgentContextId() != null && !agent.getAgentContextId().isEmpty()) {
+            argList.add("--agent.ai.context.db.id=" + agent.getAgentContextId());
+        }else {
+            String agentFile= "chat-helper.yaml";
+            switch(agentType){
+                case "chat":
+                    agentFile = "chat-helper.yaml";
+                    break;
+                case "atpl-helper":
+                    agentFile = "chat-atpl-helper.yaml";
+                    break;
+                case "default":
+                default:
+                    agentFile = "chat-helper.yaml";
+            }
+            argList.add("--agent.ai.config=/config/" + agentFile);
+        }
+
 
         String image = String.format("%ssentrius-launchable-agent:%s", myAgentRegistry, agentVersion);
 
@@ -199,11 +212,7 @@ public class PodLauncherService {
                     .image(image)
                     .imagePullPolicy("IfNotPresent")
 
-                    .args(List.of("--spring.config.location=file:/config/agent.properties",
-                        "--agent.namePrefix=" + agentId, "--agent.ai.config=/config/" + agentFile, "--agent.listen" +
-                            ".websocket=true",
-                        "--agent.callback.url=" + constructedCallbackUrl
-                        ))
+                    .args(argList)
                     .resources(new V1ResourceRequirements()
                         .limits(Map.of(
                             "cpu", Quantity.fromString("1000m"),

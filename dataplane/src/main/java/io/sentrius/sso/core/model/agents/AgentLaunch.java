@@ -8,6 +8,7 @@ import java.util.UUID;
 
 @Entity
 @Setter
+@Table(name = "agent_launches")
 @Getter
 public class AgentLaunch {
 

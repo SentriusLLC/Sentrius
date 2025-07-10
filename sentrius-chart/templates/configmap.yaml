@@ -25,6 +25,8 @@ data:
     keystore.alias=KEYBOX-ENCRYPTION_KEY
     spring.thymeleaf.enabled=true
     spring.freemarker.enabled=false
+    management.metrics.enable.system.processor={{ .Values.metrics.enabled }}
+    spring.autoconfigure.exclude={{ .Values.metrics.class.exclusion }}
     #flyway configuration
     spring.main.web-application-type=reactive
     spring.flyway.enabled=false
@@ -80,6 +82,8 @@ data:
     spring.main.web-application-type=servlet
     spring.thymeleaf.enabled=true
     spring.freemarker.enabled=false
+    management.metrics.enable.system.processor={{ .Values.metrics.enabled }}
+    spring.autoconfigure.exclude={{ .Values.metrics.class.exclusion }}
     #flyway configuration
     spring.flyway.enabled=false
     spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
@@ -149,6 +153,8 @@ data:
     spring.main.web-application-type=servlet
     spring.thymeleaf.enabled=true
     spring.freemarker.enabled=false
+    management.metrics.enable.system.processor={{ .Values.metrics.enabled }}
+    spring.autoconfigure.exclude={{ .Values.metrics.class.exclusion }}
     #flyway configuration
     spring.flyway.enabled=false
     logging.level.org.springframework.web=INFO
@@ -211,6 +217,8 @@ data:
     spring.main.web-application-type=servlet
     spring.thymeleaf.enabled=true
     spring.freemarker.enabled=false
+    management.metrics.enable.system.processor={{ .Values.metrics.enabled }}
+    spring.autoconfigure.exclude={{ .Values.metrics.class.exclusion }}
     #flyway configuration
     spring.flyway.enabled=true
     spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
@@ -288,6 +296,8 @@ data:
     spring.main.web-application-type=servlet
     spring.thymeleaf.enabled=true
     spring.freemarker.enabled=false
+    management.metrics.enable.system.processor={{ .Values.metrics.enabled }}
+    spring.autoconfigure.exclude={{ .Values.metrics.class.exclusion }}
     #flyway configuration
     spring.flyway.enabled=true
     spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius

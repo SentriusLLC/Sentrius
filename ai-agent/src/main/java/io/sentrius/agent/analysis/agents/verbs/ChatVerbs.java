@@ -41,20 +41,29 @@ import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
-public class ChatVerbs {
+
+public class ChatVerbs extends VerbBase{
 
     private final AgentExecutionService agentExecutionService;
-    @Value("${agent.ai.config}")
-    private String agentConfigFile;
-
-    @Value("${agent.ai.context.db.id:none}")
-    private String agentDatabaseContext;
 
     final ZeroTrustClientService zeroTrustClientService;
     final LLMService llmService;
     final VerbRegistry verbRegistry;
     final AgentClientService agentClientService;
+
+    protected ChatVerbs(@Value("${agent.ai.config}") String agentConfigFile,
+                        @Value("${agent.ai.context.db.id:none}") String agentDatabaseContext,
+                        AgentClientService agentClientService, AgentExecutionService agentExecutionService,
+                        ZeroTrustClientService zeroTrustClientService, LLMService llmService, VerbRegistry verbRegistry,
+                        AgentClientService agentClientService1
+    ) {
+        super(agentConfigFile, agentDatabaseContext, agentClientService);
+        this.agentExecutionService = agentExecutionService;
+        this.zeroTrustClientService = zeroTrustClientService;
+        this.llmService = llmService;
+        this.verbRegistry = verbRegistry;
+        this.agentClientService = agentClientService1;
+    }
 
     /**
      * Prompts the agent for workload based on the provided arguments.
@@ -79,23 +88,10 @@ public class ChatVerbs {
                 throw new RuntimeException("assessor-config.yaml not found on classpath");
 
             }
-            AgentConfig config = null;
+
             String terminalResponse = new String(terminalHelperStream.readAllBytes());
-            InputStream is = getStream(agentConfigFile);
-            if (is == null) {
-                throw new RuntimeException(agentConfigFile + " not found on classpath");
-            }
-            if (agentDatabaseContext != null && !agentDatabaseContext.equals("none")) {
-                AgentContextDTO agentContext = agentClientService.getAgentContext(execution,
-                    agentDatabaseContext);
-               config = AgentConfig.builder().description(agentContext.getDescription())
-                    .context(agentContext.getContext()).build();
-                log.info("Agent context loaded: {}", agentContext);
-            }else {
 
-                config = new ObjectMapper(new YAMLFactory()).readValue(is, AgentConfig.class);
-            }
-
+            AgentConfig config = getAgentConfig(execution);
             log.info("Agent config loaded: {}", config);
             PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
             var prompt = promptBuilder.buildPrompt(false
@@ -117,9 +113,9 @@ public class ChatVerbs {
                 "sessions, using " +
                 "terminal output if needed " +
                 "for clarity of the next LLM request and for the user. Ensure your all future responses meets this " +
-                "json format: " + terminalResponse).build());
+                "json format (TerminalResponse format): " + terminalResponse).build());
             messages.add(Message.builder().role("user").content(userMessage.getContent()).build());
-            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
+            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
             execution.addMessages( messages );
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
@@ -152,18 +148,15 @@ public class ChatVerbs {
 
             }
             String terminalResponse = new String(terminalHelperStream.readAllBytes());
-            InputStream is = getStream(agentConfigFile);
-            if (is == null) {
-                throw new RuntimeException(agentConfigFile +  " not found on classpath");
-            }
-            AgentConfig config = new ObjectMapper(new YAMLFactory()).readValue(is, AgentConfig.class);
+
+            AgentConfig config = getAgentConfig(execution);
 
             log.info("Agent config loaded: {}", config);
             PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
             var prompt = promptBuilder.buildPrompt(false);
             List<Message> messages = new ArrayList<>();
-            var context = Message.builder().role("system").content(prompt).build();
-            messages.add(context);
+            //var context = Message.builder().role("system").content(prompt).build();
+            //messages.add(context);
 
             /*
             var listedEndpoints = Message.builder().role("system").content("These are a list of available endpoints, " +
@@ -188,7 +181,7 @@ public class ChatVerbs {
             execution.addMessages( userMessage );
             messages.add(Message.builder().role("user").content(userMessage.getContent()).build());
 
-            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
+            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
 
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
@@ -289,11 +282,8 @@ public class ChatVerbs {
 
             }
             String terminalResponse = new String(terminalHelperStream.readAllBytes());
-            InputStream is = getStream(agentConfigFile);
-            if (is == null) {
-                throw new RuntimeException(agentConfigFile +  " not found on classpath");
-            }
-            AgentConfig config = new ObjectMapper(new YAMLFactory()).readValue(is, AgentConfig.class);
+
+            AgentConfig config = getAgentConfig(execution);
 
             log.info("Agent config loaded: {}", config);
             PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
@@ -301,30 +291,35 @@ public class ChatVerbs {
             List<Message> messages = new ArrayList<>();
 
             if (execution.getMessages().isEmpty()) {
+                log.info("*** Adding Prompt");
                 var context = Message.builder().role("system").content(prompt).build();
                 messages.add(context);
 
 
 
+                messages.add(Message.builder().role("system").content("You have executed verbs for the previous user " +
+                    "messages. Please generate a user response that summarizes the last message. Keep all responses in " +
+                    "TerminalResponse format" +
+                    ".").build());
             }
 
-            messages.add(Message.builder().role("system").content("You have executed verbs for the previous user " +
-                "messages. Please generate a user response that summarizes the last message.").build());
+
             if (null != agentVerb) {
                 messages.add(
                     Message.builder().role("system").content("You have executed verb: " + agentVerb.getName() +
                         " with the following description: " + agentVerb.getDescription()).build());
             }
 
-            var history = getContextWindow(execution.getMessages(), 1024*96 );
-            messages.addAll(history);
+
             //messages.add(Message.builder().role("assistant").content("prior response: " + lastMessage
         // .getTerminalSummaryForLLM()).build());
             messages.add(Message.builder().role("assistant").content(planExecutionOutput).build());
 
-            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
+            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
             execution.addMessages( messages );
+            var history = getContextWindow(execution.getMessages(), 1024*96 );
+            messages.addAll(history);
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             log.info("Response is {}", resp);
             for (Response.Choice choice : response.getChoices()) {
@@ -336,23 +331,21 @@ public class ChatVerbs {
                 }
                 log.info("content is {}", content);
                 if (null != content && !content.isEmpty()) {
-                    var newResponse =   JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readValue(content,
-                        TerminalResponse.class);
-                    return newResponse;
+                    try {
+                        var newResponse = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readValue(
+                            content,
+                            TerminalResponse.class
+                        );
+                        return newResponse;
+                    } catch (Exception e){
+                        return TerminalResponse.builder().responseForUser(content).build();
+                    }
+
                 }
             }
         return null;
     }
 
-    private InputStream getStream(String requestedPath) throws IOException {
-        Path path = Paths.get(requestedPath); // 🔁 Replace with your actual path
 
-        if (!Files.exists(path)) {
-            throw new RuntimeException("File not found at path: " + path.toAbsolutePath());
-        }
-
-        return Files.newInputStream(path);
-
-    }
 
 }

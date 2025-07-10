@@ -15,6 +15,14 @@ launcherFQDN: sentrius-launcher-service.dev.svc.cluster.local
 agentproxySubdomain: "agentproxy.{{ .Values.tenant }}.sentrius.cloud"
 agentproxyDomain: "https://agentproxy.{{ .Values.tenant }}.sentrius.cloud"
 
+metrics:
+  enabled: true
+  class:
+    exclusion: ""
+  serviceMonitor:
+    enabled: true
+    interval: "30s"
+    scrapeTimeout: "10s"
 
 certificates:
   enabled: false  # Disable certs for local; enable for cloud

@@ -10,10 +10,12 @@ import jakarta.persistence.Lob;
 
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
 @Entity
+@Table(name = "agent_contexts")
 @Getter
 @Setter
 public class AgentContext {

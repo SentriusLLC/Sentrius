@@ -302,7 +302,7 @@
             
             <div class="chat-container">
                 <div class="chat-header">
-                    <h2><i class="fas fa-robot"></i> Agent Designer Assistant</h2>
+                    <h2><i class="fas fa-robot"></i> Agent Designer</h2>
                     <p>Let me help you create an agent</p>
                 </div>
                 
@@ -314,21 +314,6 @@
                 </div>
                 
                 <div class="chat-input-container" id="chat-container">
-                    <div class="quick-actions">
-                        <button class="quick-action" onclick="sendQuickMessage('I want to create a new ATPL policy')">
-                            <i class="fas fa-plus"></i> New Policy
-                        </button>
-                        <button class="quick-action" onclick="sendQuickMessage('What endpoints does my agent need?')">
-                            <i class="fas fa-link"></i> Endpoints
-                        </button>
-                        <button class="quick-action" onclick="sendQuickMessage('What commands should I allow?')">
-                            <i class="fas fa-terminal"></i> Commands
-                        </button>
-                        <button class="quick-action" onclick="sendQuickMessage('Show me existing policies')">
-                            <i class="fas fa-list"></i> Existing Policies
-                        </button>
-                    </div>
-                    
                     <div class="d-flex w-100 gap-2">
                         <input type="text" class="chat-input" id="chat-input"
                                placeholder="Describe what your agent needs to do..." 
@@ -345,9 +330,6 @@
             </div>
             
             <div class="action-buttons mt-3 text-center">
-                <button class="btn btn-success" onclick="generatePolicy()">
-                    <i class="fas fa-magic"></i> Generate Policy
-                </button>
                 <button class="btn btn-secondary" onclick="clearChat()">
                     <i class="fas fa-trash"></i> Clear Chat
                 </button>
@@ -368,7 +350,7 @@
         async function waitForAgent(matchFn, options = {}) {
             const {
                 interval = 2000,  // 2 seconds between retries
-                timeout = 20000   // give up after 20 seconds
+                timeout = 60000   // give up after 20 seconds
             } = options;
 
             const start = Date.now();
@@ -381,7 +363,7 @@
                     return found;
                 }
 
-                $("#alertTopError").text("Agent not available yet").show().delay(3000).fadeOut();
+                $("#alertTopError").text("Agent not available yet").show().delay(10000).fadeOut();
                 await new Promise(resolve => setTimeout(resolve, interval));
             }
 

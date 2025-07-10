@@ -65,7 +65,7 @@ public class AgentWebSocketProxyHandler implements WebSocketHandler {
             log.info("Handling WebSocket connection for host: {}, sessionId: {}, chatGroupId: {}, ztat: {}",
                 agentHost, sessionId, chatGroupId, ztat);
 
-            URI agentUri = agentLocator.resolveWebSocketUri(agentHost, sessionId, chatGroupId, ztat);
+            URI agentUri = agentLocator.resolveWebSocketUri(agentHost.toLowerCase(), sessionId, chatGroupId, ztat);
 
             log.info("Resolved agent URI: {}", agentUri);
 

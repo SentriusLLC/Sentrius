@@ -112,7 +112,8 @@ public class ATPLPolicyService {
         var f =  policy.getCapabilities().getPrimitives().stream()
             .filter(p -> {
                 log.info("Checking if {} contains {} {} ", p.getEndpoints(), endpoint, p.getEndpoints().contains(endpoint));
-                return p.getEndpoints().contains(endpoint);
+                return p.getEndpoints().contains(endpoint) ||
+                    p.getEndpoints().stream().anyMatch(endpoint::startsWith);
             })
             .findFirst();
 

@@ -18,10 +18,20 @@ sentriusFQDN: sentrius-sentrius.dev.svc.cluster.local
 integrationproxyFQDN: sentrius-integrationproxy.dev.svc.cluster.local
 agentProxyFQDN: sentrius-agentproxy.dev.svc.cluster.local
 
+
+
 certificates:
   enabled: false  # Disable certs for local; enable for cloud
   issuer: "letsencrypt-prod"  # Change for cloud environments
 
+metrics:
+  enabled: true
+  class:
+    exclusion: ""
+  serviceMonitor:
+    enabled: true
+    interval: "30s"
+    scrapeTimeout: "10s"
 
 # Sentrius configuration
 sentrius:

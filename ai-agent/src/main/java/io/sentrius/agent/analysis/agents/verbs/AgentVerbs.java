@@ -24,16 +24,12 @@ import com.google.common.collect.Sets;
 import io.sentrius.agent.analysis.agents.agents.AgentConfig;
 import io.sentrius.agent.analysis.agents.agents.PromptBuilder;
 import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
-import io.sentrius.agent.analysis.agents.interpreters.AgentContextInterpreter;
 import io.sentrius.agent.analysis.agents.interpreters.AsessmentListInterpreter;
 import io.sentrius.agent.analysis.agents.interpreters.ObjectListInterpreter;
 import io.sentrius.agent.analysis.agents.interpreters.ObjectNodeInterpreter;
-import io.sentrius.agent.analysis.agents.interpreters.StringInterpreter;
 import io.sentrius.agent.analysis.agents.interpreters.ZtatOutputInterpreter;
 import io.sentrius.agent.analysis.model.AssessedTerminal;
 import io.sentrius.agent.analysis.model.Assessment;
-import io.sentrius.agent.analysis.model.TerminalResponse;
-import io.sentrius.agent.analysis.model.WebSocky;
 import io.sentrius.agent.analysis.model.ZtatAsessment;
 import io.sentrius.agent.analysis.model.ZtatResponse;
 import io.sentrius.sso.core.dto.AgentCommunicationDTO;
@@ -45,7 +41,6 @@ import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.AtatRequest;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
-import io.sentrius.sso.core.model.verbs.DefaultInterpreter;
 import io.sentrius.sso.core.model.verbs.Verb;
 import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.LLMService;
@@ -54,7 +49,6 @@ import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.genai.Message;
 import io.sentrius.sso.genai.Response;
 import io.sentrius.sso.genai.model.LLMRequest;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -66,16 +60,14 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @Slf4j
-public class AgentVerbs {
+public class AgentVerbs extends VerbBase {
 
     final ZeroTrustClientService zeroTrustClientService;
     final LLMService llmService;
     final VerbRegistry verbRegistry;
-    final AgentClientService agentClientService;
 
 
-    @Value("${agent.ai.config}")
-    private String agentConfigFile;
+
 
     final ObjectMapper mapper = new ObjectMapper(new YAMLFactory()); // Jackson ObjectMapper for YAML parsing
 
@@ -88,14 +80,14 @@ public class AgentVerbs {
      * @throws JsonProcessingException If there is an error processing JSON during initialization.
      */
     public AgentVerbs( @Value("${agent.ai.config}") String agentConfigFile,
+                       @Value("${agent.ai.context.db.id:none}") String agentDatabaseContext,
                        ZeroTrustClientService zeroTrustClientService, LLMService llmService, VerbRegistry verbRegistry,
                       AgentClientService agentService
     ) throws JsonProcessingException {
+        super(agentConfigFile, agentDatabaseContext, agentService);
         this.zeroTrustClientService = zeroTrustClientService;
         this.llmService = llmService;
         this.verbRegistry = verbRegistry;
-        this.agentClientService = agentService;
-        this.agentConfigFile = agentConfigFile;
 
         log.info("Loading agent config from {}", agentConfigFile);
     }
@@ -112,11 +104,8 @@ public class AgentVerbs {
         isAiCallable = false, requiresTokenManagement = true)
     public ArrayNode promptAgent(AgentExecution execution, Map<String, Object> args) throws ZtatException,
         IOException {
-        InputStream is = getClass().getClassLoader().getResourceAsStream(agentConfigFile);
-        if (is == null) {
-            throw new RuntimeException(agentConfigFile +  " not found on classpath");
-        }
-        AgentConfig config = new ObjectMapper(new YAMLFactory()).readValue(is, AgentConfig.class);
+
+        AgentConfig config = getAgentConfig(execution);
 
         log.info("Agent config loaded: {}", config);
         PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
@@ -125,7 +114,7 @@ public class AgentVerbs {
 
         messages.add(Message.builder().role("system").content(prompt).build());
 
-        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
+        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
         var resp = llmService.askQuestion(execution, chatRequest);
         execution.addMessages( messages );
         Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
@@ -232,7 +221,7 @@ public class AgentVerbs {
                     messages.add(Message.builder().role("system").content("please respond in the following json " +
                         "format: " + respondZtat).build());
 
-                    LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
+                    LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
                     execution.addMessages( messages );
                     var resp = llmService.askQuestion(execution, chatRequest);
                     Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
@@ -290,11 +279,7 @@ public class AgentVerbs {
         inputInterpreter =
         ObjectListInterpreter.class, requiresTokenManagement = true)
     public List<AssessedTerminal> assessData(AgentExecution execution, List<?> objectList) throws ZtatException, IOException {
-        InputStream is = getClass().getClassLoader().getResourceAsStream(agentConfigFile);
-        if (is == null) {
-            throw new RuntimeException(agentConfigFile + " not found on classpath");
-        }
-        AgentConfig config = new ObjectMapper(new YAMLFactory()).readValue(is, AgentConfig.class);
+        AgentConfig config = getAgentConfig(execution);
 
         log.info("Agent config loaded: {}", config);
 
@@ -311,7 +296,7 @@ public class AgentVerbs {
 
 
 
-                LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
+                LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
 
                 var resp = llmService.askQuestion(execution, chatRequest);
                 Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
@@ -346,7 +331,7 @@ public class AgentVerbs {
             execution.addMessages(assistantMessage);
 
 
-            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
+            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
             execution.addMessages(messages);
             var resp = llmService.askQuestion(execution, chatRequest);
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
@@ -431,11 +416,6 @@ public class AgentVerbs {
         throws ZtatException,
         IOException, TimeoutException {
         // set up context
-        InputStream is = getClass().getClassLoader().getResourceAsStream(agentConfigFile);
-        if (is == null) {
-            throw new RuntimeException("assessor-config.yaml not found on classpath");
-
-        }
 
         InputStream assessZtatStream = getClass().getClassLoader().getResourceAsStream("assess-ztat.json");
         if (assessZtatStream == null) {
@@ -444,7 +424,7 @@ public class AgentVerbs {
         }
         String assessZtat = new String(assessZtatStream.readAllBytes());
 
-        AgentConfig config = new ObjectMapper(new YAMLFactory()).readValue(is, AgentConfig.class);
+        AgentConfig config = getAgentConfig(execution);
         log.info("Agent config loaded: {}", config);
         List<ZtatAsessment> responses = new ArrayList<>();
         log.info("Size of requests {}", requests.size());
@@ -466,7 +446,7 @@ public class AgentVerbs {
 
             log.info("Messages is {}", messages);
 
-            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             log.info("Assess Response is {}", resp);
@@ -530,7 +510,7 @@ public class AgentVerbs {
 
                         log.info("Messages is {}", messages);
 
-                        chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+                        chatRequest = LLMRequest.builder().model("gpt-4o-mini-mini").messages(messages).build();
                         resp = llmService.askQuestion(execution, chatRequest);
                         response = JsonUtil.MAPPER.readValue(resp, Response.class);
                         if (response.getChoices().isEmpty()) {
@@ -644,7 +624,7 @@ public class AgentVerbs {
         List<Message> messages = new ArrayList<>();
         messages.add( listedEndpoints);
         execution.addMessages(Message.builder().role("user").content(queryInput.toString()).build());
-        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o").messages(messages).build();
+        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
         var resp = llmService.askQuestion(execution, chatRequest);
 
         Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
