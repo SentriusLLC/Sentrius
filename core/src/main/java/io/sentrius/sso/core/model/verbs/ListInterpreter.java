@@ -20,7 +20,7 @@ public class ListInterpreter<T> implements InputInterpreterIfc<List<T>>{
             TypeReference<List<T>> typeRef = new TypeReference<>() {};
             return JsonUtil.convertArrayNodeToList(node,typeRef);
         } else {
-            throw new IllegalArgumentException("Invalid input type " + input.get("verb.response.type"));
+            return null;
         }
 
     }
@@ -30,13 +30,13 @@ public class ListInterpreter<T> implements InputInterpreterIfc<List<T>>{
 
         var field = input.get("verb.response.map.key");
         if (field == null) {
-            throw new IllegalArgumentException("Input response does not contain required fields");
+            return null;
         }
 
         var object = input.get(field);
         if (object instanceof List){
             return (List<T>) object;
         }
-        throw new IllegalArgumentException("Input response does not contain required fields");
+        return null;
     }
 }

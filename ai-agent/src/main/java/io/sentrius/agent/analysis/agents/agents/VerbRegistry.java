@@ -1,5 +1,6 @@
 package io.sentrius.agent.analysis.agents.agents;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ScanResult;
 import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
@@ -10,6 +11,7 @@ import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.verbs.OutputInterpreterIfc;
 import io.sentrius.sso.core.model.verbs.Verb;
 import io.sentrius.sso.core.model.verbs.VerbResponse;
+import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.services.capabilities.EndpointScanningService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Component;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +37,8 @@ public class VerbRegistry {
     private final ApplicationContext applicationContext;
 
     private final ZeroTrustClientService zeroTrustClientService;
+
+    private final AgentClientService agentClientService;
     
     private final EndpointScanningService endpointScanningService;
 
@@ -41,6 +46,26 @@ public class VerbRegistry {
     private final Map<String, Object> instances = new HashMap<>();
 
     private final AgentEndpointDiscoveryService agentEndpointDiscoveryService;
+
+    private List<EndpointDescriptor> endpoints = new ArrayList<>();
+
+    public void scanEndpoints(AgentExecution execution) throws ZtatException, JsonProcessingException {
+        synchronized (this) {
+            var endpoints = agentClientService.getAvailableEndpoints(execution);
+            log.info("Scanning endpoints for verbs...");
+            var verbs = agentClientService.getAvailableVerbs(execution);
+
+            endpoints.forEach(x -> {
+                log.info("Discovered endpoint: {}", x);
+            });
+
+            this.endpoints.addAll(endpoints);
+
+            verbs.forEach(x -> {
+                log.info("Discovered verb: {}", x);
+            });
+        }
+    }
 
     public void scanClasspath() {
         // Scan the classpath for classes with the @Verb annotation
@@ -68,6 +93,7 @@ public class VerbRegistry {
                                         .name(name)
                                         .description(annotation.description())
                                         .method(method)
+                                        .exampleJson(annotation.exampleJson())
                                         .requiresTokenManagement(annotation.requiresTokenManagement())
                                         .returnType(annotation.returnType())
                                         .outputInterpreter(annotation.outputInterpreter())
@@ -83,6 +109,7 @@ public class VerbRegistry {
                     }
                 });
             }
+
         }
     }
 
@@ -173,6 +200,10 @@ public class VerbRegistry {
         }
     }
 
+    public List<EndpointDescriptor> getEndpoints() {
+        return endpoints;
+    }
+
     public Map<String, AgentVerb> getVerbs() {
         return new HashMap<>(verbs);
     }
@@ -202,4 +233,5 @@ public class VerbRegistry {
                 })
                 .collect(Collectors.toList());
     }
+
 }

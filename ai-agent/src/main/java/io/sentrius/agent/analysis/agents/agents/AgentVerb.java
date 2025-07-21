@@ -24,4 +24,6 @@ public class AgentVerb {
     @Builder.Default
     Class<? extends OutputInterpreterIfc> outputInterpreter = DefaultInterpreter.class;
     Class<? extends InputInterpreterIfc> inputInterpreter = DefaultInterpreter.class;
+
+    private String exampleJson = "";
 }

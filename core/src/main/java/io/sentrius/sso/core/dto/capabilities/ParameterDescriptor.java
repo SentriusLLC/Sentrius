@@ -1,8 +1,10 @@
 package io.sentrius.sso.core.dto.capabilities;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
@@ -12,10 +14,12 @@ import lombok.Setter;
 @Data
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class ParameterDescriptor {
     private String name;
     private String description;
-    private Class<?> type;
+    private String type;
     private boolean required;
     private Object defaultValue;
     private String source; // "PATH", "QUERY", "BODY", "HEADER", "METHOD_PARAM"

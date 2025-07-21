@@ -55,10 +55,6 @@ public class SecurityConfig {
 
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
             Collection<GrantedAuthority> authorities = new JwtGrantedAuthoritiesConverter().convert(jwt);
-            log.info("JWT Claims: {}", jwt.getClaims());
-
-            String username = jwt.getClaimAsString("preferred_username");
-            String email = jwt.getClaimAsString("email");
 
             return Flux.fromIterable(authorities);
         });

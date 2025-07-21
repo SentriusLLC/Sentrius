@@ -9,14 +9,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (disableSSHButton) {
 
 
-            fetch(`/api/v1/system/settings/sshEnabled`)
+            fetch(`/api/v1/system/settings/lockdownEnabled`)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.sshEnabled) {
-                        disableSSHButton.innerText = 'Disable SSH';
+                    if (data.lockdownEnabled) {
+                        disableSSHButton.innerText = 'LockDown Systems';
                     }
                     else {
-                        disableSSHButton.innerText = 'Enable SSH';
+                        disableSSHButton.innerText = 'Re-enable Systems';
                     }
                 })
                 .catch(error => {
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('disable-ssh-button').addEventListener('click', function(event) {
             event.preventDefault(); // Prevent the default anchor behavior
             const csrfToken = document.getElementById('csrf-token').value; // Get CSRF token value
-            fetch('/api/v1/system/settings/ssh/toggle', {
+            fetch('/api/v1/system/settings/lockdown/toggle', {
                 method: 'PUT', // Specify PUT request
                 headers: {
                     'Content-Type': 'application/json', // Optional, adjust based on your API
@@ -34,10 +34,10 @@ document.addEventListener('DOMContentLoaded', function () {
             }).then(response => response.json())
                 .then(data => {
                     if (data.sshEnabled) {
-                        disableSSHButton.innerText = 'Disable SSH';
+                        disableSSHButton.innerText = 'LockDown Systems';
                     }
                     else {
-                        disableSSHButton.innerText = 'Enable SSH';
+                        disableSSHButton.innerText = 'Re-enable Systems';
                     }
                 })
                 .catch(error => {

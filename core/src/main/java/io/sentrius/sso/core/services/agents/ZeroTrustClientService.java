@@ -115,8 +115,10 @@ public class ZeroTrustClientService {
         }
         var builder = UriComponentsBuilder.fromUri(URI.create(endpoint))
             .path(apiEndpoint);
-        for (Map.Entry<String, List<String>> entry : params) {
-            builder.queryParam(entry.getKey(), entry.getValue());
+        if (null != params) {
+            for (Map.Entry<String, List<String>> entry : params) {
+                builder.queryParam(entry.getKey(), entry.getValue());
+            }
         }
         try{
             ResponseEntity<String> response = restTemplate.exchange(builder.build(true).toUriString(), HttpMethod.POST, requestEntity, String.class);
@@ -302,7 +304,6 @@ public class ZeroTrustClientService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
 
-        log.info("**** EXPOSING JWT {}", keycloakJwt);
         HttpEntity<T> requestEntity = new HttpEntity<>(headers);
         if (!apiEndpoint.startsWith("/")) {
             apiEndpoint = "/" + apiEndpoint;

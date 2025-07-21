@@ -72,7 +72,14 @@
                 <div th:replace="~{fragments/alerts}"></div>
                 <div class="header-bar">
                     <h2 class="text-white">ATPL Policy List</h2>
-                    <a href="/sso/v1/atpl/configure" class="btn btn-primary">+ Create New Policy</a>
+                    <div class="btn-group">
+                        <a href="/sso/v1/atpl/chat" class="btn btn-success">
+                            <i class="fas fa-comments"></i> Chat Assistant
+                        </a>
+                        <a href="/sso/v1/atpl/configure" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create New Policy
+                        </a>
+                    </div>
                 </div>
                 <div class="policy-grid">
                     <div class="policy-card" th:each="policy : ${savedPolicies}">

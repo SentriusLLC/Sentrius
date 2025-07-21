@@ -12,7 +12,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -50,8 +49,7 @@ public class AgentLauncherController  {
             return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
         }
 
-        var clientId = agent.getAgentName();
-        podLauncherService.launchAgentPod(clientId, agent.getAgentCallbackUrl());
+        podLauncherService.launchAgentPod(agent);
 
         return ResponseEntity.ok(Map.of("status", "success"));
     }
@@ -62,8 +60,17 @@ public class AgentLauncherController  {
             podLauncherService.deleteAgentById(agentId);
             return ResponseEntity.ok("Shutdown triggered");
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.status(500).body("Shutdown failed: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/status")
+    public ResponseEntity<String> getAgentStatus(@RequestParam(name="agentId") String agentId) {
+        try {
+            return ResponseEntity.ok(podLauncherService.statusById(agentId) );
+        } catch (Exception e) {
+            log.error("Status failed", e);
+            return ResponseEntity.status(500).body("Status retrieval failed");
         }
     }
 

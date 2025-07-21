@@ -284,7 +284,7 @@ public class EndpointScanningService {
 
             parameters.add(ParameterDescriptor.builder()
                     .name(name)
-                    .type(parameter.getType())
+                    .type(parameter.getType().getCanonicalName())
                     .required(required)
                     .source(source)
                     .build());
@@ -307,7 +307,7 @@ public class EndpointScanningService {
             parameters.add(ParameterDescriptor.builder()
                     .name(parameter.getName())
                     .description(description)
-                    .type(parameter.getType())
+                    .type(parameter.getType().getCanonicalName())
                     .required(true) // Assume required for verb parameters
                     .source("METHOD_PARAM")
                     .build());

@@ -1,5 +1,5 @@
 # Use an OpenJDK image as the base
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jdk-jammy
 
 # Declare the argument
 ARG INCLUDE_DEV_CERTS=false
@@ -36,4 +36,4 @@ RUN apt-get update && apt-get install -y curl
 
 
 # Command to run the app
-CMD ["java", "-jar", "/app/llmproxy.jar", "--spring.config.location=/config/llmproxy-application.properties"]
+CMD ["java","-XX:+UseContainerSupport", "-jar", "/app/llmproxy.jar", "--spring.config.location=/config/llmproxy-application.properties"]

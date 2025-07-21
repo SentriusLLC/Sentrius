@@ -180,20 +180,35 @@ public class OpenAIProxyController extends BaseController {
 
 
         Span span = tracer.spanBuilder("AgentToAgentCommunication").startSpan();
+        int retries = 2;
         try (Scope scope = span.makeCurrent()) {
-            var resp = endpoint.sample(RawConversationRequest.builder().request(chatRequest).build());
-            span.setAttribute("communication.id", comm.get().getId().toString());
-            span.setAttribute("source.agent", operatingUser.getUsername());
-                span.setAttribute("target.agent", "SYSTEM");
-            span.setAttribute("message.type", "interpretation_request");
-            return ResponseEntity.ok(resp);
+                HttpException httpException = null;
+                do {
+                    try {
+                    var resp = endpoint.sample(RawConversationRequest.builder().request(chatRequest).build());
+                    span.setAttribute("communication.id", comm.get().getId().toString());
+                    span.setAttribute("source.agent", operatingUser.getUsername());
+                    span.setAttribute("target.agent", "SYSTEM");
+                    span.setAttribute("message.type", "interpretation_request");
+                    return ResponseEntity.ok(resp);
+                }catch(HttpException e){
+                    if (e.getMessage().contains("timeout")) {
+                        httpException = e;
+                    } else {
+                        throw e;
+                    }
+                }
+            } while(retries-- > 0);
+            if (null != httpException) {
+                throw httpException;
+            }
         } catch (ExecutionException | InterruptedException e) {
             throw new RuntimeException(e);
         } finally {
             span.end();
         }
 
-
+        return null;
     }
 
     @PostMapping("/justify")

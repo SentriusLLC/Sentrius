@@ -3,18 +3,20 @@
 // =========================
 const chatSessions = new Map(); // key: agentId, value: ChatSession
 
-window.addEventListener("beforeunload", persistChatSessions);
+//window.addEventListener("beforeunload", persistChatSessions);
 
 // Restore on page load
-(function restoreSessions() {
+(function restoreSesions() {
     const saved = localStorage.getItem("openChats");
     if (!saved) return;
 
-    const chatData = JSON.parse(saved);
+    /*const chatData = JSON.parse(saved);
     for (const [agentId, data] of Object.entries(chatData)) {
         const session = new ChatSession(data.agentName, data.agentId, data.sessionId, data.agentHost, data.messages);
         chatSessions.set(agentId, session);
     }
+    */
+
 })();
 
 // =========================
@@ -281,11 +283,10 @@ export function switchToAgent(agentName,agentId, sessionId, agentHost) {
 }
 
 export function sendMessage(event) {
+
+    if (event && event.key && event.key !== 'Enter') return;
+
     console.log("Send message event:", event);
-    if (event.key !== "Enter"){
-        console.log("Key pressed is not Enter, ignoring.");
-        return;
-    }
 
     const input = document.getElementById("chat-input");
     const messageText = input.value.trim();
@@ -385,3 +386,6 @@ export async function fetchAvailableAgents() {
 
 window.sendMessage = sendMessage;
 window.toggleChat = toggleChat;
+window.fetchAvailableAgents = fetchAvailableAgents;
+window.chatSessions = chatSessions;
+window.ChatSession = ChatSession;

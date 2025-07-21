@@ -73,20 +73,20 @@ public class SystemApiController extends BaseController {
         this.configurationApplicationTask = configurationApplicationTask;
     }
 
-    @GetMapping("/settings/sshEnabled")
-    public ResponseEntity<ObjectNode> getSSHEnabled() {
+    @GetMapping("/settings/lockdownEnabled")
+    public ResponseEntity<ObjectNode> getLockdownEnabled() {
         ObjectNode node = JsonUtil.MAPPER.createObjectNode();
-        node.put("sshEnabled", systemOptions.getSshEnabled());
+        node.put("lockdownEnabled", systemOptions.getLockdownEnabled());
         return ResponseEntity.ok(node);
     }
 
-    @PutMapping("/settings/ssh/toggle")
+    @PutMapping("/settings/lockdown/toggle")
     @LimitAccess(applicationAccess ={ ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
-    public ResponseEntity<ObjectNode> toggleSSHEnabled() {
-        log.info("Toggling SSH enabled");
+    public ResponseEntity<ObjectNode> toggleLockdown() {
+        log.info("Toggling Lockdown enabled");
         ObjectNode node = JsonUtil.MAPPER.createObjectNode();
-        systemOptions.setValue("sshEnabled", !systemOptions.getSshEnabled());
-        node.put("sshEnabled", systemOptions.getSshEnabled());
+        systemOptions.setValue("lockdownEnabled", !systemOptions.getLockdownEnabled());
+        node.put("lockdownEnabled", systemOptions.getLockdownEnabled());
         return ResponseEntity.ok(node);
     }
 

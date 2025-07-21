@@ -48,6 +48,12 @@ public class AgentController extends BaseController {
         return "sso/agents/list_agents";
     }
 
+    @GetMapping("/design/chat")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public String designAgent(Model m) {
+        return "sso/agents/design_chat";
+    }
+
     @GetMapping("/connections")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public String listConnections(Model m, @RequestParam("agentId") String agentId) throws GeneralSecurityException {
@@ -58,5 +64,6 @@ public class AgentController extends BaseController {
         m.addAttribute("callTypes", List.of("intercept","chat_request","atat_chat_respond", "atat_chat_ask"));
         return "sso/agents/agent_comms";
     }
+
 
 }

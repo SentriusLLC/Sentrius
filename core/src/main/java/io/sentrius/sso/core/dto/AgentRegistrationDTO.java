@@ -20,4 +20,6 @@ public class AgentRegistrationDTO {
     private final String clientId;
     private final String agentType;
     private final String agentCallbackUrl;
+    @Builder.Default
+    private final String agentContextId = "";
 }

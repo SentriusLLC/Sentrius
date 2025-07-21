@@ -30,4 +30,9 @@ public class AgentExecution extends TokenDTO {
         this.messages.addAll(messages);
 
     }
+
+    public void addMessages(Message message) {
+        this.messages.add(message);
+
+    }
 }

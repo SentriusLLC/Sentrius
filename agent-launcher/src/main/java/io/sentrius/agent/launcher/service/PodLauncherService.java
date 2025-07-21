@@ -3,14 +3,17 @@ package io.sentrius.agent.launcher.service;
 import io.kubernetes.client.custom.IntOrString;
 import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.*;
 import io.kubernetes.client.util.Config;
+import io.sentrius.sso.core.dto.AgentRegistrationDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -100,7 +103,7 @@ public class PodLauncherService {
                     } catch (Exception ex) {
                         log.warn("Service not found or already deleted: {}", ex.getMessage());
                     }
-                }else {
+                } else {
                     log.info("Not Deleting pod: {}", podName);
                 }
 
@@ -111,12 +114,52 @@ public class PodLauncherService {
 
 
         }
-
-
     }
 
 
-    public V1Pod launchAgentPod(String agentId, String callbackUrl) throws Exception {
+        public String statusById(String agentId) throws Exception {
+            // Delete all pods with this agentId label
+            var pods = coreV1Api.listNamespacedPod(
+                agentNamespace
+            ).execute().getItems();
+
+            for (V1Pod pod : pods) {
+
+                var labels = pod.getMetadata().getLabels();
+                var podName = pod.getMetadata().getName();
+
+                Matcher matcher = pattern.matcher(agentId);
+
+                if (matcher.matches() && labels != null && labels.containsKey("agentId")) {
+                    String name = matcher.group(1);
+
+                    var value = labels.get("agentId");
+                    if (value.equals(name)) {
+                        // get pod status
+                        //
+                        V1PodStatus status = pod.getStatus();
+                        if (status == null) {
+                            log.warn("Pod {} has no status information", podName);
+                            return "Unknown";
+                        }
+                        return status.getPhase(); // e.g., "Running", "Pending", "Failed", "Succeeded"
+
+                    }
+
+
+                }
+
+
+            }
+            return "NotFound";
+        }
+
+
+
+
+
+
+    public V1Pod launchAgentPod(AgentRegistrationDTO agent) throws Exception {
         var myAgentRegistry = "";
         if (agentRegistry != null ) {
             if ("local".equalsIgnoreCase(agentRegistry)) {
@@ -125,8 +168,36 @@ public class PodLauncherService {
                 myAgentRegistry += "/";
             }
         }
+        String agentId = agent.getAgentName().toLowerCase();
+        String callbackUrl = agent.getAgentCallbackUrl();
+        String agentType = agent.getAgentType();
 
         var constructedCallbackUrl = buildAgentCallbackUrl(agentId);
+
+
+        List<String> argList = new ArrayList<>();
+        argList.add("--spring.config.location=file:/config/agent.properties");
+        argList.add("--agent.namePrefix=" + agentId);
+        argList.add("--agent.listen.websocket=true");
+        argList.add("--agent.callback.url=" + constructedCallbackUrl);
+        if (agent.getAgentContextId() != null && !agent.getAgentContextId().isEmpty()) {
+            argList.add("--agent.ai.context.db.id=" + agent.getAgentContextId());
+        }else {
+            String agentFile= "chat-helper.yaml";
+            switch(agentType){
+                case "chat":
+                    agentFile = "chat-helper.yaml";
+                    break;
+                case "atpl-helper":
+                    agentFile = "chat-atpl-helper.yaml";
+                    break;
+                case "default":
+                default:
+                    agentFile = "chat-helper.yaml";
+            }
+            argList.add("--agent.ai.config=/config/" + agentFile);
+        }
+
 
         String image = String.format("%ssentrius-launchable-agent:%s", myAgentRegistry, agentVersion);
 
@@ -141,10 +212,7 @@ public class PodLauncherService {
                     .image(image)
                     .imagePullPolicy("IfNotPresent")
 
-                    .args(List.of("--spring.config.location=file:/config/agent.properties",
-                        "--agent.namePrefix=" + agentId, "--agent.ai.config=/config/chat-helper.yaml", "--agent.listen.websocket=true",
-                        "--agent.callback.url=" + constructedCallbackUrl
-                        ))
+                    .args(argList)
                     .resources(new V1ResourceRequirements()
                         .limits(Map.of(
                             "cpu", Quantity.fromString("1000m"),
@@ -169,24 +237,34 @@ public class PodLauncherService {
 
         var createdPod = coreV1Api.createNamespacedPod(agentNamespace, pod).execute();
 
-        // Create corresponding service for WebSocket routing
-        V1Service service = new V1Service()
-            .metadata(new V1ObjectMeta()
-                .name("sentrius-agent-" + agentId)
-                .labels(Map.of("agentId", agentId)))
-            .spec(new V1ServiceSpec()
-                .selector(Map.of("agentId", agentId))
-                .ports(List.of(new V1ServicePort()
-                    .protocol("TCP")
-                    .port(8090)
-                    .targetPort(new IntOrString(8090))
-                ))
-                .type("ClusterIP")
-            );
+        try {
+            // Create corresponding service for WebSocket routing
+            V1Service service = new V1Service()
+                .metadata(new V1ObjectMeta()
+                    .name("sentrius-agent-" + agentId)
+                    .labels(Map.of("agentId", agentId)))
+                .spec(new V1ServiceSpec()
+                    .selector(Map.of("agentId", agentId))
+                    .ports(List.of(new V1ServicePort()
+                        .protocol("TCP")
+                        .port(8090)
+                        .targetPort(new IntOrString(8090))
+                    ))
+                    .type("ClusterIP")
+                );
 
-        log.info("Created service pod: {} and service {}", createdPod, service);
-        coreV1Api.createNamespacedService(agentNamespace, service).execute();
+            log.info("Created service pod: {} and service {}", createdPod, service);
+            coreV1Api.createNamespacedService(agentNamespace, service).execute();
 
+        }catch(ApiException e){
+            if (e.getCode() == 409){
+                log.info("Service for agent {} already exists, skipping creation", agentId);
+            }
+            else{
+                throw e;
+            }
+        }
         return createdPod;
     }
+
 }

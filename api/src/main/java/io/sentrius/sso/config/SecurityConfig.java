@@ -78,9 +78,7 @@ public class SecurityConfig {
         log.info("**** Initializing JwtAuthenticationConverter");
 
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            log.info("**** Jwt Authentication Converter invoked");
             Collection<GrantedAuthority> authorities = new JwtGrantedAuthoritiesConverter().convert(jwt);
-            log.info("JWT Claims: {}", jwt.getClaims());
 
             String userId = jwt.getClaimAsString("sub");
             String username = jwt.getClaimAsString("preferred_username");

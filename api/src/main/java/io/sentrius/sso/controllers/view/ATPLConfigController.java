@@ -64,4 +64,10 @@ public class ATPLConfigController extends BaseController {
         }
         return "sso/atpl/configure";
     }
+
+    @GetMapping("/chat")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public String chatPage(Model model) {
+        return "sso/atpl/chat";
+    }
 }

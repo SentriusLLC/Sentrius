@@ -129,6 +129,13 @@ fi
 
 }
 
+if ! kubectl get pods -n ingress-nginx 2>/dev/null | grep -q ingress-nginx-controller; then
+    echo "🔧 Enabling ingress controller in Minikube..."
+    minikube addons enable ingress
+else
+    echo "✅ Ingress controller already enabled."
+fi
+
 # Configure TLS settings
 if [[ "$ENABLE_TLS" == "true" ]]; then
     echo "Deploying with TLS enabled..."
@@ -214,6 +221,8 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set tenant=${TENANT} \
     --set environment=${ENVIRONMENT} \
     --set subdomain="${SUBDOMAIN}" \
+    --set metrics.enabled=false \
+    --set metrics.class.exclusion="org.springframework.boot.actuate.autoconfigure.metrics.SystemMetricsAutoConfiguration" \
     --set agentproxySubdomain="${APROXY_SUBDOMAIN}" \
     --set keycloakSubdomain="${KEYCLOAK_SUBDOMAIN}" \
     --set keycloakHostname="${KEYCLOAK_HOSTNAME}" \
@@ -264,6 +273,8 @@ helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${T
     --set integrationproxyFQDN=sentrius-integrationproxy.${TENANT}.svc.cluster.local \
     --set agentproxyFQDN=sentrius-llmproxy.${TENANT}.svc.cluster.local \
     --set subdomain="${SUBDOMAIN}" \
+    --set metrics.enabled=false \
+    --set metrics.class.exclusion="org.springframework.boot.actuate.autoconfigure.metrics.SystemMetricsAutoConfiguration" \
     --set agentproxySubdomain="${APROXY_SUBDOMAIN}" \
     --set agentproxyDomain="${APROXY_DOMAIN}" \
     --set keycloakSubdomain="${KEYCLOAK_SUBDOMAIN}" \

@@ -196,7 +196,7 @@ public class HostApiController extends BaseController {
         if (enclaveId == null || hostId == null) {
             return ResponseEntity.badRequest().build();
         }
-        if (systemOptions.getSshEnabled() == false){
+        if (systemOptions.getLockdownEnabled() == true){
             node.put("sessionId","");
             node.put("errorToUser","SSH is disabled");
             return ResponseEntity.ok(node);

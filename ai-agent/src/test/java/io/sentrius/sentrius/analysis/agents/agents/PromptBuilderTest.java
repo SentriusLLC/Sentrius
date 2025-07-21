@@ -51,7 +51,7 @@ class PromptBuilderTest {
 
         String result = promptBuilder.buildPrompt();
 
-        assertTrue(result.contains("Available Verbs:"));
+        assertTrue(result.contains("Verb operations:"));
         assertTrue(result.contains("- verbName ("));
         assertTrue(result.contains("Description of the verb"));
     }
@@ -72,7 +72,7 @@ class PromptBuilderTest {
 
         String result = promptBuilder.buildPrompt();
 
-        assertTrue(result.contains("Available Verbs:"));
+        assertTrue(result.contains("Verb operations:"));
         assertFalse(result.contains("- "));
     }
 }

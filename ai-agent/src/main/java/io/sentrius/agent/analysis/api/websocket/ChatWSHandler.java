@@ -184,8 +184,10 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                 websocketCommunication, userMessage);
                             log.info("Response: {}", response);
                             var newMessage = Session.ChatMessage.newBuilder()
-                                .setMessage(String.format("{\"type\":\"user-message\",\"message\":\"%s\"}",
-                                    response.getResponseForUser()))
+                                .setMessage(response.getResponseForUser()/*String.format("{\"type\":\"user-message\"," +
+                                        "\"message\":\"%s\"}",
+                                    response.getResponseForUser())*/
+                                )
                                 .setSender("agent")
                                 .setChatGroupId("")
                                 .setSessionId(Long.parseLong(websocketCommunication.getSessionId()))
@@ -203,40 +205,55 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                 verbRegistry.isVerbRegistered(response.getNextOperation()))
                             {
                                 try {
+
+                                    TerminalResponse nextResponse = null;
+
                                     var lastVerbResponse =
-                                        websocketCommunication.getVerbResponses().stream().reduce((prev, next) -> next)
+                                        websocketCommunication.getVerbResponses().stream()
+                                            .reduce((prev, next) -> next)
                                             .orElse(null);
-                                    var executionResponse = verbRegistry.execute(
-                                        chatAgent.getAgentExecution(),
-                                        lastVerbResponse,
-                                        response.getNextOperation(), Maps.newHashMap()
-                                    );
+                                    do {
 
-                                    var nextResponse = chatVerbs.interpret_plan_response(
-                                        chatAgent.getAgentExecution(), websocketCommunication,
-                                        verbRegistry.getVerbs().get(response.getNextOperation()),
-                                        executionResponse.getResponse().toString()
-                                    );
+                                        var arguments = response.getArguments();
+                                        var executionResponse = verbRegistry.execute(
+                                            chatAgent.getAgentExecution(),
+                                            lastVerbResponse,
+                                            response.getNextOperation(), arguments
+                                        );
 
-                                    websocky.get().getMessages().add(nextResponse);
+//                                        chatAgent.getAgentExecution().addMessages(Message.builder().role("System")
+//                                        .content("System executed operation: " + response.getNextOperation()).build());
 
-                                    websocketCommunication.getVerbResponses().add(executionResponse);
+                                        nextResponse = chatVerbs.interpret_plan_response(
+                                            chatAgent.getAgentExecution(), websocketCommunication,
+                                            verbRegistry.getVerbs().get(response.getNextOperation()),
+                                            executionResponse.getResponse().toString()
+                                        );
 
-                                    var newNextMessage = Session.ChatMessage.newBuilder()
-                                        .setMessage(String.format(
-                                            "{\"type\":\"user-message\",\"message\":\"%s\"}",
-                                            nextResponse.getResponseForUser()
-                                        ))
-                                        .setSender("agent")
-                                        .setChatGroupId("")
-                                        .setSessionId(Long.parseLong(websocketCommunication.getSessionId()))
-                                        .setTimestamp(System.currentTimeMillis())
-                                        .build();
-                                    messageBytes = newNextMessage.toByteArray();
-                                    base64Message = Base64.getEncoder().encodeToString(messageBytes);
-                                    session.sendMessage(new TextMessage(
-                                        base64Message
-                                    ));
+                                        websocky.get().getMessages().add(nextResponse);
+
+                                        websocketCommunication.getVerbResponses().add(executionResponse);
+
+                                        var newNextMessage = Session.ChatMessage.newBuilder()
+                                            .setMessage(
+                                                nextResponse.getResponseForUser()
+                                            )
+                                            .setSender("agent")
+                                            .setChatGroupId("")
+                                            .setSessionId(Long.parseLong(websocketCommunication.getSessionId()))
+                                            .setTimestamp(System.currentTimeMillis())
+                                            .build();
+                                        messageBytes = newNextMessage.toByteArray();
+                                        base64Message = Base64.getEncoder().encodeToString(messageBytes);
+                                        session.sendMessage(new TextMessage(
+                                            base64Message
+                                        ));
+                                        log.info("Next response: {}", nextResponse.getResponseForUser());
+                                        log.info("Next getNextOperation: {}", nextResponse.getNextOperation());
+                                        log.info("Next getArguments: {}", nextResponse.getArguments());
+                                        lastVerbResponse = executionResponse;
+                                        response = nextResponse;
+                                    }while (nextResponse.getNextOperation() != null && !nextResponse.getNextOperation().isEmpty());
                                 }catch (Exception e){
                                     e.printStackTrace();
                                     log.error("Error executing next operation: {}", e.getMessage());

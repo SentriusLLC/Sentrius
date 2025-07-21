@@ -7,10 +7,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Maps;
 import io.sentrius.sso.core.dto.AgentCommunicationDTO;
 import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
 import io.sentrius.sso.core.dto.AgentRegistrationDTO;
+import io.sentrius.sso.core.dto.agents.AgentContextDTO;
+import io.sentrius.sso.core.dto.agents.AgentContextRequestDTO;
+import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
 import io.sentrius.sso.core.dto.ztat.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.AtatRequest;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
@@ -207,4 +211,95 @@ public class AgentClientService {
         return callbackUrl;
     }
 
+    public List<EndpointDescriptor> getAvailableEndpoints(TokenDTO token) throws ZtatException, JsonProcessingException {
+        String url = "/api/v1/capabilities/endpoints";
+        Object response = zeroTrustClientService.callGetOnApi(token, url);
+        if (response instanceof String str) {
+            return JsonUtil.MAPPER.readValue(str, new TypeReference<List<EndpointDescriptor>>() {});
+        } else if (response instanceof List<?> list) {
+            // Already deserialized
+            return list.stream()
+                .map(item -> JsonUtil.MAPPER.convertValue(item, EndpointDescriptor.class))
+                .toList();
+        }
+        return List.of();
+    }
+
+    public List<EndpointDescriptor> getAvailableVerbs(TokenDTO token) throws ZtatException, JsonProcessingException {
+        String url = "/api/v1/capabilities/verbs";
+        Object response = zeroTrustClientService.callGetOnApi(token, url);
+        if (response instanceof String str) {
+            return JsonUtil.MAPPER.readValue(str, new TypeReference<List<EndpointDescriptor>>() {});
+        } else if (response instanceof List<?> list) {
+            // Already deserialized
+            return list.stream()
+                .map(item -> JsonUtil.MAPPER.convertValue(item, EndpointDescriptor.class))
+                .toList();
+        }
+        return List.of();
+    }
+
+    public String getAgentPodStatus(String launcherService, String agentId) throws ZtatException {
+        var podResponse = zeroTrustClientService.callAuthenticatedGetOnApi(launcherService,
+            "agent/launcher" +
+                "/status", Maps.immutableEntry("agentId", List.of(agentId)) );
+        String apiResponse = "Running";
+        switch(podResponse){
+            case "Running":
+                apiResponse = "Running";
+                break;
+            case "Pending":
+                apiResponse = "Pending";
+                break;
+            case "Succeeded":
+                apiResponse = "Succeeded";
+                break;
+            case "Failed":
+                apiResponse = "Failed";
+                break;
+            case "NotFound":
+                apiResponse = "NotFound";
+                break;
+            default:
+                log.error("Unknown pod status response: {}", podResponse);
+                apiResponse = "Unknown";
+        }
+        return apiResponse;
+    }
+
+    public AgentContextDTO getAgentContext(TokenDTO token, String agentContextId) throws ZtatException,
+        JsonProcessingException {
+        String url = "/api/v1/agent/context/" + agentContextId;
+        var response = zeroTrustClientService.callGetOnApi(token, url);
+        if (response != null) {
+            AgentContextDTO context = JsonUtil.MAPPER.convertValue(response, AgentContextDTO.class);
+            return context;
+        }
+        return null;
+    }
+
+    public AgentContextDTO createAgentContext(AgentExecution execution, AgentContextRequestDTO dto)
+        throws ZtatException, JsonProcessingException {
+        String url = "/api/v1/agent/context";
+        String response = zeroTrustClientService.callPostOnApi(execution, url, dto, null );
+        if (response != null) {
+            return JsonUtil.MAPPER.readValue(response, AgentContextDTO.class);
+        }
+        return null;
+    }
+
+    public String createAgent(AgentExecution execution, AgentRegistrationDTO registrationDTO)
+        throws ZtatException, JsonProcessingException {
+        String ask = "/agent/bootstrap/launcher/create";
+
+        var acommResponse = zeroTrustClientService.callPostOnApi(execution, ask, registrationDTO);
+        return acommResponse;
+    }
+
+    public String getCreatedAgentStatus(AgentExecution execution, String agentId)
+        throws ZtatException, JsonProcessingException {
+        String ask = "/agent/bootstrap/launcher/status";
+
+        return zeroTrustClientService.callGetOnApi(execution, ask , Maps.immutableEntry("agentId", List.of(agentId)));
+    }
 }

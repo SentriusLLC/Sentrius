@@ -70,16 +70,20 @@ public class AccessControlAspect {
         allowedEndpoints.add("/api/v1/zerotrust/accesstoken/status");
         allowedEndpoints.add("/api/v1/zerotrust/accesstoken/jwt/verify");
         allowedEndpoints.add("/api/v1/agent/bootstrap/register");
+        allowedEndpoints.add("/api/v1/capabilities/endpoints");
+        allowedEndpoints.add("/api/v1/capabilities/verbs");
     }
 
     Tracer tracer = GlobalOpenTelemetry.getTracer("io.sentrius.sso");
 
     private boolean isAllowedEndpoint(String endpoint) {
         for (String allowedEndpoint : allowedEndpoints) {
+            log.info("Checking if endpoint {} matches {}", endpoint, allowedEndpoint);
             if (endpoint.startsWith(allowedEndpoint)) {
                 return true;
             }
         }
+        log.info("Endpoint {} doesn't match", endpoint);
         return false;
     }
 

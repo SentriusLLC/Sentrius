@@ -25,6 +25,12 @@ public class Capability {
     private List<String> endpoints = new ArrayList<>();
     @Builder.Default
     private List<String> tags = new ArrayList<>();
+    @Builder.Default
+    private List<String> commands = new ArrayList<>();
+    @Builder.Default
+    private List<String> activities = new ArrayList<>();
+    @Builder.Default
+    private List<String> subcommands = new ArrayList<>();
 
     public String getId() {
         return id;

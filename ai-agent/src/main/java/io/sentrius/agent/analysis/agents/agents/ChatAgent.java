@@ -135,6 +135,14 @@ public class ChatAgent implements ApplicationListener<ApplicationReadyEvent> {
             }
         }
 
+        try {
+            verbRegistry.scanEndpoints(agentExecution);
+        } catch (ZtatException e) {
+            throw new RuntimeException(e);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
         while(running) {
 
                 log.info("Agent Registered...");
