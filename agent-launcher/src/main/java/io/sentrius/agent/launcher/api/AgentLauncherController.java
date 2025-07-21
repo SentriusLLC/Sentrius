@@ -69,7 +69,8 @@ public class AgentLauncherController  {
         try {
             return ResponseEntity.ok(podLauncherService.statusById(agentId) );
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("Status failed: " + e.getMessage());
+            log.error("Status failed", e);
+            return ResponseEntity.status(500).body("Status retrieval failed");
         }
     }
 

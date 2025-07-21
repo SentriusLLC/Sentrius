@@ -221,8 +221,6 @@ public class AgentBootstrapController extends BaseController {
         @RequestParam("agentId") String agentId, HttpServletRequest request, HttpServletResponse response
     ) throws GeneralSecurityException, IOException, ZtatException {
 
-
-        var operatingUser = getOperatingUser(request, response );
         String podResponse =
             agentClientService.getAgentPodStatus(appConfig.getSentriusLauncherService(), agentId);
         // bootstrap with a default policy

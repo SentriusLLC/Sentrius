@@ -343,7 +343,7 @@
 
     <script type="module">
         import * as Chat from '/js/chat.js';
-        let sessionId = Math.floor(Math.random() * 1e12); // up to 12 digit
+        let sessionId = crypto.randomUUID();
         let conversationHistory = [];
         let availableAgent = null;
         const csrfToken = document.getElementById("csrf-token").value;
@@ -611,7 +611,7 @@
                 </div>
             `;
             conversationHistory = [];
-            sessionId = Math.floor(Math.random() * 1e12); // up to 12 digit
+            sessionId = crypto.randomUUID();
         }
 
         window.clearChat = clearChat;

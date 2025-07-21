@@ -240,9 +240,31 @@ public class AgentClientService {
     }
 
     public String getAgentPodStatus(String launcherService, String agentId) throws ZtatException {
-        return zeroTrustClientService.callAuthenticatedGetOnApi(launcherService,
+        var podResponse = zeroTrustClientService.callAuthenticatedGetOnApi(launcherService,
             "agent/launcher" +
                 "/status", Maps.immutableEntry("agentId", List.of(agentId)) );
+        String apiResponse = "Running";
+        switch(podResponse){
+            case "Running":
+                apiResponse = "Running";
+                break;
+            case "Pending":
+                apiResponse = "Pending";
+                break;
+            case "Succeeded":
+                apiResponse = "Succeeded";
+                break;
+            case "Failed":
+                apiResponse = "Failed";
+                break;
+            case "NotFound":
+                apiResponse = "NotFound";
+                break;
+            default:
+                log.error("Unknown pod status response: {}", podResponse);
+                apiResponse = "Unknown";
+        }
+        return apiResponse;
     }
 
     public AgentContextDTO getAgentContext(TokenDTO token, String agentContextId) throws ZtatException,
