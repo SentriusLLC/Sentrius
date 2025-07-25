@@ -1,5 +1,6 @@
 package io.sentrius.sso.core.services.agents;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -8,7 +9,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.sentrius.sso.core.dto.UserDTO;
-import io.sentrius.sso.core.dto.ztat.AgentExecution;
+import io.sentrius.sso.core.dto.agents.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.EndpointRequest;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.util.UriUtils;
 
 @Slf4j
 @Service
@@ -72,7 +74,7 @@ public class ZeroTrustClientService {
         try{
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
 
-            if (response.getStatusCode() == HttpStatus.OK) {
+            if (response.getStatusCode() == HttpStatus.OK || response.getStatusCode() == HttpStatus.CREATED) {
                 return response.getBody(); // This is the ZTAT (JWT or opaque token)
             } else {
                 throw new RuntimeException("Failed to obtain ZTAT: " + response.getStatusCode());
@@ -97,7 +99,8 @@ public class ZeroTrustClientService {
         return callPostOnApi(token, agentApiUrl, apiEndpoint, body, params);
     }
 
-    <T> String callPostOnApi(@NonNull TokenDTO token, String endpoint, @NonNull String apiEndpoint, T body,Map.Entry<String, List<String>>... params) throws ZtatException {
+    public <T> String callPostOnApi(@NonNull TokenDTO token, String endpoint, @NonNull String apiEndpoint, T body,
+                              Map.Entry<String, List<String>>... params) throws ZtatException {
         String keycloakJwt = getKeycloakToken();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -123,7 +126,7 @@ public class ZeroTrustClientService {
         try{
             ResponseEntity<String> response = restTemplate.exchange(builder.build(true).toUriString(), HttpMethod.POST, requestEntity, String.class);
 
-            if (response.getStatusCode() == HttpStatus.OK) {
+            if (response.getStatusCode() == HttpStatus.OK || response.getStatusCode() == HttpStatus.CREATED) {
                 return response.getBody(); // This is the ZTAT (JWT or opaque token)
             } else if (response.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
                 // we need to get
@@ -192,7 +195,7 @@ public class ZeroTrustClientService {
         try{
             ResponseEntity<String> response = restTemplate.exchange(builder.build(true).toUriString(), HttpMethod.POST, requestEntity, String.class);
 
-            if (response.getStatusCode() == HttpStatus.OK) {
+            if (response.getStatusCode() == HttpStatus.OK || response.getStatusCode() == HttpStatus.CREATED) {
                 return response.getBody(); // This is the ZTAT (JWT or opaque token)
             } else if (response.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
                 // we need to get
@@ -253,7 +256,6 @@ public class ZeroTrustClientService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
 
-        log.info("**** EXPOSING JWT {}", keycloakJwt);
         log.info("Sending {}", body.toString());
         HttpEntity<T> requestEntity = new HttpEntity<>(body, headers);
         if (!apiEndpoint.startsWith("/")) {
@@ -272,7 +274,7 @@ public class ZeroTrustClientService {
         try{
             ResponseEntity<String> response = restTemplate.exchange(builder.build(true).toUriString(), HttpMethod.POST, requestEntity, String.class);
 
-            if (response.getStatusCode() == HttpStatus.OK) {
+            if (response.getStatusCode() == HttpStatus.OK || response.getStatusCode() == HttpStatus.CREATED) {
                 return response.getBody(); // This is the ZTAT (JWT or opaque token)
             } else if (response.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
                 // we need to get
@@ -322,7 +324,7 @@ public class ZeroTrustClientService {
             ResponseEntity<String> response = restTemplate.exchange(builder.build(true).toUriString(), HttpMethod.GET,
                 requestEntity, String.class);
 
-            if (response.getStatusCode() == HttpStatus.OK) {
+            if (response.getStatusCode() == HttpStatus.OK || response.getStatusCode() == HttpStatus.CREATED) {
                 return response.getBody(); // This is the ZTAT (JWT or opaque token)
             } else if (response.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
                 // we need to get
@@ -388,7 +390,7 @@ public class ZeroTrustClientService {
                 requestEntity,
                 String.class);
 
-            if (response.getStatusCode() == HttpStatus.OK) {
+            if (response.getStatusCode() == HttpStatus.OK || response.getStatusCode() == HttpStatus.CREATED) {
                 return response.getBody(); // This is the ZTAT (JWT or opaque token)
             } else if (response.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
                 // we need to get
@@ -439,7 +441,7 @@ public class ZeroTrustClientService {
         try {
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
 
-            if (response.getStatusCode() == HttpStatus.OK) {
+            if (response.getStatusCode() == HttpStatus.OK || response.getStatusCode() == HttpStatus.CREATED) {
                 return response.getBody(); // This is the ZTAT (JWT or opaque token)
             } else if (response.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
                 // we need to get
@@ -476,7 +478,7 @@ public class ZeroTrustClientService {
 
 
     @SafeVarargs
-    final <T> String callGetOnApi(
+    public final <T> String callGetOnApi(
         @NonNull TokenDTO token,
         String endpoint, @NonNull String apiEndpoint, Map.Entry<String, List<String>> param,
         Map.Entry<String, List<String>>... params
@@ -499,12 +501,16 @@ public class ZeroTrustClientService {
         var builder = UriComponentsBuilder.fromHttpUrl(endpoint)
             .path(apiEndpoint);
 
-        for (String value : param.getValue()){
-            builder.queryParam(param.getKey(), value);
+        if (null != param) {
+            for (String value : param.getValue()) {
+                builder.queryParam(param.getKey(), UriUtils.encodeQueryParam(value, StandardCharsets.UTF_8));
+            }
         }
-        for (Map.Entry<String, List<String>> entry : params) {
-            for(String value : entry.getValue()) {
-                builder.queryParam(entry.getKey(), value);
+        if (null != params) {
+            for (Map.Entry<String, List<String>> entry : params) {
+                for (String value : entry.getValue()) {
+                    builder.queryParam(entry.getKey(), UriUtils.encodeQueryParam(value, StandardCharsets.UTF_8));
+                }
             }
         }
         try{
@@ -512,7 +518,7 @@ public class ZeroTrustClientService {
                 requestEntity,
                 String.class);
 
-            if (response.getStatusCode() == HttpStatus.OK) {
+            if (response.getStatusCode() == HttpStatus.OK || response.getStatusCode() == HttpStatus.CREATED) {
                 return response.getBody(); // This is the ZTAT (JWT or opaque token)
             } else if (response.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
                 // we need to get
@@ -563,7 +569,7 @@ public class ZeroTrustClientService {
         try{
             ResponseEntity<T> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, (Class<T>) Object.class);
 
-            if (response.getStatusCode() == HttpStatus.OK) {
+            if (response.getStatusCode() == HttpStatus.OK || response.getStatusCode() == HttpStatus.CREATED) {
                 return response.getBody(); // This is the ZTAT (JWT or opaque token)
             } else if (response.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
                 // we need to get
@@ -605,7 +611,7 @@ public class ZeroTrustClientService {
         try{
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
 
-            if (response.getStatusCode() == HttpStatus.OK) {
+            if (response.getStatusCode() == HttpStatus.OK || response.getStatusCode() == HttpStatus.CREATED) {
                 JsonNode node = JsonUtil.MAPPER.readTree(response.getBody());
                 return node.get("ztat_request").asText();
             } else {
@@ -637,7 +643,7 @@ public class ZeroTrustClientService {
         try{
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
 
-            if (response.getStatusCode() == HttpStatus.OK) {
+            if (response.getStatusCode() == HttpStatus.OK || response.getStatusCode() == HttpStatus.CREATED) {
                 JsonNode node = JsonUtil.MAPPER.readTree(response.getBody());
                 return node.get("ztat_request").asText();
             } else {

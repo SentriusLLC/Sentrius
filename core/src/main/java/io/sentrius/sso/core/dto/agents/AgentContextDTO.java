@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AgentContextDTO {
     @Builder.Default
-    private UUID id = UUID.randomUUID();
+    private UUID contextId = UUID.randomUUID();
     private String name;
     @Builder.Default
     private String description = "";

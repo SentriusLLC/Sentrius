@@ -8,6 +8,7 @@ import io.sentrius.sso.core.repository.AgentContextRepository;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -19,6 +20,7 @@ public class AgentContextService {
         this.contextRepo = contextRepo;
     }
 
+    @Transactional
     public AgentContext create(@NonNull AgentContextRequestDTO dto) {
         log.info("Creating AgentContext from {}", dto);
         AgentContext context = new AgentContext();

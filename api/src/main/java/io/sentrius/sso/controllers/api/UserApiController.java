@@ -35,6 +35,7 @@ import io.sentrius.sso.core.utils.MessagingUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -133,6 +134,42 @@ public class UserApiController extends BaseController {
             return ResponseEntity.internalServerError().body(node);
         }
     }
+    @PostMapping("/update")
+    @LimitAccess(userAccess = {UserAccessEnum.CAN_EDIT_USERS})
+    public ResponseEntity<ObjectNode> updateUser(@RequestBody UserDTO userDTO) {
+        ObjectNode node = JsonUtil.MAPPER.createObjectNode();
+        log.info("Updating user from DTO: {}", userDTO);
+
+        try {
+            var dbUser = userService.getUserByUsername(userDTO.getUsername());
+            if (dbUser == null) {
+                node.put("status", "User not found");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(node);
+            }
+
+            dbUser.setName(userDTO.getName());
+
+            var dbUserType = userService.getUserType(userDTO.getAuthorizationType().getUserTypeName());
+            if (dbUserType.isPresent()) {
+                dbUser.setAuthorizationType(dbUserType.get());
+            } else {
+                log.warn("UserType not found: {}", userDTO.getAuthorizationType().getId());
+            }
+
+            if (userDTO.getStatus() != null) {
+                //dbUser.setS(userDTO.getStatus());
+            }
+
+            userService.save(dbUser);
+            node.put("status", "User successfully updated.");
+            return ResponseEntity.ok(node);
+
+        } catch (Exception e) {
+            log.error("Error updating user", e);
+            node.put("status", "Error updating user");
+            return ResponseEntity.internalServerError().body(node);
+        }
+    }
 
     @GetMapping("/delete")
     @LimitAccess(userAccess = {UserAccessEnum.CAN_DEL_USERS})
@@ -210,11 +247,6 @@ public class UserApiController extends BaseController {
     public String updateWorkhours(HttpServletRequest request, HttpServletResponse response,
                                   @RequestBody JsonNode body) throws JsonProcessingException {
         log.info("Updating work hours: {}", body);
-        /*
-        var reason = ztatService.createReason("Updating work hours", "Updating work hours", "");
-        var ztatRequest = ztatService.createOpsRequest("Updating work hours", "Updating work hours",
-         reason,   userService.getOperatingUser(request,response, null));
-        ztatRequestService.createOpsTATRequest(ztatRequest);*/
         return "";
     }
 

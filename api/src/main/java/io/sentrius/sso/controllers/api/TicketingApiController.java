@@ -34,7 +34,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @Slf4j
 @Controller
-@RequestMapping("/api/v1/ticketing")
+@RequestMapping("/api/v1/associate/")
 public class TicketingApiController extends BaseController {
 
 
@@ -87,7 +87,6 @@ public class TicketingApiController extends BaseController {
 
         switch(ticketType){
             case "jira":
-                log.info("SEssion Id is " + sessionIdStr);
                 var connectedSystem = sessionTrackingService.getConnectedSession(Long.parseLong(sessionIdStr.toString()));
                 if (null != connectedSystem){
                     var configuration = connectedSystem.getEnclave().getConfiguration();
@@ -126,7 +125,7 @@ public class TicketingApiController extends BaseController {
 
     }
 
-    @GetMapping("/incidents/search")
+    @GetMapping("/search")
     public ResponseEntity<List<TicketDTO>> searchIncidentIntegrations(HttpServletRequest request,
                                                                       HttpServletResponse response,
                                                                       @RequestParam("query") String query)

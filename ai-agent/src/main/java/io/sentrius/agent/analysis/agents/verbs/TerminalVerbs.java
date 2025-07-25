@@ -9,14 +9,10 @@ import java.util.Map;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Maps;
-import io.sentrius.agent.analysis.agents.interpreters.AsessmentListInterpreter;
-import io.sentrius.agent.analysis.agents.interpreters.ObjectListInterpreter;
-import io.sentrius.agent.analysis.agents.interpreters.TerminalListInterpreter;
-import io.sentrius.agent.analysis.agents.interpreters.TerminalOutputInterpreter;
 import io.sentrius.agent.analysis.model.AssessedTerminal;
-import io.sentrius.agent.analysis.model.Assessment;
 import io.sentrius.sso.core.dto.HostSystemDTO;
-import io.sentrius.sso.core.dto.ztat.AgentExecution;
+import io.sentrius.sso.core.dto.agents.AgentExecution;
+import io.sentrius.sso.core.dto.agents.AgentExecutionContextDTO;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
@@ -59,7 +55,7 @@ public class TerminalVerbs {
      * @throws ZtatException If there is an error during the operation.
      */
     @Verb(name = "list_open_terminals", description = "Retrieves a list of currently open terminals.",
-        outputInterpreter = TerminalListInterpreter.class, requiresTokenManagement = true)
+         requiresTokenManagement = true)
     public ArrayNode listTerminals(TokenDTO token, Map<String, Object> args) throws ZtatException {
         try {
             String response = zeroTrustClientService.callGetOnApi(token, "/ssh/terminal/list/all");
@@ -81,11 +77,10 @@ public class TerminalVerbs {
      * @throws ZtatException If there is an error during the operation.
      */
     @Verb(name = "list_systems", description = "Retrieves a list of available systems. These are not connected " +
-        "sessions.",
-        outputInterpreter = TerminalListInterpreter.class, requiresTokenManagement = true)
-    public List<HostSystemDTO> listSystem(TokenDTO token, Map<String, Object> args) throws ZtatException {
+        "sessions.", requiresTokenManagement = true)
+    public List<HostSystemDTO> listSystem(AgentExecution execution, Map<String, Object> args) throws ZtatException {
         try {
-            List<HostSystemDTO> response = zeroTrustClientService.callGetOnApi(token, "/api/v1/enclaves/hosts/list/all");
+            List<HostSystemDTO> response = zeroTrustClientService.callGetOnApi(execution, "/api/v1/enclaves/hosts/list/all");
 
             if (response == null) {
                 throw new RuntimeException("Failed to retrieve terminal list");
@@ -105,7 +100,6 @@ public class TerminalVerbs {
      * @throws ZtatException If there is an error during the operation.
      */
     @Verb(name = "fetch_terminal_logs", description = "Retrieves a list of terminal output from a given open terminal.",
-        outputInterpreter = TerminalOutputInterpreter.class, inputInterpreter = TerminalListInterpreter.class,
         returnType = List.class, requiresTokenManagement = true)
     public List<ObjectNode> fetchTerminalOutput(TokenDTO token, List<HostSystemDTO> dtos) throws ZtatException {
         try {
@@ -133,11 +127,14 @@ public class TerminalVerbs {
 
     @Verb(name = "kill_session_with_assessment", description = "Kills a terminal session using a terminal assessment." +
         " Requires sessionId, risk, and description in a json object.",
-        requiresTokenManagement = true,
-        outputInterpreter = TerminalOutputInterpreter.class, inputInterpreter = AsessmentListInterpreter.class)
-    public List<ObjectNode> killTerminalSessionWithTerminalAssessment(AgentExecution execution, List<AssessedTerminal> dtos)
+        requiresTokenManagement = true)
+    public List<ObjectNode> killTerminalSessionWithTerminalAssessment(AgentExecution execution,
+                                                                      AgentExecutionContextDTO contextDTO
+                                                                      )
         throws ZtatException, IOException {
         try {
+            List<AssessedTerminal> dtos = contextDTO.getExecutionArgumentScoped("assessedTerminals", List.class)
+                .orElseThrow(() -> new RuntimeException("No assessed terminals found in context"));
             List<ObjectNode> responses = new ArrayList<>();
             log.info("Terminal list response: {}", dtos);
             for (AssessedTerminal dto : dtos) {
@@ -197,7 +194,7 @@ public class TerminalVerbs {
 
                             ztatRequestDTO.setRequestId(request);
 
-                            var token = agentVerbs.justifyAgent(execution, ztatRequestDTO, dto);
+                            var token = agentVerbs.justifyAgent(execution,contextDTO, ztatRequestDTO, dto);
                             execution.setZtatToken(token);
                             var sessionId = URLEncoder.encode(dto.getAssessment().getSessionId(), StandardCharsets.UTF_8);
                             var response = zeroTrustClientService.callPutOnApi(
@@ -214,8 +211,7 @@ public class TerminalVerbs {
     }
 
     @Verb(name = "open_ssh_session", description = "Opens an SSH websocket connection.",
-        requiresTokenManagement = true,
-        outputInterpreter = TerminalOutputInterpreter.class, inputInterpreter = AsessmentListInterpreter.class)
+        requiresTokenManagement = true)
     public List<ObjectNode> openSSHSession(AgentExecution execution)
         throws ZtatException, IOException {
         log.info("Opening SSH session");

@@ -11,8 +11,5 @@ import lombok.Getter;
 @Getter
 public class VerbResponse {
     private List<Message> messages;
-    private Object response;
     private Class<?> returnType;
-    @Builder.Default
-    private Class<?extends OutputInterpreterIfc> outputInterpreter = DefaultInterpreter.class;
 }

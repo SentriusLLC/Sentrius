@@ -9,10 +9,11 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Verb {
     String name();
+    String returnName() default "";
+    String argName() default "arg1";
     String description() default "";
     Class<?> returnType() default String.class;
-    Class<? extends OutputInterpreterIfc> outputInterpreter() default DefaultInterpreter.class;
-    Class<? extends InputInterpreterIfc> inputInterpreter() default DefaultInterpreter.class;
+    String[] pathVariables() default {};
     String[] paramDescriptions() default {};
     // if set to true, this verb will be callable by AI agents
     boolean isAiCallable() default true;

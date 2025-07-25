@@ -17,12 +17,28 @@ actions:
   on_marginal:
     action: "require_ztat"
     ztat_provider: "ztat-service.internal"
-capabilities:
-  primitives:
+  capabilities:
+    primitives:
       - id: "accessLLM"
         description: "access llm"
-        endpoint:
+        endpoints:
           - "/api/v1/chat/completions"
+      - id: "endpoints"
+        description: "endpoints "
+        endpoints:
+          - "/api/v1/capabilities/endpoints"
+      - id: "registration"
+        description: "registration "
+        endpoints:
+          - "/api/v1/agent/bootstrap/register"
+      - id: "context"
+        description: "context "
+        endpoints:
+          - "/api/v1/agent/context/"
+      - id: "verbs"
+        description: "verb endpoint "
+        endpoints:
+          - "/api/v1/capabilities/verbs"
   composed:
 ztat:
   provider: "ztat-service.internal"

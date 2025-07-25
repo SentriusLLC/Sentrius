@@ -7,7 +7,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
 import io.sentrius.agent.analysis.api.AgentKeyService;
 import io.sentrius.agent.config.AgentConfigOptions;
-import io.sentrius.sso.core.dto.ztat.AgentExecution;
+import io.sentrius.sso.core.dto.agents.AgentExecution;
+import io.sentrius.sso.core.dto.agents.AgentExecutionContextDTO;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.security.Ztat;
@@ -120,6 +121,7 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
 
                 var agentExecution = agentExecutionService.getAgentExecution(finalUser);
                 var response = promptAgent(agentExecution);
+                AgentExecutionContextDTO agentExecutionContext = AgentExecutionContextDTO.builder().build();
                 while (running) {
                     try {
                         log.info("Got response: {}", response);
@@ -131,7 +133,8 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
                             if (node.get("verb") != null) {
                                 var verb = node.get("verb").asText();
                                 log.info("Executing verb: {}", verb);
-                                priorResponse = verbRegistry.execute(agentExecution, priorResponse, verb, args);
+                                priorResponse = verbRegistry.execute(agentExecution,agentExecutionContext,
+                                    priorResponse, verb, args);
                             }
                             log.info("Node: {}", node);
                         }

@@ -2,32 +2,55 @@ package io.sentrius.sso.controllers.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.common.collect.Maps;
+import io.sentrius.sso.config.AppConfig;
 import io.sentrius.sso.core.annotations.LimitAccess;
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.model.ATPLPolicyEntity;
+import io.sentrius.sso.core.services.ErrorOutputService;
+import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.trust.ATPLPolicy;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/v1/policies")
-@RequiredArgsConstructor
 @Slf4j
-public class ATPLPolicyController {
+public class ATPLPolicyController extends BaseController {
 
     private final ATPLPolicyService policyService;
     private final ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
+    private final AppConfig appConfig;
+
+    protected ATPLPolicyController(
+        UserService userService, SystemOptions systemOptions,
+        ErrorOutputService errorOutputService, ATPLPolicyService policyService, AppConfig appConfig
+    ) {
+        super(userService, systemOptions, errorOutputService);
+        this.policyService = policyService;
+        this.appConfig = appConfig;
+    }
 
     @PostMapping(consumes = {"application/x-yaml", "application/yaml", "text/yaml", "application/json"})
-    public ResponseEntity<?> uploadPolicy(@RequestBody String rawPolicy) {
+    public ResponseEntity<?> uploadPolicy(
+        @RequestParam (name = "includeDefault" , required = false, defaultValue = "false") boolean includeDefault,
+        @RequestBody String rawPolicy) {
         try {
             ATPLPolicy policy = yamlMapper.readValue(rawPolicy, ATPLPolicy.class);
 
@@ -36,9 +59,35 @@ public class ATPLPolicyController {
                 return ResponseEntity.badRequest().body("Missing required fields: policy_id and version.");
             }
 
+            if (includeDefault){
+                log.info("Including default policy primitives in {}", policy.getPolicyId());
+                try(
+                    InputStream terminalHelperStream = getStream(appConfig.getDefaultPolicyFile())
+                            ) {
+                        if (terminalHelperStream == null) {
+                            throw new RuntimeException(appConfig.getDefaultPolicyFile() + "not found on classpath");
+
+                        }
+
+
+                        String defaultYaml = new String(terminalHelperStream.readAllBytes());
+                        ATPLPolicy defaultPolicy = yamlMapper.readValue(defaultYaml, ATPLPolicy.class);
+                        var latest = policyService.getLatestPolicyEntity(defaultPolicy.getPolicyId());
+                        if (latest.isPresent()) {
+                            log.info("Merging default policy with existing policy {}", latest.get().getPolicyId());
+                            policy.getCapabilities().getPrimitives().addAll( defaultPolicy.getCapabilities().getPrimitives());
+                        } else {
+                            log.info("Could not find default policy for {}, creating new one", defaultPolicy.getPolicyId());
+                        }
+                } catch (IOException e) {
+                    log.error("Error reading default policy file", e);
+
+                }
+            }
+
             log.info("Saving policy {}", policy);
-            policyService.savePolicy(policy);
-            return ResponseEntity.status(HttpStatus.CREATED).body("Policy uploaded successfully.");
+            var newPolicy = policyService.savePolicy(policy);
+            return ResponseEntity.status(HttpStatus.CREATED).body(newPolicy.getPolicyId());
 
         } catch (Exception e) {
             log.error("Invalid policy submission", e);
@@ -233,4 +282,12 @@ public class ATPLPolicyController {
                 .body("Error getting templates: " + e.getMessage());
         }
     }
+
+    @DeleteMapping("/delete")
+    @ResponseBody
+    public ResponseEntity<?> deletePolicy(@RequestParam String id) {
+        boolean deleted = policyService.deletePolicyById(id);
+        return deleted ? ResponseEntity.ok().build() : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
+
 }

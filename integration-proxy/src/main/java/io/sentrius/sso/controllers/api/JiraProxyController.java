@@ -16,6 +16,7 @@ import io.sentrius.sso.core.dto.TicketDTO;
 import io.sentrius.sso.core.integrations.ticketing.JiraService;
 import io.sentrius.sso.core.model.security.IntegrationSecurityToken;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.model.verbs.Verb;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
@@ -60,7 +61,13 @@ public class JiraProxyController extends BaseController {
 
     @GetMapping("/rest/api/3/search")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
-    public ResponseEntity<?> search(
+    @Verb( name="search_jira",
+           description="Search for JIRA tickets using JQL or query parameters",
+           paramDescriptions = {
+               "jql - JIRA Query Language string to search for tickets",
+               "query - Alternative search query string",
+           }, requiresTokenManagement = true)
+    public ResponseEntity<?> searchForJiraIssue(
         @RequestHeader("Authorization") String token,
         @RequestParam(value = "jql", required = false) String jql,
         @RequestParam(value = "query", required = false) String query,
@@ -115,11 +122,16 @@ public class JiraProxyController extends BaseController {
         }
     }
 
-    @GetMapping("/rest/api/3/issue/{issueKey}")
+    @GetMapping("/rest/api/3/issue")
+    @Verb( name="retrieve_jira_issue",
+        description="Retrieves jira issue by key",
+        paramDescriptions = {
+            "issueKey - issue key to retrieve",
+        }, requiresTokenManagement = true)
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
-    public ResponseEntity<?> getIssue(
+    public ResponseEntity<?> getJiraIssue(
         @RequestHeader("Authorization") String token,
-        @PathVariable String issueKey,
+        @RequestParam(name = "issueKey") String issueKey,
         HttpServletRequest request, 
         HttpServletResponse response
     ) throws JsonProcessingException, HttpException {

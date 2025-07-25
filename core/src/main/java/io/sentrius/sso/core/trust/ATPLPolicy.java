@@ -34,13 +34,16 @@ public class ATPLPolicy {
     private Provenance provenance;
 
     @JsonProperty("runtime")
-    private AgentRuntimePolicies runtimePolicies;
+    private AgentRuntimePolicies runtimePolicies = new AgentRuntimePolicies();
 
     private Behavior behavior;
 
     @JsonProperty("trust_score")
     private TrustScore trustScore;
-    private Actions actions;
+
+    @Builder.Default
+    private Actions actions =
+        Actions.builder().onSuccess("allow").onFailure("ztat").onMarginal(OnMarginal.builder().action("ztat").build()).build();
     private CapabilitySet capabilities;
 
 

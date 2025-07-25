@@ -1,7 +1,11 @@
 package io.sentrius.sso.controllers.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.sentrius.sso.config.AppConfig;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.services.ATPLPolicyService;
+import io.sentrius.sso.core.services.ErrorOutputService;
+import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.trust.ATPLPolicy;
 import io.sentrius.sso.core.trust.CapabilitySet;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,13 +30,26 @@ class ATPLPolicyControllerTest {
     @Mock
     private ATPLPolicyService policyService;
 
+    @Mock
+    UserService userService;
+
+
+    @Mock
+    AppConfig appConfig;
+
+    @Mock
+    SystemOptions systemOptions;
+
+    @Mock
+    ErrorOutputService errorOutputService;
+
     private ATPLPolicyController controller;
 
     @BeforeEach
     void setUp() {
-        controller = new ATPLPolicyController(policyService);
+        controller =
+            new ATPLPolicyController(userService, systemOptions, errorOutputService, policyService, appConfig);
     }
-
     @Test
     void uploadValidPolicyReturnsSuccess() {
         String validPolicy = """
@@ -45,7 +62,7 @@ class ATPLPolicyControllerTest {
 
         when(policyService.savePolicy(any(ATPLPolicy.class))).thenReturn(null);
 
-        ResponseEntity<?> result = controller.uploadPolicy(validPolicy);
+        ResponseEntity<?> result = controller.uploadPolicy(false, validPolicy);
 
         assertEquals(HttpStatus.CREATED, result.getStatusCode());
         assertEquals("Policy uploaded successfully.", result.getBody());
@@ -60,7 +77,7 @@ class ATPLPolicyControllerTest {
             }
             """;
 
-        ResponseEntity<?> result = controller.uploadPolicy(invalidPolicy);
+        ResponseEntity<?> result = controller.uploadPolicy(false, invalidPolicy);
 
         assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
         assertTrue(result.getBody().toString().contains("Missing required fields"));
@@ -127,9 +144,4 @@ class ATPLPolicyControllerTest {
         assertEquals("Policy not found", result.getBody());
     }
 
-    @Test
-    void controllerCanBeInstantiated() {
-        ATPLPolicyController testController = new ATPLPolicyController(policyService);
-        assertNotNull(testController);
-    }
 }

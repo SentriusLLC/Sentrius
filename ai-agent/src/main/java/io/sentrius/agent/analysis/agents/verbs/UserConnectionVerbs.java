@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import com.fasterxml.jackson.databind.JsonNode;
-import io.sentrius.agent.analysis.agents.interpreters.TerminalListInterpreter;
 import io.sentrius.agent.analysis.api.UserCommunicationService;
 import io.sentrius.sso.core.dto.HostSystemDTO;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
@@ -52,7 +51,7 @@ public class UserConnectionVerbs {
      * @throws io.sentrius.sso.core.exceptions.ZtatException If there is an error during the operation.
      */
     @Verb(name = "list_hosts", description = "Retrieves a list of available hosts.",
-        outputInterpreter = TerminalListInterpreter.class, requiresTokenManagement = true)
+         requiresTokenManagement = true)
     public List<HostSystemDTO> listHosts(TokenDTO token, Map<String, Object> args) throws ZtatException {
         try {
             String response = zeroTrustClientService.callGetOnApi(token, "/sso/v1/enclaves/hosts/list");

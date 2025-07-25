@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Maps;
 import io.sentrius.sso.core.dto.AgentCommunicationDTO;
 import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
@@ -15,7 +15,7 @@ import io.sentrius.sso.core.dto.AgentRegistrationDTO;
 import io.sentrius.sso.core.dto.agents.AgentContextDTO;
 import io.sentrius.sso.core.dto.agents.AgentContextRequestDTO;
 import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
-import io.sentrius.sso.core.dto.ztat.AgentExecution;
+import io.sentrius.sso.core.dto.agents.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.AtatRequest;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
@@ -80,7 +80,7 @@ public class AgentClientService {
         var response = zeroTrustClientService.callGetOnApi(execution, responseUrl,
             Maps.immutableEntry("requestId", List.of(atatRequest.getRequestId())));
         if (response != null) {
-            log.info("response is {}", response);
+            log.info("responseis {}", response);
             return JsonUtil.MAPPER.readValue(
                 response,
                 new TypeReference<>() {
@@ -192,12 +192,13 @@ public class AgentClientService {
         return JsonUtil.MAPPER.readValue(acommResponse, AgentCommunicationDTO.class);
     }
 
-    public AgentRegistrationDTO bootstrap(String name, String publicKey, String keyType)
+    public AgentRegistrationDTO bootstrap(String clientId, String name, String publicKey, String keyType)
         throws ZtatException, JsonProcessingException {
         String ask = "/agent/bootstrap/register";
 
         AgentRegistrationDTO registration = AgentRegistrationDTO.builder()
             .agentName(name)
+            .clientId(clientId)
             .agentCallbackUrl(getCallbackUrl())
             .agentPublicKey(publicKey)
             .agentPublicKeyAlgo(keyType)
@@ -243,26 +244,35 @@ public class AgentClientService {
         var podResponse = zeroTrustClientService.callAuthenticatedGetOnApi(launcherService,
             "agent/launcher" +
                 "/status", Maps.immutableEntry("agentId", List.of(agentId)) );
-        String apiResponse = "Running";
-        switch(podResponse){
-            case "Running":
-                apiResponse = "Running";
-                break;
-            case "Pending":
-                apiResponse = "Pending";
-                break;
-            case "Succeeded":
-                apiResponse = "Succeeded";
-                break;
-            case "Failed":
-                apiResponse = "Failed";
-                break;
-            case "NotFound":
-                apiResponse = "NotFound";
-                break;
-            default:
-                log.error("Unknown pod status response: {}", podResponse);
-                apiResponse = "Unknown";
+
+        String apiResponse = "Unknown";
+        log.info("Pod response: {}", podResponse);
+        try {
+            var responseNode = JsonUtil.MAPPER.readTree(podResponse);
+            if (responseNode.has("status")) {
+                switch (responseNode.get("status").asText().toLowerCase()) {
+                    case "running":
+                        apiResponse = "Running";
+                        break;
+                    case "pending":
+                        apiResponse = "Pending";
+                        break;
+                    case "succeeded":
+                        apiResponse = "Succeeded";
+                        break;
+                    case "failed":
+                        apiResponse = "Failed";
+                        break;
+                    case "notfound":
+                        apiResponse = "NotFound";
+                        break;
+                    default:
+                        log.error("Unknown pod status response: {}", podResponse);
+                        apiResponse = "Unknown";
+                }
+            }
+        }catch (Exception e) {
+            log.error("Error parsing pod status response: {}", e.getMessage());
         }
         return apiResponse;
     }

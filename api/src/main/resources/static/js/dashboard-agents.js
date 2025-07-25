@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const agentName = selected.value;
             const agentHost = selected.dataset.agentHost;
             const agentId = selected.dataset.agentId;
-            const sessionId = Date.now().toString();
+            const sessionId = crypto.randomUUID();
             switchToAgent(agentName, agentId, sessionId, agentHost);
         }
     });

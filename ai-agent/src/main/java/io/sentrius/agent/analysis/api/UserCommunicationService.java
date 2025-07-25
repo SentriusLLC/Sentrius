@@ -4,6 +4,7 @@ import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import io.sentrius.agent.analysis.model.WebSocky;
 import io.sentrius.sso.core.model.AgentStatus;
@@ -30,12 +31,16 @@ public class UserCommunicationService {
 
 
 
-    public void createSession(String sessionId, WebSocketSession session) {
-        sessions.put(sessionId, WebSocky.builder().sessionId(sessionId).webSocketSession(session).build());
+    public WebSocky createSession(String sessionId, WebSocketSession session) {
+        var websocky =
+            WebSocky.builder().sessionId(sessionId).webSocketSession(session).uniqueIdentifier(UUID.fromString(sessionId).getMostSignificantBits()).build();
+        sessions.put(sessionId, websocky);
+        return websocky;
     }
 
     public Optional<WebSocky> getSession(String sessionId) {
-        return Optional.of(sessions.get(sessionId));
+        var websocky = sessions.get(sessionId);
+        return Optional.of(websocky);
     }
 
     public void remove(String sessionId) {

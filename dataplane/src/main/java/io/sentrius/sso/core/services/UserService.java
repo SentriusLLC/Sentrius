@@ -391,6 +391,40 @@ public class UserService {
         return ret;
     }
 
+
+    /**
+     * Retrieves a user type by its base user.
+     *
+     * @param userTypeName userTypeId
+     * @return An optional containing the user type if found, or empty if not found.
+     */
+    public Optional<UserType> getUserType(String userTypeName) {
+        if (userTypeName == null) {
+            log.warn("Attempted to get UserType with null baseUser or null ID");
+            return Optional.empty();
+        }
+        log.info("Getting user type for baseUser: {}", userTypeName);
+        var ret = userTypeRepository.findByUserTypeName(userTypeName);
+        log.info("Got user type for baseUser: {}", ret);
+        return ret;
+    }
+    /**
+     * Retrieves a user type by its base user.
+     *
+     * @param userTypeId userTypeId
+     * @return An optional containing the user type if found, or empty if not found.
+     */
+    public Optional<UserType> getUserType(Long userTypeId) {
+        if (userTypeId == null) {
+            log.warn("Attempted to get UserType with null baseUser or null ID");
+            return Optional.empty();
+        }
+        log.info("Getting user type for baseUser: {}", userTypeId);
+        var ret = userTypeRepository.findById(userTypeId);
+        log.info("Got user type for baseUser: {}", ret);
+        return ret;
+    }
+
     /**
      * Validates a JWT token.
      *

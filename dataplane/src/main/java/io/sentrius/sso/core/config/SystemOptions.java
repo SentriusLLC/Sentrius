@@ -190,13 +190,13 @@ public class SystemOptions {
     List<Field> fields =  getAllInstanceFields();
     for (var field : fields) {
       if (field.getName().equalsIgnoreCase(fieldName)) {
-        log.debug("Setting field {} to {}", fieldName, fieldValue);
+        log.trace("Setting field {} to {}", fieldName, fieldValue);
         try {
           field.set(this, fieldValue);
 
           // Update the AppConfig with the new field value
           dynamicPropertiesService.updateProperty(fieldName, fieldValue.toString());
-          log.debug("Set field {} to {}", fieldName, fieldValue);
+          log.trace("Set field {} to {}", fieldName, fieldValue);
           return true;
         } catch (IllegalAccessException e) {
           log.error("Failed to update field {}", fieldName);
@@ -240,7 +240,7 @@ public class SystemOptions {
         String fieldName = field.getName();
         Object fieldValue = field.get(this);
 
-        log.debug("Field: {} Value: {}", fieldName, fieldValue);
+        log.trace("Field: {} Value: {}", fieldName, fieldValue);
 
         // Create a SystemOption object with the field details
         var sysOpt = SystemOption.builder()

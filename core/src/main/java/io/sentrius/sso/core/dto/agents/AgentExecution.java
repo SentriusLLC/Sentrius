@@ -1,8 +1,9 @@
-package io.sentrius.sso.core.dto.ztat;
+package io.sentrius.sso.core.dto.agents;
 
 import java.util.ArrayList;
 import java.util.List;
 import io.sentrius.sso.core.dto.UserDTO;
+import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.genai.Message;
 import lombok.Builder;
 import lombok.Data;
@@ -19,20 +20,6 @@ import lombok.experimental.SuperBuilder;
 public class AgentExecution extends TokenDTO {
     UserDTO user;
     String executionId;
-    @Builder.Default
-    List<Message> messages = new ArrayList<>();
 
-    public void addMessages(List<Message> messages) {
-        if (messages == null){
-            messages = new ArrayList<>();
-        }
 
-        this.messages.addAll(messages);
-
-    }
-
-    public void addMessages(Message message) {
-        this.messages.add(message);
-
-    }
 }
