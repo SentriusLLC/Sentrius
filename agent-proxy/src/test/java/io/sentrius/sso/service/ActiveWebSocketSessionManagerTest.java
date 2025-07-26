@@ -72,10 +72,6 @@ class ActiveWebSocketSessionManagerTest {
     void testGetActiveAgentSessionDurations() throws InterruptedException {
         // Given
         String sessionId = "active-session-1";
-        when(webSocketSession.getId()).thenReturn(sessionId);
-        when(webSocketSession.isOpen()).thenReturn(true);
-        when(webSocketSession.getHandshakeInfo()).thenReturn(handshakeInfo);
-        when(handshakeInfo.getRemoteAddress()).thenReturn(new InetSocketAddress("127.0.0.1", 8080));
 
         // When
         sessionManager.register(sessionId, webSocketSession);

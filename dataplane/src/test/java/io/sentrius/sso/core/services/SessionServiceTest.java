@@ -19,6 +19,7 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,13 +62,13 @@ class SessionServiceTest {
         ));
         
         when(terminalLogRepository.findMinAndMaxLogTmBySessionLogId(1L))
-            .thenReturn(Arrays.asList(new Object[]{
+            .thenReturn(Collections.singletonList(new Object[]{
                 Timestamp.valueOf(LocalDateTime.now().minusMinutes(10)),
                 Timestamp.valueOf(LocalDateTime.now().minusMinutes(5))
             }));
             
         when(terminalLogRepository.findMinAndMaxLogTmBySessionLogId(2L))
-            .thenReturn(Arrays.asList(new Object[]{
+            .thenReturn(Collections.singletonList(new Object[]{
                 Timestamp.valueOf(LocalDateTime.now().minusMinutes(20)),
                 Timestamp.valueOf(LocalDateTime.now())
             }));
