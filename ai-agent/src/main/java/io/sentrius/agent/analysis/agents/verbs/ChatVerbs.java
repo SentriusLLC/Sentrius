@@ -2,27 +2,20 @@ package io.sentrius.agent.analysis.agents.verbs;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.sentrius.agent.analysis.agents.agents.AgentConfig;
 import io.sentrius.agent.analysis.agents.agents.AgentVerb;
 import io.sentrius.agent.analysis.agents.agents.PromptBuilder;
 import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
 import io.sentrius.agent.analysis.model.TerminalResponse;
 import io.sentrius.agent.analysis.model.WebSocky;
-import io.sentrius.sso.core.dto.agents.AgentContextDTO;
-import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
-import io.sentrius.sso.core.dto.ztat.AgentExecution;
+import io.sentrius.sso.core.dto.agents.AgentExecution;
+import io.sentrius.sso.core.dto.agents.AgentExecutionContextDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.verbs.Verb;
 import io.sentrius.sso.core.services.agents.AgentClientService;
@@ -34,7 +27,6 @@ import io.sentrius.sso.genai.Message;
 import io.sentrius.sso.genai.Response;
 import io.sentrius.sso.genai.model.LLMRequest;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -76,7 +68,7 @@ public class ChatVerbs extends VerbBase{
         "user input.",
         isAiCallable = false, requiresTokenManagement = true)
     public TerminalResponse interpretUserData(
-        AgentExecution execution, @NonNull WebSocky socketConnection,
+        AgentExecution execution, AgentExecutionContextDTO executionContext, @NonNull WebSocky socketConnection,
         @NonNull Message userMessage) throws ZtatException,
         IOException {
 
@@ -104,7 +96,7 @@ public class ChatVerbs extends VerbBase{
                 "messages. Please generate a user response that summarizes the last message.").build());
             int size = getMessageSize(context);
 
-            var history = getContextWindow(execution.getMessages(), 1024*96 - (size));
+            var history = getContextWindow(executionContext.getMessages(), 1024*96 - (size));
             messages.addAll(history);
             messages.add(Message.builder().role("system").content("Please ensure your nextOperation abides by the " +
                 "following json format and leave it empty if user's request doesn't require explicit use of system " +
@@ -117,7 +109,7 @@ public class ChatVerbs extends VerbBase{
             messages.add(Message.builder().role("user").content(userMessage.getContent()).build());
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
-            execution.addMessages( messages );
+            executionContext.addMessages( messages );
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             log.info("Response is {}", resp);
             for (Response.Choice choice : response.getChoices()) {
@@ -127,7 +119,7 @@ public class ChatVerbs extends VerbBase{
                 } else if (content.startsWith("```")) {
                     content = content.substring(3, content.length() - 3);
                 }
-                log.info("content is {}", content);
+                log.info("+ {}", content);
                 if (null != content && !content.isEmpty()) {
                     try {
                         var newResponse = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readValue(
@@ -155,30 +147,11 @@ public class ChatVerbs extends VerbBase{
             PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
             var prompt = promptBuilder.buildPrompt(false);
             List<Message> messages = new ArrayList<>();
-            //var context = Message.builder().role("system").content(prompt).build();
-            //messages.add(context);
 
-            /*
-            var listedEndpoints = Message.builder().role("system").content("These are a list of available endpoints, " +
-                "description," +
-                " their " +
-                "name:" + endpointArray).build();
-            messages.add(listedEndpoints);
-            messages.add(Message.builder().role("system").content("You have executed verbs for the previous user " +
-                "messages. Please generate a user response that summarizes the last message.").build());
-            int size = getMessageSize(context) + getMessageSize(listedEndpoints);
-
-            var history = getContextWindow(execution.getMessages(), 1024*96 - (size));
+            var history = getContextWindow(executionContext.getMessages(), 1024*96 );
             messages.addAll(history);
 
-             */
-            var history = getContextWindow(execution.getMessages(), 1024*96 );
-            messages.addAll(history);
-
-//            messages.add(Message.builder().role("assistant").content("prior response: " + lastMessage
-//            .getTerminalSummaryForLLM()).build());
-
-            execution.addMessages( userMessage );
+            executionContext.addMessages( userMessage );
             messages.add(Message.builder().role("user").content(userMessage.getContent()).build());
 
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
@@ -196,7 +169,7 @@ public class ChatVerbs extends VerbBase{
                 log.info("content is {}", content);
                 if (null != content && !content.isEmpty()) {
 
-                    execution.addMessages( choice.getMessage() );
+                    executionContext.addMessages( choice.getMessage() );
                     try {
                         var newResponse = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readValue(
                             content,
@@ -267,12 +240,12 @@ public class ChatVerbs extends VerbBase{
     }
 
     public TerminalResponse interpret_plan_response(
-        AgentExecution execution, @NonNull WebSocky socketConnection,
+        AgentExecution execution, AgentExecutionContextDTO executionContext, @NonNull WebSocky socketConnection,
         AgentVerb agentVerb, String planExecutionOutput) throws ZtatException,
         IOException {
 
 
-        log.info("interpret_plan_response");
+        log.info("interpret_plan_response {}", planExecutionOutput);
 
         var lastMessage = socketConnection.getMessages().stream().reduce((prev, next) -> next).orElse(null);
 
@@ -290,7 +263,9 @@ public class ChatVerbs extends VerbBase{
             var prompt = promptBuilder.buildPrompt(false);
             List<Message> messages = new ArrayList<>();
 
-            if (execution.getMessages().isEmpty()) {
+
+
+            if (executionContext.getMessages().isEmpty()) {
                 log.info("*** Adding Prompt");
                 var context = Message.builder().role("system").content(prompt).build();
                 messages.add(context);
@@ -301,6 +276,10 @@ public class ChatVerbs extends VerbBase{
                     "messages. Please generate a user response that summarizes the last message. Keep all responses in " +
                     "TerminalResponse format" +
                     ".").build());
+            } else {
+                executionContext.addMessages( messages );
+                var history = getContextWindow(executionContext.getMessages(), 1024*96 );
+                messages.addAll(history);
             }
 
 
@@ -313,17 +292,17 @@ public class ChatVerbs extends VerbBase{
 
             //messages.add(Message.builder().role("assistant").content("prior response: " + lastMessage
         // .getTerminalSummaryForLLM()).build());
+        if (!planExecutionOutput.isEmpty()) {
             messages.add(Message.builder().role("assistant").content(planExecutionOutput).build());
-
+        }
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
-            execution.addMessages( messages );
-            var history = getContextWindow(execution.getMessages(), 1024*96 );
-            messages.addAll(history);
+
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             log.info("Response is {}", resp);
             for (Response.Choice choice : response.getChoices()) {
                 var content = choice.getMessage().getContent();
+                executionContext.addMessages(choice.getMessage());
                 if (content.startsWith("```json")) {
                     content = content.substring(7, content.length() - 3);
                 } else if (content.startsWith("```")) {

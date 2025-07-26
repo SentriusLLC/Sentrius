@@ -23,15 +23,18 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RestController
 @RequestMapping(ApiPaths.API_V1 + "/agent/launcher")
-public class AgentLauncherController  {
+public class AgentLauncherController {
     private final PodLauncherService podLauncherService;
     private final KeycloakService keycloakService;
 
-    public AgentLauncherController(
-        PodLauncherService podLauncherService, KeycloakService keycloakService) {
+    protected AgentLauncherController(
+        PodLauncherService podLauncherService, KeycloakService keycloakService
+    ) {
+
         this.podLauncherService = podLauncherService;
         this.keycloakService = keycloakService;
     }
+
 
     @PostMapping("/create")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
@@ -49,6 +52,9 @@ public class AgentLauncherController  {
             return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
         }
 
+        // create the user, assign the policy
+
+
         podLauncherService.launchAgentPod(agent);
 
         return ResponseEntity.ok(Map.of("status", "success"));
@@ -65,9 +71,9 @@ public class AgentLauncherController  {
     }
 
     @GetMapping("/status")
-    public ResponseEntity<String> getAgentStatus(@RequestParam(name="agentId") String agentId) {
+    public ResponseEntity<?> getAgentStatus(@RequestParam(name="agentId") String agentId) {
         try {
-            return ResponseEntity.ok(podLauncherService.statusById(agentId) );
+            return ResponseEntity.ok(Map.of("status", podLauncherService.statusById(agentId)) );
         } catch (Exception e) {
             log.error("Status failed", e);
             return ResponseEntity.status(500).body("Status retrieval failed");

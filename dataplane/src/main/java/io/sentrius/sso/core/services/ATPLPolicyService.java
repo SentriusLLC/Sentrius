@@ -6,9 +6,15 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.github.benmanes.caffeine.cache.AsyncCache;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.model.ATPLPolicyEntity;
 import io.sentrius.sso.core.model.AgentPolicyAssignment;
@@ -31,7 +37,10 @@ public class ATPLPolicyService {
     private final ATPLPolicyRepository repository;
     private final AgentPolicyAssignmentRepository agentPolicyAssignmentRepository;
     private final ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
-
+    Cache<String, String> policyCacheLoader = Caffeine.newBuilder()
+        .expireAfterWrite(30, TimeUnit.MINUTES)
+        .maximumSize(100)
+        .build();
     @Transactional
     public ATPLPolicyEntity savePolicy(ATPLPolicy policy) {
         try {
@@ -248,4 +257,25 @@ public class ATPLPolicyService {
             .toList();
     }
 
+    @Transactional
+    public boolean deletePolicyById(String id) {
+        log.info("Deleting policy with ID: {}", id);
+        List<ATPLPolicyEntity> policyEntity = repository.findAllByPolicyId(id);
+        boolean deleted = false;
+        for(ATPLPolicyEntity entity : policyEntity) {
+            repository.delete(entity);
+            deleted = true;
+            log.info("Deleted policy with ID: {}", entity.getId());
+
+        }
+        return deleted;
+    }
+
+    public void cachePolicy(String key, String policyId) {
+        policyCacheLoader.put(key,policyId);
+    }
+
+    public String getCachedPolicy(String key) {
+        return policyCacheLoader.getIfPresent(key);
+    }
 }

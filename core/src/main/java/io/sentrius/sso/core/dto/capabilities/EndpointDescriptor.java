@@ -22,6 +22,8 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EndpointDescriptor {
+    @Builder.Default
+    private String serviceUrl = ""; // Base URL of the service providing this endpoint
     private String name;
     private String description;
     private String type; // "REST" or "VERB"

@@ -31,7 +31,7 @@ public class JwtUtil {
                         .writeValueAsString(authentication.getPrincipal());
                     return (ObjectNode) JsonUtil.MAPPER.readTree(jwt);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    // ignorable error, just return an empty node
                 }
             }
         }

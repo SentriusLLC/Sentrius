@@ -371,8 +371,10 @@ data:
     spring.kafka.bootstrap-servers=sentrius-kafka:9092
     sentrius.agent.launcher.service=http://sentrius-agents-launcherservice:8080/
     sentrius.agent.register.bootstrap.allow=true
-    sentrius.agent.bootstrap.policy=default-policy.yaml
+    sentrius.agent.bootstrap.policy=/config/default-policy.yaml
     agentproxy.externalUrl={{ .Values.agentproxyDomain }}
+    integrationproxy.externalUrl=http://sentrius-integrationproxy:8080/
+    sentrius.integration.proxyUrl=http://sentrius-integrationproxy:8080/
   default-policy.yaml: |
     ---
     version: "v0"
@@ -397,8 +399,27 @@ data:
       primitives:
         - id: "accessLLM"
           description: "access llm"
-          endpoint:
+          endpoints:
             - "/api/v1/chat/completions"
+        - id: "endpoints"
+          description: "endpoints "
+          endpoints:
+            - "/api/v1/capabilities/endpoints"
+        - id: "registration"
+          description: "registration "
+          endpoints:
+            - "/api/v1/agent/bootstrap/register"
+        - id: "verbs"
+          description: "verb endpoint "
+          endpoints:
+            - "/api/v1/capabilities/verbs"
+        - id: "createAgent"
+          description: "Create agent  "
+          endpoints:
+            - "/api/v1/agent/context"
+            - "/api/v1/agent/bootstrap/launcher/create"
+            - "/api/v1/agent/bootstrap/launcher/status"
+            - "/api/v1/capabilities/endpoints"
       composed:
     ztat:
       provider: "ztat-service.internal"

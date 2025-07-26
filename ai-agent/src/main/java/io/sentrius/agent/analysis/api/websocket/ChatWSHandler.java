@@ -10,7 +10,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Maps;
 import io.sentrius.agent.analysis.agents.agents.ChatAgent;
 import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
 import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
@@ -24,7 +23,6 @@ import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.genai.Message;
 import io.sentrius.sso.protobuf.Session;
 import io.sentrius.sso.provenance.ProvenanceEvent;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -77,7 +75,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
         }
 
         Map<String, String> queryParams = parseQueryParams(uri.getQuery());
-        Long sessionId = Long.valueOf( queryParams.get("sessionId") );
+        Long sessionId = UUID.fromString( queryParams.get("sessionId") ).getMostSignificantBits();
         String chatGroupId = queryParams.get("chatGroupId");
         String ztatToken = queryParams.get("ztat");
 
@@ -88,7 +86,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
         }
 
         // Store session
-        userCommunicationService.createSession(queryParams.get("sessionId"), session);
+        var websocky = userCommunicationService.createSession(queryParams.get("sessionId"), session);
         log.info("Session {} created for incoming connection", sessionId);
 
         // Generate and store nonce for this session
@@ -124,6 +122,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
             .build();
 
         agentClientService.submitProvenance(chatAgent.getAgentExecution(), provenanceEvent);
+
     }
 
 
@@ -143,7 +142,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
 
                 if (sessionId != null && websocky.isPresent()) {
                     var websocketCommunication = websocky.get();
-                    log.info("Received message from session ID: " + sessionId);
+                    log.info("Received message from session ID: {}" , sessionId, websocketCommunication.getUniqueIdentifier());
                     // Handle the message (e.g., process or respond)
 
 
@@ -181,6 +180,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
                             Message userMessage = Message.builder().role("user").content(json.get("message").asText()).build();
                             log.info("Received heartbeat from session {}", sessionId);
                             var response = chatVerbs.interpretUserData(chatAgent.getAgentExecution(),
+                                websocketCommunication.getAgentExecutionContextDTO(),
                                 websocketCommunication, userMessage);
                             log.info("Response: {}", response);
                             var newMessage = Session.ChatMessage.newBuilder()
@@ -190,7 +190,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                 )
                                 .setSender("agent")
                                 .setChatGroupId("")
-                                .setSessionId(Long.parseLong(websocketCommunication.getSessionId()))
+                                .setSessionId(websocketCommunication.getUniqueIdentifier())
                                 .setTimestamp(System.currentTimeMillis())
                                 .build();
                             messageBytes = newMessage.toByteArray();
@@ -217,17 +217,23 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                         var arguments = response.getArguments();
                                         var executionResponse = verbRegistry.execute(
                                             chatAgent.getAgentExecution(),
+                                            websocketCommunication.getAgentExecutionContextDTO(),
                                             lastVerbResponse,
                                             response.getNextOperation(), arguments
                                         );
 
 //                                        chatAgent.getAgentExecution().addMessages(Message.builder().role("System")
 //                                        .content("System executed operation: " + response.getNextOperation()).build());
-
+                                        var responses = websocketCommunication.getAgentExecutionContextDTO().getAgentDataList();
+                                        var planResponse =
+                                            responses.isEmpty() ? "" :
+                                                responses.get( responses.size() -1 ).asText();
                                         nextResponse = chatVerbs.interpret_plan_response(
-                                            chatAgent.getAgentExecution(), websocketCommunication,
+                                            chatAgent.getAgentExecution(),
+                                            websocketCommunication.getAgentExecutionContextDTO(),
+                                            websocketCommunication,
                                             verbRegistry.getVerbs().get(response.getNextOperation()),
-                                            executionResponse.getResponse().toString()
+                                            planResponse
                                         );
 
                                         websocky.get().getMessages().add(nextResponse);
@@ -240,7 +246,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                             )
                                             .setSender("agent")
                                             .setChatGroupId("")
-                                            .setSessionId(Long.parseLong(websocketCommunication.getSessionId()))
+                                            .setSessionId(websocketCommunication.getUniqueIdentifier())
                                             .setTimestamp(System.currentTimeMillis())
                                             .build();
                                         messageBytes = newNextMessage.toByteArray();

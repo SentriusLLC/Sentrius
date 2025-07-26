@@ -1,5 +1,10 @@
 package io.sentrius.sso.core.controllers;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -138,5 +143,16 @@ public abstract class BaseController {
      * can access functions
      */
 
+
+    protected InputStream getStream(String requestedPath) throws IOException {
+        Path path = Paths.get(requestedPath); // 🔁 Replace with your actual path
+
+        if (!Files.exists(path)) {
+            throw new RuntimeException("File not found at path: " + path.toAbsolutePath());
+        }
+
+        return Files.newInputStream(path);
+
+    }
 
 }

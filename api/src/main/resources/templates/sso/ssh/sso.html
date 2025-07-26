@@ -1230,7 +1230,7 @@ b
         // Debounce to avoid excessive API calls
         clearTimeout(timeout);
         timeout = setTimeout(() => {
-            fetch(`/api/v1/ticketing/incidents/search?query=${encodeURIComponent(query)}`, {
+            fetch(`/api/v1/associate/search?query=${encodeURIComponent(query)}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1276,7 +1276,7 @@ b
 
         const params = new URLSearchParams(urlObj.search);
         const mySessionId = params.get('sessionId');
-        fetch('/api/v1/ticketing/assign/' + ticketType, {
+        fetch('/api/v1/associate/assign/' + ticketType, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

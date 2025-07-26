@@ -13,11 +13,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.*;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.*;
-import java.util.stream.Stream;
 
 /**
  * Service that scans for both REST API endpoints and Verb methods across the application.
@@ -30,9 +28,16 @@ public class EndpointScanningService {
     private final ApplicationContext applicationContext;
     private final Map<String, EndpointDescriptor> cachedEndpoints = new HashMap<>();
     private boolean cacheInitialized = false;
+    private volatile boolean selectVerbs = false;
 
     public EndpointScanningService(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
+        this.selectVerbs = true;
+    }
+
+
+    public void disableVerbScanning() {
+        this.selectVerbs = false;
     }
 
     /**
@@ -67,9 +72,11 @@ public class EndpointScanningService {
         
         // Scan for REST endpoints
         scanRestEndpoints();
-        
-        // Scan for Verb methods
-        scanVerbEndpoints();
+
+        if (selectVerbs) {
+            // Scan for Verb methods
+            scanVerbEndpoints();
+        }
         
         log.info("Endpoint scanning completed. Found {} endpoints", cachedEndpoints.size());
     }
@@ -105,7 +112,16 @@ public class EndpointScanningService {
         String basePath = classMapping != null && classMapping.value().length > 0 ? classMapping.value()[0] : "";
 
         for (Method method : clazz.getDeclaredMethods()) {
+            // ⛔ Skip methods that are also annotated with @Verb
+            if (method.isAnnotationPresent(Verb.class)) {
+                log.info("Skipping method {} in class {} because it is annotated with @Verb", method.getName(), clazz.getName());
+                continue;
+            } else {
+                log.info("Scanning method {} in class {}", method.getName(), clazz.getName() );
+            }
+
             EndpointDescriptor descriptor = scanRestMethod(clazz, method, basePath);
+            log.info("Scanned method {} in class {}: {}", method.getName(), clazz.getName(), descriptor);
             if (descriptor != null) {
                 String key = descriptor.getType() + ":" + descriptor.getName();
                 cachedEndpoints.put(key, descriptor);
@@ -164,7 +180,7 @@ public class EndpointScanningService {
 
         return EndpointDescriptor.builder()
                 .name(method.getName())
-                .description("REST endpoint: " + httpMethod + " " + path) // TODO: Extract from JavaDoc or custom annotation
+                .description("REST endpoint: " + httpMethod + " " + path)
                 .type("REST")
                 .httpMethod(httpMethod)
                 .path(path)
@@ -223,9 +239,7 @@ public class EndpointScanningService {
                 .requiresTokenManagement(verbAnnotation.requiresTokenManagement())
                 .accessLimitations(AccessLimitations.builder().hasLimitAccess(false).build())
                 .metadata(Map.of(
-                        "isAiCallable", verbAnnotation.isAiCallable(),
-                        "outputInterpreter", verbAnnotation.outputInterpreter().getName(),
-                        "inputInterpreter", verbAnnotation.inputInterpreter().getName()
+                        "isAiCallable", verbAnnotation.isAiCallable()
                 ))
                 .build();
     }
@@ -280,6 +294,7 @@ public class EndpointScanningService {
                 name = !requestHeader.value().isEmpty() ? requestHeader.value() : 
                        (!requestHeader.name().isEmpty() ? requestHeader.name() : name);
                 required = requestHeader.required();
+                continue;
             }
 
             parameters.add(ParameterDescriptor.builder()

@@ -34,7 +34,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @Slf4j
 @Controller
-@RequestMapping("/api/v1/ticketing")
+@RequestMapping("/api/v1/associate/")
 public class TicketingApiController extends BaseController {
 
 
@@ -68,7 +68,7 @@ public class TicketingApiController extends BaseController {
     }
 
     @PostMapping("/assign/{ticketType}")
-    public ResponseEntity<String> searchIncidentIntegrations(HttpServletRequest request,
+    public ResponseEntity<String> searchAssociatedIntegrations(HttpServletRequest request,
                                                                       HttpServletResponse response,
                                                                       @PathVariable("ticketType") String ticketType,
                                                                       @RequestBody Map<String, Object> payload)
@@ -87,7 +87,6 @@ public class TicketingApiController extends BaseController {
 
         switch(ticketType){
             case "jira":
-                log.info("SEssion Id is " + sessionIdStr);
                 var connectedSystem = sessionTrackingService.getConnectedSession(Long.parseLong(sessionIdStr.toString()));
                 if (null != connectedSystem){
                     var configuration = connectedSystem.getEnclave().getConfiguration();
@@ -126,8 +125,8 @@ public class TicketingApiController extends BaseController {
 
     }
 
-    @GetMapping("/incidents/search")
-    public ResponseEntity<List<TicketDTO>> searchIncidentIntegrations(HttpServletRequest request,
+    @GetMapping("/search")
+    public ResponseEntity<List<TicketDTO>> searchIntegrations(HttpServletRequest request,
                                                                       HttpServletResponse response,
                                                                       @RequestParam("query") String query)
         throws JsonProcessingException {

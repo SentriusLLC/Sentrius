@@ -60,7 +60,7 @@ public class JiraProxyController extends BaseController {
 
     @GetMapping("/rest/api/3/search")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
-    public ResponseEntity<?> search(
+    public ResponseEntity<?> searchForJiraIssue(
         @RequestHeader("Authorization") String token,
         @RequestParam(value = "jql", required = false) String jql,
         @RequestParam(value = "query", required = false) String query,
@@ -115,11 +115,11 @@ public class JiraProxyController extends BaseController {
         }
     }
 
-    @GetMapping("/rest/api/3/issue/{issueKey}")
+    @GetMapping("/rest/api/3/issue")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
-    public ResponseEntity<?> getIssue(
+    public ResponseEntity<?> fetchJiraIssue(
         @RequestHeader("Authorization") String token,
-        @PathVariable String issueKey,
+        @RequestParam(name = "issueKey") String issueKey,
         HttpServletRequest request, 
         HttpServletResponse response
     ) throws JsonProcessingException, HttpException {
@@ -160,11 +160,11 @@ public class JiraProxyController extends BaseController {
         }
     }
 
-    @PostMapping("/rest/api/3/issue/{issueKey}/comment")
+    @PostMapping("/rest/api/3/issue/comment")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<?> addComment(
         @RequestHeader("Authorization") String token,
-        @PathVariable String issueKey,
+        @RequestParam(name="issueKey") String issueKey,
         @RequestBody CommentRequest commentRequest,
         HttpServletRequest request, 
         HttpServletResponse response
@@ -217,11 +217,11 @@ public class JiraProxyController extends BaseController {
         }
     }
 
-    @PutMapping("/rest/api/3/issue/{issueKey}/assignee")
+    @PutMapping("/rest/api/3/issue/assignee")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
-    public ResponseEntity<?> assignIssue(
+    public ResponseEntity<?> assignJiraIssue(
         @RequestHeader("Authorization") String token,
-        @PathVariable String issueKey,
+        @RequestParam(name="issueKey") String issueKey,
         @RequestBody AssigneeRequest assigneeRequest,
         HttpServletRequest request, 
         HttpServletResponse response

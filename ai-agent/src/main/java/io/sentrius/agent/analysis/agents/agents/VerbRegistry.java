@@ -1,19 +1,23 @@
 package io.sentrius.agent.analysis.agents.agents;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ScanResult;
+import io.sentrius.sso.core.dto.agents.AgentExecutionContextDTO;
 import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
 import io.sentrius.agent.discovery.AgentEndpointDiscoveryService;
-import io.sentrius.sso.core.dto.ztat.AgentExecution;
+import io.sentrius.sso.core.dto.agents.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
-import io.sentrius.sso.core.model.verbs.OutputInterpreterIfc;
 import io.sentrius.sso.core.model.verbs.Verb;
 import io.sentrius.sso.core.model.verbs.VerbResponse;
 import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.services.capabilities.EndpointScanningService;
+import io.sentrius.sso.core.utils.JsonUtil;
+import io.sentrius.sso.genai.Message;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -73,7 +77,7 @@ public class VerbRegistry {
             try (
                 ScanResult scanResult = new ClassGraph()
                     .enableAllInfo()
-                    .acceptPackages("io.sentrius.agent.analysis.agents.verbs")
+                    .acceptPackages("io.sentrius.agent.analysis.agents.verbs", "io.sentrius.sso.core.integrations.ticketing")
                     .scan()
             ) {
 
@@ -93,11 +97,11 @@ public class VerbRegistry {
                                         .name(name)
                                         .description(annotation.description())
                                         .method(method)
+                                        .argName(annotation.argName())
+                                        .returnName(annotation.returnName())
                                         .exampleJson(annotation.exampleJson())
                                         .requiresTokenManagement(annotation.requiresTokenManagement())
                                         .returnType(annotation.returnType())
-                                        .outputInterpreter(annotation.outputInterpreter())
-                                        .inputInterpreter(annotation.inputInterpreter())
                                         .build();
                                     verbs.put(name, verb);
                                     instances.put(name, instance);
@@ -119,46 +123,75 @@ public class VerbRegistry {
         }
     }
 
-    public VerbResponse execute(AgentExecution agentExecution, VerbResponse priorResponse, String verb,
+    public VerbResponse execute(AgentExecution agentExecution,
+                                AgentExecutionContextDTO contextDTO, VerbResponse priorResponse,
+                                String verb,
                                 Map<String, Object> args)
         throws Exception {
+
+        log.info("Executing {}",  contextDTO);
         synchronized (this) {
-            Map<String, Object> newArgs = new HashMap<>();
+            var agentVerb = verbs.get(verb);
+            if (null == agentVerb) {
+                throw new IllegalArgumentException("Unknown verb: " + verb);
+            }
+
             if (null != args) {
-                newArgs.putAll(args);
+
+                for (Map.Entry<String, Object> entry : args.entrySet()) {
+                    contextDTO.getExecutionArgs().put(entry.getKey(), entry.getValue().toString());
+                }
+
+                if (agentVerb.getArgName() != null && !agentVerb.getArgName().isEmpty() && !agentVerb.getArgName().equals("arg1")) {
+                    ObjectNode object = JsonUtil.MAPPER.createObjectNode();
+                    for (Map.Entry<String, Object> entry : args.entrySet()) {
+                        var node = JsonUtil.MAPPER.valueToTree(entry.getValue());
+                        object.put(entry.getKey(), node);
+                        log.info("Interpreting input " +
+                            "for AgentExecutionContextDTO: {}", entry.getValue());
+                    }
+
+
+                    contextDTO.getExecutionArgs().put(agentVerb.getArgName(), object);
+
+                }
             }
+
             log.info("Executing verb: {}", verb);
-            var returnType = verbs.get(verb).getReturnType();
+            var returnType = agentVerb.getReturnType();
             if (null != priorResponse ) {
-                Class<? extends OutputInterpreterIfc> interpreter = priorResponse.getOutputInterpreter();
                 log.info("Interpreting prior response for verb: {}", verb);
-                log.info("Interpreting prior response with: {}", interpreter.getName());
-                log.info("Interpreting prior response: {}", priorResponse.getReturnType());
+               log.info("Interpreting prior response: {}", priorResponse.getReturnType());
                 log.info("New response return type: {}", returnType);
-                newArgs.putAll(interpreter.getConstructor().newInstance().interpret(priorResponse));
             }
-            Method method = verbs.get(verb).getMethod();
-            var inputInterpreter = verbs.get(verb).getInputInterpreter();
+            Method method = agentVerb.getMethod();
             Object instance = instances.get(verb);
             if (method == null) {
                 throw new IllegalArgumentException("Unknown verb: " + verb);
             }
-            var interpreterInstance = inputInterpreter.getConstructor().newInstance();
             try {
 
 
-                log.info("Interpreting input with: {}", interpreterInstance.getClass().getName());
-                log.info("Interpreting input: {}", newArgs.getClass().getName());
-                log.info("Interpreting input: {}", newArgs);
-                var interpretedInput = interpreterInstance.interpret(newArgs);
+
+                var thisVerb = agentVerb;
+                var exec = thisVerb.isRequiresTokenManagement() ?
+                    method.invoke(instance, agentExecution, contextDTO) :
+                    method.invoke(instance, contextDTO);
+
+                JsonNode execNode = JsonUtil.MAPPER.valueToTree(exec);
+                log.info("Interpreting output for AgentExecutionContextDTO: {}", execNode);
+                // add the output
+                if (null != thisVerb.getReturnName() && !thisVerb.getReturnName().isEmpty()) {
+                    contextDTO.addToMemory(thisVerb.getReturnName(), execNode);
+                } else {
+                    contextDTO.addToMemory(verb, execNode);
+                }
+
 
                 return VerbResponse.builder()
-                    .response(verbs.get(verb).isRequiresTokenManagement() ?
-                        method.invoke(instance,agentExecution, interpretedInput) :
-                        method.invoke(instance, interpretedInput))
                     .returnType(returnType)
-                    .outputInterpreter(verbs.get(verb).getOutputInterpreter())
                     .build();
+
             } catch (InvocationTargetException e) {
                     Throwable targetException = e.getTargetException();
                     if (targetException instanceof ZtatException ztatEx) {
@@ -179,22 +212,32 @@ public class VerbRegistry {
 
                         log.info("Re-attempting verb execution after Ztat token acquisition: {}", verb);
 
-                        var interpretedInput = interpreterInstance.interpret(newArgs);
-
-                        log.info("Re-attempting verb execution after Ztat token acquisition: {}", verb);
+                        var thisVerb = agentVerb;
+                        var exec = thisVerb.isRequiresTokenManagement() ?
+                            method.invoke(instance, agentExecution, contextDTO) :
+                            method.invoke(instance, contextDTO);
+                        JsonNode execNode = JsonUtil.MAPPER.valueToTree(exec);
+                        // add the output
+                        if (null != thisVerb.getReturnName() && !thisVerb.getReturnName().isEmpty()) {
+                            contextDTO.addToMemory(thisVerb.getReturnName(), execNode);
+                        } else {
+                            contextDTO.addToMemory(verb, execNode);
+                        }
 
                         return VerbResponse.builder()
-                            .response(verbs.get(verb).isRequiresTokenManagement() ?
-                                method.invoke(instance,agentExecution, interpretedInput) :
-                                method.invoke(instance, interpretedInput))
                             .returnType(returnType)
-                            .outputInterpreter(verbs.get(verb).getOutputInterpreter())
                             .build();
+
+
+
                         // re-attempt
                     } else {
                         throw new RuntimeException(targetException);
                     }
             } catch (Exception e) {
+                log.info(method.getName() + " failed", e);
+                e.printStackTrace();
+                contextDTO.addMessages(Message.builder().role("system").content("Previous request failed: " + e.getMessage()).build());
                 throw new RuntimeException("Failed to execute verb: " + verb, e);
             }
         }

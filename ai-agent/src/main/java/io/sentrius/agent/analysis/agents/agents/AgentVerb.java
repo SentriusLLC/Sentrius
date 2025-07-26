@@ -3,9 +3,6 @@ package io.sentrius.agent.analysis.agents.agents;
 import java.lang.reflect.Method;
 import java.util.List;
 import io.sentrius.sso.core.dto.capabilities.ParameterDescriptor;
-import io.sentrius.sso.core.model.verbs.DefaultInterpreter;
-import io.sentrius.sso.core.model.verbs.InputInterpreterIfc;
-import io.sentrius.sso.core.model.verbs.OutputInterpreterIfc;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -21,9 +18,11 @@ public class AgentVerb {
     private boolean requiresTokenManagement = false;
     @Builder.Default
     private Class<?> returnType =  String.class;
+
     @Builder.Default
-    Class<? extends OutputInterpreterIfc> outputInterpreter = DefaultInterpreter.class;
-    Class<? extends InputInterpreterIfc> inputInterpreter = DefaultInterpreter.class;
+    private String returnName =  "";
 
     private String exampleJson = "";
+    @Builder.Default
+    private String argName = "arg1";
 }

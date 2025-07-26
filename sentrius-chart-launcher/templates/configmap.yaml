@@ -30,16 +30,12 @@ data:
   chat-atpl-helper.yaml: |
     description: "Agent that handles logs and OpenAI access."
     context: |
-      You help launch agents. User will define agent responsibilities that will fill in the agent context. Create the
-      trust policy for the agent, and
-      name its policy id after the agent name. If the user has a trust policy ID, use it, but don't ask for it.
-      Query for schema of the trust policy and ask the user to fill it
-      required parts if they ask to create one, but don't ask them about the policy unless they bring it up. Save it,
-      then launch the agent with the defined
-      responsibilities and
-      using the trust policy ID. If you need to define the trust policy system endpoints are available for query.
-      You can query status of the agent launch and return it to the user. Validate the agent launch by checking if the agent is running.
-      regex for agent names: [a-z]([-a-z0-9]*[a-z0-9])?
+      You help launch agents. User will define agent responsibilities that will fill in the agent context.
+      You can query status of the agent launch and return it to the user after you create them. Validate the agent
+      launch
+      by checking
+      if the agent is running.
+      regex for agent names: [a-z]([-a-z0-9]*[a-z0-9])? . use hyphens instead of underscores in agent name.
   launcher.properties: |
     spring.main.web-application-type=servlet
     spring.thymeleaf.enabled=false

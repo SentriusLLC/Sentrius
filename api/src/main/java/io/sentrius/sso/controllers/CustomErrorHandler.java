@@ -1,13 +1,17 @@
 package io.sentrius.sso.controllers;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.sentrius.sso.core.model.ErrorOutput;
 import io.sentrius.sso.core.services.ErrorOutputService;
+import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.core.utils.MessagingUtil;
 import io.sentrius.sso.core.utils.ZTATUtils;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.servlet.error.ErrorController;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,7 +34,29 @@ public class CustomErrorHandler implements ErrorController {
         return ZTATUtils.getCommandHash(sb.toString());
     }
 
+    @RequestMapping("/error")
+    public Object handleError(HttpServletRequest request, HttpServletResponse response, Model model) {
+        Integer statusCode = (Integer) request.getAttribute("jakarta.servlet.error.status_code");
+        Throwable ex = (Throwable) request.getAttribute("jakarta.servlet.error.exception");
+        String message = (ex != null) ? ex.getMessage() : "Unknown error";
 
+        // Log as needed
+        log.error("Error occurred: Status code {}, message {}", statusCode, message, ex);
+
+        boolean isAjax = "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
+        if (isAjax) {
+            ObjectNode errorResponse = JsonUtil.MAPPER.createObjectNode();
+            errorResponse.put("error", true);
+            errorResponse.put("status", statusCode != null ? statusCode : 500);
+            errorResponse.put("message", message);
+            return ResponseEntity.status(statusCode != null ? statusCode : 500).body(errorResponse);
+        }
+
+        // Otherwise, redirect to dashboard
+        model.addAttribute("errorId", MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR));
+        return "redirect:/sso/v1/dashboard?errorId=" + MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR);
+    }
+    /*
     @RequestMapping("/error")
     public String handleError(HttpServletRequest request, Model model) {
         // Retrieve error details
@@ -60,5 +86,5 @@ public class CustomErrorHandler implements ErrorController {
 
         // Redirect to "/mydashboard" with the messageId parameter
         return "redirect:/sso/v1/dashboard?errorId=" + MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR);
-    }
+    }*/
 }

@@ -3,18 +3,15 @@ package io.sentrius.agent.discovery;
 import io.sentrius.agent.analysis.agents.agents.AgentVerb;
 import io.sentrius.agent.config.AgentConfigOptions;
 import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
-import io.sentrius.sso.core.dto.ztat.AgentExecution;
+import io.sentrius.sso.core.dto.agents.AgentExecution;
 import io.sentrius.sso.core.exceptions.ZtatException;
-import io.sentrius.sso.core.model.verbs.DefaultInterpreter;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -69,8 +66,6 @@ public class AgentEndpointDiscoveryService {
             .description(descriptor.getDescription())
             .returnType(descriptor.getReturnType() != null ? descriptor.getReturnType() : String.class)
             .requiresTokenManagement(descriptor.isRequiresTokenManagement())
-            .outputInterpreter(DefaultInterpreter.class) // You can enhance this later if `metadata` has interpreter info
-            .inputInterpreter(DefaultInterpreter.class)
             .paramDescriptions(descriptor.getParameters())
             .isAiCallable(true) // Assume everything from the API is callable
             .build();

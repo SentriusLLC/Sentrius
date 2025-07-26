@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -798,7 +797,7 @@ public class AgentApiController extends BaseController {
         @PathVariable("contextId") String contextId){
         var databaseContext = agentContextService.getContextOrThrow(UUID.fromString(contextId));
         return ResponseEntity.ok(AgentContextDTO.builder()
-            .id(databaseContext.getId())
+            .contextId(databaseContext.getId())
             .name(databaseContext.getName())
             .description(databaseContext.getDescription())
             .context(databaseContext.getContext())
@@ -814,14 +813,17 @@ public class AgentApiController extends BaseController {
         HttpServletResponse response,
         @RequestBody AgentContextRequestDTO dtoRequest){
         var databaseContext = agentContextService.create(dtoRequest);
-        return ResponseEntity.ok(AgentContextDTO.builder()
-            .id(databaseContext.getId())
+
+        var dto = AgentContextDTO.builder()
+            .contextId(databaseContext.getId())
             .name(databaseContext.getName())
             .description(databaseContext.getDescription())
             .context(databaseContext.getContext())
             .createdAt(databaseContext.getCreatedAt())
             .updatedAt(databaseContext.getUpdatedAt())
-            .build());
+            .build();
+        log.info("Created new agent context: {}", dto);
+        return ResponseEntity.ok(dto);
     }
 
 }

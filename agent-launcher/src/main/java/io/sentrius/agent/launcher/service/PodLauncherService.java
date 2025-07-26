@@ -178,8 +178,12 @@ public class PodLauncherService {
         List<String> argList = new ArrayList<>();
         argList.add("--spring.config.location=file:/config/agent.properties");
         argList.add("--agent.namePrefix=" + agentId);
+        argList.add("--agent.clientId=" + agent.getClientId());
         argList.add("--agent.listen.websocket=true");
         argList.add("--agent.callback.url=" + constructedCallbackUrl);
+        if (agent.getAgentPolicyId() != null && !agent.getAgentPolicyId().isEmpty()) {
+            argList.add("--agent.ai.policy.id=" + agent.getAgentPolicyId());
+        }
         if (agent.getAgentContextId() != null && !agent.getAgentContextId().isEmpty()) {
             argList.add("--agent.ai.context.db.id=" + agent.getAgentContextId());
         }else {
@@ -215,8 +219,8 @@ public class PodLauncherService {
                     .args(argList)
                     .resources(new V1ResourceRequirements()
                         .limits(Map.of(
-                            "cpu", Quantity.fromString("1000m"),
-                            "memory", Quantity.fromString("1Gi")
+                            "cpu", Quantity.fromString("2000m"),
+                            "memory", Quantity.fromString("2Gi")
                         )))
                         .volumeMounts(List.of(
                             new V1VolumeMount()

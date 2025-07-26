@@ -75,7 +75,7 @@ class JiraProxyControllerTest {
         when(keycloakService.validateJwt("invalid-token")).thenReturn(false);
 
         // When
-        ResponseEntity<?> result = jiraProxyController.search(
+        ResponseEntity<?> result = jiraProxyController.searchForJiraIssue(
             invalidToken, "test query", null, request, response
         );
 
@@ -94,7 +94,7 @@ class JiraProxyControllerTest {
             .thenReturn(Collections.emptyList());
 
         // When
-        ResponseEntity<?> result = jiraProxyController.search(
+        ResponseEntity<?> result = jiraProxyController.searchForJiraIssue(
             validToken, "test query", null, request, response
         );
 
@@ -118,7 +118,7 @@ class JiraProxyControllerTest {
             .thenReturn(Arrays.asList(mockToken));
 
         // When
-        ResponseEntity<?> result = jiraProxyController.search(
+        ResponseEntity<?> result = jiraProxyController.searchForJiraIssue(
             validToken, null, null, request, response
         );
 
@@ -134,7 +134,7 @@ class JiraProxyControllerTest {
         when(keycloakService.validateJwt("invalid-token")).thenReturn(false);
 
         // When
-        ResponseEntity<?> result = jiraProxyController.getIssue(
+        ResponseEntity<?> result = jiraProxyController.fetchJiraIssue(
             invalidToken, "TEST-123", request, response
         );
 
@@ -153,7 +153,7 @@ class JiraProxyControllerTest {
             .thenReturn(Collections.emptyList());
 
         // When
-        ResponseEntity<?> result = jiraProxyController.getIssue(
+        ResponseEntity<?> result = jiraProxyController.fetchJiraIssue(
             validToken, "TEST-123", request, response
         );
 
@@ -191,7 +191,7 @@ class JiraProxyControllerTest {
         assigneeRequest.setAccountId("test-account-id");
 
         // When
-        ResponseEntity<?> result = jiraProxyController.assignIssue(
+        ResponseEntity<?> result = jiraProxyController.assignJiraIssue(
             invalidToken, "TEST-123", assigneeRequest, request, response
         );
 

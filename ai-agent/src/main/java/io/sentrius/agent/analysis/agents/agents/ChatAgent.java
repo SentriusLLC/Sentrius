@@ -9,7 +9,7 @@ import io.sentrius.agent.analysis.api.AgentKeyService;
 import io.sentrius.agent.analysis.api.UserCommunicationService;
 import io.sentrius.agent.config.AgentConfigOptions;
 import io.sentrius.sso.core.dto.UserDTO;
-import io.sentrius.sso.core.dto.ztat.AgentExecution;
+import io.sentrius.sso.core.dto.agents.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.security.Ztat;
@@ -85,7 +85,8 @@ public class ChatAgent implements ApplicationListener<ApplicationReadyEvent> {
         try {
             var agentName = agentConfigOptions.getNamePrefix() + "-" + UUID.randomUUID().toString();
             var base64PublicKey = agentKeyService.getBase64PublicKey(keyPair.getPublic());
-            var agentRegistrationDTO = agentClientService.bootstrap(agentName, base64PublicKey
+            var agentRegistrationDTO = agentClientService.bootstrap(agentConfigOptions.getClientId(), agentName,
+                base64PublicKey
                 , keyPair.getPublic().getAlgorithm());
 
             var encryptedSecret = agentRegistrationDTO.getClientSecret();
@@ -143,15 +144,24 @@ public class ChatAgent implements ApplicationListener<ApplicationReadyEvent> {
             throw new RuntimeException(e);
         }
 
+        int allowedFailures = 20;
+        log.info("Agent Registered...");
         while(running) {
 
-                log.info("Agent Registered...");
+
                 try {
 
                     Thread.sleep(5_000);
                     agentClientService.heartbeat(agentExecution, agentExecution.getUser().getUsername());
-                } catch (InterruptedException | ZtatException ex) {
-                    throw new RuntimeException(ex);
+                    allowedFailures = 20; // Reset allowed failures on successful heartbeat
+                } catch (ZtatException | Exception ex) {
+                    if (allowedFailures-- <= 0) {
+                        log.error("Failed to heartbeat agent after multiple attempts, shutting down...");
+                        throw new RuntimeException(ex);
+                    } else {
+                        log.warn("Heartbeat failed, retrying... Remaining attempts: {}", allowedFailures);
+                    }
+
                 }
 
         }

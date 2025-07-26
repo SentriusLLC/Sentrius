@@ -6,6 +6,7 @@ import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.collect.Maps;
@@ -16,6 +17,7 @@ import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.AgentRegistrationDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
+import io.sentrius.sso.core.model.ATPLPolicyEntity;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.IdentityType;
 import io.sentrius.sso.core.model.security.UserType;
@@ -134,25 +136,40 @@ public class AgentBootstrapController extends BaseController {
                     log.info("Creating new user: {}", user);
                     user = userService.save(user);
 
-                try(InputStream terminalHelperStream = getClass().getClassLoader().getResourceAsStream(appConfig.getDefaultPolicyFile())) {
-                    if (terminalHelperStream == null) {
-                        throw new RuntimeException(appConfig.getDefaultPolicyFile() + "not found on classpath");
+                    log.info("Created user: {}", user.getUsername());
 
+                    var policyId =  atplPolicyService.getCachedPolicy( registrationDTO.getClientId() );
+                    Optional<ATPLPolicyEntity> policyEntity = Optional.empty();
+                    if (null != policyId ){
+                        log.info("Found cached policy ID: {}", policyId);
+                        policyEntity = atplPolicyService.getLatestPolicyEntity(policyId);
                     }
+                    if ( policyEntity.isEmpty() ) {
+                        log.info("No policy found for agent {}. Assigning default policy", registrationDTO.getAgentName());
+                        try (
+                            InputStream terminalHelperStream = getStream(appConfig.getDefaultPolicyFile())
+                        ) {
+                            if (terminalHelperStream == null) {
+                                throw new RuntimeException(appConfig.getDefaultPolicyFile() + "not found on classpath");
+
+                            }
 
 
-                    String defaultYaml = new String(terminalHelperStream.readAllBytes());
-                    ATPLPolicy policy = yamlMapper.readValue(defaultYaml, ATPLPolicy.class);
-                    var latest = atplPolicyService.getLatestPolicyEntity( policy.getPolicyId() );
-                    if (latest.isEmpty() ) {
-                        var addedPolicy = atplPolicyService.createPolicy(user, defaultYaml);
+                            String defaultYaml = new String(terminalHelperStream.readAllBytes());
+                            ATPLPolicy policy = yamlMapper.readValue(defaultYaml, ATPLPolicy.class);
+                            var latest = atplPolicyService.getLatestPolicyEntity(policy.getPolicyId());
+                            if (latest.isEmpty()) {
+                                var addedPolicy = atplPolicyService.createPolicy(user, defaultYaml);
+                            } else {
+                                atplPolicyService.assignPolicyToUser(user, latest.get());
+                            }
+                            log.info("Default policy file: {}", appConfig.getDefaultPolicyFile());
+
+                        }
+                    } else {
+
+                        atplPolicyService.assignPolicyToUser(user, policyEntity.get());
                     }
-                    else {
-                        atplPolicyService.assignPolicyToUser(user, latest.get());
-                    }
-                    log.info("Default policy file: {}", appConfig.getDefaultPolicyFile());
-
-                }
 
             }
 
@@ -192,9 +209,22 @@ public class AgentBootstrapController extends BaseController {
             log.error("Error getting agent status", e);
 
         }
+
+        var latest = atplPolicyService.getLatestPolicyEntity( registrationDTO.getAgentPolicyId() );
+        if (latest.isPresent()) {
+            log.info("Caching policy {} to agent {}", registrationDTO.getAgentPolicyId(),
+                registrationDTO.getAgentName());
+            atplPolicyService.cachePolicy(registrationDTO.getClientId(), registrationDTO.getAgentPolicyId());
+
+
+        } else {
+            log.info("Policy {} not found, skipping assignment", registrationDTO.getAgentPolicyId());
+        }
+
         var operatingUser = getOperatingUser(request, response );
         zeroTrustClientService.callAuthenticatedPostOnApi(appConfig.getSentriusLauncherService(),  "agent/launcher/create",
             registrationDTO);
+
         // bootstrap with a default policy
         return ResponseEntity.ok("{\"status\": \"success\"}");
     }

@@ -1,5 +1,7 @@
 package io.sentrius.sso.core.integrations.ticketing;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -7,7 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.sentrius.sso.core.dto.TicketDTO;
 import io.sentrius.sso.core.integrations.external.ExternalIntegrationDTO;
@@ -45,13 +49,17 @@ public class JiraService {
         ExternalIntegrationDTO externalIntegrationDTO = JsonUtil.MAPPER.readValue(integration.getConnectionInfo(),
             ExternalIntegrationDTO.class);
         this.jiraBaseUrl = externalIntegrationDTO.getBaseUrl();
+        if (null != jiraBaseUrl && !jiraBaseUrl.startsWith("https://")) {
+            jiraBaseUrl = "https://" + jiraBaseUrl;
+        }
         this.apiToken = externalIntegrationDTO.getApiToken();
         this.username = externalIntegrationDTO.getUsername();
     }
 
     public boolean isTicketActive(String ticketKey) {
-        String url = String.format("%s/rest/api/3/issue/%s", jiraBaseUrl, ticketKey);
 
+        String url = String.format("%s/rest/api/3/issue/%s", jiraBaseUrl, ticketKey);
+        log.info(url);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(apiToken);
         //headers.setBasicAuth(username, apiToken);
@@ -95,18 +103,21 @@ public class JiraService {
         return Optional.empty();
     }
 
-    public List<TicketDTO> searchForIncidents(String query) throws ExecutionException, InterruptedException {
+    public List<TicketDTO> searchForIncidents(String query)
+        throws ExecutionException, InterruptedException, JsonProcessingException {
         List<TicketDTO> ticketsFound = new ArrayList<>();
 
         // Jira Search API endpoint
         String url = String.format("%s/rest/api/3/search", jiraBaseUrl);
 
+        // ✅ Decode query (in case it was encoded when passed via endpoint)
+        String decodedQuery = URLDecoder.decode(query, StandardCharsets.UTF_8);
         // JQL query to search by summary, description, or issue key
         boolean isIssueKey = query.matches("[A-Z]+-\\d+"); // Regex to match issue keys like "PROJECT-123"
 
         String jql = isIssueKey
-            ? String.format("(key = \"%s\" OR summary ~ \"%s\" OR description ~ \"%s\") ", query, query, query)
-            : String.format("(summary ~ \"%s\" OR description ~ \"%s\") ", query, query);
+            ? String.format("(key = \"%s\" OR summary ~ \"%s\" OR description ~ \"%s\") ", decodedQuery, decodedQuery, decodedQuery)
+            : String.format("%s", decodedQuery);
         log.info("Searching Jira with JQL: {}", jql);
 
         // Request body for Jira API
@@ -133,7 +144,16 @@ public class JiraService {
             String key = (String) issue.get("key");
             Map<String, Object> fields = (Map<String, Object>) issue.get("fields");
             String summary = (String) fields.get("summary");
-            String description = (String) fields.get("description");
+            Object descriptionRaw = fields.get("description");
+            String description;
+
+            if (descriptionRaw instanceof String) {
+                description = (String) descriptionRaw;
+            } else if (descriptionRaw != null) {
+                description = JsonUtil.MAPPER.writeValueAsString(descriptionRaw); // JSON blob fallback
+            } else {
+                description = "";
+            }
             String status = (String) ((Map<String, Object>) fields.get("status")).get("name");
 
             // Add to the result list
@@ -213,6 +233,18 @@ public class JiraService {
         } catch (Exception e) {
             log.error("Error while adding comment to ticket: {}", e.getMessage());
             return false;
+        }
+    }
+
+    public String extractTextFromADF(Object adf) {
+        try {
+            JsonNode root = JsonUtil.MAPPER.convertValue(adf, JsonNode.class);
+            return root.path("content")
+                .findValuesAsText("text")
+                .stream().collect(Collectors.joining(" "));
+        } catch (Exception e) {
+            log.warn("Failed to parse ADF description", e);
+            return "";
         }
     }
 }

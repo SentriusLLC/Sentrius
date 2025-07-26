@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.sentrius.agent.analysis.agents.agents.AgentConfig;
 import io.sentrius.sso.core.dto.agents.AgentContextDTO;
-import io.sentrius.sso.core.dto.ztat.AgentExecution;
+import io.sentrius.sso.core.dto.agents.AgentExecution;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.services.agents.AgentClientService;
 import lombok.extern.slf4j.Slf4j;

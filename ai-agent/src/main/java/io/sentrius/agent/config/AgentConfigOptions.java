@@ -14,6 +14,7 @@ public class AgentConfigOptions {
 
 
     private String namePrefix;
+    private String clientId;
     private String type;
     private List<String> endpoints;
 }

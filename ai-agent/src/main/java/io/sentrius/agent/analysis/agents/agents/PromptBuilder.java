@@ -81,11 +81,11 @@ public class PromptBuilder {
                     // your DTO
                     try {
                         if (verb.getExampleJson() != null && !verb.getExampleJson().isEmpty()) {
-                            prompt.append("  Example arg1: ").append(verb.getExampleJson()).append("\n");
+                            prompt.append("  Example \"" + verb.getArgName() + "\": ").append(verb.getExampleJson()).append("\n");
                         } else if (example != null) {
                             // Serialize the example object to JSON
                             String exampleJson = JsonUtil.MAPPER.writeValueAsString(example);
-                            prompt.append("  Example arg1: ").append(exampleJson).append("\n");
+                            prompt.append("  Example " + verb.getArgName() + ": ").append(exampleJson).append("\n");
                         }
 
                     } catch (Exception e) {

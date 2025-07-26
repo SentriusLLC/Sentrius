@@ -1,3 +1,4 @@
+
 """
 Test configuration manager functionality.
 """

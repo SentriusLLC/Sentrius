@@ -4,11 +4,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import io.sentrius.agent.analysis.agents.interpreters.StringToAtplInterpreter;
-import io.sentrius.sso.core.dto.ztat.AtatRequest;
+import io.sentrius.sso.core.dto.agents.AgentExecutionContextDTO;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
-import io.sentrius.sso.core.model.verbs.DefaultInterpreter;
 import io.sentrius.sso.core.model.verbs.Verb;
 import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.LLMService;
@@ -47,9 +45,7 @@ public class AtplVerbs extends VerbBase {
         this.agentVerbs = agentVerbs;
     }
 
-    @Verb(name = "qry_policy_id", description = "Queries by policyId.",
-        inputInterpreter = StringToAtplInterpreter.class,
-        outputInterpreter = DefaultInterpreter.class, requiresTokenManagement = true)
+    @Verb(name = "qry_policy_id", description = "Queries trust policy by policyId.", requiresTokenManagement = true)
     public ArrayNode queryPolicyById(TokenDTO token, String policyId) throws ZtatException {
         try {
 
@@ -66,9 +62,9 @@ public class AtplVerbs extends VerbBase {
     }
 
     @Verb(name = "get_atpl_schema", description = "Gets Schema. No argument required. Returns JSON Schema.",
-        inputInterpreter = DefaultInterpreter.class,
-        outputInterpreter = DefaultInterpreter.class, requiresTokenManagement = true)
-    public String getAtplSchema(TokenDTO token, Map<String,Object> args) throws ZtatException, IOException {
+        
+         requiresTokenManagement = true)
+    public String getAtplSchema(TokenDTO token, AgentExecutionContextDTO context) throws ZtatException, IOException {
         InputStream schema = getClass().getClassLoader().getResourceAsStream("atpl-schema.json");
         if (schema == null) {
             throw new RuntimeException("atpl-schema.json not found on classpath");
@@ -84,11 +80,12 @@ public class AtplVerbs extends VerbBase {
      * @throws io.sentrius.sso.core.exceptions.ZtatException If there is an error during the operation.
      */
     @Verb(name = "save_policy", description = "Saves an ATPL policy. Accepts ATPL policy in JSON format.",
-        inputInterpreter = StringToAtplInterpreter.class,
-        outputInterpreter = DefaultInterpreter.class, requiresTokenManagement = true)
-    public ArrayNode savePolicy(TokenDTO token, ATPLPolicy policy) throws ZtatException {
+        
+         requiresTokenManagement = true)
+    public ArrayNode savePolicy(TokenDTO token, AgentExecutionContextDTO context) throws ZtatException {
         try {
 
+            var policy = context.getExecutionArgumentScoped("policy" , ATPLPolicy.class);
             log.info("policy is : {}", policy);
             String response = zeroTrustClientService.callPostOnApi("/api/v1/policies", policy);
             if (response == null) {
