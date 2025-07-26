@@ -7,7 +7,9 @@ import io.sentrius.sso.core.model.sessions.TerminalLogs;
 import io.sentrius.sso.core.repository.SessionLogRepository;
 import io.sentrius.sso.core.repository.TerminalLogRepository;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 @Service
 public class SessionService {
 
@@ -29,6 +32,10 @@ public class SessionService {
 
     @Autowired
     private TerminalLogRepository terminalLogRepository;
+
+
+    @Value("${agentproxy.externalUrl:}")
+    private String agentProxyExternalUrl;
 
     private final Map<Long, SessionLog> activeSessions = new ConcurrentHashMap<>();
     private final Map<Long, TerminalLogs> activeTerminals = new ConcurrentHashMap<>();
@@ -134,6 +141,7 @@ public class SessionService {
     public Map<String, Integer> getGraphData(String username) {
         List<Map<String, Object>> sessionDurations = getSessionDurationData(username);
 
+        // Add agent session durations
         Map<String, Integer> graphData = new HashMap<>();
         graphData.put("0-5 min", 0);
         graphData.put("5-15 min", 0);
@@ -156,5 +164,14 @@ public class SessionService {
 
         return graphData;
     }
+
+    public List<Map<String, Object>> getGraphList(String username) {
+        List<Map<String, Object>> sessionDurations = getSessionDurationData(username);
+
+        return sessionDurations;
+    }
+
+
+
 
 }

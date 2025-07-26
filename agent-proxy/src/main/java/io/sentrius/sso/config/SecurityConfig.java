@@ -65,6 +65,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
+        log.info("Configuring CORS for agent API URL: {}", agentApiUrl);
         config.setAllowedOrigins(List.of(agentApiUrl));
         config.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
