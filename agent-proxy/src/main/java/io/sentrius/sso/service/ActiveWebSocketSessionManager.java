@@ -11,9 +11,11 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import io.sentrius.sso.core.dto.TerminalLogDTO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.socket.WebSocketSession;
 
+@Slf4j
 @Component
 public class ActiveWebSocketSessionManager {
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
@@ -72,6 +74,7 @@ public class ActiveWebSocketSessionManager {
      */
     public List<Map<String, Object>> getAgentSessionDurations() {
         synchronized (completedAgentSessions) {
+            log.info("Returning {} completed agent sessions", completedAgentSessions.size());
             return new ArrayList<>(completedAgentSessions);
         }
     }
@@ -103,7 +106,7 @@ public class ActiveWebSocketSessionManager {
                 activeDurations.add(activeSession);
             }
         }
-        
+        log.info("Returning {} active agent session durations", activeDurations.size());
         return activeDurations;
     }
 }

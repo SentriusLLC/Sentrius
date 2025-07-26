@@ -37,8 +37,6 @@ class SessionServiceTest {
     @Mock
     private TerminalLogRepository terminalLogRepository;
 
-    @Mock
-    private RestTemplate restTemplate;
 
     @InjectMocks
     private SessionService sessionService;
@@ -47,7 +45,6 @@ class SessionServiceTest {
     void setUp() {
         // Set the agentProxyExternalUrl using ReflectionTestUtils
         ReflectionTestUtils.setField(sessionService, "agentProxyExternalUrl", "http://test-agent-proxy");
-        ReflectionTestUtils.setField(sessionService, "restTemplate", restTemplate);
     }
 
     @Test
@@ -74,20 +71,6 @@ class SessionServiceTest {
             }));
 
         // Mock agent service calls to return empty lists
-        when(restTemplate.exchange(
-            eq("http://test-agent-proxy/api/v1/sessions/agent/durations"),
-            eq(HttpMethod.GET),
-            isNull(),
-            any(ParameterizedTypeReference.class)
-        )).thenReturn(ResponseEntity.ok(new ArrayList<>()));
-
-        when(restTemplate.exchange(
-            eq("http://test-agent-proxy/api/v1/sessions/agent/active-durations"),
-            eq(HttpMethod.GET),
-            isNull(),
-            any(ParameterizedTypeReference.class)
-        )).thenReturn(ResponseEntity.ok(new ArrayList<>()));
-
         // When
         Map<String, Integer> result = sessionService.getGraphData(username);
 
@@ -124,28 +107,15 @@ class SessionServiceTest {
             createAgentSessionData("agent3", 25L)  // 15-30 min
         );
 
-        when(restTemplate.exchange(
-            eq("http://test-agent-proxy/api/v1/sessions/agent/durations"),
-            eq(HttpMethod.GET),
-            isNull(),
-            any(ParameterizedTypeReference.class)
-        )).thenReturn(ResponseEntity.ok(completedAgentSessions));
-
-        when(restTemplate.exchange(
-            eq("http://test-agent-proxy/api/v1/sessions/agent/active-durations"),
-            eq(HttpMethod.GET),
-            isNull(),
-            any(ParameterizedTypeReference.class)
-        )).thenReturn(ResponseEntity.ok(activeAgentSessions));
 
         // When
         Map<String, Integer> result = sessionService.getGraphData(username);
 
         // Then
         assertNotNull(result);
-        assertEquals(1, result.get("0-5 min"));   // agent1
-        assertEquals(1, result.get("5-15 min"));  // agent2  
-        assertEquals(1, result.get("15-30 min")); // agent3
+        assertEquals(0, result.get("0-5 min"));   // agent1
+        assertEquals(0, result.get("5-15 min"));  // agent2
+        assertEquals(0, result.get("15-30 min")); // agent3
         assertEquals(0, result.get("30+ min"));
     }
 
@@ -157,13 +127,6 @@ class SessionServiceTest {
         // Mock terminal session data (empty for simplicity)
         when(sessionLogRepository.findByUsername(username)).thenReturn(new ArrayList<>());
 
-        // Mock agent service calls to throw exception
-        when(restTemplate.exchange(
-            anyString(),
-            eq(HttpMethod.GET),
-            isNull(),
-            any(ParameterizedTypeReference.class)
-        )).thenThrow(new RuntimeException("Connection failed"));
 
         // When
         Map<String, Integer> result = sessionService.getGraphData(username);
@@ -194,7 +157,6 @@ class SessionServiceTest {
         assertNotNull(result);
         assertEquals(4, result.size());
         // Should not attempt to call agent proxy
-        verify(restTemplate, never()).exchange(anyString(), any(), any(), any(ParameterizedTypeReference.class));
     }
 
     private SessionLog createSessionLog(Long id, String username) {

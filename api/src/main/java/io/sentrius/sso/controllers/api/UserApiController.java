@@ -2,6 +2,7 @@ package io.sentrius.sso.controllers.api;
 
 import java.lang.reflect.Field;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
 import io.sentrius.sso.core.model.users.User;
@@ -27,6 +29,7 @@ import io.sentrius.sso.core.services.SessionService;
 import io.sentrius.sso.core.services.UserCustomizationService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.agents.AgentService;
+import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
@@ -35,6 +38,9 @@ import io.sentrius.sso.core.utils.MessagingUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -60,6 +66,11 @@ public class UserApiController extends BaseController {
     final ZeroTrustRequestService ztatRequestService;
     final ZeroTrustAccessTokenService ztatService;
     final AgentService agentService;
+    final ZeroTrustClientService zeroTrustClientService;
+
+
+    @Value("${agentproxy.externalUrl:}")
+    private String agentProxyExternalUrl;
 
     static Map<String, Field> fields = new HashMap<>();
     static {
@@ -78,7 +89,8 @@ public class UserApiController extends BaseController {
         UserCustomizationService userThemeService,
         SessionService sessionService,
         ZeroTrustRequestService ztatRequestService,
-        ZeroTrustAccessTokenService ztatService, AgentService agentService
+        ZeroTrustAccessTokenService ztatService, AgentService agentService,
+        ZeroTrustClientService zeroTrustClientService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.hostGroupService =     hostGroupService;
@@ -89,6 +101,7 @@ public class UserApiController extends BaseController {
         this.ztatRequestService = ztatRequestService;
         this.ztatService = ztatService;
         this.agentService = agentService;
+        this.zeroTrustClientService = zeroTrustClientService;
     }
 
     @GetMapping("list")
@@ -303,9 +316,116 @@ public class UserApiController extends BaseController {
     public ResponseEntity<Map<String, Integer>> getGraphData(HttpServletRequest request,
                                                               HttpServletResponse response) {
         var username = userService.getOperatingUser(request,response, null).getUsername();
-        var ret= sessionService.getGraphData(username);
+        var ret= getGraphData(username);
 
         return ResponseEntity.ok(ret);
+    }
+
+
+    public Map<String, Integer> getGraphData(String username) {
+        List<Map<String, Object>> sessionDurations = sessionService.getGraphList(username);
+
+        // Add agent session durations
+        List<Map<String, Object>> agentSessionDurations = getAgentSessionDurations();
+        log.info("Fetched {} agent session durations", agentSessionDurations.size());
+        log.info("Fetched {} agent session durations", agentSessionDurations.size());
+        sessionDurations.addAll(agentSessionDurations);
+
+        Map<String, Integer> graphData = new HashMap<>();
+        graphData.put("0-5 min", 0);
+        graphData.put("5-15 min", 0);
+        graphData.put("15-30 min", 0);
+        graphData.put("30+ min", 0);
+
+        for (Map<String, Object> session : sessionDurations) {
+            long durationMinutes = Long.valueOf ( session.get("durationMinutes").toString() );
+
+            if (durationMinutes <= 5) {
+                graphData.put("0-5 min", graphData.get("0-5 min") + 1);
+            } else if (durationMinutes <= 15) {
+                graphData.put("5-15 min", graphData.get("5-15 min") + 1);
+            } else if (durationMinutes <= 30) {
+                graphData.put("15-30 min", graphData.get("15-30 min") + 1);
+            } else {
+                graphData.put("30+ min", graphData.get("30+ min") + 1);
+            }
+        }
+
+        return graphData;
+    }
+
+    /**
+     * Fetch agent session duration data from agent proxy service
+     * @return List of agent session duration data
+     */
+    private List<Map<String, Object>> getAgentSessionDurations() {
+        List<Map<String, Object>> agentSessions = new ArrayList<>();
+
+        if (agentProxyExternalUrl == null || agentProxyExternalUrl.trim().isEmpty()) {
+            log.warn("Agent proxy URL not configured, skipping agent session data");
+            return agentSessions;
+        }
+
+        try {
+
+            var resp = zeroTrustClientService.callAuthenticatedGetOnApi(agentProxyExternalUrl,"/api/v1/sessions/agent" +
+                    "/durations"
+                , null);
+            log.info("Fetched active agent session duration data: {}", resp);
+            if (null != resp){
+                var completedNode = JsonUtil.MAPPER.readTree(resp);
+                Map<String, Object> completedMap = new HashMap<>();
+                for(var node : completedNode) {
+                    node.fields().forEachRemaining(
+                        entry -> {
+                            completedMap.put(entry.getKey(), entry.getValue());
+                            log.info(
+                                "Processing agent session duration entry: {} = {}", entry.getKey(), entry.getValue());
+                        }
+
+                    );
+                }
+                if (completedMap.size() > 0) {
+                    log.info("Adding completed agent session duration data: {}", completedMap);
+                    agentSessions.add(completedMap);
+                }
+
+            }
+
+
+            resp = zeroTrustClientService.callAuthenticatedGetOnApi(agentProxyExternalUrl,"/api/v1/sessions/agent/active-durations"
+                , null);
+
+            log.info("Fetched active agent session duration data: {}", resp);
+            if (null != resp){
+                var completedNode = JsonUtil.MAPPER.readTree(resp);
+                Map<String, Object> completedMap = new HashMap<>();
+                for(var node : completedNode) {
+                    node.fields().forEachRemaining(
+                        entry -> {
+                            completedMap.put(entry.getKey(), entry.getValue());
+                            log.info(
+                                "Processing agent session duration entry: {} = {}", entry.getKey(), entry.getValue());
+                        }
+
+                    );
+                }
+                if (completedMap.size() > 0) {
+                    log.info("Adding completed agent session duration data: {}", completedMap);
+                    agentSessions.add(completedMap);
+                }
+
+            }
+
+            log.info("Fetched {} agent session duration records", agentSessions.size());
+
+        } catch (Exception e) {
+            log.warn("Failed to fetch agent session data from {}: {}", agentProxyExternalUrl, e.getMessage());
+        } catch (ZtatException e) {
+            log.warn("Failed to fetch agent session data from {}: {}", agentProxyExternalUrl, e.getMessage());
+        }
+
+        return agentSessions;
     }
 
 }

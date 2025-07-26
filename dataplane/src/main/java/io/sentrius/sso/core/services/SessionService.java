@@ -10,11 +10,8 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -36,10 +33,9 @@ public class SessionService {
     @Autowired
     private TerminalLogRepository terminalLogRepository;
 
+
     @Value("${agentproxy.externalUrl:}")
     private String agentProxyExternalUrl;
-
-    private final RestTemplate restTemplate = new RestTemplate();
 
     private final Map<Long, SessionLog> activeSessions = new ConcurrentHashMap<>();
     private final Map<Long, TerminalLogs> activeTerminals = new ConcurrentHashMap<>();
@@ -144,11 +140,8 @@ public class SessionService {
 
     public Map<String, Integer> getGraphData(String username) {
         List<Map<String, Object>> sessionDurations = getSessionDurationData(username);
-        
-        // Add agent session durations
-        List<Map<String, Object>> agentSessionDurations = getAgentSessionDurations();
-        sessionDurations.addAll(agentSessionDurations);
 
+        // Add agent session durations
         Map<String, Integer> graphData = new HashMap<>();
         graphData.put("0-5 min", 0);
         graphData.put("5-15 min", 0);
@@ -172,52 +165,13 @@ public class SessionService {
         return graphData;
     }
 
-    /**
-     * Fetch agent session duration data from agent proxy service
-     * @return List of agent session duration data
-     */
-    private List<Map<String, Object>> getAgentSessionDurations() {
-        List<Map<String, Object>> agentSessions = new ArrayList<>();
-        
-        if (agentProxyExternalUrl == null || agentProxyExternalUrl.trim().isEmpty()) {
-            log.warn("Agent proxy URL not configured, skipping agent session data");
-            return agentSessions;
-        }
-        
-        try {
-            // Fetch completed agent sessions
-            String completedUrl = agentProxyExternalUrl + "/api/v1/sessions/agent/durations";
-            var completedResponse = restTemplate.exchange(
-                completedUrl,
-                HttpMethod.GET,
-                null,
-                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
-            );
-            
-            if (completedResponse.getBody() != null) {
-                agentSessions.addAll(completedResponse.getBody());
-            }
-            
-            // Fetch active agent sessions
-            String activeUrl = agentProxyExternalUrl + "/api/v1/sessions/agent/active-durations";
-            var activeResponse = restTemplate.exchange(
-                activeUrl,
-                HttpMethod.GET,
-                null,
-                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
-            );
-            
-            if (activeResponse.getBody() != null) {
-                agentSessions.addAll(activeResponse.getBody());
-            }
-            
-            log.info("Fetched {} agent session duration records", agentSessions.size());
-            
-        } catch (Exception e) {
-            log.warn("Failed to fetch agent session data from {}: {}", agentProxyExternalUrl, e.getMessage());
-        }
-        
-        return agentSessions;
+    public List<Map<String, Object>> getGraphList(String username) {
+        List<Map<String, Object>> sessionDurations = getSessionDurationData(username);
+
+        return sessionDurations;
     }
+
+
+
 
 }
