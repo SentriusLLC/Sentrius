@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.sentrius.agent.analysis.agents.verbs.TerminalVerbs;
 import io.sentrius.sso.core.dto.HostSystemDTO;
+import io.sentrius.sso.core.dto.agents.AgentExecutionContextDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.services.agents.LLMService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
@@ -42,7 +43,7 @@ class TerminalVerbsTest {
         String mockResponse = "[{\"id\":1,\"name\":\"Terminal1\"},{\"id\":2,\"name\":\"Terminal2\"}]";
 
         when(zeroTrustClientService.callGetOnApi(isNull(), "/ssh/terminal/list/all")).thenReturn(mockResponse);
-        ArrayNode result = terminalVerbs.listTerminals(null, new HashMap<>());
+        ArrayNode result = terminalVerbs.listTerminals(null, AgentExecutionContextDTO.builder().build());
 
         assertNotNull(result);
         assertEquals(2, result.size());
@@ -53,7 +54,7 @@ class TerminalVerbsTest {
     void listTerminalsThrowsRuntimeExceptionWhenApiCallFails() throws ZtatException {
         when(zeroTrustClientService.callGetOnApi(isNull(), "/ssh/terminal/list/all")).thenThrow(new RuntimeException("API error"));
 
-        assertThrows(RuntimeException.class, () -> terminalVerbs.listTerminals(null, new HashMap<>()));
+        assertThrows(RuntimeException.class, () -> terminalVerbs.listTerminals(null, AgentExecutionContextDTO.builder().build()));
     }
 
   //  @Test

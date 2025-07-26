@@ -50,13 +50,13 @@ public class TerminalVerbs {
     /**
      * Retrieves a list of currently open terminals.
      *
-     * @param args A map of arguments for the operation (currently unused).
+
      * @return An `ArrayNode` containing the list of open terminals.
      * @throws ZtatException If there is an error during the operation.
      */
     @Verb(name = "list_open_terminals", description = "Retrieves a list of currently open terminals.",
          requiresTokenManagement = true)
-    public ArrayNode listTerminals(TokenDTO token, Map<String, Object> args) throws ZtatException {
+    public ArrayNode listTerminals(TokenDTO token, AgentExecutionContextDTO execution) throws ZtatException {
         try {
             String response = zeroTrustClientService.callGetOnApi(token, "/ssh/terminal/list/all");
             if (response == null) {
@@ -72,13 +72,12 @@ public class TerminalVerbs {
     /**
      * Retrieves a list of currently open terminals.
      *
-     * @param args A map of arguments for the operation (currently unused).
      * @return An `ArrayNode` containing the list of open terminals.
      * @throws ZtatException If there is an error during the operation.
      */
     @Verb(name = "list_systems", description = "Retrieves a list of available systems. These are not connected " +
-        "sessions.", requiresTokenManagement = true)
-    public List<HostSystemDTO> listSystem(AgentExecution execution, Map<String, Object> args) throws ZtatException {
+        "sessions.", returnName = "systems", requiresTokenManagement = true)
+    public List<HostSystemDTO> listSystem(AgentExecution execution, AgentExecutionContextDTO dto) throws ZtatException {
         try {
             List<HostSystemDTO> response = zeroTrustClientService.callGetOnApi(execution, "/api/v1/enclaves/hosts/list/all");
 

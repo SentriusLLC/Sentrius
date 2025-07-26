@@ -17,6 +17,7 @@ import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.services.capabilities.EndpointScanningService;
 import io.sentrius.sso.core.utils.JsonUtil;
+import io.sentrius.sso.genai.Message;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -236,6 +237,7 @@ public class VerbRegistry {
             } catch (Exception e) {
                 log.info(method.getName() + " failed", e);
                 e.printStackTrace();
+                contextDTO.addMessages(Message.builder().role("system").content("Previous request failed: " + e.getMessage()).build());
                 throw new RuntimeException("Failed to execute verb: " + verb, e);
             }
         }
