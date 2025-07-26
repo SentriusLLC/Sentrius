@@ -260,14 +260,14 @@ public class AccessControlAspect {
                 // Get the required roles from the annotation
                 for (var userAccess : accessAnnotation.userAccess()) {
                     if (!canAccess(operatingUser, userAccess)) {
-                        log.debug("Access Denied to {} at {}", operatingUser, userAccess);
+                        log.debug("Access Denied to {} at {}, {}", operatingUser, userAccess, operatingUser.getAuthorizationType());
                         canAccess = false;
                         break;
                     }
                 }
                 for (var appAccess : accessAnnotation.applicationAccess()) {
                     if (!canAccess(operatingUser, appAccess)) {
-                        log.debug("Access Denied to {} at {}", operatingUser, appAccess);
+                        log.debug("Access Denied to {} at {}, {}", operatingUser, appAccess, operatingUser.getAuthorizationType());
                         canAccess = false;
                         break;
                     }

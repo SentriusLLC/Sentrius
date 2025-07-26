@@ -134,7 +134,7 @@ class JiraProxyControllerTest {
         when(keycloakService.validateJwt("invalid-token")).thenReturn(false);
 
         // When
-        ResponseEntity<?> result = jiraProxyController.getJiraIssue(
+        ResponseEntity<?> result = jiraProxyController.fetchJiraIssue(
             invalidToken, "TEST-123", request, response
         );
 
@@ -153,7 +153,7 @@ class JiraProxyControllerTest {
             .thenReturn(Collections.emptyList());
 
         // When
-        ResponseEntity<?> result = jiraProxyController.getJiraIssue(
+        ResponseEntity<?> result = jiraProxyController.fetchJiraIssue(
             validToken, "TEST-123", request, response
         );
 
@@ -191,7 +191,7 @@ class JiraProxyControllerTest {
         assigneeRequest.setAccountId("test-account-id");
 
         // When
-        ResponseEntity<?> result = jiraProxyController.assignIssue(
+        ResponseEntity<?> result = jiraProxyController.assignJiraIssue(
             invalidToken, "TEST-123", assigneeRequest, request, response
         );
 

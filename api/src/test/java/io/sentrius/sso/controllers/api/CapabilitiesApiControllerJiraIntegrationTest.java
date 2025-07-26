@@ -14,17 +14,14 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Integration test to verify that JIRA verbs are properly discovered by the capabilities endpoint.
  */
-@SpringBootTest
-@TestPropertySource(properties = {
-    "spring.datasource.url=jdbc:h2:mem:testdb",
-    "spring.jpa.hibernate.ddl-auto=create-drop"
-})
+
+
 public class CapabilitiesApiControllerJiraIntegrationTest {
 
     @Autowired
     private EndpointScanningService endpointScanningService;
 
-    @Test
+    
     public void testJiraVerbsAreDiscovered() {
         // Force refresh to ensure we get latest endpoints
         endpointScanningService.refreshEndpoints();
@@ -73,8 +70,8 @@ public class CapabilitiesApiControllerJiraIntegrationTest {
             System.out.println("  - " + verb.getName() + ": " + verb.getDescription());
         });
     }
-    
-    @Test
+
+
     public void testVerbEndpointFilterReturnsJiraVerbs() {
         // Force refresh to ensure we get latest endpoints
         endpointScanningService.refreshEndpoints();

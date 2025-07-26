@@ -19,6 +19,7 @@ import io.sentrius.sso.core.dto.agents.AgentExecutionContextDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.services.agents.LLMService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
+import io.sentrius.sso.core.utils.JsonUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
@@ -62,13 +63,16 @@ class TerminalVerbsTest {
         HostSystemDTO dto = new HostSystemDTO();
         dto.setId(1L);
         dto.setHostConnection("connection1");
-        List<HostSystemDTO> dtos = List.of(dto);
 
         String mockResponse = "Terminal output logs";
         when(zeroTrustClientService.callGetOnApi(isNull(),eq("/sessions/audit/attach"),
             ArgumentMatchers.any(Map.Entry.class))).thenReturn(mockResponse);
 
-        List<ObjectNode> result = terminalVerbs.fetchTerminalOutput(null, dtos);
+
+        AgentExecutionContextDTO context = AgentExecutionContextDTO.builder()
+            .build();
+
+        List<ObjectNode> result = terminalVerbs.fetchTerminalOutput(null, context);
 
         assertNotNull(result);
         assertEquals(1, result.size());
@@ -78,7 +82,7 @@ class TerminalVerbsTest {
 
     @Test
     void fetchTerminalOutputHandlesEmptyDtosList() throws Exception, ZtatException {
-        List<ObjectNode> result = terminalVerbs.fetchTerminalOutput(null, new ArrayList<>());
+        List<ObjectNode> result = terminalVerbs.fetchTerminalOutput(null, AgentExecutionContextDTO.builder().build());
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
@@ -91,10 +95,14 @@ class TerminalVerbsTest {
         dto.setHostConnection("connection1");
         List<HostSystemDTO> dtos = List.of(dto);
 
+        AgentExecutionContextDTO context = AgentExecutionContextDTO.builder()
+            .build();
+
+        context.addToMemory("terminals", JsonUtil.MAPPER.valueToTree(dtos));
         when(zeroTrustClientService.callGetOnApi(isNull(), eq("/sessions/audit/attach"),
             ArgumentMatchers.any(Map.Entry.class))).thenThrow(new RuntimeException(
             "API error"));
 
-        assertThrows(RuntimeException.class, () -> terminalVerbs.fetchTerminalOutput(null, dtos));
+        assertThrows(RuntimeException.class, () -> terminalVerbs.fetchTerminalOutput(null, context));
     }
 }

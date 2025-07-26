@@ -3,6 +3,7 @@ package io.sentrius.sso.controllers.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentrius.sso.config.AppConfig;
 import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.model.ATPLPolicyEntity;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
@@ -19,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -60,12 +62,13 @@ class ATPLPolicyControllerTest {
             }
             """;
 
-        when(policyService.savePolicy(any(ATPLPolicy.class))).thenReturn(null);
+        var id = UUID.randomUUID().toString();
+        when(policyService.savePolicy(any(ATPLPolicy.class))).thenReturn(ATPLPolicyEntity.builder().id(UUID.randomUUID()).policyId(id).build());
 
         ResponseEntity<?> result = controller.uploadPolicy(false, validPolicy);
 
         assertEquals(HttpStatus.CREATED, result.getStatusCode());
-        assertEquals("Policy uploaded successfully.", result.getBody());
+        assertEquals(id, result.getBody());
         verify(policyService).savePolicy(any(ATPLPolicy.class));
     }
 

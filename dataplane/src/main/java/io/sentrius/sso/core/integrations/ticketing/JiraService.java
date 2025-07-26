@@ -49,7 +49,7 @@ public class JiraService {
         ExternalIntegrationDTO externalIntegrationDTO = JsonUtil.MAPPER.readValue(integration.getConnectionInfo(),
             ExternalIntegrationDTO.class);
         this.jiraBaseUrl = externalIntegrationDTO.getBaseUrl();
-        if (!jiraBaseUrl.startsWith("https://")) {
+        if (null != jiraBaseUrl && !jiraBaseUrl.startsWith("https://")) {
             jiraBaseUrl = "https://" + jiraBaseUrl;
         }
         this.apiToken = externalIntegrationDTO.getApiToken();

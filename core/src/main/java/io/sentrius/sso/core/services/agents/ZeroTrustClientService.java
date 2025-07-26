@@ -120,7 +120,9 @@ public class ZeroTrustClientService {
             .path(apiEndpoint);
         if (null != params) {
             for (Map.Entry<String, List<String>> entry : params) {
-                builder.queryParam(entry.getKey(), entry.getValue());
+                for (String value : entry.getValue()) {
+                    builder.queryParam(entry.getKey(), UriUtils.encodeQueryParam(value, StandardCharsets.UTF_8));
+                }
             }
         }
         try{

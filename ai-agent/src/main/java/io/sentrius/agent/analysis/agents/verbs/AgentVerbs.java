@@ -600,7 +600,7 @@ public class AgentVerbs extends VerbBase {
 
     @Verb(name = "create_agent", returnType = AgentExecutionContextDTO.class, description = "Creates an agent who has the " +
         "context. a previously defined contextId is required. previously defined endpoints can be used to build a " +
-        "trust policy.",
+        "trust policy. must call create_agent_context before this verb.",
         exampleJson = "{  \"agentName\": \"agentName\" }",
         requiresTokenManagement = true )
     public ObjectNode createAgent(AgentExecution execution, AgentExecutionContextDTO context)

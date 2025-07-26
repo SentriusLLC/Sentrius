@@ -68,7 +68,7 @@ public class TicketingApiController extends BaseController {
     }
 
     @PostMapping("/assign/{ticketType}")
-    public ResponseEntity<String> searchIncidentIntegrations(HttpServletRequest request,
+    public ResponseEntity<String> searchAssociatedIntegrations(HttpServletRequest request,
                                                                       HttpServletResponse response,
                                                                       @PathVariable("ticketType") String ticketType,
                                                                       @RequestBody Map<String, Object> payload)
@@ -126,7 +126,7 @@ public class TicketingApiController extends BaseController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<TicketDTO>> searchIncidentIntegrations(HttpServletRequest request,
+    public ResponseEntity<List<TicketDTO>> searchIntegrations(HttpServletRequest request,
                                                                       HttpServletResponse response,
                                                                       @RequestParam("query") String query)
         throws JsonProcessingException {

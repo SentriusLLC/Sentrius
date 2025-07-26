@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Maps;
@@ -75,9 +77,10 @@ public class TerminalVerbs {
      * @return An `ArrayNode` containing the list of open terminals.
      * @throws ZtatException If there is an error during the operation.
      */
-    @Verb(name = "list_systems", description = "Retrieves a list of available systems. These are not connected " +
+    @Verb(name = "list_host_systems", description = "Retrieves a list of available host systems. These are not " +
+        "connected " +
         "sessions.", returnName = "systems", requiresTokenManagement = true)
-    public List<HostSystemDTO> listSystem(AgentExecution execution, AgentExecutionContextDTO dto) throws ZtatException {
+    public List<HostSystemDTO> listHostSystem(AgentExecution execution, AgentExecutionContextDTO dto) throws ZtatException {
         try {
             List<HostSystemDTO> response = zeroTrustClientService.callGetOnApi(execution, "/api/v1/enclaves/hosts/list/all");
 
@@ -94,16 +97,19 @@ public class TerminalVerbs {
     /**
      * Retrieves a list of terminal output logs for the given open terminals.
      *
-     * @param dtos A list of `HostSystemDTO` objects representing the terminals.
      * @return A list of `ObjectNode` objects containing terminal output logs.
      * @throws ZtatException If there is an error during the operation.
      */
     @Verb(name = "fetch_terminal_logs", description = "Retrieves a list of terminal output from a given open terminal.",
-        returnType = List.class, requiresTokenManagement = true)
-    public List<ObjectNode> fetchTerminalOutput(TokenDTO token, List<HostSystemDTO> dtos) throws ZtatException {
+        returnType = List.class,exampleJson = "\terminals\" : { \"id\" : 1, \"hostConnection\" : \"hostConnection\" } ",
+        requiresTokenManagement = true)
+    public List<ObjectNode> fetchTerminalOutput(TokenDTO token, AgentExecutionContextDTO contextDTO) throws ZtatException {
         try {
             List<ObjectNode> responses = new ArrayList<>();
-            log.info("Terminal list response: {}", dtos);
+            List<HostSystemDTO> dtos = contextDTO
+                .getExecutionArgumentScoped("terminals", new TypeReference<List<HostSystemDTO>>() {})
+                .orElse(Collections.emptyList());
+            log.debug("Terminal list response: {}", dtos);
             for (HostSystemDTO dto : dtos) {
                 var sessionId = URLEncoder.encode(dto.getHostConnection(), StandardCharsets.UTF_8);
                 var response = zeroTrustClientService.callGetOnApi(token,"/sessions/audit/attach", Maps.immutableEntry(
@@ -120,6 +126,7 @@ public class TerminalVerbs {
             }
             return responses;
         } catch (Exception e) {
+            e.printStackTrace();
             throw new RuntimeException("Failed to retrieve terminal list", e);
         }
     }
