@@ -1,6 +1,7 @@
 package io.sentrius.sso.controller;
 
 import java.util.List;
+import java.util.Map;
 import io.sentrius.sso.core.dto.TerminalLogDTO;
 import io.sentrius.sso.service.ActiveWebSocketSessionManager;
 import org.springframework.http.HttpHeaders;
@@ -25,6 +26,16 @@ public class SessionController {
     @GetMapping("/list")
     public List<TerminalLogDTO> listSessions() {
         return activeWebSocketSessionManager.getActiveSessions();
+    }
+
+    @GetMapping("/agent/durations")
+    public List<Map<String, Object>> getAgentSessionDurations() {
+        return activeWebSocketSessionManager.getAgentSessionDurations();
+    }
+
+    @GetMapping("/agent/active-durations")
+    public List<Map<String, Object>> getActiveAgentSessionDurations() {
+        return activeWebSocketSessionManager.getActiveAgentSessionDurations();
     }
 
 }
