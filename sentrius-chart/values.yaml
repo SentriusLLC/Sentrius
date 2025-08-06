@@ -366,3 +366,20 @@ neo4j:
 
 adminer:
   enabled: false
+
+# SSH Proxy configuration
+sshproxy:
+  enabled: true
+  image:
+    repository: sentrius-ssh-proxy
+    tag: tag
+    pullPolicy: IfNotPresent
+  port: 2222
+  serviceType: ClusterIP
+  nodePort: 30022  # Only used if serviceType is NodePort
+  resources: {}
+  targetSsh:
+    defaultHost: "localhost"
+    defaultPort: 22
+    connectionTimeout: 30000
+    keepAliveInterval: 60000

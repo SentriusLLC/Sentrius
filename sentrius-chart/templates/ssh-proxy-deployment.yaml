@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-ssh-proxy
+  labels:
+    app: sentrius-ssh-proxy
+    release: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: sentrius-ssh-proxy
+  template:
+    metadata:
+      labels:
+        app: sentrius-ssh-proxy
+    spec:
+      containers:
+        - name: sentrius-ssh-proxy
+          image: "{{ .Values.sshproxy.image.repository }}:{{ .Values.sshproxy.image.tag }}"
+          imagePullPolicy: {{ .Values.sshproxy.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.sshproxy.port }}
+              name: ssh
+            - containerPort: 8090
+              name: http
+          env:
+            - name: SENTRIUS_SSH_PROXY_ENABLED
+              value: "{{ .Values.sshproxy.enabled }}"
+            - name: SENTRIUS_SSH_PROXY_PORT
+              value: "{{ .Values.sshproxy.port }}"
+            - name: SENTRIUS_SSH_PROXY_TARGET_SSH_DEFAULT_HOST
+              value: "{{ .Values.sshproxy.targetSsh.defaultHost }}"
+            - name: SENTRIUS_SSH_PROXY_TARGET_SSH_DEFAULT_PORT
+              value: "{{ .Values.sshproxy.targetSsh.defaultPort }}"
+          resources:
+            {{- toYaml .Values.sshproxy.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
