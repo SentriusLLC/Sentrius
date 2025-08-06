@@ -29,10 +29,12 @@ spec:
               value: "{{ .Values.sshproxy.enabled }}"
             - name: SENTRIUS_SSH_PROXY_PORT
               value: "{{ .Values.sshproxy.port }}"
-            - name: SENTRIUS_SSH_PROXY_TARGET_SSH_DEFAULT_HOST
-              value: "{{ .Values.sshproxy.targetSsh.defaultHost }}"
-            - name: SENTRIUS_SSH_PROXY_TARGET_SSH_DEFAULT_PORT
-              value: "{{ .Values.sshproxy.targetSsh.defaultPort }}"
+            - name: SENTRIUS_SSH_PROXY_CONNECTION_CONNECTION_TIMEOUT
+              value: "{{ .Values.sshproxy.connection.connectionTimeout }}"
+            - name: SENTRIUS_SSH_PROXY_CONNECTION_KEEP_ALIVE_INTERVAL
+              value: "{{ .Values.sshproxy.connection.keepAliveInterval }}"
+            - name: SENTRIUS_SSH_PROXY_CONNECTION_MAX_RETRIES
+              value: "{{ .Values.sshproxy.connection.maxRetries }}"
           resources:
             {{- toYaml .Values.sshproxy.resources | nindent 12 }}
           livenessProbe:

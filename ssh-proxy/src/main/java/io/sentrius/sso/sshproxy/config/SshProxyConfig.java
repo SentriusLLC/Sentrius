@@ -14,14 +14,13 @@ public class SshProxyConfig {
     private boolean enabled = true;
     private int maxConcurrentSessions = 100;
     
-    // Target SSH configuration
-    private TargetSsh targetSsh = new TargetSsh();
+    // Connection settings for target SSH servers
+    private Connection connection = new Connection();
     
     @Data
-    public static class TargetSsh {
-        private String defaultHost = "localhost";
-        private int defaultPort = 22;
+    public static class Connection {
         private int connectionTimeout = 30000;
         private int keepAliveInterval = 60000;
+        private int maxRetries = 3;
     }
 }

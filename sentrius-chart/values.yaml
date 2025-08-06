@@ -378,8 +378,8 @@ sshproxy:
   serviceType: ClusterIP
   nodePort: 30022  # Only used if serviceType is NodePort
   resources: {}
-  targetSsh:
-    defaultHost: "localhost"
-    defaultPort: 22
+  connection:
+    # Connection settings for target SSH servers from database
     connectionTimeout: 30000
     keepAliveInterval: 60000
+    maxRetries: 3

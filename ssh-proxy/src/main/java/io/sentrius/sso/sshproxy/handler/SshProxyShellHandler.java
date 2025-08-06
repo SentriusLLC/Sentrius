@@ -3,8 +3,10 @@ package io.sentrius.sso.sshproxy.handler;
 import io.sentrius.sso.automation.auditing.Trigger;
 import io.sentrius.sso.automation.auditing.TriggerAction;
 import io.sentrius.sso.core.model.ConnectedSystem;
+import io.sentrius.sso.core.model.HostSystem;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import io.sentrius.sso.sshproxy.config.SshProxyConfig;
+import io.sentrius.sso.sshproxy.service.HostSystemSelectionService;
 import io.sentrius.sso.sshproxy.service.InlineTerminalResponseService;
 import io.sentrius.sso.sshproxy.service.SshCommandProcessor;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +38,7 @@ public class SshProxyShellHandler implements Factory<Command> {
     private final SessionTrackingService sessionTrackingService;
     private final SshCommandProcessor commandProcessor;
     private final InlineTerminalResponseService terminalResponseService;
+    private final HostSystemSelectionService hostSystemSelectionService;
     private final SshProxyConfig config;
 
     // Track active sessions
@@ -58,6 +61,7 @@ public class SshProxyShellHandler implements Factory<Command> {
         private Environment environment;
         private ServerSession session;
         private ConnectedSystem connectedSystem;
+        private HostSystem selectedHostSystem;
         private Thread shellThread;
         private volatile boolean running = false;
 
@@ -94,6 +98,7 @@ public class SshProxyShellHandler implements Factory<Command> {
             // Initialize Sentrius session tracking
             try {
                 initializeSentriusSession(username, sessionId);
+                initializeHostSystemSelection();
                 sendWelcomeMessage();
                 startShellLoop();
             } catch (Exception e) {
@@ -116,7 +121,26 @@ public class SshProxyShellHandler implements Factory<Command> {
             log.info("Initialized Sentrius session for user: {}", username);
         }
 
+        private void initializeHostSystemSelection() {
+            // Try to get a default HostSystem from the database
+            selectedHostSystem = hostSystemSelectionService.getDefaultHostSystem().orElse(null);
+            
+            if (selectedHostSystem == null || !hostSystemSelectionService.isHostSystemValid(selectedHostSystem)) {
+                log.warn("No valid HostSystem found for SSH proxy session");
+            } else {
+                log.info("Selected HostSystem: {} ({}:{})", 
+                    selectedHostSystem.getDisplayName(), 
+                    selectedHostSystem.getHost(), 
+                    selectedHostSystem.getPort());
+            }
+        }
+
         private void sendWelcomeMessage() throws IOException {
+            String hostInfo = selectedHostSystem != null 
+                ? String.format("%s (%s:%d)", selectedHostSystem.getDisplayName(), 
+                                selectedHostSystem.getHost(), selectedHostSystem.getPort())
+                : "No target host configured";
+                
             String welcome = "\r\n" +
                 "╔══════════════════════════════════════════════════════════════╗\r\n" +
                 "║                   SENTRIUS SSH PROXY                        ║\r\n" +
@@ -125,6 +149,8 @@ public class SshProxyShellHandler implements Factory<Command> {
                 "\r\n" +
                 "Welcome! This SSH session is protected by Sentrius safeguards.\r\n" +
                 "All commands are monitored and may be blocked based on security policies.\r\n" +
+                "\r\n" +
+                "Target Host: " + hostInfo + "\r\n" +
                 "\r\n";
             
             terminalResponseService.sendMessage(welcome, out);
@@ -132,7 +158,8 @@ public class SshProxyShellHandler implements Factory<Command> {
         }
 
         private void sendPrompt() throws IOException {
-            String prompt = String.format("[sentrius@%s]$ ", config.getTargetSsh().getDefaultHost());
+            String hostname = selectedHostSystem != null ? selectedHostSystem.getHost() : "unknown";
+            String prompt = String.format("[sentrius@%s]$ ", hostname);
             terminalResponseService.sendMessage(prompt, out);
         }
 
@@ -214,6 +241,7 @@ public class SshProxyShellHandler implements Factory<Command> {
 
         private boolean handleBuiltinCommand(String command) throws IOException {
             String cmd = command.toLowerCase().trim();
+            String[] parts = command.trim().split("\\s+");
             
             switch (cmd) {
                 case "exit":
@@ -231,7 +259,14 @@ public class SshProxyShellHandler implements Factory<Command> {
                     showStatus();
                     return true;
                     
+                case "hosts":
+                    showAvailableHosts();
+                    return true;
+                    
                 default:
+                    if (parts.length >= 2 && "connect".equals(parts[0].toLowerCase())) {
+                        return handleConnectCommand(parts);
+                    }
                     return false;
             }
         }
@@ -239,9 +274,12 @@ public class SshProxyShellHandler implements Factory<Command> {
         private void showHelp() throws IOException {
             String help = "\r\n" +
                 "Sentrius SSH Proxy - Built-in Commands:\r\n" +
-                "  help     - Show this help message\r\n" +
-                "  status   - Show session status\r\n" +
-                "  exit     - Close SSH session\r\n" +
+                "  help              - Show this help message\r\n" +
+                "  status            - Show session status\r\n" +
+                "  hosts             - List available target hosts\r\n" +
+                "  connect <id>      - Connect to HostSystem by ID\r\n" +
+                "  connect <name>    - Connect to HostSystem by display name\r\n" +
+                "  exit              - Close SSH session\r\n" +
                 "\r\n" +
                 "All other commands are forwarded to the target SSH server\r\n" +
                 "and subject to Sentrius security policies.\r\n\r\n";
@@ -250,19 +288,97 @@ public class SshProxyShellHandler implements Factory<Command> {
         }
 
         private void showStatus() throws IOException {
+            String hostInfo = selectedHostSystem != null 
+                ? String.format("%s (%s:%d)", selectedHostSystem.getDisplayName(), 
+                                selectedHostSystem.getHost(), selectedHostSystem.getPort())
+                : "No target host configured";
+                
             String status = String.format("\r\n" +
                 "Sentrius SSH Proxy Status:\r\n" +
                 "  User: %s\r\n" +
-                "  Target Host: %s:%d\r\n" +
+                "  Target Host: %s\r\n" +
                 "  Session Active: %s\r\n" +
                 "  Safeguards: ENABLED\r\n\r\n",
                 session.getUsername(),
-                config.getTargetSsh().getDefaultHost(),
-                config.getTargetSsh().getDefaultPort(),
+                hostInfo,
                 running ? "YES" : "NO"
             );
             
             terminalResponseService.sendMessage(status, out);
+        }
+
+        private void showAvailableHosts() throws IOException {
+            var hostSystems = hostSystemSelectionService.getAllHostSystems();
+            
+            StringBuilder hostList = new StringBuilder("\r\nAvailable HostSystems:\r\n");
+            hostList.append("ID\tName\t\t\tHost:Port\t\tStatus\r\n");
+            hostList.append("────────────────────────────────────────────────────────────\r\n");
+            
+            if (hostSystems.isEmpty()) {
+                hostList.append("No HostSystems configured in database.\r\n");
+            } else {
+                for (HostSystem hs : hostSystems) {
+                    String name = hs.getDisplayName() != null ? hs.getDisplayName() : "N/A";
+                    String hostPort = String.format("%s:%d", hs.getHost(), hs.getPort());
+                    String status = hostSystemSelectionService.isHostSystemValid(hs) ? "Valid" : "Invalid";
+                    String current = (selectedHostSystem != null && selectedHostSystem.getId().equals(hs.getId())) ? " *" : "";
+                    
+                    hostList.append(String.format("%d\t%-15s\t%-15s\t%s%s\r\n", 
+                        hs.getId(), name, hostPort, status, current));
+                }
+                hostList.append("\r\n* = Current selection\r\n");
+            }
+            hostList.append("\r\n");
+            
+            terminalResponseService.sendMessage(hostList.toString(), out);
+        }
+
+        private boolean handleConnectCommand(String[] parts) throws IOException {
+            if (parts.length < 2) {
+                terminalResponseService.sendMessage("Usage: connect <id|name>\r\n", out);
+                return true;
+            }
+            
+            String target = parts[1];
+            HostSystem targetHost = null;
+            
+            // Try to parse as ID first
+            try {
+                Long id = Long.parseLong(target);
+                targetHost = hostSystemSelectionService.getHostSystemById(id).orElse(null);
+            } catch (NumberFormatException e) {
+                // Not a number, try by display name
+                var hostsByName = hostSystemSelectionService.getHostSystemsByDisplayName(target);
+                if (!hostsByName.isEmpty()) {
+                    targetHost = hostsByName.get(0);
+                    if (hostsByName.size() > 1) {
+                        terminalResponseService.sendMessage(
+                            String.format("Warning: Multiple hosts found with name '%s', using first one.\r\n", target), out);
+                    }
+                }
+            }
+            
+            if (targetHost == null) {
+                terminalResponseService.sendMessage(
+                    String.format("Error: HostSystem '%s' not found.\r\n", target), out);
+                return true;
+            }
+            
+            if (!hostSystemSelectionService.isHostSystemValid(targetHost)) {
+                terminalResponseService.sendMessage(
+                    String.format("Error: HostSystem '%s' is not properly configured.\r\n", target), out);
+                return true;
+            }
+            
+            selectedHostSystem = targetHost;
+            terminalResponseService.sendMessage(
+                String.format("Connected to HostSystem: %s (%s:%d)\r\n", 
+                    targetHost.getDisplayName(), targetHost.getHost(), targetHost.getPort()), out);
+            
+            log.info("SSH proxy session switched to HostSystem: {} ({}:{})", 
+                targetHost.getDisplayName(), targetHost.getHost(), targetHost.getPort());
+            
+            return true;
         }
 
         private void executeCommand(String command) throws IOException {
