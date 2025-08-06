@@ -1,77 +1,76 @@
 package io.sentrius.agent.analysis.agents.agents;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
+import io.sentrius.agent.analysis.agents.verbs.ChatVerbs;
 import io.sentrius.agent.analysis.api.AgentKeyService;
 import io.sentrius.agent.analysis.api.UserCommunicationService;
+import io.sentrius.agent.analysis.model.LLMResponse;
 import io.sentrius.agent.config.AgentConfigOptions;
 import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.dto.agents.AgentExecution;
-import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
+import io.sentrius.sso.core.dto.agents.AgentExecutionContextDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.security.Ztat;
+import io.sentrius.sso.core.model.verbs.VerbResponse;
 import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.AgentExecutionService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.utils.JsonUtil;
+import io.sentrius.sso.genai.Message;
 import jakarta.annotation.PreDestroy;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 @ConditionalOnProperty(name = "agents.ai.chat.agent.enabled", havingValue = "true", matchIfMissing = false)
-public class ChatAgent implements ApplicationListener<ApplicationReadyEvent> {
+public class ChatAgent extends BaseEnterpriseAgent {
 
 
     final ZeroTrustClientService zeroTrustClientService;
     final AgentClientService agentClientService;
     final VerbRegistry verbRegistry;
-    final AgentVerbs agentVerbs;
     final AgentExecutionService agentExecutionService;
     final UserCommunicationService userCommunicationService;
     final AgentConfigOptions agentConfigOptions;
     final AgentKeyService agentKeyService;
     private final KeycloakService keycloakService;
+    final ChatVerbs chatVerbs;
 
     private volatile boolean running = true;
     private Thread workerThread;
 
     private AgentExecution agentExecution;
 
-    public ArrayNode promptAgent(AgentExecution execution) throws ZtatException {
-        while(true){
-            try {
-                log.info("Prompting agent...");
-                return agentVerbs.promptAgent(execution,null);
-            } catch (ZtatException e) {
-                log.info("Mechanisms {}" , e.getMechanisms());
-                var endpoint = zeroTrustClientService.createEndPointRequest("prompt_agent", e.getEndpoint());
-                ZtatRequestDTO ztatRequestDTO = ZtatRequestDTO.builder()
-                    .user(execution.getUser())
-                    .command(endpoint.toString())
-                    .justification("Registered Agent requires ability to prompt LLM endpoints to begin operations")
-                    .summary("Registered Agent requires ability to prompt LLM endpoints to begin operations")
-                    .build();
-                var request = zeroTrustClientService.requestZtatToken(execution, execution.getUser(),ztatRequestDTO);
 
-                var token = zeroTrustClientService.awaitZtatToken(execution, execution.getUser(), request, 60,
-                    TimeUnit.MINUTES);
-                execution.setZtatToken(token);
-            } catch (Exception e) {
-                log.error(e.getMessage());
-                throw new RuntimeException(e);
-            }
-        }
+    @Autowired
+    public ChatAgent(
+        AgentVerbs agentVerbs, ZeroTrustClientService zeroTrustClientService, AgentClientService agentClientService,
+        VerbRegistry verbRegistry, AgentExecutionService agentExecutionService, UserCommunicationService userCommunicationService,
+        AgentConfigOptions agentConfigOptions, AgentKeyService agentKeyService, KeycloakService keycloakService,
+        ChatVerbs chatVerbs
+    ) {
+        super(agentVerbs, zeroTrustClientService, agentClientService, verbRegistry);
+        this.zeroTrustClientService = zeroTrustClientService;
+        this.agentClientService = agentClientService;
+        this.verbRegistry = verbRegistry;
+        this.agentExecutionService = agentExecutionService;
+        this.userCommunicationService = userCommunicationService;
+        this.agentConfigOptions = agentConfigOptions;
+        this.agentKeyService = agentKeyService;
+        this.keycloakService = keycloakService;
+        this.chatVerbs = chatVerbs;
     }
 
     @Override
@@ -146,6 +145,39 @@ public class ChatAgent implements ApplicationListener<ApplicationReadyEvent> {
 
         int allowedFailures = 20;
         log.info("Agent Registered...");
+        AgentExecutionContextDTO agentExecutionContext = AgentExecutionContextDTO.builder().build();
+        agentExecutionService.setExecutionContextDTO(agentExecution, agentExecutionContext);
+        LLMResponse response = null;
+        AgentConfig config = null;
+        try {
+            config = chatVerbs.getAgentConfig(agentExecution);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } catch (ZtatException e) {
+            throw new RuntimeException(e);
+        }
+        PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
+        var prompt = promptBuilder.buildPrompt(false);
+        try {
+            if (agentConfigOptions.getType().equalsIgnoreCase("chat-autonomous")) {
+
+
+                response = chatVerbs.promptAgent(agentExecution, agentExecutionContext, prompt);
+            }
+        } catch (ZtatException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+
+        if (agentConfigOptions.getType().equalsIgnoreCase("chat-autonomous") && response == null) {
+            log.error("Chat autonomous agent mode enabled but no response received from promptAgent, shutting down...");
+            throw new RuntimeException("Chat autonomous agent mode enabled but no response received from promptAgent");
+        }
+        VerbResponse lastVerbResponse = null;
+        LLMResponse nextResponse = null;
+        List<VerbResponse> verbResponses = new ArrayList<>();
         while(running) {
 
 
@@ -153,8 +185,57 @@ public class ChatAgent implements ApplicationListener<ApplicationReadyEvent> {
 
                     Thread.sleep(5_000);
                     agentClientService.heartbeat(agentExecution, agentExecution.getUser().getUsername());
+                    if (agentConfigOptions.getType().equalsIgnoreCase("chat-autonomous")) {
+                        log.info("Chat autonomous agent mode enabled, executing workload...");
+                        VerbResponse priorResponse = null;
+                        Map<String, Object> args = new HashMap<>();
+
+                        var arguments = response.getArguments();
+                        if (null != response) {
+                            if (response.getNextOperation() != null && !response.getNextOperation().isEmpty()) {
+                                var executionResponse = verbRegistry.execute(
+                                    agentExecution,
+                                    agentExecutionContext,
+                                    lastVerbResponse,
+                                    response.getNextOperation(), arguments
+                                );
+                                verbResponses.add(executionResponse);
+                                lastVerbResponse = executionResponse;
+
+
+//                                        chatAgent.getAgentExecution().addMessages(Message.builder().role("System")
+//                                        .content("System executed operation: " + response.getNextOperation()).build());
+                                var responses = agentExecutionContext.getAgentDataList();
+                                var planResponse =
+                                    responses.isEmpty() ? "" :
+                                        responses.get(responses.size() - 1).asText();
+                                nextResponse = chatVerbs.interpret_plan_response(
+                                    agentExecution,
+                                    agentExecutionContext,
+                                    verbRegistry.getVerbs().get(response.getNextOperation()),
+                                    planResponse
+                                );
+
+
+                                response = nextResponse;
+                            }
+
+                        }else {
+                            response = chatVerbs.promptAgent(agentExecution, agentExecutionContext, prompt);
+
+                        }
+
+                        continue;
+                    }
                     allowedFailures = 20; // Reset allowed failures on successful heartbeat
                 } catch (ZtatException | Exception ex) {
+                    agentExecutionContext.addMessages(Message.builder().role("system").content(
+                        "You caused the following error. Please re-validate you chose the right operations or " +
+                            "endpoints for the context" + 
+                        ex.getMessage()).build());
+
+
+                    ex.printStackTrace();
                     if (allowedFailures-- <= 0) {
                         log.error("Failed to heartbeat agent after multiple attempts, shutting down...");
                         throw new RuntimeException(ex);

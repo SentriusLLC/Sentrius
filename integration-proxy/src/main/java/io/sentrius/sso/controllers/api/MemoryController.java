@@ -27,7 +27,6 @@ import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.genai.GenerativeAPI;
 import io.sentrius.sso.genai.Message;
-
 import io.sentrius.sso.genai.model.EmbeddingRequest;
 import io.sentrius.sso.genai.model.LLMRequest;
 import io.sentrius.sso.genai.model.endpoints.EmbeddingApiRequest;
@@ -49,9 +48,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/chat")
+@RequestMapping("/api/v1/memory")
 @Slf4j
-public class OpenAIProxyController extends BaseController {
+public class MemoryController extends BaseController {
 
     final CryptoService cryptoService;
     final SessionTrackingService sessionTrackingService;
@@ -67,7 +66,7 @@ public class OpenAIProxyController extends BaseController {
 
     Tracer tracer = GlobalOpenTelemetry.getTracer("io.sentrius.sso");
 
-    protected OpenAIProxyController(
+    protected MemoryController(
         UserService userService, SystemOptions systemOptions,
         ErrorOutputService errorOutputService, CryptoService cryptoService,
         SessionTrackingService sessionTrackingService, KeycloakService keycloakService,

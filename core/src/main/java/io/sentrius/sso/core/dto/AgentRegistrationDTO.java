@@ -18,7 +18,8 @@ public class AgentRegistrationDTO {
     private final String agentPublicKeyAlgo;
     private final String clientSecret;
     private final String clientId;
-    private final String agentType;
+    @Builder.Default
+    private final String agentType = "chat";
     private final String agentCallbackUrl;
     @Builder.Default
     private final String agentContextId = "";
