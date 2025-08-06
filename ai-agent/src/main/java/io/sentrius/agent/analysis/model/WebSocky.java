@@ -5,7 +5,6 @@ import java.util.List;
 import io.sentrius.sso.core.dto.HostSystemDTO;
 import io.sentrius.sso.core.dto.agents.AgentExecutionContextDTO;
 import io.sentrius.sso.core.model.verbs.VerbResponse;
-import io.sentrius.sso.genai.Message;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,7 +25,7 @@ public class WebSocky {
     Long uniqueIdentifier;
     WebSocketSession webSocketSession;
     @Builder.Default
-    List<TerminalResponse> messages = new ArrayList<>();
+    List<LLMResponse> communicationResponses = new ArrayList<>();
 
     @Builder.Default
     List<VerbResponse> verbResponses = new ArrayList<>();

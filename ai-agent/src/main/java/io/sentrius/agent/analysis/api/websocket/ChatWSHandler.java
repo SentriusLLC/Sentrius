@@ -16,15 +16,16 @@ import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
 import io.sentrius.agent.analysis.agents.verbs.ChatVerbs;
 import io.sentrius.agent.analysis.agents.verbs.TerminalVerbs;
 import io.sentrius.agent.analysis.api.UserCommunicationService;
-import io.sentrius.agent.analysis.model.TerminalResponse;
+import io.sentrius.agent.analysis.model.LLMResponse;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.services.agents.AgentClientService;
+import io.sentrius.sso.core.services.agents.AgentExecutionService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.genai.Message;
 import io.sentrius.sso.protobuf.Session;
 import io.sentrius.sso.provenance.ProvenanceEvent;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -34,6 +35,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 @ConditionalOnProperty(name = "agents.ai.chat.agent.enabled", havingValue = "true", matchIfMissing = false)
 public class ChatWSHandler extends TextWebSocketHandler {
 
@@ -42,6 +44,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
     final TerminalVerbs terminalVerbs;
     final AgentVerbs agentVerbs;
     final ChatVerbs chatVerbs;
+    final AgentExecutionService agentExecutionService;
     // Store active sessions, using session ID or a custom identifier
 
 
@@ -49,21 +52,6 @@ public class ChatWSHandler extends TextWebSocketHandler {
     private final AgentClientService agentClientService;
     private final VerbRegistry verbRegistry;
 
-    @Autowired
-    public ChatWSHandler(UserCommunicationService userCommunicationService, ZeroTrustClientService zeroTrustClientService,
-                         TerminalVerbs terminalVerbs, AgentVerbs agentVerbs, ChatVerbs chatVerbs, ChatAgent chatAgent,
-                         AgentClientService agentClientService,
-                         VerbRegistry verbRegistry
-    ) {
-        this.userCommunicationService = userCommunicationService;
-        this.zeroTrustClientService = zeroTrustClientService;
-        this.terminalVerbs = terminalVerbs;
-        this.agentVerbs = agentVerbs;
-        this.chatVerbs = chatVerbs;
-        this.chatAgent = chatAgent;
-        this.agentClientService = agentClientService;
-        this.verbRegistry = verbRegistry;
-    }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -199,14 +187,14 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                 base64Message
                             ));
 
-                            websocky.get().getMessages().add(response);
+                            websocky.get().getCommunicationResponses().add(response);
 
                             if (response.getNextOperation() != null && !response.getNextOperation().isEmpty() &&
                                 verbRegistry.isVerbRegistered(response.getNextOperation()))
                             {
                                 try {
 
-                                    TerminalResponse nextResponse = null;
+                                    LLMResponse nextResponse = null;
 
                                     var lastVerbResponse =
                                         websocketCommunication.getVerbResponses().stream()
@@ -231,12 +219,11 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                         nextResponse = chatVerbs.interpret_plan_response(
                                             chatAgent.getAgentExecution(),
                                             websocketCommunication.getAgentExecutionContextDTO(),
-                                            websocketCommunication,
                                             verbRegistry.getVerbs().get(response.getNextOperation()),
                                             planResponse
                                         );
 
-                                        websocky.get().getMessages().add(nextResponse);
+                                        websocky.get().getCommunicationResponses().add(nextResponse);
 
                                         websocketCommunication.getVerbResponses().add(executionResponse);
 

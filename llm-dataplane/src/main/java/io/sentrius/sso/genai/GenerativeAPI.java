@@ -6,6 +6,8 @@ import java.util.Objects;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.sentrius.sso.genai.model.EmbeddingRequest;
+import io.sentrius.sso.genai.model.endpoints.EmbeddingApiRequest;
 import io.sentrius.sso.security.TokenProvider;
 import io.sentrius.sso.genai.model.ApiEndPointRequest;
 import io.sentrius.sso.integrations.exceptions.HttpException;
@@ -68,9 +70,7 @@ public class GenerativeAPI {
     /**
      * ask for response message
      *
-     * @param apiRequest
-     *            Api Request object
-     *
+     * @param apiRequest Api Request object
      * @return ChatCompletionResponseBody
      */
     public String sample(final ApiEndPointRequest apiRequest) throws HttpException {
@@ -110,5 +110,9 @@ public class GenerativeAPI {
      */
     public <T> T sample(final ApiEndPointRequest apiRequest, Class<T> clazz) throws HttpException, JsonProcessingException {
         return (T) objectMapper.readValue(sample(apiRequest), clazz);
+    }
+
+    public String getEmbedding(final EmbeddingApiRequest request) throws HttpException {
+        return sample(request);
     }
 }

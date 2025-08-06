@@ -178,6 +178,7 @@ public class PodLauncherService {
         List<String> argList = new ArrayList<>();
         argList.add("--spring.config.location=file:/config/agent.properties");
         argList.add("--agent.namePrefix=" + agentId);
+        argList.add("--agent.type=" + agent.getAgentType());
         argList.add("--agent.clientId=" + agent.getClientId());
         argList.add("--agent.listen.websocket=true");
         argList.add("--agent.callback.url=" + constructedCallbackUrl);

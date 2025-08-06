@@ -23,6 +23,7 @@ import io.sentrius.sso.core.utils.JsonUtil;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
@@ -30,15 +31,10 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 @ConditionalOnProperty(name = "agents.ai.registered.agent.enabled", havingValue = "true", matchIfMissing = false)
-public class RegisteredAgent implements ApplicationListener<ApplicationReadyEvent> {
+public class RegisteredAgent  extends BaseEnterpriseAgent {
 
 
-    final ZeroTrustClientService zeroTrustClientService;
-    final AgentClientService agentClientService;
-    final VerbRegistry verbRegistry;
-    final AgentVerbs agentVerbs;
     final AgentExecutionService agentExecutionService;
     final AgentConfigOptions agentConfigOptions;
     final AgentKeyService agentKeyService;
@@ -46,6 +42,19 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
 
     private volatile boolean running = true;
     private Thread workerThread;
+
+    @Autowired
+    public RegisteredAgent(
+        AgentVerbs agentVerbs, ZeroTrustClientService zeroTrustClientService, AgentClientService agentClientService,
+        VerbRegistry verbRegistry, AgentExecutionService agentExecutionService, AgentConfigOptions agentConfigOptions,
+        AgentKeyService agentKeyService, KeycloakService keycloakService
+    ) {
+        super(agentVerbs, zeroTrustClientService, agentClientService, verbRegistry);
+        this.agentExecutionService = agentExecutionService;
+        this.agentConfigOptions = agentConfigOptions;
+        this.agentKeyService = agentKeyService;
+        this.keycloakService = keycloakService;
+    }
 
     public ArrayNode promptAgent(AgentExecution execution) throws ZtatException {
         while(true){

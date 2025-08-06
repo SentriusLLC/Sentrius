@@ -64,7 +64,7 @@ context: |
   {
     "previousOperation": "<previousOperation>",
     "nextOperation": "<nextOperation>",
-    "terminalSummaryForLLM": "<Summary of the terminal thus far for the next LLM assessment>",
+    "summaryForLLM": "<Summary of the terminal thus far for the next LLM assessment>",
     "responseForUser": "<Response to the user>"
   }
 ```

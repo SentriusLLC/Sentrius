@@ -172,7 +172,7 @@ class JiraProxyControllerTest {
         commentRequest.setText("Test comment");
 
         // When
-        ResponseEntity<?> result = jiraProxyController.addComment(
+        ResponseEntity<?> result = jiraProxyController.addCommentToJiraIssue(
             invalidToken, "TEST-123", commentRequest, request, response
         );
 
