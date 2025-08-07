@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.BooleanNode;
@@ -15,7 +16,10 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.dto.HostGroupDTO;
+import io.sentrius.sso.core.dto.UserPublicKeyDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
+import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
 import io.sentrius.sso.core.model.users.User;
@@ -24,6 +28,7 @@ import io.sentrius.sso.core.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.users.UserConfig;
 import io.sentrius.sso.core.model.users.UserPublicKey;
 import io.sentrius.sso.core.model.users.UserSettings;
+import io.sentrius.sso.core.services.ConfigurationService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.SessionService;
@@ -438,24 +443,51 @@ public class UserApiController extends BaseController {
     // Public Key Management Endpoints
     
     @GetMapping("/publickeys")
-    public ResponseEntity<List<UserPublicKey>> getUserPublicKeys(HttpServletRequest request, HttpServletResponse response) {
+    public ResponseEntity<List<UserPublicKeyDTO>> getUserPublicKeys(HttpServletRequest request,
+                                                                  HttpServletResponse response) {
         var user = userService.getOperatingUser(request, response, null);
         var publicKeys = userPublicKeyService.getPublicKeysForUser(user.getId());
-        return ResponseEntity.ok(publicKeys);
+        List<UserPublicKeyDTO> publicKeyDTOs = new ArrayList<>();
+        for (UserPublicKey key : publicKeys) {
+            UserPublicKeyDTO dto = UserPublicKeyDTO.builder().build();
+            //dto.setId(key.getId());
+            dto.setKeyName(key.getKeyName());
+            dto.setKeyType(key.getKeyType());
+            dto.setPublicKey(key.getPublicKey());
+            dto.setIsEnabled(key.getIsEnabled());
+            if (key.getHostGroup() != null) {
+                dto.setHostGroup( HostGroupDTO.builder().groupId(key.getHostGroup().getId()).build());
+                //dto.setHostGroupName(key.getHostGroup().getName());
+            }
+            publicKeyDTOs.add(dto);
+        }
+        return ResponseEntity.ok(publicKeyDTOs);
     }
 
     @PostMapping("/publickeys")
-    public ResponseEntity<ObjectNode> addPublicKey(HttpServletRequest request, HttpServletResponse response, @RequestBody UserPublicKey publicKey) {
+    public ResponseEntity<ObjectNode> addPublicKey(HttpServletRequest request, HttpServletResponse response, @RequestBody
+    UserPublicKeyDTO publicKey) {
         ObjectNode node = JsonUtil.MAPPER.createObjectNode();
         try {
+
+            HostGroup hostGroup = hostGroupService.getHostGroup(publicKey.getHostGroup().getGroupId());
+            Objects.requireNonNull(hostGroup);
+
+            UserPublicKey key = new UserPublicKey();
+            key.setKeyName(publicKey.getKeyName());
+            key.setKeyType(publicKey.getKeyType());
+            key.setPublicKey(publicKey.getPublicKey());
+            key.setIsEnabled(publicKey.getIsEnabled());
+            key.setHostGroup(hostGroup);
+
             var user = userService.getOperatingUser(request, response, null);
-            publicKey.setUser(user);
+            key.setUser(user);
             
-            if (publicKey.getCreatedAt() == null) {
-                publicKey.setCreatedAt(new java.sql.Timestamp(System.currentTimeMillis()));
+            if (key.getCreatedAt() == null) {
+                key.setCreatedAt(new java.sql.Timestamp(System.currentTimeMillis()));
             }
             
-            var savedKey = userPublicKeyService.addPublicKey(publicKey);
+            var savedKey = userPublicKeyService.addPublicKey(key);
             node.put("status", "Public key successfully added");
             node.put("id", savedKey.getId());
             return ResponseEntity.ok(node);

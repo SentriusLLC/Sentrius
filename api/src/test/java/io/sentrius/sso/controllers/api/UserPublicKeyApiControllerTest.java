@@ -2,6 +2,7 @@ package io.sentrius.sso.controllers.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.dto.UserPublicKeyDTO;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.model.users.UserPublicKey;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
@@ -141,7 +142,7 @@ public class UserPublicKeyApiControllerTest {
         user.setId(1L);
         user.setUsername("testuser");
 
-        UserPublicKey newKey = new UserPublicKey();
+        UserPublicKeyDTO newKey = UserPublicKeyDTO.builder().build();
         newKey.setKeyName("New Test Key");
         newKey.setKeyType("RSA");
         newKey.setPublicKey("ssh-rsa AAAAB3NzaC1yc2EAAA...");
