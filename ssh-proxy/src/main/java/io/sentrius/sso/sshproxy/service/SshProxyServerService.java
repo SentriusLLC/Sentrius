@@ -1,5 +1,8 @@
 package io.sentrius.sso.sshproxy.service;
 
+import io.sentrius.sso.core.model.HostSystem;
+import io.sentrius.sso.core.services.HostGroupService;
+import io.sentrius.sso.core.services.UserPublicKeyService;
 import io.sentrius.sso.sshproxy.config.SshProxyConfig;
 import io.sentrius.sso.sshproxy.handler.SshProxyShellHandler;
 import lombok.RequiredArgsConstructor;
@@ -30,41 +33,58 @@ public class SshProxyServerService {
 
     private final SshProxyConfig config;
     private final SshProxyShellHandler shellHandler;
-    
+    private final HostGroupService hostGroupService;
+    private final UserPublicKeyService userPublicKeyService;
     private SshServer sshServer;
 
     @EventListener(ApplicationReadyEvent.class)
     public void startSshServer() {
+
+        var hosts = hostGroupService.getAllHosts();
+
+        for (HostSystem host : hosts) {
+            log.info("Available Host: {} - {}", host.getId(), host.getDisplayName());
+            if (host.isProxiedSSHServer()){
+                log.info("Host {} is configured for SSH proxy", host.getDisplayName());
+            } else {
+                log.warn("Host {} is not configured for SSH proxy", host.getDisplayName());
+            }
+
+            try {
+                var hostGroups = host.getHostGroups();
+
+                userPublicKeyService.get
+                sshServer = SshServer.setUpDefaultServer();
+                sshServer.setPort( host.getProxiedSSHPort() );
+
+                // Set up host key
+                sshServer.setKeyPairProvider(new SimpleGeneratorHostKeyProvider(Paths.get(config.getHostKeyPath())));
+
+                // Set up file system factory (for SFTP if needed)
+                sshServer.setFileSystemFactory(new VirtualFileSystemFactory(Paths.get("/tmp")));
+
+                // Set up authentication
+                setupAuthentication();
+
+                // Set up shell factory that integrates with Sentrius
+                sshServer.setShellFactory(channel -> shellHandler.create());
+
+                // Start the server
+                sshServer.start();
+
+                log.info("SSH Proxy Server started on port {}", config.getPort());
+                log.info("Maximum concurrent sessions: {}", config.getMaxConcurrentSessions());
+
+            } catch (IOException e) {
+                log.error("Failed to start SSH Proxy Server", e);
+            }
+        }
         if (!config.isEnabled()) {
             log.info("SSH Proxy Server is disabled");
             return;
         }
 
-        try {
-            sshServer = SshServer.setUpDefaultServer();
-            sshServer.setPort(config.getPort());
-            
-            // Set up host key
-            sshServer.setKeyPairProvider(new SimpleGeneratorHostKeyProvider(Paths.get(config.getHostKeyPath())));
-            
-            // Set up file system factory (for SFTP if needed)
-            sshServer.setFileSystemFactory(new VirtualFileSystemFactory(Paths.get("/tmp")));
-            
-            // Set up authentication
-            setupAuthentication();
-            
-            // Set up shell factory that integrates with Sentrius
-            sshServer.setShellFactory(channel -> shellHandler.create());
-            
-            // Start the server
-            sshServer.start();
-            
-            log.info("SSH Proxy Server started on port {}", config.getPort());
-            log.info("Maximum concurrent sessions: {}", config.getMaxConcurrentSessions());
-            
-        } catch (IOException e) {
-            log.error("Failed to start SSH Proxy Server", e);
-        }
+
     }
 
     private void setupAuthentication() {

@@ -149,6 +149,7 @@ update_sentrius_ai_agent=false
 update_integrationproxy=false
 update_launcher=false
 update_agent_proxy=false
+update_ssh_proxy=false
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -160,7 +161,8 @@ while [[ "$#" -gt 0 ]]; do
         --sentrius-launcher-service) update_launcher=true ;;
         --sentrius-integration-proxy) update_integrationproxy=true ;;
         --sentrius-agent-proxy) update_agent_proxy=true ;;
-        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_integrationproxy=true; update_launcher=true; update_agent_proxy=true; ;;
+        --sentrius-ssh-proxy) update_ssh_proxy=true ;;
+        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_integrationproxy=true; update_launcher=true; update_agent_proxy=true; update_ssh_proxy=true; ;;
         --no-cache) NO_CACHE=true ;;
         --include-dev-certs) INCLUDE_DEV_CERTS=true ;;
         *) echo "Unknown flag: $1"; exit 1 ;;
@@ -237,4 +239,12 @@ if $update_agent_proxy; then
     build_image "sentrius-agent-proxy" "$AGENTPROXY_VERSION" "${SCRIPT_DIR}/../../docker/agent-proxy"
     rm docker/agent-proxy/agentproxy.jar
     update_env_var "AGENTPROXY_VERSION" "$AGENTPROXY_VERSION"
+fi
+
+if $update_ssh_proxy; then
+    cp ssh-proxy/target/ssh-proxy-*.jar docker/ssh-proxy/sshproxy.jar
+    SSHPROXY_VERSION=$(increment_patch_version $SSHPROXY_VERSION)
+    build_image "sentrius-ssh-proxy" "$SSHPROXY_VERSION" "${SCRIPT_DIR}/../../docker/ssh-proxy"
+    rm docker/ssh-proxy/sshproxy.jar
+    update_env_var "SSHPROXY_VERSION" "$SSHPROXY_VERSION"
 fi
