@@ -471,15 +471,16 @@ public class UserApiController extends BaseController {
         try {
 
             HostGroup hostGroup = hostGroupService.getHostGroup(publicKey.getHostGroup().getGroupId());
-            Objects.requireNonNull(hostGroup);
+
 
             UserPublicKey key = new UserPublicKey();
             key.setKeyName(publicKey.getKeyName());
             key.setKeyType(publicKey.getKeyType());
             key.setPublicKey(publicKey.getPublicKey());
             key.setIsEnabled(publicKey.getIsEnabled());
-            key.setHostGroup(hostGroup);
-
+            if (null != hostGroup) {
+                key.setHostGroup(hostGroup);
+            }
             var user = userService.getOperatingUser(request, response, null);
             key.setUser(user);
             
