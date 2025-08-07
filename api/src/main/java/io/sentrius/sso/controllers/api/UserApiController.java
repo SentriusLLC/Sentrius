@@ -22,11 +22,13 @@ import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.dto.UserTypeDTO;
 import io.sentrius.sso.core.model.users.UserConfig;
+import io.sentrius.sso.core.model.users.UserPublicKey;
 import io.sentrius.sso.core.model.users.UserSettings;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.SessionService;
 import io.sentrius.sso.core.services.UserCustomizationService;
+import io.sentrius.sso.core.services.UserPublicKeyService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
@@ -45,8 +47,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -63,6 +67,7 @@ public class UserApiController extends BaseController {
     final CryptoService cryptoService;
     private final MessagingUtil messagingUtil;
     final UserCustomizationService userThemeService;
+    final UserPublicKeyService userPublicKeyService;
     final ZeroTrustRequestService ztatRequestService;
     final ZeroTrustAccessTokenService ztatService;
     final AgentService agentService;
@@ -87,6 +92,7 @@ public class UserApiController extends BaseController {
         HostGroupService hostGroupService, CryptoService  cryptoService,
         MessagingUtil messagingUtil,
         UserCustomizationService userThemeService,
+        UserPublicKeyService userPublicKeyService,
         SessionService sessionService,
         ZeroTrustRequestService ztatRequestService,
         ZeroTrustAccessTokenService ztatService, AgentService agentService,
@@ -97,6 +103,7 @@ public class UserApiController extends BaseController {
         this.cryptoService = cryptoService;
         this.messagingUtil = messagingUtil;
         this.userThemeService = userThemeService;
+        this.userPublicKeyService = userPublicKeyService;
         this.sessionService = sessionService;
         this.ztatRequestService = ztatRequestService;
         this.ztatService = ztatService;
@@ -426,6 +433,104 @@ public class UserApiController extends BaseController {
         }
 
         return agentSessions;
+    }
+
+    // Public Key Management Endpoints
+    
+    @GetMapping("/publickeys")
+    public ResponseEntity<List<UserPublicKey>> getUserPublicKeys(HttpServletRequest request, HttpServletResponse response) {
+        var user = userService.getOperatingUser(request, response, null);
+        var publicKeys = userPublicKeyService.getPublicKeysForUser(user.getId());
+        return ResponseEntity.ok(publicKeys);
+    }
+
+    @PostMapping("/publickeys")
+    public ResponseEntity<ObjectNode> addPublicKey(HttpServletRequest request, HttpServletResponse response, @RequestBody UserPublicKey publicKey) {
+        ObjectNode node = JsonUtil.MAPPER.createObjectNode();
+        try {
+            var user = userService.getOperatingUser(request, response, null);
+            publicKey.setUser(user);
+            
+            if (publicKey.getCreatedAt() == null) {
+                publicKey.setCreatedAt(new java.sql.Timestamp(System.currentTimeMillis()));
+            }
+            
+            var savedKey = userPublicKeyService.addPublicKey(publicKey);
+            node.put("status", "Public key successfully added");
+            node.put("id", savedKey.getId());
+            return ResponseEntity.ok(node);
+        } catch (Exception e) {
+            log.error("Error adding public key", e);
+            node.put("status", "Error adding public key");
+            return ResponseEntity.internalServerError().body(node);
+        }
+    }
+
+    @PostMapping("/publickeys/{keyId}/assign")
+    public ResponseEntity<ObjectNode> assignPublicKeyToHostGroup(
+            HttpServletRequest request, HttpServletResponse response,
+            @PathVariable Long keyId, @RequestParam Long hostGroupId) {
+        ObjectNode node = JsonUtil.MAPPER.createObjectNode();
+        try {
+            var user = userService.getOperatingUser(request, response, null);
+            var publicKeyOpt = userPublicKeyService.getPublicKeyById(keyId);
+            
+            if (publicKeyOpt.isEmpty()) {
+                node.put("status", "Public key not found");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(node);
+            }
+            
+            var publicKey = publicKeyOpt.get();
+            
+            // Verify the key belongs to the current user
+            if (!publicKey.getUser().getId().equals(user.getId())) {
+                node.put("status", "Unauthorized");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(node);
+            }
+            
+            var hostGroup = hostGroupService.getHostGroup(hostGroupId);
+            publicKey.setHostGroup(hostGroup);
+            userPublicKeyService.addPublicKey(publicKey);
+            
+            node.put("status", "Public key successfully assigned to host group");
+            return ResponseEntity.ok(node);
+        } catch (Exception e) {
+            log.error("Error assigning public key to host group", e);
+            node.put("status", "Error assigning public key to host group");
+            return ResponseEntity.internalServerError().body(node);
+        }
+    }
+
+    @DeleteMapping("/publickeys/{keyId}")
+    public ResponseEntity<ObjectNode> deletePublicKey(
+            HttpServletRequest request, HttpServletResponse response,
+            @PathVariable Long keyId) {
+        ObjectNode node = JsonUtil.MAPPER.createObjectNode();
+        try {
+            var user = userService.getOperatingUser(request, response, null);
+            var publicKeyOpt = userPublicKeyService.getPublicKeyById(keyId);
+            
+            if (publicKeyOpt.isEmpty()) {
+                node.put("status", "Public key not found");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(node);
+            }
+            
+            var publicKey = publicKeyOpt.get();
+            
+            // Verify the key belongs to the current user
+            if (!publicKey.getUser().getId().equals(user.getId())) {
+                node.put("status", "Unauthorized");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(node);
+            }
+            
+            userPublicKeyService.deletePublicKey(keyId);
+            node.put("status", "Public key successfully deleted");
+            return ResponseEntity.ok(node);
+        } catch (Exception e) {
+            log.error("Error deleting public key", e);
+            node.put("status", "Error deleting public key");
+            return ResponseEntity.internalServerError().body(node);
+        }
     }
 
 }

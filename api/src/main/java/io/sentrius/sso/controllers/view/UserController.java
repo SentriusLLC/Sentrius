@@ -23,7 +23,9 @@ import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.model.users.UserConfig;
 import io.sentrius.sso.core.model.users.UserSettings;
 import io.sentrius.sso.core.services.ErrorOutputService;
+import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.UserCustomizationService;
+import io.sentrius.sso.core.services.UserPublicKeyService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.WorkHoursService;
 import io.sentrius.sso.core.services.security.CryptoService;
@@ -44,16 +46,21 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class UserController extends BaseController {
 
     final UserCustomizationService userThemeService;
+    final UserPublicKeyService userPublicKeyService;
+    final HostGroupService hostGroupService;
     final WorkHoursService  workHoursService;
     final CryptoService cryptoService;
 
     protected UserController(
         UserService userService, SystemOptions systemOptions,
-        ErrorOutputService errorOutputService, UserCustomizationService userThemeService, WorkHoursService workHoursService,
-        CryptoService cryptoService
+        ErrorOutputService errorOutputService, UserCustomizationService userThemeService, 
+        UserPublicKeyService userPublicKeyService, HostGroupService hostGroupService,
+        WorkHoursService workHoursService, CryptoService cryptoService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.userThemeService = userThemeService;
+        this.userPublicKeyService = userPublicKeyService;
+        this.hostGroupService = hostGroupService;
         this.workHoursService = workHoursService;
         this.cryptoService = cryptoService;
     }
@@ -186,8 +193,16 @@ public class UserController extends BaseController {
         Map<Integer, WorkHours> userWorkHours = workHoursList.stream()
             .collect(Collectors.toMap(WorkHours::getDayOfWeek, wh -> wh));
 
+        // Get user's public keys
+        var publicKeys = userPublicKeyService.getPublicKeysForUser(user.getId());
+        
+        // Get available host groups for this user
+        var hostGroups = hostGroupService.getHostGroupsForUser(user.getId());
+
         // Pass data to Thymeleaf
         model.addAttribute("userWorkHours", userWorkHours);
+        model.addAttribute("publicKeys", publicKeys);
+        model.addAttribute("hostGroups", hostGroups);
         model.addAttribute("daysOfWeek", List.of(
             new DayOfWeekDTO(0, "Sunday"),
             new DayOfWeekDTO(1, "Monday"),

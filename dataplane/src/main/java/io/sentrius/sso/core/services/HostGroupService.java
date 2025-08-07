@@ -195,6 +195,11 @@ public class HostGroupService {
     public List<HostGroup> getAllHostGroups() {
         return hostGroupRepository.findAll();
     }
+    
+    @Transactional(readOnly = true)
+    public List<HostGroup> getHostGroupsForUser(Long userId) {
+        return userRepository.findHostGroupsByUserId(userId).stream().toList();
+    }
 
     public List<HostGroup> getHostGroupsByName(String name) {
         return hostGroupRepository.findByName(name);
