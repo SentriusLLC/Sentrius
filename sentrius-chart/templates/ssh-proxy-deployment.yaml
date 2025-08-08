@@ -22,7 +22,7 @@ spec:
           ports:
             - containerPort: {{ .Values.sshproxy.port }}
               name: ssh
-            - containerPort: 8090
+            - containerPort: 8080
               name: http
           env:
             - name: SENTRIUS_SSH_PROXY_ENABLED
@@ -35,8 +35,26 @@ spec:
               value: "{{ .Values.sshproxy.connection.keepAliveInterval }}"
             - name: SENTRIUS_SSH_PROXY_CONNECTION_MAX_RETRIES
               value: "{{ .Values.sshproxy.connection.maxRetries }}"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: db-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: db-password
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: keystore-password
           resources:
             {{- toYaml .Values.sshproxy.resources | nindent 12 }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
           livenessProbe:
             httpGet:
               path: /actuator/health
@@ -49,3 +67,7 @@ spec:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 5
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ .Release.Name }}-config

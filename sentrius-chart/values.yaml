@@ -375,7 +375,7 @@ sshproxy:
     tag: tag
     pullPolicy: IfNotPresent
   port: 2222
-  serviceType: ClusterIP
+  serviceType: NodePort
   nodePort: 30022  # Only used if serviceType is NodePort
   resources: {}
   connection:

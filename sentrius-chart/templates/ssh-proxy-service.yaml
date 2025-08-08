@@ -15,9 +15,5 @@ spec:
       {{- if and (eq .Values.sshproxy.serviceType "NodePort") .Values.sshproxy.nodePort }}
       nodePort: {{ .Values.sshproxy.nodePort }}
       {{- end }}
-    - port: 8090
-      targetPort: 8090
-      protocol: TCP
-      name: http
   selector:
     app: sentrius-ssh-proxy

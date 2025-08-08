@@ -3,7 +3,9 @@ package io.sentrius.sso.sshproxy.service;
 import io.sentrius.sso.core.model.HostSystem;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.UserPublicKeyService;
+import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.sshproxy.config.SshProxyConfig;
+import io.sentrius.sso.sshproxy.handler.SentriusPublicKeyAuthenticator;
 import io.sentrius.sso.sshproxy.handler.SshProxyShellHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,27 +37,17 @@ public class SshProxyServerService {
     private final SshProxyShellHandler shellHandler;
     private final HostGroupService hostGroupService;
     private final UserPublicKeyService userPublicKeyService;
+    private final UserService userService;
+
     private SshServer sshServer;
 
     @EventListener(ApplicationReadyEvent.class)
     public void startSshServer() {
+        log.info("Starting SSH Proxy Server... on port {}", config.getPort());
+        try{
 
-        var hosts = hostGroupService.getAllHosts();
-
-        for (HostSystem host : hosts) {
-            log.info("Available Host: {} - {}", host.getId(), host.getDisplayName());
-            if (host.isProxiedSSHServer()){
-                log.info("Host {} is configured for SSH proxy", host.getDisplayName());
-            } else {
-                log.warn("Host {} is not configured for SSH proxy", host.getDisplayName());
-            }
-
-            try {
-                var hostGroups = host.getHostGroups();
-
-                userPublicKeyService.get
                 sshServer = SshServer.setUpDefaultServer();
-                sshServer.setPort( host.getProxiedSSHPort() );
+                sshServer.setPort( config.getPort() );
 
                 // Set up host key
                 sshServer.setKeyPairProvider(new SimpleGeneratorHostKeyProvider(Paths.get(config.getHostKeyPath())));
@@ -70,6 +62,7 @@ public class SshProxyServerService {
                 sshServer.setShellFactory(channel -> shellHandler.create());
 
                 // Start the server
+
                 sshServer.start();
 
                 log.info("SSH Proxy Server started on port {}", config.getPort());
@@ -78,11 +71,6 @@ public class SshProxyServerService {
             } catch (IOException e) {
                 log.error("Failed to start SSH Proxy Server", e);
             }
-        }
-        if (!config.isEnabled()) {
-            log.info("SSH Proxy Server is disabled");
-            return;
-        }
 
 
     }
@@ -92,23 +80,12 @@ public class SshProxyServerService {
         sshServer.setPasswordAuthenticator(new PasswordAuthenticator() {
             @Override
             public boolean authenticate(String username, String password, ServerSession session) {
-                // TODO: Integrate with Sentrius authentication system
-                // For now, allow any non-empty password for demo purposes
-                log.info("Password authentication attempt for user: {}", username);
-                return password != null && !password.isEmpty();
+                return false;
             }
         });
 
         // Public key authentication
-        sshServer.setPublickeyAuthenticator(new PublickeyAuthenticator() {
-            @Override
-            public boolean authenticate(String username, PublicKey key, ServerSession session) {
-                // TODO: Integrate with Sentrius key management
-                // For now, allow any valid public key for demo purposes
-                log.info("Public key authentication attempt for user: {}", username);
-                return true;
-            }
-        });
+        sshServer.setPublickeyAuthenticator(new SentriusPublicKeyAuthenticator(userService, userPublicKeyService));
     }
 
     @PreDestroy

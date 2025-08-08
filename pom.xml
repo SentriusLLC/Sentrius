@@ -484,11 +484,12 @@
           <dependenciesToScan>
             <dependency>org.junit.jupiter</dependency>
           </dependenciesToScan>
+            <!--
           <providers>
             <provider>
               <name>junit-platform</name>
             </provider>
-          </providers>
+          </providers> -->
         </configuration>
       </plugin>
       <plugin>
