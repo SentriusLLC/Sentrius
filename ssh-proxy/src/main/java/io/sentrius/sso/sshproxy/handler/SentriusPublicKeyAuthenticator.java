@@ -7,7 +7,9 @@ import io.sentrius.sso.core.services.UserPublicKeyService;
 import io.sentrius.sso.core.services.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.sshd.common.config.keys.AuthorizedKeyEntry;
 import org.apache.sshd.common.config.keys.FilePasswordProvider;
+import org.apache.sshd.common.config.keys.PublicKeyEntry;
 import org.apache.sshd.common.util.security.SecurityUtils;
 import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator;
 import org.apache.sshd.server.session.ServerSession;
@@ -52,9 +54,7 @@ public class SentriusPublicKeyAuthenticator implements PublickeyAuthenticator {
     }
 
     private PublicKey parseOpenSSHKey(String sshKey) throws Exception {
-        return SecurityUtils.loadKeyPairIdentities(null, null,
-                new ByteArrayInputStream(sshKey.getBytes(StandardCharsets.UTF_8)),
-                FilePasswordProvider.EMPTY)
-            .iterator().next().getPublic();
+        AuthorizedKeyEntry entry = AuthorizedKeyEntry.parseAuthorizedKeyEntry(sshKey);
+        return entry.resolvePublicKey(null, null);
     }
 }

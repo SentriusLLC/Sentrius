@@ -1,9 +1,12 @@
 package io.sentrius.sso.sshproxy.service;
 
 import io.sentrius.sso.core.model.HostSystem;
+import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.repository.SystemRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -73,11 +76,16 @@ public class HostSystemSelectionService {
     /**
      * Get the default HostSystem (first available one) for SSH proxy.
      */
+    @Transactional
     public Optional<HostSystem> getDefaultHostSystem() {
         try {
             List<HostSystem> hostSystems = systemRepository.findAll();
             if (!hostSystems.isEmpty()) {
                 HostSystem defaultHost = hostSystems.get(0);
+                Hibernate.initialize(defaultHost.getHostGroups());
+                for(HostGroup gropu : defaultHost.getHostGroups()) {
+                    Hibernate.initialize(gropu.getRules());
+                }
                 log.info("Using default HostSystem: {} ({}:{})", 
                     defaultHost.getDisplayName(), defaultHost.getHost(), defaultHost.getPort());
                 return Optional.of(defaultHost);

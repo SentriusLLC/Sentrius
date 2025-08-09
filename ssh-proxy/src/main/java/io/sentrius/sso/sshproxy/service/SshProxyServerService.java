@@ -1,6 +1,5 @@
 package io.sentrius.sso.sshproxy.service;
 
-import io.sentrius.sso.core.model.HostSystem;
 import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.UserPublicKeyService;
 import io.sentrius.sso.core.services.UserService;
@@ -12,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.sshd.common.file.virtualfs.VirtualFileSystemFactory;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.auth.password.PasswordAuthenticator;
-import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -22,7 +20,8 @@ import org.springframework.stereotype.Service;
 import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.security.PublicKey;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Main SSH proxy server that accepts SSH connections and applies Sentrius safeguards.
@@ -39,15 +38,20 @@ public class SshProxyServerService {
     private final UserPublicKeyService userPublicKeyService;
     private final UserService userService;
 
-    private SshServer sshServer;
+    private final Map<Long, SshServer> servers = new ConcurrentHashMap<>();
+
 
     @EventListener(ApplicationReadyEvent.class)
     public void startSshServer() {
-        log.info("Starting SSH Proxy Server... on port {}", config.getPort());
-        try{
+        log.info("Starting Default SSH Proxy Server... on port {}", config.getPort());
+        try {
 
-                sshServer = SshServer.setUpDefaultServer();
-                sshServer.setPort( config.getPort() );
+            // Create and configure the SSH server
+            var defaultGroup = hostGroupService.getHostGroup(-1L);
+
+            if (defaultGroup != null) {
+                var sshServer = SshServer.setUpDefaultServer();
+                sshServer.setPort(config.getPort());
 
                 // Set up host key
                 sshServer.setKeyPairProvider(new SimpleGeneratorHostKeyProvider(Paths.get(config.getHostKeyPath())));
@@ -56,7 +60,7 @@ public class SshProxyServerService {
                 sshServer.setFileSystemFactory(new VirtualFileSystemFactory(Paths.get("/tmp")));
 
                 // Set up authentication
-                setupAuthentication();
+                setupAuthentication(sshServer);
 
                 // Set up shell factory that integrates with Sentrius
                 sshServer.setShellFactory(channel -> shellHandler.create());
@@ -65,17 +69,25 @@ public class SshProxyServerService {
 
                 sshServer.start();
 
+
+                servers.put(defaultGroup.getId(), sshServer);
                 log.info("SSH Proxy Server started on port {}", config.getPort());
                 log.info("Maximum concurrent sessions: {}", config.getMaxConcurrentSessions());
-
-            } catch (IOException e) {
-                log.error("Failed to start SSH Proxy Server", e);
             }
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
 
     }
 
-    private void setupAuthentication() {
+
+    public void refreshHostGroups() {
+
+    }
+
+    private void setupAuthentication(SshServer sshServer) {
         // Password authentication - integrate with Sentrius user management
         sshServer.setPasswordAuthenticator(new PasswordAuthenticator() {
             @Override
@@ -90,22 +102,19 @@ public class SshProxyServerService {
 
     @PreDestroy
     public void stopSshServer() {
-        if (sshServer != null && sshServer.isStarted()) {
-            try {
-                log.info("Stopping SSH Proxy Server...");
-                sshServer.stop();
-                log.info("SSH Proxy Server stopped");
-            } catch (IOException e) {
-                log.error("Error stopping SSH Proxy Server", e);
+        for(var entry : servers.entrySet()){
+            var sshServer = entry.getValue();
+            if (sshServer != null && sshServer.isStarted()) {
+                try {
+                    log.info("Stopping SSH Proxy Server...");
+                    sshServer.stop();
+                    log.info("SSH Proxy Server stopped");
+                } catch (IOException e) {
+                    log.error("Error stopping SSH Proxy Server", e);
+                }
             }
         }
+
     }
 
-    public boolean isRunning() {
-        return sshServer != null && sshServer.isStarted();
-    }
-
-    public int getPort() {
-        return config.getPort();
-    }
 }

@@ -3,10 +3,12 @@ package io.sentrius.sso.websocket;
 
 import io.sentrius.sso.automation.auditing.Trigger;
 import io.sentrius.sso.automation.auditing.TriggerAction;
+import io.sentrius.sso.core.integrations.ssh.DataWebSession;
 import io.sentrius.sso.core.model.chat.ChatLog;
 import io.sentrius.sso.core.services.ChatService;
 import io.sentrius.sso.core.services.metadata.TerminalSessionMetadataService;
 import io.sentrius.sso.core.services.security.CryptoService;
+import io.sentrius.sso.core.services.SshListenerService;
 import io.sentrius.sso.core.utils.StringUtils;
 import io.sentrius.sso.protobuf.Session;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
@@ -57,7 +59,7 @@ public class TerminalWSHandler extends TextWebSocketHandler {
                 // Store the WebSocket session using the session ID from the query parameter
                 sessions.put(sessionId, session);
                 log.debug("New connection established, session ID: " + sessionId);
-                sshListenerService.startListeningToSshServer(sessionId, session);
+                sshListenerService.startListeningToSshServer(sessionId, new DataWebSession(session));
             } else {
                 log.trace("Session ID not found in query parameters.");
                 session.close(); // Close the session if no valid session ID is provided

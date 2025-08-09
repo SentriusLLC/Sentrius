@@ -18,6 +18,8 @@ public class HostGroupDTO {
     private String displayName;
     private String description;
     private int hostCount = 0;
+    @Builder.Default
+    private int proxiedSSHPort = 0;
     private ProfileConfiguration configuration;
     List<UserDTO> users = new ArrayList<>();
 
