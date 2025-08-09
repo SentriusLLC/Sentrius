@@ -43,7 +43,7 @@ public class RefreshController extends BaseController {
         } catch (Exception e) {
             log.error("Failed to refresh SSH proxy host groups", e);
             return ResponseEntity.internalServerError()
-                .body("Failed to refresh host groups: " + e.getMessage());
+                .body("Failed to refresh host groups.");
         }
     }
 }
