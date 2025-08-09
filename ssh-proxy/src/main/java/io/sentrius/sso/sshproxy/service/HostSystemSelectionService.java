@@ -83,8 +83,8 @@ public class HostSystemSelectionService {
             if (!hostSystems.isEmpty()) {
                 HostSystem defaultHost = hostSystems.get(0);
                 Hibernate.initialize(defaultHost.getHostGroups());
-                for(HostGroup gropu : defaultHost.getHostGroups()) {
-                    Hibernate.initialize(gropu.getRules());
+                for(HostGroup group : defaultHost.getHostGroups()) {
+                    Hibernate.initialize(group.getRules());
                 }
                 log.info("Using default HostSystem: {} ({}:{})", 
                     defaultHost.getDisplayName(), defaultHost.getHost(), defaultHost.getPort());

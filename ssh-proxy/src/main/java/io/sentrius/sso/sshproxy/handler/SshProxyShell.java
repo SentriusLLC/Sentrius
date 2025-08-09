@@ -128,9 +128,9 @@ public class SshProxyShell implements Command {
 
             initializeHostSystemSelection();
 
-            var connectedSysteem = connect(user, selectedHostSystem.getHostGroups().get(0), selectedHostSystem.getId());
+            var connectedSystem = connect(user, selectedHostSystem.getHostGroups().get(0), selectedHostSystem.getId());
             sendWelcomeMessage();
-            startShellLoop(connectedSysteem);
+            startShellLoop(connectedSystem);
         } catch (Exception e) {
             log.error("Failed to initialize SSH proxy session", e);
             callback.onExit(1, "Failed to initialize session");
@@ -251,78 +251,24 @@ public class SshProxyShell implements Command {
                         byte b = buffer[i];
                         char c = (char) b;
 
-
-                        /*
-                        if (c == '\r' || c == '\n') {
-                            // Command completed
-                            String command = commandBuffer.toString().trim();
-
-                            commandBuffer.setLength(0);
-                            out.write("\r\n".getBytes());
-                            sendPrompt();
-
-
-
-                            auditLog.setKeycode(c);
-                            auditLog.setCommand(command);
-                            getSshListenerService().processTerminalMessage(connectedSystem,
-                                auditLog.build());
-                            auditLog =
-                                Session.TerminalMessage.newBuilder();
-                        } else if (c == 3) { // Ctrl+C
-                            auditLog.setKeycode(c);
-                            auditLog =
-                                Session.TerminalMessage.newBuilder();
-                            getSshListenerService().processTerminalMessage(connectedSystem,
-                                auditLog.build());
-                            terminalResponseService.sendMessage("^C\r\n", out);
-                            commandBuffer.setLength(0);
-                        } else if (c == 127 || c == 8) { // Backspace
-                            if (commandBuffer.length() > 0) {
-                                commandBuffer.setLength(commandBuffer.length() - 1);
-//                                out.write("\b \b".getBytes());
-                            }
-                            auditLog.setKeycode(c);
-                            auditLog =
-                                Session.TerminalMessage.newBuilder();
-                            getSshListenerService().processTerminalMessage(connectedSystem,
-                                auditLog.build());
-                        } else if (c >= 32 && c <= 126) { //+ Printable characters
-                            commandBuffer.append(c);
-                            auditLog.setCommand(String.valueOf(c));
-                            auditLog =
-                                Session.TerminalMessage.newBuilder();
-                            getSshListenerService().processTerminalMessage(connectedSystem,
-                                auditLog.build());
-  //                          out.write(b);
-                        }
-
-*/
-                        // Ignore other control characters for now
+                        // Process input character and send audit log
                         if (c >= 32 && c <= 126) {
+                            // Printable characters
                             auditLog.setCommand(String.valueOf(c));
                             auditLog.setType(Session.MessageType.PROMPT_DATA);
                             auditLog.setKeycode(-1);
                             getSshListenerService().processTerminalMessage(connectedSystem,
                                 auditLog.build());
-                            auditLog =
-                                Session.TerminalMessage.newBuilder();
-                            //                          out.write(b);
-                        }else {
+                            auditLog = Session.TerminalMessage.newBuilder();
+                        } else {
+                            // Control characters and special keys
                             auditLog.setKeycode(c);
                             auditLog.setType(Session.MessageType.PROMPT_DATA);
-
-
                             getSshListenerService().processTerminalMessage(connectedSystem,
                                 auditLog.build());
-                            auditLog =
-                                Session.TerminalMessage.newBuilder();
-                            //                          out.write(b);
-
+                            auditLog = Session.TerminalMessage.newBuilder();
                         }
                     }
-
-                  ///  getSshListenerService().processTerminalMessage(connectedSystem, auditLog);
                 }
 
             } catch (IOException e) {
