@@ -94,7 +94,7 @@ public class SshListenerService {
                             }
                         }
                     }else {
-                        log.info("No data to return");
+                        log.trace("No data to return");
                     }
 
 
@@ -104,7 +104,7 @@ public class SshListenerService {
                     Thread.currentThread().interrupt(); // Ensure the thread can exit cleanly on exception
                 }
             };
-            log.info("***L:eaving thread");
+            log.trace("***L:eaving thread");
         });
     }
 
@@ -245,9 +245,9 @@ public class SshListenerService {
             }
         } else if (terminalMessage.getType() == Session.MessageType.HEARTBEAT) {
             // Handle heartbeat message
-            log.info("received heartbedat");
+            log.trace("received heartbedat");
         }
-        log.info("Processed terminal message for session: {}", terminalSessionId.getSession().getId());
+        log.debug("Processed terminal message for session: {}", terminalSessionId.getSession().getId());
     }
 
 

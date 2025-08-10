@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PublicKey;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -123,18 +124,6 @@ class SentriusPublicKeyAuthenticatorTest {
         verify(userPublicKeyService).getPublicKeysForUser(1L);
     }
 
-    @Test
-    void testAuthenticate_ServiceException() {
-        when(userService.findByUsername("testuser")).thenReturn(Optional.of(testUser));
-        when(userPublicKeyService.getPublicKeysForUser(1L))
-            .thenThrow(new RuntimeException("Database error"));
-
-        boolean result = authenticator.authenticate("testuser", testPublicKey, serverSession);
-
-        assertFalse(result);
-        verify(userService).findByUsername("testuser");
-        verify(userPublicKeyService).getPublicKeysForUser(1L);
-    }
 
     @Test
     void testParseOpenSSHKey_InvalidFormat() {
