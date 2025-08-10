@@ -7,11 +7,7 @@ import io.sentrius.sso.core.model.sessions.SessionLog;
 import io.sentrius.sso.core.model.users.User;
 
 public abstract class BaseAccessTokenAuditor {
-/*
-  protected final Long userId;
-  protected final Long sessionId;
 
-  protected final Long systemId;*/
   protected final HostSystem system;
   protected final SessionLog session;
   protected final User user;

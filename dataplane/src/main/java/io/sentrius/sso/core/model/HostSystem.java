@@ -93,6 +93,16 @@ public class HostSystem implements Host {
     @Column(name = "locked")
     private boolean locked = false;
 
+    @Builder.Default
+    @Column(name = "proxied_ssh_server")
+    private boolean proxiedSSHServer = false;
+
+    @Builder.Default
+    @Column(name = "proxied_ssh_port")
+    private Integer proxiedSSHPort = 0;
+
+
+
     @OneToMany(mappedBy = "hostSystem", cascade = CascadeType.ALL,orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ProxyHost> proxies;
 

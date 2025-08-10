@@ -260,6 +260,7 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set sentriusaiagent.image.tag=${SENTRIUS_AI_AGENT_VERSION} \
     --set launcherservice.image.pullPolicy="Never" \
     --set launcherservice.image.tag=${LAUNCHER_VERSION} \
+    --set sshproxy.image.tag=${SSHPROXY_VERSION} \
     --set neo4j.env.NEO4J_server_config_strict__validation__enabled="\"false\"" \
     --set sentriusagent.image.tag=${SENTRIUS_AGENT_VERSION} || { echo "Failed to deploy Sentrius with Helm"; exit 1; }
 

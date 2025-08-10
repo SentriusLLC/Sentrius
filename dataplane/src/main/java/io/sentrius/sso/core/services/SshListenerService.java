@@ -1,6 +1,7 @@
-package io.sentrius.sso.websocket;
+package io.sentrius.sso.core.services;
 import io.sentrius.sso.automation.auditing.Trigger;
 import io.sentrius.sso.automation.auditing.TriggerAction;
+import io.sentrius.sso.core.integrations.ssh.DataSession;
 import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.protobuf.Session;
 import io.sentrius.sso.core.model.ConnectedSystem;
@@ -11,7 +12,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -34,9 +34,9 @@ public class SshListenerService {
     @Qualifier("taskExecutor") // Specify the custom task executor to use
     private final Executor taskExecutor;
 
-    private final ConcurrentMap<String, WebSocketSession> activeSessions = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, DataSession> activeSessions = new ConcurrentHashMap<>();
 
-    public void startAuditingSession(String terminalSessionId, WebSocketSession session) throws GeneralSecurityException {
+    public void startAuditingSession(String terminalSessionId, DataSession session) throws GeneralSecurityException {
 
         var sessionIdStr = cryptoService.decrypt(terminalSessionId);
         var sessionIdLong = Long.parseLong(sessionIdStr);
@@ -56,7 +56,7 @@ public class SshListenerService {
         }
     }
 
-    public void startListeningToSshServer(String terminalSessionId, WebSocketSession session) throws GeneralSecurityException {
+    public void startListeningToSshServer(String terminalSessionId, DataSession session) throws GeneralSecurityException {
 
         var sessionIdStr = cryptoService.decrypt(terminalSessionId);
         var sessionIdLong = Long.parseLong(sessionIdStr);
@@ -73,13 +73,14 @@ public class SshListenerService {
 
 
         taskExecutor.execute(() -> {
+            log.info("Listening to SSH server for session: {}", terminalSessionId);
             while (!Thread.currentThread().isInterrupted() && activeSessions.get(terminalSessionId) != null &&
                 !connectedSystem.getSession().getClosed()) {
                 try {
                     // logic for receiving data from SSH server
                     var sshData = sessionTrackingService.getOutput(connectedSystem, 1L, TimeUnit.SECONDS,
                         output -> (!connectedSystem.getSession().getClosed() && (null != activeSessions.get(terminalSessionId) && activeSessions.get(terminalSessionId).isOpen())));
-
+                    log.info("Received data from SSH server for session: {}", terminalSessionId);
                     // Send data to the specific terminal session
                     if (null != sshData ) {
                         for(Session.TerminalMessage terminalMessage : sshData){
@@ -149,8 +150,8 @@ public class SshListenerService {
     @Async
     public void sendToTerminalSession(String terminalSessionId, ConnectedSystem connectedSystem,
                                       Session.TerminalMessage sshData) {
-        WebSocketSession session = activeSessions.get(terminalSessionId);
-        log.trace("Sending message to session: {}", terminalSessionId);
+        DataSession session = activeSessions.get(terminalSessionId);
+        log.info("Sending message to session: {}", terminalSessionId);
         if (session != null && session.isOpen()) {
             try {
 
@@ -194,6 +195,7 @@ public class SshListenerService {
                         sessionTrackingService.addTrigger(terminalSessionId, terminalSessionId.getTerminalAuditor().getCurrentTrigger());
                     }
                     if (keyCode != null && keyCode != -1) {
+                        log.info("Processing keycode: {}", keyCode);
                         if (keyMap.containsKey(keyCode)) {
 
                             if (keyCode == 13
@@ -224,10 +226,11 @@ public class SshListenerService {
                                 terminalSessionId.getTerminalAuditor().keycode(keyCode);
                             }
                         } else {
+                            log.info("Keycode not mapped: {}", keyCode);
                         }
 
                     } else {
-
+                            log.info("Sending command to SSH server: {}", command);
                             terminalSessionId.getTerminalAuditor().append(command);
                             terminalSessionId.getCommander().print(command);
 
@@ -244,6 +247,7 @@ public class SshListenerService {
             // Handle heartbeat message
             log.trace("received heartbedat");
         }
+        log.debug("Processed terminal message for session: {}", terminalSessionId.getSession().getId());
     }
 
 
@@ -251,7 +255,7 @@ public class SshListenerService {
         sessionTrackingService.closeSession(connectedSystem);
     }
 
-    /** Maps key press events to the ascii values */
+    /** Maps key press events to the ascii values
     static Map<Integer, byte[]> keyMap = new HashMap<>();
 
     static {
@@ -269,6 +273,7 @@ public class SshListenerService {
         keyMap.put(40, new byte[] {(byte) 0x1b, (byte) 0x4f, (byte) 0x42});
         // BS
         keyMap.put(8, new byte[] {(byte) 0x7f});
+        keyMap.put(127, new byte[] {(byte) 0x7f}); // DEL
         // TAB
         keyMap.put(9, new byte[] {(byte) 0x09});
         // CTR
@@ -281,6 +286,7 @@ public class SshListenerService {
         keyMap.put(66, new byte[] {(byte) 0x02});
         // CTR-C
         keyMap.put(67, new byte[] {(byte) 0x03});
+        keyMap.put(3, new byte[] {(byte) 0x03});
         // CTR-D
         keyMap.put(68, new byte[] {(byte) 0x04});
         // CTR-E
@@ -341,7 +347,44 @@ public class SshListenerService {
         keyMap.put(35, "\033[4~".getBytes());
         // HOME
         keyMap.put(36, "\033[1~".getBytes());
+    }*/
+    public static Map<Integer, byte[]> keyMap = new HashMap<>();
+    static {
+        // --- Control characters ---
+        keyMap.put(8,  new byte[] {0x08});   // Backspace (^H)
+        keyMap.put(127,new byte[] {0x7f});   // DEL
+        keyMap.put(9,  new byte[] {0x09});   // Tab
+        keyMap.put(13, new byte[] {0x0d});   // Enter
+
+        // --- Arrow keys (CSI sequences) ---
+        keyMap.put(37, "\033[D".getBytes()); // Left
+        keyMap.put(38, "\033[A".getBytes()); // Up
+        keyMap.put(39, "\033[C".getBytes()); // Right
+        keyMap.put(40, "\033[B".getBytes()); // Down
+
+        // --- Home / End / Insert / Delete / PgUp / PgDn ---
+        keyMap.put(36, "\033[H".getBytes());   // Home
+        keyMap.put(35, "\033[F".getBytes());   // End
+        keyMap.put(45, "\033[2~".getBytes());  // Insert
+        keyMap.put(46, "\033[3~".getBytes());  // Delete
+        keyMap.put(33, "\033[5~".getBytes());  // Page Up
+        keyMap.put(34, "\033[6~".getBytes());  // Page Down
+
+        // --- Ctrl + Letter (ASCII 1–26) ---
+        for (int i = 'A'; i <= 'Z'; i++) {
+            keyMap.put(i, new byte[] { (byte) (i - 'A' + 1) });
+        }
+        // Also allow numeric keyCodes for Ctrl+C from browsers
+        keyMap.put(3, new byte[] {0x03}); // Ctrl-C
+
+        // --- Ctrl-[ and Ctrl-] ---
+        keyMap.put(219, new byte[] {0x1B}); // Ctrl-[ (Escape)
+        keyMap.put(221, new byte[] {0x1D}); // Ctrl-]
+
+        // --- ESC key ---
+        keyMap.put(27, new byte[] {0x1B});
     }
+
 
     public void removeSession(String sessionId) {
         log.trace("Removing session: {}", sessionId);

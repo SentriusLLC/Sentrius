@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-ssh-proxy
+  labels:
+    app: sentrius-ssh-proxy
+    release: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: sentrius-ssh-proxy
+  template:
+    metadata:
+      labels:
+        app: sentrius-ssh-proxy
+    spec:
+      containers:
+        - name: sentrius-ssh-proxy
+          image: "{{ .Values.sshproxy.image.repository }}:{{ .Values.sshproxy.image.tag }}"
+          imagePullPolicy: {{ .Values.sshproxy.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.sshproxy.port }}
+              name: ssh
+            - containerPort: 8080
+              name: http
+          env:
+            - name: SENTRIUS_SSH_PROXY_ENABLED
+              value: "{{ .Values.sshproxy.enabled }}"
+            - name: SENTRIUS_SSH_PROXY_PORT
+              value: "{{ .Values.sshproxy.port }}"
+            - name: SENTRIUS_SSH_PROXY_CONNECTION_CONNECTION_TIMEOUT
+              value: "{{ .Values.sshproxy.connection.connectionTimeout }}"
+            - name: SENTRIUS_SSH_PROXY_CONNECTION_KEEP_ALIVE_INTERVAL
+              value: "{{ .Values.sshproxy.connection.keepAliveInterval }}"
+            - name: SENTRIUS_SSH_PROXY_CONNECTION_MAX_RETRIES
+              value: "{{ .Values.sshproxy.connection.maxRetries }}"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: db-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: db-password
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: keystore-password
+          resources:
+            {{- toYaml .Values.sshproxy.resources | nindent 12 }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ .Release.Name }}-config

@@ -70,6 +70,10 @@ public class HostGroup {
   @Transient
   private boolean selected = false;
 
+    @Builder.Default
+    @Column(name = "proxied_ssh_port")
+    private Integer proxiedSSHPort = 0;
+
   @ManyToMany(fetch = FetchType.LAZY)
   @JoinTable(
       name = "user_hostgroups",
@@ -139,6 +143,7 @@ public class HostGroup {
     builder.description(this.getDescription());
     builder.hostCount(this.getHostSystems().size());
     builder.configuration(this.getConfiguration());
+    builder.proxiedSSHPort(this.getProxiedSSHPort());
     if (setUsers){
       builder.users(this.getUsers().stream().map(x -> x.toDto()).toList());
     }

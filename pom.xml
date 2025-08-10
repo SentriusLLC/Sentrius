@@ -19,6 +19,7 @@
     <module>analytics</module>
     <module>ai-agent</module>
     <module>agent-launcher</module>
+    <module>ssh-proxy</module>
   </modules>
   <properties>
     <java.version>17</java.version>
@@ -483,11 +484,12 @@
           <dependenciesToScan>
             <dependency>org.junit.jupiter</dependency>
           </dependenciesToScan>
+            <!--
           <providers>
             <provider>
               <name>junit-platform</name>
             </provider>
-          </providers>
+          </providers> -->
         </configuration>
       </plugin>
       <plugin>

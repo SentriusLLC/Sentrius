@@ -8,8 +8,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import io.sentrius.sso.core.integrations.ssh.DataWebSession;
 import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
+import io.sentrius.sso.core.services.SshListenerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -43,7 +45,7 @@ public class AuditSocketHandler extends TextWebSocketHandler {
                 // Store the WebSocket session using the session ID from the query parameter
                 sessions.put(sessionId, session);
                 log.trace("*AUDITING New connection established, session ID: " + sessionId);
-                sshListenerService.startAuditingSession(sessionId, session);
+                sshListenerService.startAuditingSession(sessionId, new DataWebSession(session));
             } else {
                 log.trace("Session ID not found in query parameters.");
                 session.close(); // Close the session if no valid session ID is provided
