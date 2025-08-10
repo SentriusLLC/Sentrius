@@ -1,6 +1,6 @@
 Sentrius
 
-![image](docs/images/mainscreen.png)
+![image](docs/images/dashboard.png)
 
 Sentrius is zero trust (and if you want AI assisted) management system. to protect your infrastructure. It is split 
 into several maven projects. Agents can be leveraged to monitor and control infra ( SSH, APIs, RDP eventually), ensuring that all connections are secure and compliant with your organization's policies.
@@ -48,6 +48,12 @@ Key Features
 
     REST API
     Manage your SSH configurations, enclaves, security rules, and sessions programmatically using a well-documented REST API.
+
+Custom SSH Server responds via Sentrius UI or terminals
+![image](docs/images/ssh.png)
+
+Agent Designer supports natural language prompts to create custom agents that can monitor and control SSH sessions, automate tasks, and provide user assistance. The Agent Designer allows you to define agent behavior, capabilities, and interactions with the Sentrius platform.
+![image](docs/images/agentdesigner.png)
 
 Project Structure
 
