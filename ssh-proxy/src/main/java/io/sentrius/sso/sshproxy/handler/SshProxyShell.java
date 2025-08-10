@@ -255,18 +255,29 @@ public class SshProxyShell implements Command {
                         if (c >= 32 && c <= 126) {
                             // Printable characters
                             auditLog.setCommand(String.valueOf(c));
-                            auditLog.setType(Session.MessageType.PROMPT_DATA);
+                            commandBuffer.append(c);
+                            auditLog.setType(Session.MessageType.USER_DATA);
                             auditLog.setKeycode(-1);
                             getSshListenerService().processTerminalMessage(connectedSystem,
                                 auditLog.build());
                             auditLog = Session.TerminalMessage.newBuilder();
                         } else {
                             // Control characters and special keys
-                            auditLog.setKeycode(c);
-                            auditLog.setType(Session.MessageType.PROMPT_DATA);
-                            getSshListenerService().processTerminalMessage(connectedSystem,
-                                auditLog.build());
-                            auditLog = Session.TerminalMessage.newBuilder();
+                            if ( handleBuiltinCommand(commandBuffer.toString()) ){
+                                commandBuffer = new StringBuilder();
+                                auditLog.setKeycode(c);
+
+                                auditLog.setType(Session.MessageType.USER_DATA);
+                                getSshListenerService().processTerminalMessage(
+                                    connectedSystem,
+                                    auditLog.build()
+                                );
+                                auditLog = Session.TerminalMessage.newBuilder();
+                            } else {
+                                // Forward command to target SSH server
+                                connectedSystem.getCommander().write(SshListenerService.keyMap.get(3));
+                                connectedSystem.getTerminalAuditor().clear(0); // clear in case
+                            }
                         }
                     }
                 }
@@ -283,24 +294,6 @@ public class SshProxyShell implements Command {
         shellThread.start();
     }
 
-    private void processCommand(String command) throws IOException {
-        log.info("Processing command: {}", command);
-
-        // Handle built-in commands
-        if (handleBuiltinCommand(command)) {
-            return;
-        }
-
-        // Process command through Sentrius safeguards
-        boolean allowed = commandProcessor.processCommand(connectedSystem, command, out);
-
-        if (allowed) {
-            executeCommand(command);
-        } else {
-            // Command was blocked by safeguards
-            log.info("Command blocked by safeguards: {}", command);
-        }
-    }
 
     private boolean handleBuiltinCommand(String command) throws IOException {
         String cmd = command.toLowerCase().trim();
@@ -320,17 +313,17 @@ public class SshProxyShell implements Command {
 
             case "status":
                 showStatus();
-                return true;
+                return false;
 
             case "hosts":
                 showAvailableHosts();
-                return true;
+                return false;
 
             default:
                 if (parts.length >= 2 && "connect".equals(parts[0].toLowerCase())) {
                     return handleConnectCommand(parts);
                 }
-                return false;
+                return true;
         }
     }
 
@@ -458,23 +451,6 @@ public class SshProxyShell implements Command {
         return true;
     }
 
-    private void executeCommand(String command) throws IOException {
-        // TODO: Implement actual command forwarding to target SSH server
-        // For now, simulate command execution
-        terminalResponseService.sendMessage(String.format("Executing: %s\r\n", command), out);
-
-        // Simulate some command output
-        if (command.startsWith("ls")) {
-            terminalResponseService.sendMessage("file1.txt  file2.txt  directory1/\r\n", out);
-        } else if (command.startsWith("pwd")) {
-            terminalResponseService.sendMessage("/home/user\r\n", out);
-        } else if (command.startsWith("whoami")) {
-            terminalResponseService.sendMessage(session.getUsername() + "\r\n", out);
-        } else {
-            terminalResponseService.sendMessage(
-                String.format("%s: command simulated\r\n", command), out);
-        }
-    }
 
     @Override
     public void destroy(ChannelSession channel) throws Exception {

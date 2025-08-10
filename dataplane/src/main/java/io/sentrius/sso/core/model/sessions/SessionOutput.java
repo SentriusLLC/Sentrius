@@ -146,7 +146,7 @@ public class SessionOutput  {
         return deny.isEmpty() ? null : deny.pop();
     }
 */
-    public void addJIT(Trigger trg) {
+    public void addZtat(Trigger trg) {
         String message =
             "This command will require approval. Your command will not execute until approval is"
                 + " garnered.If approval is not already submitted you will be notified when it is"
