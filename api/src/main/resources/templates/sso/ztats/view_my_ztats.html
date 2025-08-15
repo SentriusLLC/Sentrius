@@ -16,40 +16,207 @@
             margin-top: 20px;
         }
 
-        .table-container {
-            margin-bottom: 20px;
+        /* Modern Page Header */
+        .page-header {
+            text-align: center;
+            margin-bottom: 3rem;
         }
 
-        .toast-header {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: #f8f9fa;
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #0d6efd, #6610f2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
+        .page-subtitle {
+            font-size: 1.1rem;
+            color: #adb5bd;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Modern Card Layout */
+        .ztat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .ztat-card {
+            background: var(--bs-dark);
+            border: 1px solid #404040;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .ztat-card:hover {
+            border-color: #0d6efd;
+            box-shadow: 0 8px 25px rgba(13, 110, 253, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .ztat-card-header {
+            background: linear-gradient(135deg, #2a2a2a, #1e1e1e);
+            padding: 1.5rem;
+            border-bottom: 1px solid #404040;
+        }
+
+        .ztat-card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .ztat-card-icon {
+            width: 24px;
+            height: 24px;
+            color: #0d6efd;
+        }
+
+        /* Enhanced DataTable Styling */
+        .display {
+            background: transparent !important;
+            color: #eaeaea !important;
+            margin: 0 !important;
+        }
+
+        .display thead th {
+            background: #333 !important;
+            color: #fff !important;
+            font-weight: 600;
+            padding: 1rem 0.75rem;
+            border-bottom: 2px solid #404040;
+            border-top: none;
+        }
+
+        .display tbody td {
+            padding: 1rem 0.75rem;
+            border-bottom: 1px solid #333;
+            background: transparent !important;
+        }
+
+        .display tbody tr:hover {
+            background: rgba(13, 110, 253, 0.1) !important;
+        }
+
+        .display tbody tr:nth-of-type(odd) {
+            background: rgba(255, 255, 255, 0.02) !important;
+        }
+
+        /* Modern Button Styling */
+        .btn-modern {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            border: none;
+            transition: all 0.3s ease;
+            margin-right: 0.5rem;
+        }
+
+        .btn-approve {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .btn-approve:hover {
+            background: linear-gradient(135deg, #218838, #1ea085);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-deny {
+            background: linear-gradient(135deg, #dc3545, #e74c3c);
+            color: white;
+        }
+
+        .btn-deny:hover {
+            background: linear-gradient(135deg, #c82333, #d63031);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-revoke {
+            background: linear-gradient(135deg, #6c757d, #5a6268);
+            color: white;
+        }
+
+        .btn-revoke:hover {
+            background: linear-gradient(135deg, #5a6268, #495057);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-open {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid #ffc107;
+        }
+
+        .status-approved {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border: 1px solid #28a745;
+        }
+
+        .status-denied {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+            border: 1px solid #dc3545;
+        }
+
+        /* Modal Improvements */
         .modal-content {
             background-color: #1e1e1e;
             color: #eaeaea;
+            border: 1px solid #404040;
+            border-radius: 12px;
         }
 
-        .btn-primary,
-        .btn-secondary {
-            background-color: #007bff;
-            border-color: #007bff;
-            transition: background-color 0.3s ease;
+        .modal-header {
+            border-bottom: 1px solid #404040;
         }
 
-        .btn-secondary:hover,
-        .btn-primary:hover {
-            background-color: #0056b3;
+        .modal-footer {
+            border-top: 1px solid #404040;
         }
 
-        .table-striped tbody tr:nth-of-type(odd) {
-            background-color: #2b2b2b; /* Custom dark striping */
-        }
-
-        .table-striped tbody tr:hover {
-            background-color: #3a3a3a;
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .ztat-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .page-title {
+                font-size: 2rem;
+            }
+            
+            .btn-modern {
+                font-size: 0.75rem;
+                padding: 0.4rem 0.8rem;
+            }
         }
     </style>
 </head>
@@ -63,173 +230,219 @@
                 <div th:replace="~{fragments/alerts}"></div>
 
                 <div class="container-fluid">
-    <!-- ZTAT Management Sections -->
-    <div class="row">
-        <!-- Open Terminal ZTATs -->
-        <div class="col-md-6 table-container">
-            <h2 class="toast-header">Open Terminal ZTATs</h2>
-            <table id="terminal-ztats-table" class="display">
-                <thead>
-                <tr>
-                    <th>Operation</th>
-                    <th>User</th>
-                    <th>System</th>
-                    <th>Approvals</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="s : ${openTerminalJits}">
-                    <td th:text="${s.command}"></td>
-                    <td th:text="${s.userName}"></td>
-                    <td th:text="${s.hostName}"></td>
-                    <td>
-                        <button th:id="'app_btn_' + ${s.id}" class="btn btn-primary btn-sm app_btn"
-                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_ZTATS') && !s.isCurrentUser}">Approve</button>
-                        <button th:id="'den_btn_' + ${s.id}" class="btn btn-danger btn-sm den_btn"
-                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_ZTATS') && !s.isCurrentUser}">Deny</button>
-                        <button th:id="'rev_btn_' + ${s.id}"
-                                th:if="${s.isCurrentUser }"
-                                class="btn btn-secondary rev_btn spacer spacer-right">Revoke
-                        </button>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="col-md-6 table-container">
-            <h2 class="toast-header">Open OPS ZTATs</h2>
-            <table id="ops-ztats-table" class="display">
-                <thead>
-                <tr>
-                    <th>Operation</th>
-                    <th>User</th>
-                    <th>Approvals</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="s : ${openOpsJits}">
-                    <td th:text="${s.command}"></td>
-                    <td th:text="${s.userName}"></td>
-                    <td>
-                         <button th:id="'ops_app_btn_' + ${s.id}"
-                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_ZTATS')
-                                         && !s.isCurrentUser}"
-                                class="btn btn-secondary ops_app_btn spacer spacer-right">Approve
-                        </button>
-                        <button th:id="'ops_den_btn_' + ${s.id}"
-                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_ZTATS')
-                                          && !s.isCurrentUser }"
-                                class="btn btn-secondary ops_den_btn spacer spacer-right">Deny
-                        </button>
-                        <button th:id="'ops_rev_btn_' + ${s.id}"
-                                th:if="${s.isCurrentUser }"
-                                class="btn btn-secondary ops_rev_btn spacer spacer-right">Revoke
-                        </button>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+                    <!-- Modern Page Header -->
+                    <div class="page-header">
+                        <h1 class="page-title">My ZTATs</h1>
+                        <p class="page-subtitle">Manage your personal Zero Trust Access Tokens</p>
                     </div>
 
-        <!-- Open OPS ZTATs -->
+                    <!-- Modern ZTAT Cards Grid -->
+                    <div class="ztat-grid">
+                        <!-- Open Terminal ZTATs Card -->
+                        <div class="ztat-card">
+                            <div class="ztat-card-header">
+                                <h3 class="ztat-card-title">
+                                    <i class="fas fa-terminal ztat-card-icon"></i>
+                                    Open Terminal ZTATs
+                                </h3>
+                            </div>
+                            <table id="terminal-ztats-table" class="display w-100">
+                                <thead>
+                                <tr>
+                                    <th>Operation</th>
+                                    <th>User</th>
+                                    <th>System</th>
+                                    <th>Status</th>
+                                    <th>Approvals</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="s : ${openTerminalJits}">
+                                    <td th:text="${s.command}"></td>
+                                    <td th:text="${s.userName}"></td>
+                                    <td th:text="${s.hostName}"></td>
+                                    <td><span class="status-badge status-open">Open</span></td>
+                                    <td>
+                                        <button th:id="'app_btn_' + ${s.id}" class="btn btn-modern btn-approve"
+                                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_ZTATS') && !s.isCurrentUser}">Approve</button>
+                                        <button th:id="'den_btn_' + ${s.id}" class="btn btn-modern btn-deny"
+                                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_ZTATS') && !s.isCurrentUser}">Deny</button>
+                                        <button th:id="'rev_btn_' + ${s.id}"
+                                                th:if="${s.isCurrentUser}"
+                                                class="btn btn-modern btn-revoke">Revoke</button>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
 
+                        <!-- Open OPS ZTATs Card -->
+                        <div class="ztat-card">
+                            <div class="ztat-card-header">
+                                <h3 class="ztat-card-title">
+                                    <i class="fas fa-cogs ztat-card-icon"></i>
+                                    Open OPS ZTATs
+                                </h3>
+                            </div>
+                            <table id="ops-ztats-table" class="display w-100">
+                                <thead>
+                                <tr>
+                                    <th>Operation</th>
+                                    <th>User</th>
+                                    <th>Status</th>
+                                    <th>Approvals</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="s : ${openOpsJits}">
+                                    <td th:text="${s.command}"></td>
+                                    <td th:text="${s.userName}"></td>
+                                    <td><span class="status-badge status-open">Open</span></td>
+                                    <td>
+                                         <button th:id="'ops_app_btn_' + ${s.id}"
+                                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_APPROVE_ZTATS')
+                                                         && !s.isCurrentUser}"
+                                                class="btn btn-modern btn-approve">Approve</button>
+                                        <button th:id="'ops_den_btn_' + ${s.id}"
+                                                th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DENY_ZTATS')
+                                                          && !s.isCurrentUser}"
+                                                class="btn btn-modern btn-deny">Deny</button>
+                                        <button th:id="'ops_rev_btn_' + ${s.id}"
+                                                th:if="${s.isCurrentUser}"
+                                                class="btn btn-modern btn-revoke">Revoke</button>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
 
-    <!-- Approved ZTATs -->
-    <div class="row">
-        <div class="col-md-6 table-container">
-            <h2 class="toast-header">Approved Terminal ZTATs</h2>
-            <table id="approved-terminal-ztats-table" class="display">
-                <thead>
-                <tr>
-                    <th>Operation</th>
-                    <th>User</th>
-                    <th>System</th>
-                    <th>Uses Remaining</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="s : ${approvedTerminalJits}">
-                    <td th:text="${s.command}"></td>
-                    <td th:text="${s.userName}"></td>
-                    <td th:text="${s.hostName}"></td>
-                    <td th:text="${s.usesRemaining}"></td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="col-md-6 table-container">
-            <h2 class="toast-header">Approved OPs ZTATs</h2>
-            <table id="approved-ops-ztats-table" class="display">
-                <thead>
-                <tr>
-                    <th>Operation</th>
-                    <th>User</th>
-                    <th>System</th>
-                    <th>Uses Remaining</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="s : ${approvedOpsJits}">
-                    <td th:text="${s.command}"></td>
-                    <td th:text="${s.userName}"></td>
-                    <td th:text="${s.hostName}"></td>
-                    <td th:text="${s.usesRemaining}"></td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+                    <!-- Approved ZTATs Grid -->
+                    <div class="ztat-grid">
+                        <!-- Approved Terminal ZTATs Card -->
+                        <div class="ztat-card">
+                            <div class="ztat-card-header">
+                                <h3 class="ztat-card-title">
+                                    <i class="fas fa-check-circle ztat-card-icon"></i>
+                                    Approved Terminal ZTATs
+                                </h3>
+                            </div>
+                            <table id="approved-terminal-ztats-table" class="display w-100">
+                                <thead>
+                                <tr>
+                                    <th>Operation</th>
+                                    <th>User</th>
+                                    <th>System</th>
+                                    <th>Uses Remaining</th>
+                                    <th>Status</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="s : ${approvedTerminalJits}">
+                                    <td th:text="${s.command}"></td>
+                                    <td th:text="${s.userName}"></td>
+                                    <td th:text="${s.hostName}"></td>
+                                    <td th:text="${s.usesRemaining}"></td>
+                                    <td><span class="status-badge status-approved">Approved</span></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
 
-    <div class="row">
-        <div class="col-md-6 table-container">
-            <h2 class="toast-header">Denied Terminal ZTATs</h2>
-            <table id="denied-terminal-ztats-table" class="display">
-                <thead>
-                <tr>
-                    <th>Operation</th>
-                    <th>User</th>
-                    <th>System</th>
-                    <th>Uses Remaining</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="s : ${deniedTerminalJits}">
-                    <td th:text="${s.command}"></td>
-                    <td th:text="${s.userName}"></td>
-                    <td th:text="${s.hostName}"></td>
-                    <td th:text="${s.usesRemaining}"></td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="col-md-6 table-container">
-            <h2 class="toast-header">Denied Ops ZTATs</h2>
-            <table id="denied-ops-ztats-table" class="display">
-                <thead>
-                <tr>
-                    <th>Operation</th>
-                    <th>User</th>
-                    <th>System</th>
-                    <th>Uses Remaining</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="s : ${deniedOpsJits}">
-                    <td th:text="${s.command}"></td>
-                    <td th:text="${s.userName}"></td>
-                    <td th:text="${s.hostName}"></td>
-                    <td th:text="${s.usesRemaining}"></td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+                        <!-- Approved OPs ZTATs Card -->
+                        <div class="ztat-card">
+                            <div class="ztat-card-header">
+                                <h3 class="ztat-card-title">
+                                    <i class="fas fa-check-circle ztat-card-icon"></i>
+                                    Approved OPs ZTATs
+                                </h3>
+                            </div>
+                            <table id="approved-ops-ztats-table" class="display w-100">
+                                <thead>
+                                <tr>
+                                    <th>Operation</th>
+                                    <th>User</th>
+                                    <th>System</th>
+                                    <th>Uses Remaining</th>
+                                    <th>Status</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="s : ${approvedOpsJits}">
+                                    <td th:text="${s.command}"></td>
+                                    <td th:text="${s.userName}"></td>
+                                    <td th:text="${s.hostName}"></td>
+                                    <td th:text="${s.usesRemaining}"></td>
+                                    <td><span class="status-badge status-approved">Approved</span></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
 
+                    <!-- Denied ZTATs Grid -->
+                    <div class="ztat-grid">
+                        <!-- Denied Terminal ZTATs Card -->
+                        <div class="ztat-card">
+                            <div class="ztat-card-header">
+                                <h3 class="ztat-card-title">
+                                    <i class="fas fa-times-circle ztat-card-icon"></i>
+                                    Denied Terminal ZTATs
+                                </h3>
+                            </div>
+                            <table id="denied-terminal-ztats-table" class="display w-100">
+                                <thead>
+                                <tr>
+                                    <th>Operation</th>
+                                    <th>User</th>
+                                    <th>System</th>
+                                    <th>Uses Remaining</th>
+                                    <th>Status</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="s : ${deniedTerminalJits}">
+                                    <td th:text="${s.command}"></td>
+                                    <td th:text="${s.userName}"></td>
+                                    <td th:text="${s.hostName}"></td>
+                                    <td th:text="${s.usesRemaining}"></td>
+                                    <td><span class="status-badge status-denied">Denied</span></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
 
-</div>
+                        <!-- Denied Ops ZTATs Card -->
+                        <div class="ztat-card">
+                            <div class="ztat-card-header">
+                                <h3 class="ztat-card-title">
+                                    <i class="fas fa-times-circle ztat-card-icon"></i>
+                                    Denied Ops ZTATs
+                                </h3>
+                            </div>
+                            <table id="denied-ops-ztats-table" class="display w-100">
+                                <thead>
+                                <tr>
+                                    <th>Operation</th>
+                                    <th>User</th>
+                                    <th>System</th>
+                                    <th>Uses Remaining</th>
+                                    <th>Status</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="s : ${deniedOpsJits}">
+                                    <td th:text="${s.command}"></td>
+                                    <td th:text="${s.userName}"></td>
+                                    <td th:text="${s.hostName}"></td>
+                                    <td th:text="${s.usesRemaining}"></td>
+                                    <td><span class="status-badge status-denied">Denied</span></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -259,13 +472,48 @@
 <!-- DataTables Initialization -->
 <script>
     $(document).ready(function () {
-        // Initialize DataTables
-        $('#terminal-ztats-table').DataTable();
-        $('#ops-ztats-table').DataTable();
-        $('#approved-terminal-ztats-table').DataTable();
-        $('#approved-ops-ztats-table').DataTable();
-        $('#denied-terminal-ztats-table').DataTable();
-        $('#denied-ops-ztats-table').DataTable();
+        // Initialize DataTables with modern styling
+        $('#terminal-ztats-table').DataTable({
+            order: [[0, 'asc']],
+            pageLength: 10,
+            responsive: true,
+            dom: '<"top"f>rt<"bottom"lp><"clear">'
+        });
+        
+        $('#ops-ztats-table').DataTable({
+            order: [[0, 'asc']],
+            pageLength: 10,
+            responsive: true,
+            dom: '<"top"f>rt<"bottom"lp><"clear">'
+        });
+        
+        $('#approved-terminal-ztats-table').DataTable({
+            order: [[0, 'asc']],
+            pageLength: 10,
+            responsive: true,
+            dom: '<"top"f>rt<"bottom"lp><"clear">'
+        });
+        
+        $('#approved-ops-ztats-table').DataTable({
+            order: [[0, 'asc']],
+            pageLength: 10,
+            responsive: true,
+            dom: '<"top"f>rt<"bottom"lp><"clear">'
+        });
+        
+        $('#denied-terminal-ztats-table').DataTable({
+            order: [[0, 'asc']],
+            pageLength: 10,
+            responsive: true,
+            dom: '<"top"f>rt<"bottom"lp><"clear">'
+        });
+        
+        $('#denied-ops-ztats-table').DataTable({
+            order: [[0, 'asc']],
+            pageLength: 10,
+            responsive: true,
+            dom: '<"top"f>rt<"bottom"lp><"clear">'
+        });
 
         // Handle modal display logic
         const queryString = window.location.search;
@@ -275,45 +523,60 @@
             new bootstrap.Modal(document.getElementById(modalId)).show();
         }
 
-        //call delete action
-        $(".den_btn").button().click(function () {
+        // Modern button handlers with improved feedback
+        $(".den_btn").button().click(function (e) {
+            e.preventDefault();
             var id = $(this).attr('id').replace("den_btn_", "");
+            $(this).prop('disabled', true).text('Processing...');
             window.location = '/api/v1/zerotrust/accesstoken/terminal/deny?ztatId=' + id;
         });
 
-        $(".ops_den_btn").button().click(function () {
+        $(".ops_den_btn").button().click(function (e) {
+            e.preventDefault();
             var id = $(this).attr('id').replace("ops_den_btn_", "");
+            $(this).prop('disabled', true).text('Processing...');
             window.location = '/v1/zerotrust/accesstoken/ops/deny?ztatId=' + id;
         });
 
-        $(".rev_btn").button().click(function () {
+        $(".rev_btn").button().click(function (e) {
+            e.preventDefault();
             var id = $(this).attr('id').replace("rev_btn_", "");
+            $(this).prop('disabled', true).text('Processing...');
             window.location = '/api/v1/zerotrust/accesstoken/terminal/revoke?ztatId=' + id;
         });
 
-        $(".ops_rev_btn").button().click(function () {
+        $(".ops_rev_btn").button().click(function (e) {
+            e.preventDefault();
             var id = $(this).attr('id').replace("ops_rev_btn_", "");
+            $(this).prop('disabled', true).text('Processing...');
             window.location = '/v1/zerotrust/accesstoken/my/ops/revoke?ztatId=' + id;
         });
 
-        $(".up_den_btn").button().click(function () {
+        $(".up_den_btn").button().click(function (e) {
+            e.preventDefault();
             var id = $(this).attr('id').replace("up_den_btn_", "");
+            $(this).prop('disabled', true).text('Processing...');
             window.location = '/manage/denyZTAT?ztatId=' + id;
         });
 
-        $(".up_app_btn").button().click(function () {
+        $(".up_app_btn").button().click(function (e) {
+            e.preventDefault();
             var id = $(this).attr('id').replace("up_app_btn_", "");
+            $(this).prop('disabled', true).text('Processing...');
             window.location = '/manage/approveZTAT?ztatId=' + id;
         });
 
-        $(".app_btn").button().click(function () {
+        $(".app_btn").button().click(function (e) {
+            e.preventDefault();
             var id = $(this).attr('id').replace("app_btn_", "");
-            console.log("ALKJDSLKJG");
+            $(this).prop('disabled', true).text('Processing...');
             window.location = '/api/v1/zerotrust/accesstoken/terminal/approve?ztatId=' + id;
         });
 
-        $(".ops_app_btn").button().click(function () {
+        $(".ops_app_btn").button().click(function (e) {
+            e.preventDefault();
             var id = $(this).attr('id').replace("ops_app_btn_", "");
+            $(this).prop('disabled', true).text('Processing...');
             window.location = '/api/v1/zerotrust/accesstoken/ops/approve?ztatId=' + id;
         });
     });
