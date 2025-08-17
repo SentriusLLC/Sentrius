@@ -69,6 +69,34 @@
             margin: 0; /* Remove outer margin */
             padding: 5px 10px; /* Adjust padding to desired amount */
         }
+
+        /* Sidebar-specific nav pills */
+        #menu.nav-pills .nav-link {
+            background: transparent;
+            color: #adb5bd;
+            border-radius: 8px;
+            padding: .65rem .9rem;
+            width: 100%;
+            text-align: left;
+        }
+
+        #menu.nav-pills .nav-link.active {
+            background-color: #0d6efd; /* blue highlight */
+            color: #fff;
+        }
+
+        /* Only affect page-content pills, not sidebar */
+        .main-content .nav-pills .nav-link {
+            background: var(--surface-2);
+            color: var(--muted);
+            border-radius: 999px;
+        }
+
+        .main-content .nav-pills .nav-link.active {
+            background: var(--primary);
+            color: #fff;
+        }
+
     </style>
 
     <script th:inline="javascript">
