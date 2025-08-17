@@ -27,7 +27,7 @@
     <lombok.version>1.18.30</lombok.version>
     <hypersistence-utils-hibernate-60.version>3.9.4</hypersistence-utils-hibernate-60.version>
     <flyway.version>11.6.0</flyway.version>
-    <commons-lang3>3.14.0</commons-lang3>
+    <commons-lang3>3.18.0</commons-lang3>
     <spring-data-jpa.version>3.3.5</spring-data-jpa.version>
     <spring.boot.version>3.3.5</spring.boot.version>
     <spring.kafka.version>3.3.5</spring.kafka.version>
