@@ -80,7 +80,6 @@ public class SshListenerService {
                     // logic for receiving data from SSH server
                     var sshData = sessionTrackingService.getOutput(connectedSystem, 1L, TimeUnit.SECONDS,
                         output -> (!connectedSystem.getSession().getClosed() && (null != activeSessions.get(terminalSessionId) && activeSessions.get(terminalSessionId).isOpen())));
-                    log.info("Received data from SSH server for session: {}", terminalSessionId);
                     // Send data to the specific terminal session
                     if (null != sshData ) {
                         for(Session.TerminalMessage terminalMessage : sshData){
