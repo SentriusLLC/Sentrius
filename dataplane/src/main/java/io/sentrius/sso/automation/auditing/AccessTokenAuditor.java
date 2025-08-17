@@ -241,8 +241,9 @@ public class AccessTokenAuditor extends BaseAccessTokenAuditor {
 
           // keep the current trigger
         } else if (ztatService.hasJITRequest(command, user, system)){
-
-            if (!ztatService.isActive(command, user, system)) {
+            var isActive = ztatService.isActive(command, user, system);
+            log.info("on message is approved {} is active ? {}", command, isActive);
+            if (!isActive) {
               ZeroTrustAccessTokenReason reason = ztatService.createReason("need ", " ticket ", " url");
               ZeroTrustAccessTokenRequest request = ztatService.createRequest(command, reason, connectedSystem.getUser(),
                   connectedSystem.getHostSystem()
@@ -250,13 +251,14 @@ public class AccessTokenAuditor extends BaseAccessTokenAuditor {
               request = ztatService.addJITRequest(request);
               return TriggerAction.DENY_ACTION;
             } else {
+                log.info("on message is approved and active {}", command);
               ztatService.incrementUses(command, user, system);
               currentTrigger = Trigger.NO_ACTION;
             }
 
 
       } else {
-
+            log.info("on message is approved, but no jit request {}", command);
             currentTrigger = Trigger.NO_ACTION;
         }
 

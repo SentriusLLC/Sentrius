@@ -198,11 +198,11 @@ public class ZeroTrustRequestService {
 
     public Optional<ZeroTrustAccessTokenApproval> getAccessTokenStatus(ZeroTrustAccessTokenRequest request) {
         var approvals = request.getApprovals();
+        log.info("Approvals for request {}: {}", request.getId(), approvals.size());
         if (!approvals.isEmpty()) {
             return Optional.of(approvals.get(0));
         }
-        // Implement logic to retrieve the JIT status (if applicable).
-        // Example: Retrieve from a specific table or calculate based on data.
+
         return Optional.empty(); // Placeholder for actual implementation.
     }
 
@@ -248,9 +248,12 @@ public class ZeroTrustRequestService {
                 if (approval.getUses() >= systemOptions.maxJitUses) {
                     throw new RuntimeException("JIT uses exceeded");
                 }
-                ;
+
                 ztatUseRepository.save(ZtatUse.builder().ztatApproval(approval).user(request.getUser()).build());
                 log.info("Incrementing uses for JITRequest: {}", request.getId());
+                ztatApprovalRepository.save(approval);
+
+                approval.setUses(approval.getUses() + 1);
                 ztatApprovalRepository.save(approval);
             });
         }

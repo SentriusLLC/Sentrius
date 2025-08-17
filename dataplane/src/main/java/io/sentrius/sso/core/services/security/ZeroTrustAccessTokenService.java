@@ -202,6 +202,11 @@ public class ZeroTrustAccessTokenService {
         var lastUpdated = null != status.get().getZtatRequest().getLastUpdated() ?
         status.get().getZtatRequest().getLastUpdated().getTime() : System.currentTimeMillis();
         var currentTime = System.currentTimeMillis();
+        log.info("JIT request last updated: " + lastUpdated);
+        log.info("JIT request current time: " + currentTime);
+        log.info("JIT request max duration: " + systemOptions.getMaxJitDurationMs());
+        log.info("JIT request uses: " + status.get().getUses());
+        log.info("JIT request max uses: " + systemOptions.getMaxJitUses());
         if (systemOptions.getMaxJitUses() > 0
             && status.get().getUses() >= systemOptions.getMaxJitUses()) {
           log.info("JIT request has reached max uses: " + request.getId());
@@ -212,6 +217,8 @@ public class ZeroTrustAccessTokenService {
         } else {
           return true;
         }
+      } else {
+          log.info("JIT request not found: " + command);
       }
     }
     log.info("JIT request not found: " + command);
