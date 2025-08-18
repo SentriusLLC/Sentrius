@@ -5,14 +5,14 @@ console.log("Script loaded"); // This should fire immediately if the script load
 document.addEventListener('DOMContentLoaded', function () {
     console.log("DOMContentLoaded event fired");
 
-    const disableSSHButton = document.getElementById('disable-ssh-button');
+    const disableSSHButton = document.getElementById('disable-systems-button');
     if (disableSSHButton) {
 
 
             fetch(`/api/v1/system/settings/lockdownEnabled`)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.lockdownEnabled) {
+                    if (!data.lockdownEnabled) {
                         disableSSHButton.innerText = 'LockDown Systems';
                     }
                     else {
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 .catch(error => {
 
                 });
-        document.getElementById('disable-ssh-button').addEventListener('click', function(event) {
+        document.getElementById('disable-systems-button').addEventListener('click', function(event) {
             event.preventDefault(); // Prevent the default anchor behavior
             const csrfToken = document.getElementById('csrf-token').value; // Get CSRF token value
             fetch('/api/v1/system/settings/lockdown/toggle', {
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }).then(response => response.json())
                 .then(data => {
-                    if (data.sshEnabled) {
+                    if (!data.lockdownEnabled) {
                         disableSSHButton.innerText = 'LockDown Systems';
                     }
                     else {
