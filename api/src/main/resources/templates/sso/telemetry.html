@@ -81,6 +81,7 @@
                             </div>
                             <button type="submit" class="btn btn-primary">Search Traces</button>
                             <button type="button" class="btn btn-secondary" onclick="clearForm()">Clear</button>
+                            <button type="button" class="btn btn-info" onclick="loadMockData()">Load Mock Data</button>
                         </form>
                     </div>
                 </div>
@@ -368,6 +369,28 @@ function showError(message) {
     errorDiv.style.display = 'block';
 }
 
+async function loadMockData() {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('results-section').style.display = 'none';
+    document.getElementById('error-display').style.display = 'none';
+    
+    try {
+        const response = await fetch('/mock/jaeger/api/traces');
+        if (response.ok) {
+            const data = await response.json();
+            currentTraces = data.data || [];
+            displayResults({traces: currentTraces, status: 'success', count: currentTraces.length});
+        } else {
+            showError('Failed to load mock data');
+        }
+    } catch (error) {
+        console.error('Error loading mock data:', error);
+        showError('Error loading mock data: ' + error.message);
+    } finally {
+        document.getElementById('loading').style.display = 'none';
+    }
+}
+
 // Load services on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadServices();
@@ -396,7 +419,26 @@ async function loadServices() {
             }
         }
     } catch (error) {
-        console.warn('Could not load services from Jaeger:', error);
+        console.warn('Could not load services from Jaeger, trying mock data:', error);
+        // Try to load mock services
+        try {
+            const mockResponse = await fetch('/mock/jaeger/api/services');
+            if (mockResponse.ok) {
+                const mockData = await mockResponse.json();
+                const serviceSelect = document.getElementById('service-name');
+                
+                if (mockData.data && Array.isArray(mockData.data)) {
+                    mockData.data.forEach(service => {
+                        const option = document.createElement('option');
+                        option.value = service;
+                        option.textContent = service + ' (mock)';
+                        serviceSelect.appendChild(option);
+                    });
+                }
+            }
+        } catch (mockError) {
+            console.warn('Could not load mock services either:', mockError);
+        }
     }
 }
 </script>
