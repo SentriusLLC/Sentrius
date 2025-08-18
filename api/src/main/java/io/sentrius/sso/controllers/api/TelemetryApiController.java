@@ -40,10 +40,12 @@ public class TelemetryApiController extends BaseController {
             @RequestParam(defaultValue = "1h") String lookback,
             @RequestParam(required = false) Long minDuration,
             @RequestParam(required = false) Long maxDuration,
-            @RequestParam(required = false) String tags
+            @RequestParam(required = false) String tags,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(defaultValue = "0") int start
     ) {
         try {
-            String jaegerApiUrl = buildJaegerApiUrl(service, operation, lookback, minDuration, maxDuration, tags);
+            String jaegerApiUrl = buildJaegerApiUrl(service, operation, lookback, minDuration, maxDuration, tags, limit, start);
             log.info("Querying Jaeger at: {}", jaegerApiUrl);
             
             HttpHeaders headers = new HttpHeaders();
@@ -65,6 +67,9 @@ public class TelemetryApiController extends BaseController {
                 result.put("traces", processedTraces);
                 result.put("status", "success");
                 result.put("count", processedTraces.size());
+                result.put("limit", limit);
+                result.put("start", start);
+                result.put("hasMore", processedTraces.size() >= limit); // Indicate if there might be more data
                 
                 return ResponseEntity.ok(result);
             } else {
@@ -132,12 +137,14 @@ public class TelemetryApiController extends BaseController {
     }
 
     private String buildJaegerApiUrl(String service, String operation, String lookback, 
-                                   Long minDuration, Long maxDuration, String tags) {
+                                   Long minDuration, Long maxDuration, String tags, int limit, int start) {
         StringBuilder url = new StringBuilder(jaegerQueryUrl + "/api/traces?");
         
-        if (service != null && !service.isEmpty()) {
-            url.append("service=").append(service).append("&");
+        // Default to sentrius-api if no service is provided to prevent 500 errors
+        if (service == null || service.isEmpty()) {
+            service = "sentrius-api";
         }
+        url.append("service=").append(service).append("&");
         
         if (operation != null && !operation.isEmpty()) {
             url.append("operation=").append(operation).append("&");
@@ -157,8 +164,9 @@ public class TelemetryApiController extends BaseController {
             url.append("tags=").append(tags).append("&");
         }
         
-        // Add limit to prevent too many results
-        url.append("limit=100");
+        // Add pagination parameters
+        url.append("limit=").append(Math.min(limit, 100)).append("&"); // Cap at 100
+        url.append("start=").append(start);
         
         return url.toString();
     }

@@ -34,7 +34,7 @@ class TelemetryApiControllerTest {
         ReflectionTestUtils.setField(telemetryApiController, "jaegerQueryUrl", "invalid-url");
 
         ResponseEntity<?> response = telemetryApiController.getTraces(
-            "test-service", null, "1h", null, null, null
+            "test-service", null, "1h", null, null, null, 20, 0
         );
 
         assertEquals(500, response.getStatusCode().value());
@@ -48,7 +48,7 @@ class TelemetryApiControllerTest {
 
         // This test will fail to connect to Jaeger, but should not throw exception
         ResponseEntity<?> response = telemetryApiController.getTraces(
-            "sentrius-api", "test-operation", "1h", 1000L, 10000L, "error=true"
+            "sentrius-api", "test-operation", "1h", 1000L, 10000L, "error=true", 20, 0
         );
 
         // Should return 500 since we can't connect to real Jaeger, but shouldn't crash
@@ -73,5 +73,33 @@ class TelemetryApiControllerTest {
 
         assertEquals(500, response.getStatusCode().value());
         assertNotNull(response.getBody());
+    }
+
+    @Test
+    void testGetTracesDefaultsToSentriusApiService() {
+        // Set a mock Jaeger URL
+        ReflectionTestUtils.setField(telemetryApiController, "jaegerQueryUrl", "http://localhost:16686");
+
+        // Test with null/empty service parameter - should default to sentrius-api
+        ResponseEntity<?> response = telemetryApiController.getTraces(
+            null, null, "1h", null, null, null, 20, 0
+        );
+
+        // Should return 500 since we can't connect to real Jaeger, but the method should handle null service
+        assertEquals(500, response.getStatusCode().value());
+    }
+
+    @Test
+    void testGetTracesWithPaginationParameters() {
+        // Set a mock Jaeger URL
+        ReflectionTestUtils.setField(telemetryApiController, "jaegerQueryUrl", "http://localhost:16686");
+
+        // Test with pagination parameters
+        ResponseEntity<?> response = telemetryApiController.getTraces(
+            "sentrius-api", null, "1h", null, null, null, 50, 100
+        );
+
+        // Should return 500 since we can't connect to real Jaeger, but shouldn't crash with pagination
+        assertEquals(500, response.getStatusCode().value());
     }
 }

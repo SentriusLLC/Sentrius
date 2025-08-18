@@ -19,13 +19,24 @@
         .trace-result:hover { background-color: #3c3c3c; }
         .trace-result.selected { background-color: #0d6efd; }
         .span-info { font-size: 0.9em; color: #888; }
+        
+        /* Pagination styles */
+        #pagination-controls button:disabled { 
+            opacity: 0.5; 
+            cursor: not-allowed; 
+        }
+        .sidebar { 
+            min-height: 100vh; 
+            position: sticky; 
+            top: 0; 
+        }
     </style>
 </head>
 <body>
 <div class="container-fluid">
-    <div class="row">
+    <div class="row flex-nowrap">
         <!-- Include sidebar -->
-        <div th:replace="~{fragments/sidebar}"></div>
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
         
         <!-- Main content -->
         <div class="col py-3">
@@ -43,8 +54,8 @@
                                 <div class="col-md-4">
                                     <label for="service-name" class="form-label">Service Name</label>
                                     <select class="form-control" id="service-name" name="service">
+                                        <option value="sentrius-api" selected>sentrius-api</option>
                                         <option value="">All Services</option>
-                                        <option value="sentrius-api">sentrius-api</option>
                                         <option value="sentrius-dataplane">sentrius-dataplane</option>
                                         <option value="sentrius-agent-proxy">sentrius-agent-proxy</option>
                                     </select>
@@ -79,6 +90,21 @@
                                     <input type="text" class="form-control" id="tags" name="tags" placeholder="e.g. error=true, user.id=123">
                                 </div>
                             </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="limit" class="form-label">Results per page</label>
+                                    <select class="form-control" id="limit" name="limit">
+                                        <option value="10">10</option>
+                                        <option value="20" selected>20</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="start" class="form-label">Start from result</label>
+                                    <input type="number" class="form-control" id="start" name="start" value="0" min="0" step="1">
+                                </div>
+                            </div>
                             <button type="submit" class="btn btn-primary">Search Traces</button>
                             <button type="button" class="btn btn-secondary" onclick="clearForm()">Clear</button>
                             <button type="button" class="btn btn-info" onclick="loadMockData()">Load Mock Data</button>
@@ -101,11 +127,24 @@
                 <div id="results-section" style="display: none;">
                     <!-- Trace List -->
                     <div class="card mb-4">
-                        <div class="card-header">
+                        <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-0">Trace Results <span id="trace-count" class="badge bg-secondary">0</span></h5>
+                            <div id="pagination-info" class="text-muted" style="display: none;">
+                                <span id="result-range"></span>
+                            </div>
                         </div>
                         <div class="card-body">
                             <div id="trace-list"></div>
+                            <!-- Pagination Controls -->
+                            <div id="pagination-controls" class="d-flex justify-content-between align-items-center mt-3" style="display: none;">
+                                <button id="prev-page" class="btn btn-outline-primary" onclick="previousPage()">
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </button>
+                                <span id="page-info" class="text-muted"></span>
+                                <button id="next-page" class="btn btn-outline-primary" onclick="nextPage()">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                     
@@ -127,6 +166,10 @@
 <script>
 let cyGraph = null;
 let currentTraces = [];
+let currentQueryParams = {};
+let currentStart = 0;
+let currentLimit = 20;
+let hasMoreResults = false;
 
 document.getElementById('trace-query-form').addEventListener('submit', function(e) {
     e.preventDefault();
@@ -137,6 +180,18 @@ function clearForm() {
     document.getElementById('trace-query-form').reset();
     document.getElementById('results-section').style.display = 'none';
     document.getElementById('error-display').style.display = 'none';
+    
+    // Reset to default values
+    document.getElementById('service-name').value = 'sentrius-api';
+    document.getElementById('limit').value = '20';
+    document.getElementById('start').value = '0';
+    
+    // Reset pagination state
+    currentStart = 0;
+    currentLimit = 20;
+    hasMoreResults = false;
+    currentQueryParams = {};
+    
     if (cyGraph) {
         cyGraph.destroy();
         cyGraph = null;
@@ -155,6 +210,15 @@ async function searchTraces() {
         }
     }
     
+    // Store current query params for pagination
+    currentQueryParams = Object.fromEntries(params.entries());
+    currentStart = parseInt(currentQueryParams.start || '0');
+    currentLimit = parseInt(currentQueryParams.limit || '20');
+    
+    await executeSearch(params);
+}
+
+async function executeSearch(params) {
     // Show loading
     document.getElementById('loading').style.display = 'block';
     document.getElementById('results-section').style.display = 'none';
@@ -168,6 +232,7 @@ async function searchTraces() {
         
         const data = await response.json();
         currentTraces = data.traces || [];
+        hasMoreResults = data.hasMore || false;
         displayResults(data);
     } catch (error) {
         console.error('Error fetching traces:', error);
@@ -180,6 +245,9 @@ async function searchTraces() {
 function displayResults(data) {
     const traceCount = data.traces ? data.traces.length : 0;
     document.getElementById('trace-count').textContent = traceCount;
+    
+    // Update pagination info
+    updatePaginationInfo(data);
     
     // Display trace list
     const traceList = document.getElementById('trace-list');
@@ -195,6 +263,50 @@ function displayResults(data) {
     }
     
     document.getElementById('results-section').style.display = 'block';
+}
+
+function updatePaginationInfo(data) {
+    const start = data.start || 0;
+    const limit = data.limit || 20;
+    const count = data.count || 0;
+    const hasMore = data.hasMore || false;
+    
+    // Update range display
+    const endRange = start + count;
+    document.getElementById('result-range').textContent = 
+        count > 0 ? `Showing ${start + 1}-${endRange}` : 'No results';
+    document.getElementById('pagination-info').style.display = count > 0 ? 'block' : 'none';
+    
+    // Update pagination controls
+    const prevBtn = document.getElementById('prev-page');
+    const nextBtn = document.getElementById('next-page');
+    const pageInfo = document.getElementById('page-info');
+    
+    prevBtn.disabled = start === 0;
+    nextBtn.disabled = !hasMore;
+    
+    const currentPage = Math.floor(start / limit) + 1;
+    pageInfo.textContent = `Page ${currentPage}`;
+    
+    document.getElementById('pagination-controls').style.display = count > 0 ? 'flex' : 'none';
+}
+
+async function previousPage() {
+    if (currentStart > 0) {
+        currentStart = Math.max(0, currentStart - currentLimit);
+        const params = new URLSearchParams(currentQueryParams);
+        params.set('start', currentStart.toString());
+        await executeSearch(params);
+    }
+}
+
+async function nextPage() {
+    if (hasMoreResults) {
+        currentStart += currentLimit;
+        const params = new URLSearchParams(currentQueryParams);
+        params.set('start', currentStart.toString());
+        await executeSearch(params);
+    }
 }
 
 function createTraceHtml(trace) {
@@ -402,21 +514,28 @@ async function loadServices() {
         if (response.ok) {
             const data = await response.json();
             const serviceSelect = document.getElementById('service-name');
+            const currentValue = serviceSelect.value; // Preserve current selection
             
-            // Clear existing options except "All Services"
-            while (serviceSelect.children.length > 1) {
+            // Clear existing options except defaults
+            while (serviceSelect.children.length > 2) {
                 serviceSelect.removeChild(serviceSelect.lastChild);
             }
             
             // Add services from Jaeger
             if (data.data && Array.isArray(data.data)) {
                 data.data.forEach(service => {
-                    const option = document.createElement('option');
-                    option.value = service;
-                    option.textContent = service;
-                    serviceSelect.appendChild(option);
+                    // Skip if already exists in defaults
+                    if (!['sentrius-api', ''].includes(service)) {
+                        const option = document.createElement('option');
+                        option.value = service;
+                        option.textContent = service;
+                        serviceSelect.appendChild(option);
+                    }
                 });
             }
+            
+            // Restore selection
+            serviceSelect.value = currentValue;
         }
     } catch (error) {
         console.warn('Could not load services from Jaeger, trying mock data:', error);
@@ -426,15 +545,22 @@ async function loadServices() {
             if (mockResponse.ok) {
                 const mockData = await mockResponse.json();
                 const serviceSelect = document.getElementById('service-name');
+                const currentValue = serviceSelect.value;
                 
                 if (mockData.data && Array.isArray(mockData.data)) {
                     mockData.data.forEach(service => {
-                        const option = document.createElement('option');
-                        option.value = service;
-                        option.textContent = service + ' (mock)';
-                        serviceSelect.appendChild(option);
+                        // Skip if already exists in defaults
+                        if (!['sentrius-api', ''].includes(service)) {
+                            const option = document.createElement('option');
+                            option.value = service;
+                            option.textContent = service + ' (mock)';
+                            serviceSelect.appendChild(option);
+                        }
                     });
                 }
+                
+                // Restore selection
+                serviceSelect.value = currentValue;
             }
         } catch (mockError) {
             console.warn('Could not load mock services either:', mockError);
