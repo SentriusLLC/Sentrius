@@ -128,6 +128,9 @@ public class SystemApiController extends BaseController {
                 case "java.lang.Float":
                     results.add(systemOptions.setValue(option.getName(), Float.valueOf(entry.getValue()[0]), false));
                     break;
+                case "java.lang.Double":
+                    results.add(systemOptions.setValue(option.getName(), Double.valueOf(entry.getValue()[0]), false));
+                    break;
                 default:
                     log.error("Unsupported type: {}", option.getClosestType());
             }

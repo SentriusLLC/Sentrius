@@ -120,6 +120,7 @@ public class TwoPartyAIMonitor extends SessionTokenEvaluator {
         }
 
         if (llmResponse.get() != null) {
+            log.info("OpenAI analysis completed. Malicious: {}, response: {}, question: {}", flaggedAsMalicious, llmResponse.get(), llmQuestion.get());
             Trigger trg = llmQuestion.get() != null ? new Trigger(TriggerAction.PROMPT_ACTION, llmResponse.get(),
                 llmQuestion.get()) :
                 new Trigger(TriggerAction.PERSISTENT_MESSAGE, llmResponse.get());
@@ -183,6 +184,7 @@ public class TwoPartyAIMonitor extends SessionTokenEvaluator {
                 analysis.get();
 
                 if (llmResponse.get() != null && llmQuestion.get() != null) {
+                    log.info("OpenAI analysis completed. Malicious: {}, response: {}, question: {}", flaggedAsMalicious, llmResponse.get(), llmQuestion.get());
                     Trigger trg = llmQuestion.get() != null && enableLLMQuestions ? new Trigger(TriggerAction.PROMPT_ACTION,
                         llmResponse.get(),
                         llmQuestion.get()) :
@@ -197,11 +199,14 @@ public class TwoPartyAIMonitor extends SessionTokenEvaluator {
             }
         }
         if ((connectedSystem.getWebsocketListenerSessionId() == null || connectedSystem.getWebsocketListenerSessionId().isEmpty() ) && flaggedAsMalicious) {
+            log.info("Flagged as malicious but no websocket session ID available. Returning JIT action.");
             if (llmQuestion.get()!= null){
+                log.info("Flagged as malicious but no websocket session ID available. Returning prompt action.");
                 Trigger trg = new Trigger(TriggerAction.PROMPT_ACTION, DESCRIPTION);
                 return Optional.of(trg);
             }
             else {
+                log.info("Flagged as malicious but no websocket session ID available. Returning JIT action.");
                 Trigger trg = new Trigger(TriggerAction.JIT_ACTION, DESCRIPTION);
                 return Optional.of(trg);
             }

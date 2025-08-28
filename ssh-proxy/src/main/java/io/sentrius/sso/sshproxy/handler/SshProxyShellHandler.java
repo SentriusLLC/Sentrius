@@ -14,15 +14,20 @@ import io.sentrius.sso.sshproxy.config.SshProxyConfig;
 import io.sentrius.sso.sshproxy.service.HostSystemSelectionService;
 import io.sentrius.sso.sshproxy.service.InlineTerminalResponseService;
 import io.sentrius.sso.sshproxy.service.SshCommandProcessor;
+import io.sentrius.sso.sshproxy.streams.SessionRoute;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.sshd.common.Factory;
 import org.apache.sshd.server.command.Command;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
 /**
  * SSH shell handler that integrates with Sentrius safeguards.
@@ -48,21 +53,27 @@ public class SshProxyShellHandler implements Factory<Command> {
     final TerminalService terminalService;
     final UserService userService;
 
+
+
+    @Qualifier("taskExecutor") // Specify the custom task executor to use
+    private final ThreadPoolTaskExecutor taskExecutor;
+
+
     @Override
     public Command create() {
+        var sessionRoute =
+            SessionRoute.builder().sshListenerService(sshListenerService).terminalSessionMetadataService(terminalSessionMetadataService).cryptoService(cryptoService).hostGroupService(hostGroupService).terminalService(terminalService).sessionService(sessionService).build();
         return new SshProxyShell(
             commandProcessor,
             terminalResponseService,
             hostSystemSelectionService,
             config,
             sessionTrackingService,
-            sessionService,
             sshListenerService,
             cryptoService,
-            terminalSessionMetadataService,
-            hostGroupService,
-            terminalService,
-            userService
+            sessionRoute,
+            userService,
+            taskExecutor
         );
     }
 

@@ -248,11 +248,13 @@ public class SessionOutput  {
             }
 
             if (!persistentMessage.isEmpty()){
+                log.info("Persistent Message: {}", persistentMessage);
                 var trigger = persistentMessage.pop();
                 triggers.add( getTrigger(trigger));
             }
 
             if (!prompt.isEmpty()){
+                log.info("Prompt: {}", prompt);
                 var trigger = prompt.pop();
                 triggers.add( getTrigger(trigger));
             }
