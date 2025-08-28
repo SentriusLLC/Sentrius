@@ -169,6 +169,7 @@ public class SshListenerService {
 
     public void processTerminalMessage(
         ConnectedSystem terminalSessionId, Session.TerminalMessage terminalMessage) {
+        log.info("process terminal messsage");
         if (!terminalSessionId.getSession().getClosed() && terminalMessage.getType() != Session.MessageType.HEARTBEAT) {
 
             try {

@@ -3,11 +3,11 @@ package io.sentrius.sso.sshproxy.service;
 import io.sentrius.sso.core.model.HostSystem;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.repository.SystemRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,16 +26,25 @@ public class HostSystemSelectionService {
     /**
      * Get a HostSystem by ID for SSH proxy connection.
      */
+
+    @Transactional(readOnly = true)
     public Optional<HostSystem> getHostSystemById(Long id) {
         try {
-            return systemRepository.findById(id);
+            var hostSystem = systemRepository.findById(id);
+            hostSystem.ifPresent(hs -> {
+                Hibernate.initialize(hs.getHostGroups());
+                for(HostGroup group : hs.getHostGroups()) {
+                    Hibernate.initialize(group.getRules());
+                }
+            });
+            return hostSystem;
         } catch (Exception e) {
             log.error("Error retrieving HostSystem with ID: {}", id, e);
             return Optional.empty();
         }
     }
 
-    /**
+   /**
      * Get all available HostSystems for SSH proxy.
      */
     public List<HostSystem> getAllHostSystems() {
@@ -50,9 +59,20 @@ public class HostSystemSelectionService {
     /**
      * Find HostSystems by display name.
      */
+    @Transactional(readOnly = true)
     public List<HostSystem> getHostSystemsByDisplayName(String displayName) {
         try {
-            return systemRepository.findByDisplayName(displayName);
+            var listOfHostSystems = systemRepository.findByDisplayName(displayName);
+            if (!listOfHostSystems.isEmpty()) {
+                for (var hostSystem : listOfHostSystems) {
+                    Hibernate.initialize(hostSystem.getHostGroups());
+                    for (HostGroup group : hostSystem.getHostGroups()) {
+                        Hibernate.initialize(group.getRules());
+                    }
+                }
+            }
+                return listOfHostSystems;
+
         } catch (Exception e) {
             log.error("Error retrieving HostSystems by display name: {}", displayName, e);
             return List.of();

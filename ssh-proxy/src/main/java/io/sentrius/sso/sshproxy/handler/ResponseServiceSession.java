@@ -22,6 +22,7 @@ public class ResponseServiceSession implements DataSession {
     private final InputStream in;
     private final OutputStream out;
     private final BaseAccessTokenAuditor auditor;
+    private String persistentMessage = "";
     private ConnectedSystem connectedSystem;
 
 
@@ -83,7 +84,13 @@ public class ResponseServiceSession implements DataSession {
                     break;
 
                 case PERSISTENT_MESSAGE:
-                    msg = formatPersistentMessage(trigger, auditLog);
+                    if (!persistentMessage.equals(trigger.getDescription())) {
+                        log.info(ANSI_BOLD + "Persistent message: " + ANSI_RESET + trigger.getDescription());
+                        msg = formatPersistentMessage(trigger, auditLog);
+                    }
+                    else {
+                        log.info(ANSI_BOLD + "Persistent message: samesies" + ANSI_RESET);
+                    }
                     break;
                 case APPROVE_ACTION:
                     msg = formatApproveMessage(trigger, auditLog);
@@ -103,6 +110,7 @@ public class ResponseServiceSession implements DataSession {
                 msg);
             out.write(msg.getBytes(StandardCharsets.UTF_8));
             out.flush();
+
 
 
 
@@ -163,11 +171,15 @@ public class ResponseServiceSession implements DataSession {
         }
 
         private String formatPersistentMessage(Session.Trigger trigger, Session.TerminalMessage auditLog) {
+            if (trigger.getDescription() == null || trigger.getDescription().isEmpty()) {
+                return "";
+            }
             StringBuilder sb = new StringBuilder();
             sb.append("\r\n");
-            sb.append(ANSI_BLUE).append(ANSI_BOLD).append("💬 MESSAGE").append(ANSI_RESET).append("\r\n");
+            sb.append(ANSI_BLUE).append(ANSI_BOLD).append("💬 AI Monitor").append(ANSI_RESET).append("\r\n");
             sb.append(ANSI_BLUE).append(trigger.getDescription()).append(ANSI_RESET).append("\r\n");
             sb.append("\r\n");
+            persistentMessage = trigger.getDescription();
             return sb.toString();
         }
 
