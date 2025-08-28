@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
 import java.util.concurrent.Future;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.ConnectedSystem;
 import io.sentrius.sso.core.model.HostSystem;
 import io.sentrius.sso.core.services.SshListenerService;
@@ -57,6 +58,7 @@ public class SshProxyShell implements Command {
     private ShellHandlerRunnable shellHandler;
 
 
+
     private final ThreadPoolTaskExecutor taskExecutor;  // inject this
     private Future<?> shellFuture = null;
 
@@ -93,7 +95,6 @@ public class SshProxyShell implements Command {
     @Override
     public void setOutputStream(OutputStream out) {
         this.out = out;
-        log.info("Setting output stream");
         sessionRoute.setOutputStream(out);
     }
 

@@ -63,7 +63,6 @@ public class ShellHandlerRunnable implements Runnable {
 
                 int bytesRead = in.read(buffer);
                 if (bytesRead == -1) {
-                    log.info("End of stream");
                     // EOF reached
                     break;
                 }
@@ -79,19 +78,16 @@ public class ShellHandlerRunnable implements Runnable {
 
                     // Process input character and send audit log
                     if (c >= 32 && c <= 126) {
-                        log.info("Processing printable character: {}", c);
+                        log.trace("Processing printable character: {}", c);
                         // Printable characters
                         auditLog.setCommand(String.valueOf(c));
                         commandBuffer.get().append(c);
-                        log.info("85");
                         auditLog.setType(Session.MessageType.USER_DATA);
                         auditLog.setKeycode(-1);
-                        log.info("87");
                         getSshListenerService().processTerminalMessage(
                             sessionRoute.getCurrent().get(),
                             auditLog.build()
                         );
-                        log.info("94");
                         log.info("Appending printable character to command buffer: {}", c);
                         auditLog = Session.TerminalMessage.newBuilder();
                     } else {
@@ -133,7 +129,7 @@ public class ShellHandlerRunnable implements Runnable {
                                 sessionRoute.getCurrent().get().getTerminalAuditor().setSessionTrigger(noActionTrigger);
                             }
 
-                            log.info("Sending terminal keycode to session");
+                            log.debug("Sending terminal keycode to session");
 
                             getSshListenerService().processTerminalMessage(
                                 sessionRoute.getCurrent().get(),

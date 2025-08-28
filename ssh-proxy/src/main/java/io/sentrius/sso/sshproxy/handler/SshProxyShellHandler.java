@@ -1,5 +1,7 @@
 package io.sentrius.sso.sshproxy.handler;
 
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.config.ThreadSafeDynamicPropertiesService;
 import io.sentrius.sso.core.model.ConnectedSystem;
 import io.sentrius.sso.core.services.ChatService;
 import io.sentrius.sso.core.services.HostGroupService;
@@ -53,6 +55,7 @@ public class SshProxyShellHandler implements Factory<Command> {
     final TerminalService terminalService;
     final UserService userService;
 
+    final ThreadSafeDynamicPropertiesService systemOptions;
 
 
     @Qualifier("taskExecutor") // Specify the custom task executor to use
@@ -61,6 +64,9 @@ public class SshProxyShellHandler implements Factory<Command> {
 
     @Override
     public Command create() {
+        if (Boolean.valueOf( systemOptions.getProperty("lockdownEnabled", "false"))) {
+            throw new RuntimeException("SSH access is disabled by system lockdown");
+        }
         var sessionRoute =
             SessionRoute.builder().sshListenerService(sshListenerService).terminalSessionMetadataService(terminalSessionMetadataService).cryptoService(cryptoService).hostGroupService(hostGroupService).terminalService(terminalService).sessionService(sessionService).build();
         return new SshProxyShell(
