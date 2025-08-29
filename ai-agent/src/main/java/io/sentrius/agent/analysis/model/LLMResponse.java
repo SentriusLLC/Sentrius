@@ -1,11 +1,7 @@
 package io.sentrius.agent.analysis.model;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import io.sentrius.sso.core.dto.HostSystemDTO;
-import io.sentrius.sso.genai.Message;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,7 +9,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.socket.WebSocketSession;
 
 @Data
 @Builder
@@ -22,10 +17,10 @@ import org.springframework.web.socket.WebSocketSession;
 @NoArgsConstructor
 @AllArgsConstructor
 @Slf4j
-public class TerminalResponse {
+public class LLMResponse {
     String previousOperation;
     String nextOperation;
-    String terminalSummaryForLLM;
+    String summaryForLLM;
     String responseForUser;
     @Builder.Default
     public Map<String, Object> arguments = new HashMap<>();

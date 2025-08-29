@@ -10,6 +10,7 @@ import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.security.CustomAuthenticationSuccessHandler;
 import io.sentrius.sso.core.services.CustomUserDetailsService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.security.KeycloakService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,6 +34,7 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final CustomAuthenticationSuccessHandler successHandler;
     private final KeycloakAuthSuccessHandler keycloakAuthSuccessHandler;
+
     final UserService userService;
 
     @Value("${https.required:false}") // Default is false
@@ -84,8 +86,18 @@ public class SecurityConfig {
 
             User user = userService.getUserByUsername(username);
             if (user == null) {
+
+                var initialUserType = jwt.getClaimAsString("initial_user_type");
                 var type = userService.getUserType(
                     UserType.createUnknownUser());
+                if (null != initialUserType) {
+                    log.info("Initial user type from token: {}", initialUserType);
+                    type = userService.getUserType(initialUserType);
+                } else {
+                    log.warn("No initial user type found in token, defaulting to UNKNOWN");
+                }
+
+
                 if (type.isEmpty()) {
                     log.error("Failed to create base user type");
                     return authorities;

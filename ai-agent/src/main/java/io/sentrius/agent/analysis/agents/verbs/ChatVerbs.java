@@ -12,7 +12,7 @@ import io.sentrius.agent.analysis.agents.agents.AgentConfig;
 import io.sentrius.agent.analysis.agents.agents.AgentVerb;
 import io.sentrius.agent.analysis.agents.agents.PromptBuilder;
 import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
-import io.sentrius.agent.analysis.model.TerminalResponse;
+import io.sentrius.agent.analysis.model.LLMResponse;
 import io.sentrius.agent.analysis.model.WebSocky;
 import io.sentrius.sso.core.dto.agents.AgentExecution;
 import io.sentrius.sso.core.dto.agents.AgentExecutionContextDTO;
@@ -67,13 +67,13 @@ public class ChatVerbs extends VerbBase{
     @Verb(name = "interpret_user_request", returnType = ArrayNode.class, description = "Queries the LLM using the " +
         "user input.",
         isAiCallable = false, requiresTokenManagement = true)
-    public TerminalResponse interpretUserData(
+    public LLMResponse interpretUserData(
         AgentExecution execution, AgentExecutionContextDTO executionContext, @NonNull WebSocky socketConnection,
         @NonNull Message userMessage) throws ZtatException,
         IOException {
 
-        var lastMessage = socketConnection.getMessages().stream().reduce((prev, next) -> next).orElse(null);
-        if (socketConnection.getMessages().isEmpty()) {
+        var lastMessage = socketConnection.getCommunicationResponses().stream().reduce((prev, next) -> next).orElse(null);
+        if (socketConnection.getCommunicationResponses().isEmpty()) {
 
             InputStream terminalHelperStream = getClass().getClassLoader().getResourceAsStream("terminal-helper.json");
             if (terminalHelperStream == null) {
@@ -105,7 +105,7 @@ public class ChatVerbs extends VerbBase{
                 "sessions, using " +
                 "terminal output if needed " +
                 "for clarity of the next LLM request and for the user. Ensure your all future responses meets this " +
-                "json format (TerminalResponse format): " + terminalResponse).build());
+                "json format (LLMResponse format): " + terminalResponse).build());
             messages.add(Message.builder().role("user").content(userMessage.getContent()).build());
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
@@ -124,12 +124,12 @@ public class ChatVerbs extends VerbBase{
                     try {
                         var newResponse = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readValue(
                             content,
-                            TerminalResponse.class
+                            LLMResponse.class
                         );
                         return newResponse;
                     }catch (JsonParseException e) {
                         log.error("Failed to parse terminal response: {}", e.getMessage());
-                        return TerminalResponse.builder().responseForUser(content).build();
+                        return LLMResponse.builder().responseForUser(content).build();
                     }
                 }
             }
@@ -173,12 +173,12 @@ public class ChatVerbs extends VerbBase{
                     try {
                         var newResponse = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readValue(
                             content,
-                            TerminalResponse.class
+                            LLMResponse.class
                         );
                         return newResponse;
                     }catch (JsonParseException e) {
                         log.error("Failed to parse terminal response: {}", e.getMessage());
-                        return TerminalResponse.builder().responseForUser(content).terminalSummaryForLLM(lastMessage.getTerminalSummaryForLLM()).build();
+                        return LLMResponse.builder().responseForUser(content).summaryForLLM(lastMessage.getSummaryForLLM()).build();
                     }
 
                 }
@@ -187,6 +187,72 @@ public class ChatVerbs extends VerbBase{
 
         return null;
     }
+
+    public LLMResponse promptAgent(
+        AgentExecution execution, AgentExecutionContextDTO executionContext,
+        String prompt) throws ZtatException,
+        IOException {
+
+
+            InputStream terminalHelperStream = getClass().getClassLoader().getResourceAsStream("terminal-helper.json");
+            if (terminalHelperStream == null) {
+                throw new RuntimeException("assessor-config.yaml not found on classpath");
+
+            }
+
+            String terminalResponse = new String(terminalHelperStream.readAllBytes());
+
+            AgentConfig config = getAgentConfig(execution);
+            log.info("Agent config loaded: {}", config);
+
+            List<Message> messages = new ArrayList<>();
+            var context = Message.builder().role("system").content(prompt).build();
+            messages.add(context);
+
+            messages.add(Message.builder().role("system").content("You have executed verbs for the previous user " +
+                "messages. Please generate a user response that summarizes the last message.").build());
+            int size = getMessageSize(context);
+
+            var history = getContextWindow(executionContext.getMessages(), 1024*96 - (size));
+            messages.addAll(history);
+            messages.add(Message.builder().role("system").content("Please ensure your nextOperation abides by the " +
+                "following json format. Don't leave next operation empty, restart the session if you need, and you " +
+                "are not interacting with the user, so don't request info from the user, but instead execute the " +
+                "necessary endpoints" +
+                "." +
+                ". " +
+                ". Please summarize messaging, using  " +
+                "for clarity of the next LLM request and for the user. Ensure your all future responses meets this " +
+                "json format (LLMResponse format): " + terminalResponse).build());
+            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+            var resp = llmService.askQuestion(execution, chatRequest);
+            executionContext.addMessages( messages );
+            Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
+            log.info("Response is {}", resp);
+            for (Response.Choice choice : response.getChoices()) {
+                var content = choice.getMessage().getContent();
+                if (content.startsWith("```json")) {
+                    content = content.substring(7, content.length() - 3);
+                } else if (content.startsWith("```")) {
+                    content = content.substring(3, content.length() - 3);
+                }
+                log.info("+ {}", content);
+                if (null != content && !content.isEmpty()) {
+                    try {
+                        var newResponse = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readValue(
+                            content,
+                            LLMResponse.class
+                        );
+                        return newResponse;
+                    }catch (JsonParseException e) {
+                        log.error("Failed to parse terminal response: {}", e.getMessage());
+                        return LLMResponse.builder().responseForUser(content).build();
+                    }
+                }
+            }
+        return LLMResponse.builder().build();
+    }
+
 
     public List<Message> getContextWindow(List<Message> allMessages, int maxContextSize) {
         List<Message> systemMessages = new ArrayList<>();
@@ -239,15 +305,13 @@ public class ChatVerbs extends VerbBase{
         return size;
     }
 
-    public TerminalResponse interpret_plan_response(
-        AgentExecution execution, AgentExecutionContextDTO executionContext, @NonNull WebSocky socketConnection,
+    public LLMResponse interpret_plan_response(
+        AgentExecution execution, AgentExecutionContextDTO executionContext,
         AgentVerb agentVerb, String planExecutionOutput) throws ZtatException,
         IOException {
 
 
         log.info("interpret_plan_response {}", planExecutionOutput);
-
-        var lastMessage = socketConnection.getMessages().stream().reduce((prev, next) -> next).orElse(null);
 
             InputStream terminalHelperStream = getClass().getClassLoader().getResourceAsStream("terminal-helper.json");
             if (terminalHelperStream == null) {
@@ -274,7 +338,7 @@ public class ChatVerbs extends VerbBase{
 
                 messages.add(Message.builder().role("system").content("You have executed verbs for the previous user " +
                     "messages. Please generate a user response that summarizes the last message. Keep all responses in " +
-                    "TerminalResponse format" +
+                    "LLMResponse format" +
                     ".").build());
             } else {
                 executionContext.addMessages( messages );
@@ -313,11 +377,11 @@ public class ChatVerbs extends VerbBase{
                     try {
                         var newResponse = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readValue(
                             content,
-                            TerminalResponse.class
+                            LLMResponse.class
                         );
                         return newResponse;
                     } catch (Exception e){
-                        return TerminalResponse.builder().responseForUser(content).build();
+                        return LLMResponse.builder().responseForUser(content).build();
                     }
 
                 }

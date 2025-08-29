@@ -1,4 +1,4 @@
-package io.sentrius.sso.controllers.api;
+package io.sentrius.sso.controllers.api.agents;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;

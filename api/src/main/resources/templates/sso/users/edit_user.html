@@ -67,6 +67,22 @@
                     <button type="submit" class="btn btn-success">Save Changes</button>
                     <a href="/sso/v1/users/list" class="btn btn-secondary">Cancel</a>
                 </form>
+
+                <!-- Visibility Expression Section -->
+                <hr class="my-4"/>
+                <h4>Access Policy Expression (ABAC)</h4>
+                <div id="attributeAlert"></div>
+                <div class="input-group mb-3">
+                    <input type="text" id="visibilityExpression" class="form-control"
+                           placeholder="e.g., DEV&LEAD|DATA_ATTRIBUTE"
+                           th:value="${visibilityExpression}">
+                    <button class="btn btn-success" id="saveExpressionBtn">Save</button>
+                </div>
+                <small class="form-text text-muted">
+                    Use <code>&</code> for AND, <code>|</code> for OR, <code>()</code> for grouping.
+                    Example: <code>(DEV&LEAD)|DATA_ATTRIBUTE</code>
+                </small>
+
             </div>
         </div>
     </div>
@@ -77,20 +93,18 @@
         const form = document.getElementById("editUserForm");
         const alertContainer = document.getElementById("alertContainer");
 
+        // Normal user form submit
         form.addEventListener("submit", function (e) {
             e.preventDefault();
 
             const formData = new FormData(form);
             const payload = {};
             let csrfToken = null;
-            let csrfParam = null;
 
             formData.forEach((value, key) => {
                 if (key.toLowerCase().includes("csrf")) {
-                    csrfParam = key;
                     csrfToken = value;
                 } else {
-                    // Support nested keys (e.g., authorizationType.id → { authorizationType: { id: ... } })
                     if (key.includes(".")) {
                         const [parent, child] = key.split(".");
                         if (!payload[parent]) payload[parent] = {};
@@ -124,6 +138,47 @@
                     alertContainer.innerHTML = `
                         <div class="alert alert-danger">Error updating user.</div>
                     `;
+                });
+        });
+
+        // Save visibility expression
+        const userId = document.querySelector("input[name='userId']").value;
+        const saveBtn = document.getElementById("saveExpressionBtn");
+        const input = document.getElementById("visibilityExpression");
+        const attributeAlert = document.getElementById("attributeAlert");
+
+        saveBtn.addEventListener("click", function () {
+            const csrfToken = document.getElementById("csrfToken").value;
+
+            const payload = {
+                attributeName: "VISIBILITY_EXPRESSION",
+                attributeValue: input.value,
+                attributeType: "STRING",
+                source: "SENTRIUS",
+                isActive: true
+            };
+
+            fetch(`/api/v1/users/attributes/update?userId=${userId}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRF-TOKEN": csrfToken
+                },
+                body: JSON.stringify(payload)
+            })
+                .then(res => {
+                    if (!res.ok) throw new Error("Failed to save expression");
+                    return res.json();
+                })
+                .then(() => {
+                    attributeAlert.innerHTML =
+                        `<div class="alert alert-success">Expression saved successfully</div>`;
+                })
+                .catch(err => {
+                    console.error(err);
+                    attributeAlert.innerHTML =
+                        `<div class="alert alert-danger">Error saving expression</div>`;
                 });
         });
     });

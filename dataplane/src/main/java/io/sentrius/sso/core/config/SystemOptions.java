@@ -122,6 +122,17 @@ public class SystemOptions {
   @Updatable(description = "Allows LLM to ask questions of the user")
   public Boolean enableLLMQuestions = false;
 
+  @Updatable(description = "Enables agent memory store functionality")
+  @Builder.Default public Boolean enableMemoryStore = true;
+
+  @Updatable(description = "Enables vector store capabilities for semantic memory search")
+  @Builder.Default public Boolean enableVectorStore = true;
+
+  @Updatable(description = "Default similarity threshold for vector searches")
+  @Builder.Default public Double vectorSimilarityThreshold = 0.7;
+
+  @Updatable(description = "Dimension size for vector embeddings")
+  @Builder.Default public Integer vectorDimension = 1536;
 
   public Boolean lockdownEnabled = false;
 
@@ -171,6 +182,8 @@ public class SystemOptions {
         field.set(this, Boolean.parseBoolean(propertyValue));
       } else if (field.getType() == Integer.class || field.getType() == int.class) {
         field.set(this, Integer.parseInt(propertyValue));
+      } else if (field.getType() == Double.class || field.getType() == double.class) {
+        field.set(this, Double.parseDouble(propertyValue));
       } else if (field.getType() == String.class) {
         field.set(this, propertyValue);
       }
