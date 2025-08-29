@@ -247,4 +247,32 @@ public class JiraService {
             return "";
         }
     }
+
+    public List<String> getComments(String ticketKey) {
+        List<String> comments = new ArrayList<>();
+        try {
+            String commentsUrl = String.format("%s/rest/api/3/issue/%s/comment", jiraBaseUrl, ticketKey);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBasicAuth(username, apiToken);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+            ResponseEntity<String> response = restTemplate.exchange(commentsUrl, HttpMethod.GET, requestEntity, String.class);
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                JsonNode root = JsonUtil.MAPPER.readTree(response.getBody());
+                ArrayNode commentNodes = (ArrayNode) root.path("comments");
+                for (JsonNode commentNode : commentNodes) {
+                    String commentText = extractTextFromADF(commentNode.path("body"));
+                    comments.add(commentText);
+                }
+            } else {
+                log.info("Failed to fetch comments. Status: {}", response.getStatusCode());
+            }
+        } catch (Exception e) {
+            log.error("Error fetching comments: {}", e.getMessage());
+        }
+        return comments;
+    }
 }

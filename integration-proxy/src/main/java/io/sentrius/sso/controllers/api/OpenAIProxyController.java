@@ -13,6 +13,7 @@ import io.sentrius.sso.config.ApplicationEnvironmentConfig;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.integrations.external.ExternalIntegrationDTO;
+import io.sentrius.sso.core.model.verbs.Endpoint;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
@@ -27,7 +28,9 @@ import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.genai.GenerativeAPI;
 import io.sentrius.sso.genai.Message;
 
+import io.sentrius.sso.genai.model.EmbeddingRequest;
 import io.sentrius.sso.genai.model.LLMRequest;
+import io.sentrius.sso.genai.model.endpoints.EmbeddingApiRequest;
 import io.sentrius.sso.genai.model.endpoints.RawConversationRequest;
 import io.sentrius.sso.genai.spring.ai.AgentCommunicationMemoryStore;
 import io.sentrius.sso.integrations.exceptions.HttpException;
@@ -87,6 +90,7 @@ public class OpenAIProxyController extends BaseController {
     }
 
     @PostMapping("/completions")
+    @Endpoint(description = "Proxy for OpenAI completions endpoint")
     // require a registered user with an active ztat
     //@LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<?> chat(@RequestHeader("Authorization") String token,
@@ -302,5 +306,43 @@ public class OpenAIProxyController extends BaseController {
         }
 
 
+    }
+
+    @PostMapping("/embeddings")
+    @Endpoint(description = "Proxy for OpenAI embeddings endpoint")
+    public ResponseEntity<?> getEmbedding(@RequestHeader("Authorization") String token,
+                                          @RequestHeader("X-Communication-Id") String communicationId,
+                                          HttpServletRequest request, HttpServletResponse response,
+                                          @RequestBody String rawBody) throws JsonProcessingException, HttpException {
+
+        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+        if (!keycloakService.validateJwt(compactJwt)) {
+            log.warn("Invalid Keycloak token");
+            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+        }
+
+        var operatingUser = getOperatingUser(request, response);
+        if (operatingUser == null) {
+            var username = keycloakService.extractUsername(compactJwt);
+            operatingUser = userService.getUserByUsername(username);
+        }
+
+        var openAiToken = integrationSecurityTokenService.findByConnectionType("openai").stream().findFirst().orElse(null);
+        if (openAiToken == null) {
+            return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("No OpenAI integration found");
+        }
+
+        var externalIntegrationDTO = JsonUtil.MAPPER.readValue(openAiToken.getConnectionInfo(), ExternalIntegrationDTO.class);
+        var key = ApiKey.builder().apiKey(externalIntegrationDTO.getApiToken()).principal(externalIntegrationDTO.getUsername()).build();
+        var generativeAPI = new GenerativeAPI(key);
+
+        EmbeddingRequest embeddingRequest = JsonUtil.MAPPER.readValue(rawBody, EmbeddingRequest.class);
+
+        EmbeddingApiRequest embeddingApiRequest = EmbeddingApiRequest.builder().input(embeddingRequest.getInput()).model(embeddingRequest.getModel()).build();
+        // Example payload: {"input": "get user endpoint", "model": "text-embedding-3-small"}
+        var resp = generativeAPI.getEmbedding(embeddingApiRequest);
+
+        return ResponseEntity.ok(resp);
     }
 }

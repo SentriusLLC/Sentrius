@@ -1055,11 +1055,46 @@
         }
     }
 
+    function incrementVersion(current) {
+        if (!current) return "v1";
+
+        // Match things like "v0", "v12", "v1.2.3"
+        const match = current.match(/^v(\d+)(?:\.(\d+)(?:\.(\d+))?)?$/);
+        if (!match) {
+            // If it doesn’t match our format, just return current unchanged
+            return current;
+        }
+
+        let major = parseInt(match[1] || "0", 10);
+        let minor = parseInt(match[2] || "0", 10);
+        let patch = parseInt(match[3] || "0", 10);
+
+        if (match[3] !== undefined) {
+            // If we have patch version: bump patch
+            patch++;
+            return `v${major}.${minor}.${patch}`;
+        } else if (match[2] !== undefined) {
+            // If we have minor version: bump minor
+            minor++;
+            return `v${major}.${minor}`;
+        } else {
+            // Just major: bump major
+            major++;
+            return `v${major}`;
+        }
+    }
+
     // Save policy
     function savePolicy() {
         try {
             const policy = formDataToPolicyObject();
-            
+
+            // Auto-increment version if it matches known pattern
+            policy.version = incrementVersion(policy.version);
+
+            // Update the input field so user sees the new version
+            document.getElementById('version').value = policy.version;
+
             // Basic validation
             if (!policy.version || !policy.policy_id) {
                 alert('Version and Policy ID are required fields.');
@@ -1221,6 +1256,18 @@
                     if (primitive.description) container.querySelector('input[name*=".description"]').value = primitive.description;
 
                     if (primitive.endpoints) {
+                        const endpointsList = container.querySelector('#primitive-endpoints-' + (primitiveCounter - 1));
+                        primitive.endpoints.forEach(endpoint => {
+                            addListItem(
+                                endpointsList.id,
+                                'capabilities.primitives[' + (primitiveCounter - 1) + '].endpoints'
+                            );
+                            const inputs = endpointsList.querySelectorAll('input');
+                            inputs[inputs.length - 1].value = endpoint;
+                        });
+                    }
+                    /*
+                    if (primitive.endpoints) {
                         const tagsList = container.querySelector('.dynamic-list');
                         primitive.endpoints.forEach(endpoint => {
                             addListItem(
@@ -1231,6 +1278,7 @@
                             inputs[inputs.length - 1].value = endpoint;
                         });
                     }
+                    */
 
 
                     if (primitive.tags) {

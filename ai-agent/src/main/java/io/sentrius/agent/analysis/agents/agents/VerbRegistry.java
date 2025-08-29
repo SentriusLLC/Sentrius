@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ScanResult;
+import io.sentrius.agent.services.EndpointRegistry;
 import io.sentrius.sso.core.dto.agents.AgentExecutionContextDTO;
 import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
 import io.sentrius.agent.discovery.AgentEndpointDiscoveryService;
@@ -20,6 +21,7 @@ import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.genai.Message;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
@@ -46,8 +48,12 @@ public class VerbRegistry {
     
     private final EndpointScanningService endpointScanningService;
 
+    private final EndpointRegistry endpointRegistry;
+
     private final Map<String, AgentVerb> verbs = new HashMap<>();
     private final Map<String, Object> instances = new HashMap<>();
+
+    private static final String [] AGENT_MARKINGS = new String[] {"SENTRIUS_INTERNAL"};
 
     private final AgentEndpointDiscoveryService agentEndpointDiscoveryService;
 
@@ -55,7 +61,8 @@ public class VerbRegistry {
 
     public void scanEndpoints(AgentExecution execution) throws ZtatException, JsonProcessingException {
         synchronized (this) {
-            var endpoints = agentClientService.getAvailableEndpoints(execution);
+            endpointRegistry.loadEndpoints(execution);
+            var endpoints = endpointRegistry.getAll();
             log.info("Scanning endpoints for verbs...");
             var verbs = agentClientService.getAvailableVerbs(execution);
 
@@ -183,7 +190,9 @@ public class VerbRegistry {
                 // add the output
                 if (null != thisVerb.getReturnName() && !thisVerb.getReturnName().isEmpty()) {
                     contextDTO.addToMemory(thisVerb.getReturnName(), execNode);
+                    contextDTO.addToPersistentMemory(thisVerb.getReturnName(), execNode, "VERB", AGENT_MARKINGS);
                 } else {
+                    contextDTO.addToPersistentMemory(verb, execNode, "VERB", AGENT_MARKINGS);
                     contextDTO.addToMemory(verb, execNode);
                 }
 
@@ -219,8 +228,10 @@ public class VerbRegistry {
                         JsonNode execNode = JsonUtil.MAPPER.valueToTree(exec);
                         // add the output
                         if (null != thisVerb.getReturnName() && !thisVerb.getReturnName().isEmpty()) {
+                            contextDTO.addToPersistentMemory(thisVerb.getReturnName(), execNode, "VERB", AGENT_MARKINGS);
                             contextDTO.addToMemory(thisVerb.getReturnName(), execNode);
                         } else {
+                            contextDTO.addToPersistentMemory(verb, execNode, "VERB", AGENT_MARKINGS);
                             contextDTO.addToMemory(verb, execNode);
                         }
 

@@ -200,6 +200,14 @@
             <artifactId>classgraph</artifactId>
         </dependency>
 
+        <!-- Spring AI for vector support (optional) -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-pgvector-store</artifactId>
+            <version>${spring-ai-version}</version>
+            <optional>true</optional>
+        </dependency>
+
     </dependencies>
 
 

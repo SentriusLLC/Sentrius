@@ -1,13 +1,17 @@
 package io.sentrius.sso.core.services.agents;
+import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.sentrius.sso.core.dto.PagedResultDTO;
 import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.dto.agents.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.EndpointRequest;
@@ -20,6 +24,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -771,4 +776,87 @@ public class ZeroTrustClientService {
         }
     }
 
+    public <T, R> PagedResultDTO<R> callPostOnApi(
+        @NonNull TokenDTO token,
+        @NonNull String apiEndpoint,
+        T body,
+        Class<R> responseType,
+        Integer page,
+        Integer size,
+        List<String> sort,
+        Map.Entry<String, List<String>>... params
+    ) throws ZtatException {
+
+        String keycloakJwt = getKeycloakToken();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(keycloakJwt);
+        headers.set("X-Ztat-Token", token.getZtatToken());
+        headers.set("X-Communication-Id", token.getCommunicationId());
+
+        HttpEntity<T> requestEntity = new HttpEntity<>(body, headers);
+
+        if (!apiEndpoint.startsWith("/")) {
+            apiEndpoint = "/" + apiEndpoint;
+        }
+        if (!apiEndpoint.startsWith("/api/v1/")) {
+            apiEndpoint = "/api/v1" + apiEndpoint;
+        }
+
+        var builder = UriComponentsBuilder.fromUri(URI.create(agentApiUrl))
+            .path(apiEndpoint);
+
+        // Add pagination params if present
+        if (page != null) builder.queryParam("page", page);
+        if (size != null) builder.queryParam("size", size);
+        if (sort != null) {
+            for (String s : sort) {
+                builder.queryParam("sort", s);
+            }
+        }
+
+        // Add any other params
+        if (params != null) {
+            for (Map.Entry<String, List<String>> entry : params) {
+                for (String value : entry.getValue()) {
+                    builder.queryParam(entry.getKey(), UriUtils.encodeQueryParam(value, StandardCharsets.UTF_8));
+                }
+            }
+        }
+
+        try {
+            // Call API as plain JSON String
+            ResponseEntity<String> response = restTemplate.exchange(
+                builder.build(true).toUriString(),
+                HttpMethod.POST,
+                requestEntity,
+                String.class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+
+
+                // Construct JavaType for PagedResultDTO<R>
+                JavaType type = JsonUtil.MAPPER.getTypeFactory()
+                    .constructParametricType(PagedResultDTO.class, responseType);
+
+                return JsonUtil.MAPPER.readValue(response.getBody(), type);
+            } else if (response.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
+                throw new ZtatException("Inaccessible endpoint: " + response.getStatusCode(), apiEndpoint);
+            } else {
+                throw new RuntimeException("Failed: " + response.getStatusCode());
+            }
+
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
+                throw new ZtatException(e.getResponseBodyAsString(), apiEndpoint);
+            } else {
+                log.info("Error: {}", e.getResponseBodyAsString());
+            }
+            throw new RuntimeException(e.getResponseBodyAsString());
+        } catch (IOException e) {
+            throw new RuntimeException("Error deserializing response", e);
+        }
     }
+
+}

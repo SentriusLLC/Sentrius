@@ -9,6 +9,7 @@ import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.model.security.IntegrationSecurityToken;
 import io.sentrius.sso.core.model.users.UserConfig;
+import io.sentrius.sso.core.model.verbs.Endpoint;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.integrations.external.ExternalIntegrationDTO;
 import io.sentrius.sso.core.services.UserService;
@@ -54,6 +55,7 @@ public class IntegrationApiController extends BaseController {
     }
 
     @PostMapping("/github/add")
+    @Endpoint(description = "Adding a github integration so github can be used as an external data provider")
     public ResponseEntity<ExternalIntegrationDTO> addGitHubIntegration(HttpServletRequest request, 
                                                                        HttpServletResponse response,
                                                                        ExternalIntegrationDTO integrationDTO)
@@ -73,6 +75,7 @@ public class IntegrationApiController extends BaseController {
     }
 
     @PostMapping("/jira/add")
+    @Endpoint(description = "Adding a jira integration so jira can be used as an external data provider")
     public ResponseEntity<ExternalIntegrationDTO> addJiraIntegration(HttpServletRequest request, HttpServletResponse response,
                                                    ExternalIntegrationDTO integrationDTO)
         throws JsonProcessingException, GeneralSecurityException {
@@ -92,6 +95,7 @@ public class IntegrationApiController extends BaseController {
     }
 
     @PostMapping("/openai/add")
+    @Endpoint(description = "Adding an OpenAI integration so OpenAI can be used as an external data provider")
     public ResponseEntity<ExternalIntegrationDTO> addOpenaiIntegration(HttpServletRequest request,
                                                                   HttpServletResponse response,
                                                                     @RequestBody ExternalIntegrationDTO integrationDTO)
@@ -111,6 +115,7 @@ public class IntegrationApiController extends BaseController {
     }
 
     @PostMapping("/jira/delete")
+    @Endpoint(description = "Deleting a jira integration so jira can no longer be used as an external data provider")
     public ResponseEntity<String> deleteJiraIntegration(HttpServletRequest request,
                                                                 HttpServletResponse response,
                                                                      @RequestParam("id") String id)
@@ -122,6 +127,7 @@ public class IntegrationApiController extends BaseController {
     }
 
     @PostMapping("/delete")
+    @Endpoint(description = "Deleting an integration so it can no longer be used as an external data provider")
     public ResponseEntity<String> deleteIntegration(HttpServletRequest request,
                                                         HttpServletResponse response,
                                                         @RequestParam("integrationId") String id) {
