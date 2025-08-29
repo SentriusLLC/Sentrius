@@ -57,6 +57,63 @@ public class AgentExecutionContextDTO {
         agentDataList.add(wrapper);
     }
 
+    // === Persistent Memory Integration ===
+
+    /**
+     * Store value to persistent memory with markings
+     */
+    public void addToPersistentMemory(String key, JsonNode value, String classification, String[] markings) {
+        // Add to short-term memory for immediate access
+        putStructuredToMemory(key, value);
+        
+        // Store metadata for persistent storage
+        if (agentContext != null) {
+            ObjectNode memoryMeta = JsonUtil.MAPPER.createObjectNode();
+            memoryMeta.put("key", key);
+            memoryMeta.set("value", value);
+            memoryMeta.put("classification", classification != null ? classification : "PRIVATE");
+            if (markings != null) {
+                memoryMeta.put("markings", String.join(",", markings));
+            }
+            memoryMeta.put("persistent", true);
+            
+            // Add to data list with persistent flag
+            agentDataList.add(memoryMeta);
+        }
+    }
+
+    /**
+     * Store simple value to persistent memory
+     */
+    public void addToPersistentMemory(String key, String value, String classification, String[] markings) {
+        JsonNode jsonValue = JsonUtil.MAPPER.convertValue(value, JsonNode.class);
+        addToPersistentMemory(key, jsonValue, classification, markings);
+    }
+
+    /**
+     * Store object to persistent memory
+     */
+    public void addToPersistentMemory(String key, Object value, String classification, String[] markings) {
+        JsonNode jsonValue = JsonUtil.MAPPER.convertValue(value, JsonNode.class);
+        addToPersistentMemory(key, jsonValue, classification, markings);
+    }
+
+    /**
+     * Get list of memories marked for persistent storage
+     */
+    public List<JsonNode> getPersistentMemoryItems() {
+        return agentDataList.stream()
+                .filter(node -> node.has("persistent") && node.get("persistent").asBoolean())
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Check if context has persistent memory items
+     */
+    public boolean hasPersistentMemory() {
+        return !getPersistentMemoryItems().isEmpty();
+    }
+
     public static void flatten(String prefix, JsonNode node, Map<String, JsonNode> map) {
         if (node.isObject()) {
             node.fields().forEachRemaining(entry -> {

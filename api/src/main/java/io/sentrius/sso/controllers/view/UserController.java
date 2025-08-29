@@ -28,8 +28,10 @@ import io.sentrius.sso.core.services.UserCustomizationService;
 import io.sentrius.sso.core.services.UserPublicKeyService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.WorkHoursService;
+import io.sentrius.sso.core.services.users.UserAttributeService;
 import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.utils.JsonUtil;
+import io.sentrius.sso.core.model.users.UserAttribute;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -50,12 +52,14 @@ public class UserController extends BaseController {
     final HostGroupService hostGroupService;
     final WorkHoursService  workHoursService;
     final CryptoService cryptoService;
+    final UserAttributeService userAttributeService;
 
     protected UserController(
         UserService userService, SystemOptions systemOptions,
         ErrorOutputService errorOutputService, UserCustomizationService userThemeService, 
         UserPublicKeyService userPublicKeyService, HostGroupService hostGroupService,
-        WorkHoursService workHoursService, CryptoService cryptoService
+        WorkHoursService workHoursService, CryptoService cryptoService,
+        UserAttributeService userAttributeService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.userThemeService = userThemeService;
@@ -63,6 +67,7 @@ public class UserController extends BaseController {
         this.hostGroupService = hostGroupService;
         this.workHoursService = workHoursService;
         this.cryptoService = cryptoService;
+        this.userAttributeService = userAttributeService;
     }
 
     @ModelAttribute("userSettings")
@@ -222,6 +227,48 @@ public class UserController extends BaseController {
         return "sso/users/audit_users";
     }
 
+    @GetMapping("/attributes")
+    public String userAttributes(Model model, HttpServletRequest request, HttpServletResponse response) {
+        try {
+            var user = userService.getOperatingUser(request, response, null);
+            List<UserAttribute> userAttributes = userAttributeService.getUserAttributes(user.getUserId());
+            model.addAttribute("userAttributes", userAttributes);
+            model.addAttribute("userId", user.getUserId());
+            model.addAttribute("availableTypes", UserAttribute.AttributeType.values());
+            model.addAttribute("availableSources", UserAttribute.Source.values());
+            return "sso/users/user_attributes";
+        } catch (Exception e) {
+            log.error("Error loading user attributes", e);
+            model.addAttribute("error", "Error loading user attributes: " + e.getMessage());
+            return "sso/users/user_attributes";
+        }
+    }
+
+    @GetMapping("/attributes/manage")
+    public String manageUserAttributes(Model model, 
+                                     @RequestParam(required = false) String userId,
+                                     HttpServletRequest request, 
+                                     HttpServletResponse response) {
+        try {
+            String targetUserId = userId;
+            if (targetUserId == null) {
+                var user = userService.getOperatingUser(request, response, null);
+                targetUserId = user.getUserId();
+            }
+            
+            List<UserAttribute> userAttributes = userAttributeService.getUserAttributes(targetUserId);
+            model.addAttribute("userAttributes", userAttributes);
+            model.addAttribute("targetUserId", targetUserId);
+            model.addAttribute("availableTypes", UserAttribute.AttributeType.values());
+            model.addAttribute("availableSources", UserAttribute.Source.values());
+            model.addAttribute("newAttribute", new UserAttribute());
+            return "sso/users/manage_user_attributes";
+        } catch (Exception e) {
+            log.error("Error loading user attributes for management", e);
+            model.addAttribute("error", "Error loading user attributes: " + e.getMessage());
+            return "sso/users/manage_user_attributes";
+        }
+    }
 
 
 }
