@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentrius.io/schemas/atpl.schema.json",
+  "title": "Agent Trust Policy Language (ATPL)",
+  "type": "object",
+  "required": ["version", "policy_id", "capabilities"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^v[0-9]+$"
+    },
+    "policy_id": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "match": {
+      "type": "object",
+      "properties": {
+        "agent_tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "properties": {
+        "issuer": { "type": "string" },
+        "subject_prefix": { "type": "string" },
+        "mfa_required": { "type": "boolean" },
+        "certificate_authority": { "type": "string" }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "source": { "type": "string" },
+        "signature_required": { "type": "boolean" },
+        "approved_committers": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "properties": {
+        "allow_drift": { "type": "boolean" },
+        "enclave_required": { "type": "boolean" },
+        "attestation_type": { "type": "string" },
+        "verified_at_boot": { "type": "boolean" }
+      }
+    },
+    "behavior": {
+      "type": "object",
+      "properties": {
+        "minimum_positive_runs": { "type": "integer" },
+        "max_incidents": { "type": "integer" },
+        "incident_types": {
+          "type": "object",
+          "properties": {
+            "denylist": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "trust_score": {
+      "type": "object",
+      "properties": {
+        "minimum": { "type": "integer" },
+        "weightings": {
+          "type": "object",
+          "properties": {
+            "identity": { "type": "number" },
+            "provenance": { "type": "number" },
+            "runtime": { "type": "number" },
+            "behavior": { "type": "number" }
+          }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "required": ["primitives", "composed"],
+      "properties": {
+        "primitives": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "description"],
+            "properties": {
+              "id": { "type": "string" },
+              "description": { "type": "string" },
+              "endpoints": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "commands": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "subcommands": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "activities": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "tags": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        },
+        "composed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "includes"],
+            "properties": {
+              "id": { "type": "string" },
+              "includes": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "tags": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "endpoints": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "commands": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "subcommands": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "activities": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  ,
+    "actions": {
+      "type": "object",
+      "properties": {
+        "on_failure": {
+          "type": "string",
+          "enum": ["deny", "log", "alert"]
+        },
+        "on_success": {
+          "type": "string",
+          "enum": ["allow", "log"]
+        },
+        "on_marginal": {
+          "oneOf": [
+            {"type": "string", "enum": ["require_ztat", "log"]},
+            {
+              "type": "object",
+              "properties": {
+                "action": {"type": "string", "enum": ["require_ztat"]},
+                "ztat_provider": {"type": "string"}
+              },
+              "required": ["action"]
+            }
+          ]
+        }
+      }
+    },
+    "ztat": {
+      "type": "object",
+      "properties": {
+        "provider": {"type": "string"},
+        "ttl": {"type": "string"},
+        "approved_issuers": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "key_binding": {"type": "string"},
+        "approval_required": {"type": "boolean"}
+      }
+    }
+  }
+}

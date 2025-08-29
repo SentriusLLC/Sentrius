@@ -1,0 +1,6 @@
+<div class="alert alert-danger" th:if="${!errors.empty}" xmlns:th="http://www.thymeleaf.org">
+    Error!
+    <div th:each="e : ${errors}">
+        <span th:text="${e}"></span>
+    </div>
+</div>

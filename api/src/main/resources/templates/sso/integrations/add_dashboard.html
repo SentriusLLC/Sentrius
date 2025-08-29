@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Add Integrations</title>
+
+    <style>
+        /* Modern Integration Cards Grid */
+        .integrations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        /* Integration Card Styling */
+        .integration-card {
+            background: var(--bs-dark);
+            border: 1px solid #404040;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .integration-card:hover {
+            background: #2a2a2a;
+            border-color: #0d6efd;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(13, 110, 253, 0.15);
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .integration-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #0d6efd, #6610f2);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .integration-card:hover::before {
+            opacity: 1;
+        }
+
+        .card-header-modern {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .card-icon {
+            font-size: 2.5rem;
+            color: #0d6efd;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(13, 110, 253, 0.1);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .integration-card:hover .card-icon {
+            background: rgba(13, 110, 253, 0.2);
+            transform: scale(1.05);
+        }
+
+        .card-content {
+            flex: 1;
+        }
+
+        .card-title-modern {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+            color: #fff;
+        }
+
+        .card-description-modern {
+            font-size: 0.9rem;
+            color: #adb5bd;
+            line-height: 1.4;
+            margin: 0;
+        }
+
+        .card-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(40, 167, 69, 0.9);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .card-badge.popular {
+            background: rgba(255, 193, 7, 0.9);
+            color: #000;
+        }
+
+        .card-badge.new {
+            background: rgba(13, 110, 253, 0.9);
+        }
+
+        /* Main Container */
+        .integrations-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #0d6efd, #6610f2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .section-subtitle {
+            font-size: 1.1rem;
+            color: #adb5bd;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Existing Integrations Section */
+        .existing-integrations {
+            background: var(--bs-dark);
+            border: 1px solid #404040;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 3rem;
+        }
+
+        .existing-integrations h3 {
+            color: #fff;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .table-dark {
+            --bs-table-bg: transparent;
+        }
+
+        .table-dark td, .table-dark th {
+            border-color: #404040;
+            padding: 1rem 0.75rem;
+        }
+
+        .btn-outline-danger {
+            --bs-btn-color: #dc3545;
+            --bs-btn-border-color: #dc3545;
+            --bs-btn-hover-bg: #dc3545;
+            --bs-btn-hover-border-color: #dc3545;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .integrations-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .integrations-container {
+                padding: 1rem;
+            }
+            
+            .section-title {
+                font-size: 2rem;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
+                <div class="integrations-container">
+                    <div class="section-header">
+                        <h1 class="section-title">Connect Your Tools</h1>
+                        <p class="section-subtitle">Integrate with your favorite tools and services to streamline your workflow and enhance productivity.</p>
+                    </div>
+
+                    <div class="integrations-grid">
+                        <a th:each="integration : ${integrations}" 
+                           th:href="${integration.href}" 
+                           class="integration-card">
+                            <div th:if="${integration.badge}" class="card-badge" th:classappend="${integration.badgeType}" th:text="${integration.badge}"></div>
+                            <div class="card-header-modern">
+                                <div class="card-icon">
+                                    <i th:class="${integration.icon}"></i>
+                                </div>
+                                <div class="card-content">
+                                    <h3 class="card-title-modern" th:text="${integration.name}"></h3>
+                                    <p class="card-description-modern" th:text="${integration.description}"></p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                <div class="existing-integrations" th:if="${!#lists.isEmpty(existingIntegrations)}">
+                    <h3><i class="fas fa-plug me-2"></i>Active Integrations</h3>
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover">
+                            <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Configuration</th>
+                                <th>Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="s : ${existingIntegrations}">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i th:class="${s.connectionType == 'github' ? 'fa-brands fa-github me-2' : 
+                                                     s.connectionType == 'openai' ? 'fa-solid fa-robot me-2' :
+                                                     s.connectionType == 'jira' ? 'fa-brands fa-jira me-2' : 'fa-solid fa-plug me-2'}"
+                                           style="color: #0d6efd;"></i>
+                                        <span th:text="${s.name}"></span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary"
+                                          th:text="${s.connectionType == 'github' ? 'GitHub' : 
+                                                   s.connectionType == 'openai' ? 'OpenAI' :
+                                                   s.connectionType == 'jira' ? 'JIRA' : s.connectionType}">
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle me-1"></i>Connected
+                                    </span>
+                                </td>
+                                <td>
+                                    <span th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}" 
+                                          th:text="${s.baseUrl}" class="text-muted small">
+                                    </span>
+                                    <span th:unless="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}" 
+                                          class="text-muted small">
+                                        <i class="fas fa-lock me-1"></i>Protected
+                                    </span>
+                                </td>
+                                <td>
+                                    <button th:id="'del_bet_' + ${s.id}"
+                                            th:data-url="'/api/v1/integrations/remove.ktrl?integrationId=' + ${s.id}"
+                                            class="btn btn-outline-danger btn-sm del_bet"
+                                            title="Remove Integration">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+
+    async function deleteIntegration(url, payload, csrf) {
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf // Include the CSRF token in the headers
+                },
+            });
+
+            console.log("Response:", response);
+            if (!response.ok) {
+                throw new Error("Failed to save the rule configuration");
+            }
+
+        } catch (error) {
+            console.log("Error occurred:", error);
+            alert("An error occurred while saving the rule configuration.");
+        }
+    }
+    $(document).ready(function () {
+        // Initialize variables
+        var csrf = "[[${_csrf.token}]]";
+
+        // Handle delete integration button clicks
+        $(".del_bet").click(async function (event) {
+            event.preventDefault();
+            
+            // Show confirmation dialog
+            if (!confirm('Are you sure you want to remove this integration? This action cannot be undone.')) {
+                return;
+            }
+            
+            var id = $(this).attr('id').replace("del_bet_", "");
+            var url = '/api/v1/integrations/delete?integrationId=' + id;
+            
+            // Disable button and show loading state
+            $(this).prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+
+            try {
+                await deleteIntegration(url, null, csrf);
+                // Show success message briefly before reload
+                $(this).html('<i class="fa fa-check text-success"></i>');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } catch (error) {
+                // Reset button on error
+                $(this).prop('disabled', false).html('<i class="fa fa-trash"></i>');
+                alert("An error occurred while removing the integration: " + error.message);
+            }
+        });
+    });
+</script>
+</body>
+</html>
+

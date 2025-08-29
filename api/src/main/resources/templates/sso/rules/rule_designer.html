@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+
+    <link rel="stylesheet" type="text/css" th:href="@{/node/css/jointjs/joint.css}"/>
+    <!-- Lodash (Required for Backbone.js) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+
+    <!-- Backbone.js (Required for JointJS) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.6.0/backbone-min.js"></script>
+
+
+    <script th:src="@{/node/js/jointjs/joint.js}"></script>
+    <title>[[${systemOptions.systemLogoName}]] - Rule Designer</title>
+
+    <style>
+        #zeroTrustCanvas {
+            width: 100%;          /* Full width of the container */
+            height: 600px;        /* Fixed height for visibility */
+            border: 2px solid red; /* Add a border to easily see the boundaries */
+            position: relative;   /* Ensure that it's in the correct layout flow */
+            overflow: hidden;     /* Prevent any overflow issues */
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.0/cytoscape.min.js"></script>
+    <style>
+        #cy {
+            width: 100%;
+            height: 600px;
+            border: 2px solid black;
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
+                <div id="cy"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var cy = cytoscape({
+            container: document.getElementById('cy'),
+            elements: [
+                { data: {
+                    id: 'rule1', label: 'Access Control' }, position: { x: 150, y: 200 },
+                    style: {
+                        'background-image': 'https://www.svgrepo.com/show/136946/lock.svg',
+                        'background-fit': 'cover',  // Ensures the image covers the node
+                        'background-opacity': 1,    // Makes sure the background image is fully visible
+                        'width': '30px',            // Increase width for visibility
+                        'height': '30px',           // Increase height for visibility
+                    }},
+                { data: { id: 'rule2', label: 'MFA Enforcement' }, position: { x: 400, y: 200 } },
+                { data: { source: 'rule1', target: 'rule2', label: 'requires' } }
+            ],
+            style: [
+                {
+                    selector: 'node',
+                    style: {
+                        'background-color': '#007bff',
+                        'label': 'data(label)',
+                        'color': '#fff',
+                        'text-valign': 'center',
+                        'text-halign': 'center'
+                    }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': 3,
+                        'line-color': '#000',
+                        'target-arrow-color': '#000',
+                        'target-arrow-shape': 'triangle',
+                        'curve-style': 'bezier'
+                    }
+                }
+            ],
+            layout: {
+                name: 'preset'
+            }
+        });
+
+        cy.on('tap', 'node', function (evt) {
+            var node = evt.target;
+            alert('Clicked on ' + node.data('label'));
+        });
+
+    });
+</script>
+</body>
+</html>
+

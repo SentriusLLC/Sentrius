@@ -1,0 +1,31 @@
+{{- if .Values.neo4j.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neo4j
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: neo4j
+  template:
+    metadata:
+      labels:
+        app: neo4j
+    spec:
+      containers:
+        - name: neo4j
+          image: "{{ .Values.neo4j.image.repository }}:{{ .Values.neo4j.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.neo4j.port }}
+            - containerPort: {{ .Values.neo4j.httpPort }}
+          env:
+            - name: NEO4J_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-neo4j-secrets
+                  key: neo4j-auth
+            - name: NEO4J_server_config_strict__validation__enabled
+              value: {{ .Values.neo4j.env.NEO4J_server_config_strict__validation__enabled | quote }}
+          resources: {{- toYaml .Values.neo4j.resources | nindent 12 }}
+{{- end }}

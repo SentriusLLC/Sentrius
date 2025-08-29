@@ -1,0 +1,36 @@
+<div class="modal fade" id="securityGroupModal" tabindex="-1" aria-labelledby="securityGroupModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="securityGroupForm" action="#" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="securityGroupModalLabel">Add Access Group</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="host" class="form-label">Type Name</label>
+                        <input type="text" class="form-control" id="host" name="host" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="userAccessList" class="form-label">User Accesses</label>
+                        <div class="chip">
+                            <select class="form-select" name="userAccessList" id="userAccessList" multiple>
+                                <option disabled hidden value="">Choose Accesses...</option>
+                                <option th:each="u: ${operatingUser.authorizationType.accessSet}" th:value="${u}"
+                                        th:text="${u}">
+                                </option>
+
+                            </select>
+                            <div class="invalid-feedback">Please select a valid tag.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                </div>
+                <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+            </form>
+        </div>
+    </div>
+</div>

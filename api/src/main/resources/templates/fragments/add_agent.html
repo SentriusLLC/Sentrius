@@ -1,0 +1,38 @@
+<div class="modal fade" id="agentFormModal" tabindex="-1" aria-labelledby="agentFormModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="agentForm" method="POST" th:object="${agent}">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="agentFormModalLabel">Add Agent</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- User fields -->
+                    <div class="mb-3">
+                        <label for="agentName" class="form-label">Agent Name</label>
+                        <input type="text" class="form-control" th:field="*{agentName}" id="agentName"
+                               placeholder="Enter the agent name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="agentCallback" class="form-label">Agent Name</label>
+                        <input type="text" class="form-control" th:field="*{agentCallbackUrl}" id="agentCallbackUrl"
+                               placeholder="Enter the agent callback URL" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="agentType" class="form-label">Access Type</label>
+                        <select name="agentType" class="form-select" th:field="*{agentType}" id="agentType">
+                            <option th:each="u: ${agentTypeList}" th:value="${u}"
+                                    th:text="${u}"></option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>

@@ -1,0 +1,4 @@
+ALTER TABLE error_output
+ALTER COLUMN error_type TYPE VARCHAR(256),
+    ALTER COLUMN error_location TYPE VARCHAR(256),
+    ALTER COLUMN error_hash TYPE VARCHAR(256);

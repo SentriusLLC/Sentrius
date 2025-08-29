@@ -1,0 +1,58 @@
+package io.sentrius.sso.controllers.view;
+
+import java.security.GeneralSecurityException;
+import java.sql.SQLException;
+import java.util.List;
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.dto.NotificationDTO;
+import io.sentrius.sso.core.services.ErrorOutputService;
+import io.sentrius.sso.core.services.NotificationService;
+import io.sentrius.sso.core.services.UserService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+@Slf4j
+@Controller
+@RequestMapping("/sso/v1/notifications")
+public class NotificationController extends BaseController {
+
+
+    protected final NotificationService notificationService;
+    protected final ErrorOutputService errorOutputService;
+
+    protected NotificationController(
+        UserService userService,
+        SystemOptions systemOptions,
+        NotificationService notificationService,
+        ErrorOutputService errorOutputService) {
+        super(userService, systemOptions, errorOutputService);
+        this.notificationService = notificationService;
+        this.errorOutputService= errorOutputService;
+    }
+
+
+
+
+    @GetMapping
+    public String listNotifications(HttpServletRequest request, HttpServletResponse response, Model model) {
+        List<NotificationDTO> notifications = notificationService.findUnseenNotifications(getOperatingUser(request,
+            response)).stream().map(x -> x.toDTO()).toList();
+        model.addAttribute("myNotifications", notifications);
+        model.addAttribute("unreadCount", notifications.size());
+        return "sso/notifications/view_notifications"; // Redirect to login page
+    }
+
+    @GetMapping("/error/log/get")
+    public String getErrorLog() throws GeneralSecurityException, SQLException {
+
+
+        return "sso/errors/list_errors"; // Redirect to login page
+    }
+
+}

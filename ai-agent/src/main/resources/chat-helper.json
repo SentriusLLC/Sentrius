@@ -1,0 +1,10 @@
+{
+  "previousOperation": "<previousOperation>",
+  "nextOperation": "<nextOperation>",
+  "arguments": {
+    "argumentname": "<argumentvalue for nextOperation>",
+    "argumentname2": "<argumentvalue>"
+  },
+  "terminalSummaryForLLM": "<Summary of the terminal thus far for the next LLM assessment>",
+    "responseForUser": "<Response to the user>"
+}

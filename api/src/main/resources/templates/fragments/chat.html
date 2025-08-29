@@ -1,0 +1,169 @@
+    <script th:src="@{/node/js/google-protobuf/google-protobuf.js}"></script>
+    <script th:src="@{/node/js/sockjs-client/sockjs.js}"></script>
+    <script th:src="@{/js/bundled_session_pb.js}"></script>
+    <script th:inline="javascript">
+
+        let chatFocus = false;
+        let chatConnection = null;
+
+        function toggleChat() {
+            let chatContainer = document.getElementById("chat-container");
+            
+            if (chatContainer.style.display === "none" || chatContainer.style.display === "") {
+                chatContainer.style.display = "flex";
+                // Small delay to ensure display change is processed
+                setTimeout(() => {
+                    chatContainer.classList.remove("hidden");
+                }, 10);
+                
+                // Focus input when opening
+                setTimeout(() => {
+                    const input = document.getElementById("chat-input");
+                    if (input) input.focus();
+                }, 300);
+                
+                termFocus = false;
+                chatFocus = true;
+                enableSessionChat();
+            } else {
+                chatContainer.classList.add("hidden");
+                // Hide after animation completes
+                setTimeout(() => {
+                    chatContainer.style.display = "none";
+                }, 300);
+            }
+        }
+    </script>
+    <style>
+        /* Modern Chat Button */
+        #chat-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            padding: 12px 18px;
+            border-radius: 24px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            outline: none;
+            user-select: none;
+        }
+
+        #chat-button:hover {
+            background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4), 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        #chat-button:active {
+            transform: translateY(0);
+        }
+
+        /* Modern Chat Container */
+        #chat-container {
+            position: fixed;
+            bottom: 10px;
+            right: 20px;
+            width: 360px;
+            height: 500px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: white;
+            border-radius: 16px;
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid #404040;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Modern Chat Header */
+        #chat-header {
+            background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
+            padding: 16px 20px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 600;
+            position: relative;
+            border-bottom: 1px solid #404040;
+            font-size: 15px;
+            letter-spacing: 0.5px;
+        }
+
+        #chat-header:hover {
+            background: linear-gradient(135deg, #2f2f2f 0%, #3f3f3f 100%);
+        }
+
+        #close-chat {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #888;
+            font-size: 18px;
+            transition: color 0.2s ease;
+            padding: 4px;
+        }
+
+        #close-chat:hover {
+            color: #ff4757;
+        }
+
+        /* Modern Chat Messages */
+        #chat-messages {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            background: linear-gradient(135deg, #1a1a1a 0%, #252525 100%);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        #chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #chat-messages::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        #chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+
+        #chat-messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Modern Chat Input */
+        #chat-input {
+            width: 100%;
+            padding: 16px 20px;
+            border: none;
+            background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
+            color: white;
+            font-size: 14px;
+            border-top: 1px solid #404040;
+            outline: none;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        #chat-input::placeholder {
+            color: #888;
+        }
+
+        #chat-input:focus {
+            background: linear-gradient(135deg, #2f2f2f 0%, #3f3f3f 100%);
+            box-shadow: inset 0 0 0 1px #007bff;
+        }
+    </style>

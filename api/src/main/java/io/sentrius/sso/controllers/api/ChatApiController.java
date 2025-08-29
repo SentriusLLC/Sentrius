@@ -1,0 +1,182 @@
+package io.sentrius.sso.controllers.api;
+
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.time.ZoneOffset;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import io.sentrius.sso.config.AppConfig;
+import io.sentrius.sso.core.annotations.LimitAccess;
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.dto.AgentDTO;
+import io.sentrius.sso.core.dto.ztat.UserTokenDTO;
+import io.sentrius.sso.core.dto.ztat.UserTokenResponse;
+import io.sentrius.sso.core.dto.ztat.ZtatChallengeRequest;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.agents.AgentService;
+import io.sentrius.sso.core.services.security.CryptoService;
+import io.sentrius.sso.core.services.security.ZtatTokenService;
+import io.sentrius.sso.core.utils.AccessUtil;
+import io.sentrius.sso.protobuf.Session.ChatMessage;
+import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
+import io.sentrius.sso.core.model.sessions.SessionLog;
+import io.sentrius.sso.core.repository.ChatLogRepository;
+import io.sentrius.sso.core.services.ErrorOutputService;
+import io.sentrius.sso.core.services.auditing.AuditService;
+import io.sentrius.sso.core.services.terminal.SessionTrackingService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/v1/chat")
+public class ChatApiController extends BaseController {
+    private final AuditService auditService;
+    final CryptoService cryptoService;
+    final SessionTrackingService sessionTrackingService;
+    final ChatLogRepository chatLogRepository;
+    final AgentService agentService;
+    final ZtatTokenService tokenService;
+    final AppConfig appConfig;
+
+    public ChatApiController(
+        UserService userService,
+        SystemOptions systemOptions,
+        ErrorOutputService errorOutputService,
+        AuditService auditService,
+        CryptoService cryptoService, SessionTrackingService sessionTrackingService, ChatLogRepository chatLogRepository,
+        AgentService agentService, ZtatTokenService tokenService, AppConfig appConfig
+    ) {
+        super(userService, systemOptions, errorOutputService);
+        this.auditService = auditService;
+        this.cryptoService = cryptoService;
+        this.sessionTrackingService = sessionTrackingService;
+        this.chatLogRepository = chatLogRepository;
+        this.agentService = agentService;
+        this.tokenService = tokenService;
+        this.appConfig = appConfig;
+    }
+
+    public SessionLog createSession(@RequestParam String username, @RequestParam String ipAddress) {
+        return auditService.createSession(username, ipAddress);
+    }
+
+    @GetMapping("/config")
+    @LimitAccess(applicationAccess = ApplicationAccessEnum.CAN_LOG_IN)
+    public Map<String, String> getChatConfig() {
+        Map<String, String> config = new HashMap<>();
+        var agentProxyUrl = appConfig.getAgentProxyExternalUrl();
+        if (agentProxyUrl != null ) {
+            config.put("agentProxyUrl", agentProxyUrl);
+            if (agentProxyUrl.startsWith("http")) {
+                var wssUrl = agentProxyUrl.replace("http", "ws");
+                config.put("agentProxyWsUrl", wssUrl);
+            }
+        }
+        config.put("sentriusLauncherService", appConfig.getSentriusLauncherService());
+        return config;
+    }
+
+    @GetMapping("/history")
+    public ResponseEntity<List<ChatMessage>> getChatHistory(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        @RequestParam(name="sessionId") String sessionIdEncrypted,
+                                                                    @RequestParam(name="chatGroupId") String chatGroupIdEncrypted)
+        throws GeneralSecurityException {
+
+        Long sessionId = Long.parseLong(cryptoService.decrypt(sessionIdEncrypted));
+
+        // Check if the user has access to this session
+        var myConnectedSystem = sessionTrackingService.getConnectedSession(sessionId);
+
+        var user = getOperatingUser(request, response);
+
+        if (myConnectedSystem == null ||
+            (
+            !myConnectedSystem.getUser().getId().equals(user.getId()) &&
+            !AccessUtil.canAccess(user, SSHAccessEnum.CAN_MANAGE_SYSTEMS))) {
+            return ResponseEntity.status(403).body(null); // Forbidden access
+        }
+
+
+        String chatGroupId = cryptoService.decrypt(chatGroupIdEncrypted);
+        List<ChatMessage> messages = chatLogRepository.findBySessionIdAndChatGroupId(sessionId, chatGroupId)
+            .stream()
+            .map(chatLog -> ChatMessage.newBuilder()
+                .setSessionId(sessionId)
+                .setChatGroupId(chatGroupId)
+                .setSender(chatLog.getSender())
+                .setMessage(chatLog.getMessage())
+                .setTimestamp(chatLog.getMessageTimestamp().toEpochSecond(ZoneOffset.UTC)).build())
+            .collect(Collectors.toList());
+
+        return ResponseEntity.ok(messages);
+    }
+
+    @GetMapping("/agent/list")
+    public ResponseEntity<List<AgentDTO>> listAvailableAgents(
+        HttpServletRequest request,
+        HttpServletResponse response)
+        throws GeneralSecurityException {
+
+        List<AgentDTO> availableAgents = agentService.getAvailableAgents();
+
+        // get a list of registered agents.
+
+        return ResponseEntity.ok(availableAgents);
+    }
+
+    @PostMapping("/ztat")
+    public ResponseEntity<UserTokenResponse> issueZtat(@RequestBody UserTokenDTO request) {
+        String ztat = tokenService.issueZtat(request.getUserId(), request.getSessionId(), request.getPublicKey());
+        return ResponseEntity.ok(new UserTokenResponse(ztat));
+    }
+
+
+    @PostMapping("/ztat/verify")
+    public ResponseEntity<Boolean> verifyZtat(@RequestBody ZtatChallengeRequest request) {
+        try {
+            var claims = tokenService.parseZtat(request.getZtat()).getBody();
+
+            // Check expiration and claims
+            String expectedKeyfp = claims.get("keyfp", String.class);
+            String actualKeyfp = tokenService.computeFingerprint(request.getPublicKey());
+
+            if (!expectedKeyfp.equals(actualKeyfp)) {
+                return ResponseEntity.ok(false);
+            }
+
+            PublicKey key = CryptoService.decodePublicKey(request.getPublicKey(), "EC");
+
+            Signature sig = Signature.getInstance("SHA256withECDSA");
+            sig.initVerify(key);
+            sig.update(request.getNonce().getBytes(StandardCharsets.UTF_8));
+            boolean verified = sig.verify(Base64.getDecoder().decode(request.getSignature()));
+
+            return ResponseEntity.ok(verified);
+        } catch (Exception e) {
+            log.warn("ZTAT validation error", e);
+            return ResponseEntity.ok(false);
+        }
+    }
+
+
+
+
+}

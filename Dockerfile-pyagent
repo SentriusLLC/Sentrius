@@ -1,0 +1,13 @@
+FROM python:3.10-slim
+
+# Set working directory
+WORKDIR /app
+
+# Copy Python agent files
+COPY python-agent/ /app
+
+# Install dependencies
+RUN pip install -r requirements.txt
+
+# Run the Python agent
+CMD ["python", "agent.py"]

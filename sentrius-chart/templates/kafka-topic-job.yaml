@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kafka-topic-init-{{ now | unixEpoch }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kafka-topic-init
+spec:
+  ttlSecondsAfterFinished: 60
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: kafka-init
+          image: bitnami/kafka:{{ .Values.kafka.image.tag | default "latest" }}
+          command:
+            - /bin/bash
+            - -c
+            - |
+              kafka-topics.sh \
+                --bootstrap-server {{ .Values.kafka.serverName | default "kafka:9092" }} \
+                --create \
+                --if-not-exists \
+                --topic sentrius-provenance \
+                --partitions 1 \
+                --replication-factor 1

@@ -1,0 +1,4 @@
+ {
+    "requestId": "<id>",
+    "justificationToAgent": "<Justification for why your operation should be approved, responding to the question asked by the agent>",
+  }

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta th:replace="~{fragments/header}" />
+    <title>[[${systemOptions.systemLogoName}]] - Trust AT (TAT) Management</title>
+
+    <!-- Styles -->
+    <style>
+        :root {
+            --bg: #121212;
+            --surface: #1e1e1e;
+            --surface-2: #242424;
+            --border: #383838;
+            --text: #eaeaea;
+            --muted: #adb5bd;
+            --primary: #0d6efd;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+        }
+        body { background-color: var(--bg); color: var(--text); }
+        .container { margin-top: 20px; }
+
+        /* Sidebar vs Content pill scoping */
+        #menu.nav-pills .nav-link {
+            background: transparent; color: #adb5bd; border-radius: 8px; padding: .65rem .9rem; width: 100%; text-align: left;
+        }
+        #menu.nav-pills .nav-link.active { background-color: #0d6efd; color: #fff; }
+        .main-content .nav-pills .nav-link { background: var(--surface-2); color: var(--muted); border-radius: 999px; }
+        .main-content .nav-pills .nav-link.active { background: var(--primary); color: #fff; }
+
+        /* Page header */
+        .page-header { margin: 8px 0 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+        .page-title {
+            font-size: 1.6rem; font-weight: 700; margin: 0;
+            background: linear-gradient(135deg, var(--primary), #6610f2);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .page-subtitle { color: var(--muted); margin: 2px 0 0; font-size: .95rem; }
+        .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .btn-ghost { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 999px; padding: .4rem .9rem; font-weight: 600; }
+        .btn-ghost:hover { border-color: var(--primary); color: #fff; }
+        #globalSearch { min-width: 220px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); }
+
+        /* Tabs */
+        .nav-tabs { border-bottom: 2px solid var(--border); margin-bottom: .75rem; }
+        .nav-tabs .nav-link { background: transparent; border: none; color: var(--muted); font-weight: 600; padding: .9rem 1.1rem; border-radius: 10px 10px 0 0; }
+        .nav-tabs .nav-link.active { color: var(--primary); background: rgba(13,110,253,.14); border-bottom: 3px solid var(--primary); }
+
+        /* Cards around tables */
+        .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 10px 10px 2px; box-shadow: 0 8px 24px rgba(0,0,0,.25); margin-bottom: 14px; }
+
+        /* DataTables – dark normalize */
+        table.dataTable { color: var(--text); border-collapse: separate; border-spacing: 0; width: 100% !important; }
+        /* Header */
+        table.dataTable thead th { background: var(--surface-2) !important; color: #fff !important; border-bottom: 1px solid var(--border) !important; padding: .65rem .75rem; }
+        /* Body cells */
+        table.dataTable tbody td, table.dataTable tbody th { border-bottom: 1px solid #2a2a2a !important; padding: .65rem .75rem; color: #eaeaea; }
+        /* Base row colors (no transparency) */
+        table.dataTable tbody tr { background-color: #1e1e1e !important; }
+        /* Dark striped alternation */
+        table.dataTable tbody tr:nth-of-type(odd) { background-color: #2b2b2b !important; }
+        /* Hover state */
+        table.dataTable tbody tr:hover { background-color: #333333 !important; color: #fff; }
+        /* Sorted column highlight—keep subtle and dark */
+        table.dataTable tbody td.sorting_1, table.dataTable tbody td.sorting_2, table.dataTable tbody td.sorting_3 { background-color: rgba(255,255,255,.06) !important; }
+        /* IMPORTANT: remove DT's default odd/even transparent overrides */
+        table.dataTable tbody tr.odd, table.dataTable tbody tr.even { background-color: unset !important; }
+
+        /* Status badges (optional) */
+        .status-badge { display: inline-block; padding: .25rem .6rem; border-radius: 10px; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; border: 1px solid transparent; }
+        .status-open     { color: var(--warning); border-color: var(--warning); background: rgba(255,193,7,.15); }
+        .status-approved { color: var(--success); border-color: var(--success); background: rgba(40,167,69,.15); }
+        .status-denied   { color: var(--danger);  border-color: var(--danger);  background: rgba(220,53,69,.15); }
+
+        /* Action buttons */
+        .btn-modern { border: none; border-radius: 999px; padding: .35rem .7rem; font-weight: 700; font-size: .8rem; }
+        .btn-approve { background: linear-gradient(135deg,#28a745,#20c997); color:#fff; }
+        .btn-deny    { background: linear-gradient(135deg,#dc3545,#e74c3c); color:#fff; }
+        .btn-revoke  { background: linear-gradient(135deg,#6c757d,#5a6268); color:#fff; }
+        .btn-modern:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+
+        /* Loading / empty */
+        .empty { color: var(--muted); padding: 16px; text-align: center; font-style: italic; }
+
+        @media (max-width: 768px) { .page-title { font-size: 1.35rem; } }
+    </style>
+</head>
+
+<body>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
+                <div class="container-fluid">
+                    <!-- Header -->
+                    <div class="page-header">
+                        <div>
+                            <h2 class="page-title">Trust AT (TAT) Management</h2>
+                            <p class="page-subtitle">Manage and monitor Zero Trust Access Tokens for secure system access</p>
+                        </div>
+                        <div class="toolbar">
+                            <button id="refreshAll" type="button" class="btn-ghost"><i class="fas fa-rotate"></i> Refresh</button>
+                            <input id="globalSearch" class="form-control" placeholder="Search all tables…">
+                        </div>
+                    </div>
+
+                    <!-- Top-level tabs -->
+                    <ul class="nav nav-tabs" id="tatTabs">
+                        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#openTats">Open TATs</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#approvedTats">Approved TATs</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#deniedTats">Denied TATs</a></li>
+                    </ul>
+
+                    <div class="tab-content mt-2">
+                        <!-- Open TATs -->
+                        <div id="openTats" class="tab-pane fade show active">
+                            <ul class="nav nav-pills mb-3">
+                                <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#open-terminal"><i class="fas fa-terminal"></i> Terminal</a></li>
+                                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#open-ops"><i class="fas fa-cogs"></i> Operational</a></li>
+                            </ul>
+                            <div class="tab-content">
+                                <div id="open-terminal" class="tab-pane fade show active">
+                                    <div class="table-card">
+                                        <table id="open-terminal-table" class="display w-100"></table>
+                                    </div>
+                                </div>
+                                <div id="open-ops" class="tab-pane fade">
+                                    <div class="table-card">
+                                        <table id="open-ops-table" class="display w-100"></table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Approved TATs -->
+                        <div id="approvedTats" class="tab-pane fade">
+                            <ul class="nav nav-pills mb-3">
+                                <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#approved-terminal"><i class="fas fa-terminal"></i> Terminal</a></li>
+                                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#approved-ops"><i class="fas fa-cogs"></i> Operational</a></li>
+                            </ul>
+                            <div class="tab-content">
+                                <div id="approved-terminal" class="tab-pane fade show active">
+                                    <div class="table-card">
+                                        <table id="approved-terminal-table" class="display w-100"></table>
+                                    </div>
+                                </div>
+                                <div id="approved-ops" class="tab-pane fade">
+                                    <div class="table-card">
+                                        <table id="approved-ops-table" class="display w-100"></table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Denied TATs -->
+                        <div id="deniedTats" class="tab-pane fade">
+                            <ul class="nav nav-pills mb-3">
+                                <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#denied-terminal"><i class="fas fa-terminal"></i> Terminal</a></li>
+                                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#denied-ops"><i class="fas fa-cogs"></i> Operational</a></li>
+                            </ul>
+                            <div class="tab-content">
+                                <div id="denied-terminal" class="tab-pane fade show active">
+                                    <div class="table-card">
+                                        <table id="denied-terminal-table" class="display w-100"></table>
+                                    </div>
+                                </div>
+                                <div id="denied-ops" class="tab-pane fade">
+                                    <div class="table-card">
+                                        <table id="denied-ops-table" class="display w-100"></table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- /tab-content -->
+                </div> <!-- /container-fluid -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts: keep Thymeleaf from parsing JS literals -->
+<script th:inline="none">
+    // ---------- DataTables factory with perf-friendly defaults ----------
+    function makeTable(selector, columns, opts = {}) {
+        return $(selector).DataTable(Object.assign({
+            columns,
+            autoWidth: false,
+            deferRender: true,
+            processing: true,
+            stripeClasses: [],
+            responsive: false,   // cheaper in Firefox; enable only if you need it
+            order: [],           // no initial sort
+            pageLength: 10,
+            language: { emptyTable: '<div class="empty">No items</div>' },
+            dom: 'tip'           // table + info + pagination (lean UI)
+        }, opts));
+    }
+
+    // ---------- Tables ----------
+    let openTerminalTable, openOpsTable, approvedTerminalTable, approvedOpsTable, deniedTerminalTable, deniedOpsTable;
+
+    $(document).ready(function () {
+        // Build tables
+        openTerminalTable = makeTable('#open-terminal-table', [
+            { title: "Operation" }, { title: "User" }, { title: "System" }, { title: "Actions" }
+        ]);
+        openOpsTable = makeTable('#open-ops-table', [
+            { title: "Operation" }, { title: "User" }, { title: "Actions" }
+        ]);
+        approvedTerminalTable = makeTable('#approved-terminal-table', [
+            { title: "Operation" }, { title: "User" }, { title: "System" }, { title: "Uses Remaining" }, { title: "Actions" }
+        ]);
+        approvedOpsTable = makeTable('#approved-ops-table', [
+            { title: "Operation" }, { title: "User" }, { title: "Uses Remaining" }, { title: "Actions" }
+        ]);
+        deniedTerminalTable = makeTable('#denied-terminal-table', [
+            { title: "Operation" }, { title: "User" }, { title: "System" }, { title: "Actions" }
+        ]);
+        deniedOpsTable = makeTable('#denied-ops-table', [
+            { title: "Operation" }, { title: "User" }, { title: "Actions" }
+        ]);
+
+        // Global search across all tables
+        $('#globalSearch').on('input', function () {
+            const val = this.value || '';
+            [openTerminalTable, openOpsTable, approvedTerminalTable, approvedOpsTable, deniedTerminalTable, deniedOpsTable]
+                .forEach(dt => dt.search(val).draw(false));
+        });
+
+        // Manual refresh
+        $('#refreshAll').on('click', () => { reloadTerminalTATs(); reloadOpsTATs(); });
+
+        // Initial load
+        reloadTerminalTATs();
+        reloadOpsTATs();
+    });
+
+    // ---------- Render helpers ----------
+    function renderActions(s, prefix) {
+        // prefix '' for terminal; 'ops_' for ops
+        return [
+            s.canApprove ? `<button type="button" class="btn-modern btn-approve ${prefix}app_btn" data-id="${s.id}"><i class="fas fa-check"></i> Approve</button>` : '',
+            s.canDeny    ? `<button type="button" class="btn-modern btn-deny ${prefix}den_btn" data-id="${s.id}"><i class="fas fa-ban"></i> Deny</button>`     : '',
+            s.currentUser? `<button type="button" class="btn-modern btn-revoke ${prefix}rev_btn" data-id="${s.id}"><i class="fas fa-times"></i> Revoke</button>`: ''
+        ].filter(Boolean).join(' ');
+    }
+
+    // ---------- Efficient reloads (batched rows + single draw) ----------
+    function reloadTerminalTATs() {
+        // avoid work if the whole tab is hidden
+        if (!$('#openTats').hasClass('active') && !$('#approvedTats').hasClass('active') && !$('#deniedTats').hasClass('active')) return;
+
+        // OPEN terminal (only if Open tab showing)
+        if ($('#openTats').hasClass('active')) {
+            $.get('/api/v1/zerotrust/accesstoken/list/terminal', function (data) {
+                const rows = data.map(s => [ s.command, s.userName, s.hostName, renderActions(s, '') ]);
+                const t = openTerminalTable; t.clear(); t.rows.add(rows); t.draw(false);
+            });
+        }
+
+        // APPROVED terminal
+        if ($('#approvedTats').hasClass('active')) {
+            $.get('/api/v1/zerotrust/accesstoken/list/approved/terminal', function (data) {
+                const rows = data.map(s => [ s.command, s.userName, s.hostName, (s.usesRemaining ?? '—'), renderActions(s, '') ]);
+                const t = approvedTerminalTable; t.clear(); t.rows.add(rows); t.draw(false);
+            });
+        }
+
+        // DENIED terminal
+        if ($('#deniedTats').hasClass('active')) {
+            $.get('/api/v1/zerotrust/accesstoken/list/denied/terminal', function (data) {
+                const rows = data.map(s => [ s.command, s.userName, s.hostName, renderActions(s, '') ]);
+                const t = deniedTerminalTable; t.clear(); t.rows.add(rows); t.draw(false);
+            });
+        }
+    }
+
+    function reloadOpsTATs() {
+        if (!$('#openTats').hasClass('active') && !$('#approvedTats').hasClass('active') && !$('#deniedTats').hasClass('active')) return;
+
+        // OPEN ops
+        if ($('#openTats').hasClass('active')) {
+            $.get('/api/v1/zerotrust/accesstoken/list/ops', function (data) {
+                const rows = data.map(s => [ s.summary, s.userName, renderActions(s, 'ops_') ]);
+                const t = openOpsTable; t.clear(); t.rows.add(rows); t.draw(false);
+            });
+        }
+
+        // APPROVED ops
+        if ($('#approvedTats').hasClass('active')) {
+            $.get('/api/v1/zerotrust/accesstoken/list/approved/ops', function (data) {
+                const rows = data.map(s => [ s.summary, s.userName, (s.usesRemaining ?? '—'), renderActions(s, 'ops_') ]);
+                const t = approvedOpsTable; t.clear(); t.rows.add(rows); t.draw(false);
+            });
+        }
+
+        // DENIED ops
+        if ($('#deniedTats').hasClass('active')) {
+            $.get('/api/v1/zerotrust/accesstoken/list/denied/ops', function (data) {
+                const rows = data.map(s => [ s.summary, s.userName, renderActions(s, 'ops_') ]);
+                const t = deniedOpsTable; t.clear(); t.rows.add(rows); t.draw(false);
+            });
+        }
+    }
+
+    // Refresh visible tables when switching tabs (prevents hidden-tab work)
+    document.addEventListener('shown.bs.tab', function (e) {
+        const target = e.target.getAttribute('href') || '';
+        if (target.startsWith('#open') || target === '#openTats')  { reloadTerminalTATs(); reloadOpsTATs(); }
+        if (target.startsWith('#approved') || target === '#approvedTats') { reloadTerminalTATs(); reloadOpsTATs(); }
+        if (target.startsWith('#denied') || target === '#deniedTats') { reloadTerminalTATs(); reloadOpsTATs(); }
+    });
+
+    // Skip work while page is hidden; refresh when visible again
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) { reloadTerminalTATs(); reloadOpsTATs(); }
+    });
+
+    // ---------- Event delegation (bind once; works across redraws) ----------
+    // Delegate from the STABLE table elements (not TBODY which DT replaces)
+    $('#open-terminal-table, #approved-terminal-table, #denied-terminal-table')
+        .on('click', 'button.app_btn', function () {
+            const id = this.dataset.id;
+            $.get(`/api/v1/zerotrust/accesstoken/terminal/approve?ztatId=${id}`, {}, () => { reloadTerminalTATs(); });
+        })
+        .on('click', 'button.den_btn', function () {
+            const id = this.dataset.id;
+            $.get(`/api/v1/zerotrust/accesstoken/terminal/deny?ztatId=${id}`, {}, () => { reloadTerminalTATs(); });
+        })
+        .on('click', 'button.rev_btn', function () {
+            const id = this.dataset.id;
+            $.get(`/api/v1/zerotrust/accesstoken/terminal/revoke?ztatId=${id}`, {}, () => { reloadTerminalTATs(); });
+        });
+
+    $('#open-ops-table, #approved-ops-table, #denied-ops-table')
+        .on('click', 'button.ops_app_btn', function () {
+            const id = this.dataset.id;
+            $.get(`/api/v1/zerotrust/accesstoken/ops/approve?ztatId=${id}`, {}, () => { reloadOpsTATs(); });
+        })
+        .on('click', 'button.ops_den_btn', function () {
+            const id = this.dataset.id;
+            $.get(`/api/v1/zerotrust/accesstoken/ops/deny?ztatId=${id}`, {}, () => { reloadOpsTATs(); });
+        })
+        .on('click', 'button.ops_rev_btn', function () {
+            const id = this.dataset.id;
+            $.get(`/api/v1/zerotrust/accesstoken/my/ops/revoke?ztatId=${id}`, {}, () => { reloadOpsTATs(); });
+        });
+</script>
+
+</body>
+</html>

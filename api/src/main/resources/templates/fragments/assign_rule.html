@@ -1,0 +1,35 @@
+<!-- Assign Host Enclaves Modal -->
+<div class="modal fade" id="assignHostGroupsModal" tabindex="-1" aria-labelledby="assignHostGroupsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="assignHostGroupsForm" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="assignHostGroupsModalLabel">Assign Host Enclaves</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="assignCsrf" name="assignCsrf" th:value="${_csrf.token}"/>
+                    <hidden id="assignRuleId" name="assignRuleId">
+                    <!-- Rule Name -->
+                    <div class="mb-3">
+                        <label for="assignRuleName" class="form-label">Rule Name</label>
+                        <input type="text" class="form-control" id="assignRuleName" name="assignRuleName" readonly>
+                    </div>
+                    <!-- Host Enclaves Multi-select -->
+                    <div class="mb-3">
+                        <label for="hostGroups" class="form-label">Host Enclaves</label>
+                        <select name="hostGroups" id="hostGroups" class="form-select" multiple>
+                            <!-- Options will be dynamically populated -->
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Assign Host Enclaves</button>
+                </div>
+                <!-- CSRF Token -->
+
+            </form>
+        </div>
+    </div>
+</div>

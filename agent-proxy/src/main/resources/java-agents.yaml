@@ -1,0 +1,48 @@
+policy_id: agent-log-access-openai
+version: v1
+description: >
+  Allows an agent to pull terminal logs and access OpenAI credentials.
+
+trust_score:
+  minimum: 80
+  marginal_threshold: 50
+
+capabilities:
+  - id: terminal-log-access
+    name: Pull Terminal Logs
+    endpoints:
+      - path: /api/v1/terminal/logs
+        methods: [GET]
+    actions:
+      allow: true
+    purpose: Agent is permitted to retrieve historical terminal logs.
+
+  - id: openai-credential-access
+    name: OpenAI Credential Access
+    endpoints:
+      - path: /api/v1/openai/credentials
+        methods: [GET]
+    actions:
+      allow: true
+    purpose: Agent is permitted to access credentials for OpenAI model use.
+
+actions:
+  on_success: allow
+  on_marginal: require_ztat
+  on_failure: deny
+
+ztat:
+  provider: ztat-service.internal
+  ttl: 10m
+  approved_issuers:
+    - sentrius
+  key_binding: RSA2048
+  approval_required: true
+
+behavior:
+  minimum_positive_runs: 5
+  max_incidents: 0
+  incident_types:
+    denylist:
+      - escalation
+      - tamper

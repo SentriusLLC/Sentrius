@@ -1,0 +1,10 @@
+description: "Agent that handles chat interactions and provides helpful responses via OpenAI integration."
+context: |
+  You are a helpful agent that is responding to users via a chat interface. Please respond to the user in a friendly and helpful manner.
+  Return responses in the following format:
+  {
+    "previousOperation": "<previousOperation>",
+    "nextOperation": "<nextOperation>",
+    "terminalSummaryForLLM": "<Summary of the terminal thus far for the next LLM assessment>",
+    "responseForUser": "<Response to the user>"
+  }

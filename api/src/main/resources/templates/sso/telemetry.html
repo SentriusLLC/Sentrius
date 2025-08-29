@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Telemetry</title>
+
+    <script th:src="@{/node/js/cytoscape.js/cytoscape.min.js}"></script>
+    <style>
+        body { background-color: #121212; color: #eaeaea; }
+        .container-fluid { margin-top: 20px; }
+        .card { background-color: #1e1e1e; border: 1px solid #444; }
+        .card-header { background-color: #2c2c2c; }
+        .form-control { background-color: #2c2c2c; border: 1px solid #444; color: #eaeaea; }
+        .form-control:focus { background-color: #2c2c2c; border-color: #007bff; color: #eaeaea; }
+        .btn-primary { background-color: #007bff; border-color: #007bff; }
+        .btn-secondary { background-color: #6c757d; border-color: #6c757d; }
+        #trace-graph { height: 400px; border: 1px solid #444; background-color: #1e1e1e; }
+        .trace-result { background-color: #2c2c2c; padding: 10px; margin: 5px 0; border-radius: 5px; cursor: pointer; }
+        .trace-result:hover { background-color: #3c3c3c; }
+        .trace-result.selected { background-color: #0d6efd; }
+        .span-info { font-size: 0.9em; color: #888; }
+        
+        /* Pagination styles */
+        #pagination-controls button:disabled { 
+            opacity: 0.5; 
+            cursor: not-allowed; 
+        }
+        .sidebar { 
+            min-height: 100vh; 
+            position: sticky; 
+            top: 0; 
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <!-- Include sidebar -->
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        
+        <!-- Main content -->
+        <div class="col py-3">
+            <div class="container-fluid">
+                <h1 class="mb-4">OpenTelemetry Traces</h1>
+                
+                <!-- Query Form -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Query Jaeger Traces</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="trace-query-form">
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label for="service-name" class="form-label">Service Name</label>
+                                    <select class="form-control" id="service-name" name="service">
+                                        <option value="sentrius-api" selected>sentrius-api</option>
+                                        <option value="">All Services</option>
+                                        <option value="sentrius-dataplane">sentrius-dataplane</option>
+                                        <option value="sentrius-agent-proxy">sentrius-agent-proxy</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="operation-name" class="form-label">Operation</label>
+                                    <input type="text" class="form-control" id="operation-name" name="operation" placeholder="Operation name (optional)">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="lookback" class="form-label">Lookback</label>
+                                    <select class="form-control" id="lookback" name="lookback">
+                                        <option value="1h">Last Hour</option>
+                                        <option value="3h">Last 3 Hours</option>
+                                        <option value="6h">Last 6 Hours</option>
+                                        <option value="1d">Last Day</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="min-duration" class="form-label">Min Duration (µs)</label>
+                                    <input type="number" class="form-control" id="min-duration" name="minDuration" placeholder="Minimum duration">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="max-duration" class="form-label">Max Duration (µs)</label>
+                                    <input type="number" class="form-control" id="max-duration" name="maxDuration" placeholder="Maximum duration">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="tags" class="form-label">Tags (key=value, separated by commas)</label>
+                                    <input type="text" class="form-control" id="tags" name="tags" placeholder="e.g. error=true, user.id=123">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="limit" class="form-label">Results per page</label>
+                                    <select class="form-control" id="limit" name="limit">
+                                        <option value="10">10</option>
+                                        <option value="20" selected>20</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="start" class="form-label">Start from result</label>
+                                    <input type="number" class="form-control" id="start" name="start" value="0" min="0" step="1">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Search Traces</button>
+                            <button type="button" class="btn btn-secondary" onclick="clearForm()">Clear</button>
+                            <button type="button" class="btn btn-info" onclick="loadMockData()">Load Mock Data</button>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Status/Loading -->
+                <div id="loading" class="text-center" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Querying traces...</p>
+                </div>
+                
+                <!-- Error Display -->
+                <div id="error-display" class="alert alert-danger" style="display: none;"></div>
+                
+                <!-- Results -->
+                <div id="results-section" style="display: none;">
+                    <!-- Trace List -->
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Trace Results <span id="trace-count" class="badge bg-secondary">0</span></h5>
+                            <div id="pagination-info" class="text-muted" style="display: none;">
+                                <span id="result-range"></span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="trace-list"></div>
+                            <!-- Pagination Controls -->
+                            <div id="pagination-controls" class="d-flex justify-content-between align-items-center mt-3" style="display: none;">
+                                <button id="prev-page" class="btn btn-outline-primary" onclick="previousPage()">
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </button>
+                                <span id="page-info" class="text-muted"></span>
+                                <button id="next-page" class="btn btn-outline-primary" onclick="nextPage()">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Call Graph Visualization -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Call Graph Visualization</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="trace-graph"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let cyGraph = null;
+let currentTraces = [];
+let currentQueryParams = {};
+let currentStart = 0;
+let currentLimit = 20;
+let hasMoreResults = false;
+
+document.getElementById('trace-query-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    searchTraces();
+});
+
+function clearForm() {
+    document.getElementById('trace-query-form').reset();
+    document.getElementById('results-section').style.display = 'none';
+    document.getElementById('error-display').style.display = 'none';
+    
+    // Reset to default values
+    document.getElementById('service-name').value = 'sentrius-api';
+    document.getElementById('limit').value = '20';
+    document.getElementById('start').value = '0';
+    
+    // Reset pagination state
+    currentStart = 0;
+    currentLimit = 20;
+    hasMoreResults = false;
+    currentQueryParams = {};
+    
+    if (cyGraph) {
+        cyGraph.destroy();
+        cyGraph = null;
+    }
+}
+
+async function searchTraces() {
+    const form = document.getElementById('trace-query-form');
+    const formData = new FormData(form);
+    const params = new URLSearchParams();
+    
+    // Build query parameters
+    for (const [key, value] of formData.entries()) {
+        if (value) {
+            params.append(key, value);
+        }
+    }
+    
+    // Store current query params for pagination
+    currentQueryParams = Object.fromEntries(params.entries());
+    currentStart = parseInt(currentQueryParams.start || '0');
+    currentLimit = parseInt(currentQueryParams.limit || '20');
+    
+    await executeSearch(params);
+}
+
+async function executeSearch(params) {
+    // Show loading
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('results-section').style.display = 'none';
+    document.getElementById('error-display').style.display = 'none';
+    
+    try {
+        const response = await fetch(`/api/v1/telemetry/traces?${params.toString()}`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        currentTraces = data.traces || [];
+        hasMoreResults = data.hasMore || false;
+        displayResults(data);
+    } catch (error) {
+        console.error('Error fetching traces:', error);
+        showError('Failed to fetch traces: ' + error.message);
+    } finally {
+        document.getElementById('loading').style.display = 'none';
+    }
+}
+
+function displayResults(data) {
+    const traceCount = data.traces ? data.traces.length : 0;
+    document.getElementById('trace-count').textContent = traceCount;
+    
+    // Update pagination info
+    updatePaginationInfo(data);
+    
+    // Display trace list
+    const traceList = document.getElementById('trace-list');
+    if (traceCount === 0) {
+        traceList.innerHTML = '<p class="text-muted">No traces found matching your criteria.</p>';
+    } else {
+        traceList.innerHTML = data.traces.map(trace => createTraceHtml(trace)).join('');
+    }
+    
+    // Display call graph for all traces
+    if (traceCount > 0) {
+        visualizeCallGraph(data.traces);
+    }
+    
+    document.getElementById('results-section').style.display = 'block';
+}
+
+function updatePaginationInfo(data) {
+    const start = data.start || 0;
+    const limit = data.limit || 20;
+    const count = data.count || 0;
+    const hasMore = data.hasMore || false;
+    
+    // Update range display
+    const endRange = start + count;
+    document.getElementById('result-range').textContent = 
+        count > 0 ? `Showing ${start + 1}-${endRange}` : 'No results';
+    document.getElementById('pagination-info').style.display = count > 0 ? 'block' : 'none';
+    
+    // Update pagination controls
+    const prevBtn = document.getElementById('prev-page');
+    const nextBtn = document.getElementById('next-page');
+    const pageInfo = document.getElementById('page-info');
+    
+    prevBtn.disabled = start === 0;
+    nextBtn.disabled = !hasMore;
+    
+    const currentPage = Math.floor(start / limit) + 1;
+    pageInfo.textContent = `Page ${currentPage}`;
+    
+    document.getElementById('pagination-controls').style.display = count > 0 ? 'flex' : 'none';
+}
+
+async function previousPage() {
+    if (currentStart > 0) {
+        currentStart = Math.max(0, currentStart - currentLimit);
+        const params = new URLSearchParams(currentQueryParams);
+        params.set('start', currentStart.toString());
+        await executeSearch(params);
+    }
+}
+
+async function nextPage() {
+    if (hasMoreResults) {
+        currentStart += currentLimit;
+        const params = new URLSearchParams(currentQueryParams);
+        params.set('start', currentStart.toString());
+        await executeSearch(params);
+    }
+}
+
+function createTraceHtml(trace) {
+    const duration = trace.duration ? (trace.duration / 1000).toFixed(2) + ' ms' : 'Unknown';
+    const startTime = trace.startTime ? new Date(trace.startTime / 1000).toLocaleString() : 'Unknown';
+    const spanCount = trace.spans ? trace.spans.length : 0;
+    
+    return `
+        <div class="trace-result" data-trace-id="${trace.traceID}" onclick="selectTrace('${trace.traceID}')">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <strong>Trace ID:</strong> <span class="text-info">${trace.traceID}</span><br>
+                    <strong>Duration:</strong> ${duration}<br>
+                    <strong>Spans:</strong> ${spanCount}<br>
+                    <span class="span-info">Started: ${startTime}</span>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); viewTraceDetails('${trace.traceID}')">
+                        Details
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function selectTrace(traceId) {
+    // Highlight selected trace
+    document.querySelectorAll('.trace-result').forEach(el => el.classList.remove('selected'));
+    document.querySelector(`[data-trace-id="${traceId}"]`).classList.add('selected');
+    
+    // Find the selected trace and visualize it
+    const selectedTrace = currentTraces.find(trace => trace.traceID === traceId);
+    if (selectedTrace) {
+        visualizeCallGraph([selectedTrace]);
+    }
+}
+
+function viewTraceDetails(traceId) {
+    // This could open a modal or navigate to detailed view
+    console.log('View details for trace:', traceId);
+    // For now, just select the trace
+    selectTrace(traceId);
+}
+
+function visualizeCallGraph(traces) {
+    const container = document.getElementById('trace-graph');
+    
+    if (cyGraph) {
+        cyGraph.destroy();
+    }
+    
+    // Process traces to create nodes and edges for call graph
+    const nodes = new Map();
+    const edges = [];
+    
+    traces.forEach(trace => {
+        if (trace.spans) {
+            trace.spans.forEach(span => {
+                const serviceName = span.process?.serviceName || 'unknown-service';
+                const operationName = span.operationName || 'unknown-operation';
+                const nodeId = `${serviceName}::${operationName}`;
+                
+                if (!nodes.has(nodeId)) {
+                    nodes.set(nodeId, {
+                        id: nodeId,
+                        label: operationName,
+                        service: serviceName,
+                        duration: span.duration || 0
+                    });
+                }
+                
+                // Find parent-child relationships
+                if (span.references && span.references.length > 0) {
+                    span.references.forEach(ref => {
+                        if (ref.refType === 'CHILD_OF') {
+                            const parentSpan = trace.spans.find(s => s.spanID === ref.spanID);
+                            if (parentSpan) {
+                                const parentServiceName = parentSpan.process?.serviceName || 'unknown-service';
+                                const parentOperationName = parentSpan.operationName || 'unknown-operation';
+                                const parentNodeId = `${parentServiceName}::${parentOperationName}`;
+                                
+                                edges.push({
+                                    id: `${parentNodeId}->${nodeId}`,
+                                    source: parentNodeId,
+                                    target: nodeId
+                                });
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    });
+    
+    // Convert to Cytoscape format
+    const cyNodes = Array.from(nodes.values()).map(node => ({
+        data: {
+            id: node.id,
+            label: node.label,
+            service: node.service,
+            duration: node.duration
+        }
+    }));
+    
+    const cyEdges = edges.map(edge => ({
+        data: {
+            id: edge.id,
+            source: edge.source,
+            target: edge.target
+        }
+    }));
+    
+    cyGraph = cytoscape({
+        container: container,
+        elements: [...cyNodes, ...cyEdges],
+        style: [
+            {
+                selector: 'node',
+                style: {
+                    'background-color': '#007bff',
+                    'label': 'data(label)',
+                    'text-valign': 'center',
+                    'text-halign': 'center',
+                    'color': '#ffffff',
+                    'font-size': '12px',
+                    'width': 80,
+                    'height': 40,
+                    'shape': 'roundrectangle'
+                }
+            },
+            {
+                selector: 'edge',
+                style: {
+                    'width': 2,
+                    'line-color': '#666',
+                    'target-arrow-color': '#666',
+                    'target-arrow-shape': 'triangle',
+                    'curve-style': 'bezier'
+                }
+            },
+            {
+                selector: 'node:selected',
+                style: {
+                    'background-color': '#ffc107',
+                    'color': '#000000'
+                }
+            }
+        ],
+        layout: {
+            name: 'breadthfirst',
+            directed: true,
+            roots: cyNodes.filter(node => 
+                !edges.some(edge => edge.target === node.data.id)
+            ).map(node => node.data.id),
+            padding: 30,
+            spacingFactor: 1.5
+        }
+    });
+    
+    // Add click handler for nodes
+    cyGraph.on('tap', 'node', function(evt) {
+        const node = evt.target;
+        console.log('Selected node:', node.data());
+        // Could show span details in a tooltip or sidebar
+    });
+}
+
+function showError(message) {
+    const errorDiv = document.getElementById('error-display');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+async function loadMockData() {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('results-section').style.display = 'none';
+    document.getElementById('error-display').style.display = 'none';
+    
+    try {
+        const response = await fetch('/mock/jaeger/api/traces');
+        if (response.ok) {
+            const data = await response.json();
+            currentTraces = data.data || [];
+            displayResults({traces: currentTraces, status: 'success', count: currentTraces.length});
+        } else {
+            showError('Failed to load mock data');
+        }
+    } catch (error) {
+        console.error('Error loading mock data:', error);
+        showError('Error loading mock data: ' + error.message);
+    } finally {
+        document.getElementById('loading').style.display = 'none';
+    }
+}
+
+// Load services on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadServices();
+});
+
+async function loadServices() {
+    try {
+        const response = await fetch('/api/v1/telemetry/services');
+        if (response.ok) {
+            const data = await response.json();
+            const serviceSelect = document.getElementById('service-name');
+            const currentValue = serviceSelect.value; // Preserve current selection
+            
+            // Clear existing options except defaults
+            while (serviceSelect.children.length > 2) {
+                serviceSelect.removeChild(serviceSelect.lastChild);
+            }
+            
+            // Add services from Jaeger
+            if (data.data && Array.isArray(data.data)) {
+                data.data.forEach(service => {
+                    // Skip if already exists in defaults
+                    if (!['sentrius-api', ''].includes(service)) {
+                        const option = document.createElement('option');
+                        option.value = service;
+                        option.textContent = service;
+                        serviceSelect.appendChild(option);
+                    }
+                });
+            }
+            
+            // Restore selection
+            serviceSelect.value = currentValue;
+        }
+    } catch (error) {
+        console.warn('Could not load services from Jaeger, trying mock data:', error);
+        // Try to load mock services
+        try {
+            const mockResponse = await fetch('/mock/jaeger/api/services');
+            if (mockResponse.ok) {
+                const mockData = await mockResponse.json();
+                const serviceSelect = document.getElementById('service-name');
+                const currentValue = serviceSelect.value;
+                
+                if (mockData.data && Array.isArray(mockData.data)) {
+                    mockData.data.forEach(service => {
+                        // Skip if already exists in defaults
+                        if (!['sentrius-api', ''].includes(service)) {
+                            const option = document.createElement('option');
+                            option.value = service;
+                            option.textContent = service + ' (mock)';
+                            serviceSelect.appendChild(option);
+                        }
+                    });
+                }
+                
+                // Restore selection
+                serviceSelect.value = currentValue;
+            }
+        } catch (mockError) {
+            console.warn('Could not load mock services either:', mockError);
+        }
+    }
+}
+</script>
+</body>
+</html>

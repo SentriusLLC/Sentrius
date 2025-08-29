@@ -1,0 +1,1 @@
+--INSERT INTO host_systems (host_system_id, display_name) VALUES (-1, 'Sentrius');

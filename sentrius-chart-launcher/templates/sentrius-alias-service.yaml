@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-sentrius
+  namespace: dev-agents
+spec:
+  type: ExternalName
+  externalName: {{ .Values.sentriusFQDN }}

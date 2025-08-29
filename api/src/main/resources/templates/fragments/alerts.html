@@ -1,0 +1,19 @@
+<div class="alert alert-warning text-center" role="alert" style="display:none ;" id="systemBanner"
+     th:text="${systemBanner}">
+</div>
+<div class="alert alert-primary" style="display:none; " role="alert" id="alertNotification">
+    <span id="alertMessage" th:text="${notification}"></span>
+    <div id="alertMessageId" style="display: none;"></div>
+    <button type="button" class="close" data-dismiss="alertMessage" aria-label="Close" onclick="markNotificationAsSeen()">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+<div class="alert alert-success dark-mode-success-alert" role="alert" style="display:none; margin-top: 10px"
+     id="alertTop" th:text="${userMessage.messageToUser}">
+</div>
+<div class="alert alert-danger" role="alert" style="display:none; margin-top: 10px" id="alertTopError"
+     th:text="${userMessage.errorToUser}">
+</div>
+<div class="alert alert-warning" role="alert" style="display:none; margin-top: 10px" id="alertTopBanner"
+     th:text="${userMessage.banner}">
+</div>

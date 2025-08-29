@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - ATPL Configuration</title>
+    <style>
+        .atpl-form-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            background: #1e1e1e;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+        
+        .section-card {
+            background: #2b2b2b;
+            border: 1px solid #444;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            padding: 15px;
+        }
+        
+        .section-header {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #333;
+            border-radius: 5px;
+        }
+        
+        .section-header:hover {
+            background: #3a3a3a;
+        }
+        
+        .section-content {
+            display: none;
+            padding: 10px 0;
+        }
+        
+        .section-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            color: #f8f9fa;
+            font-weight: 500;
+            margin-bottom: 5px;
+            display: block;
+        }
+        
+        .form-control {
+            background-color: #2b2b2b;
+            border: 1px solid #444;
+            color: #eaeaea;
+            border-radius: 4px;
+            padding: 8px 12px;
+        }
+        
+        .form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        .dynamic-list {
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 5px;
+        }
+        
+        .list-item {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .list-item input {
+            flex: 1;
+            margin-right: 10px;
+        }
+        
+        .btn-remove {
+            background: #dc3545;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .btn-add {
+            background: #28a745;
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .json-preview {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 15px;
+            max-height: 600px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #f8f9fa;
+        }
+        
+        .actions-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: #333;
+            border-radius: 5px;
+        }
+        
+        .chevron {
+            transition: transform 0.3s ease;
+        }
+        
+        .chevron.rotated {
+            transform: rotate(180deg);
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        
+        /* Endpoint Builder Styles */
+        .endpoint-builder {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 15px;
+        }
+        
+        .endpoint-rule {
+            background: #2b2b2b;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .endpoint-rule h6 {
+            color: #f8f9fa;
+            margin-bottom: 10px;
+        }
+        
+        .quick-templates {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        /* Trust Score Visual Enhancements */
+        .trust-score-preview {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+        
+        .score-indicator {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, #dc3545 0deg, #ffc107 72deg, #28a745 108deg, #28a745 360deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .score-bar {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: #1e1e1e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .score-text {
+            font-size: 24px;
+            font-weight: bold;
+            color: #f8f9fa;
+        }
+        
+        .weightings-container {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 15px;
+        }
+        
+        .weight-input-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .weight-slider {
+            flex: 1;
+        }
+        
+        .weight-number {
+            width: 80px;
+        }
+        
+        .weight-percentage {
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .weighting-total {
+            margin-top: 15px;
+            padding: 10px;
+            background: #2b2b2b;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .weight-total {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+<div id="csrf-token" style="display: none;" th:text="${_csrf.token}"></div>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
+                <div class="atpl-form-container">
+                    <h2 class="text-center mb-4">Agent Trust Policy Language (ATPL) Configuration</h2>
+                    
+                    <div class="row">
+                        <!-- Form Column -->
+                        <div class="col-md-8">
+                            <form id="atpl-form">
+                                <!-- Basic Information Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('basic-info')">
+                                        <h4><i class="fas fa-info-circle"></i> Basic Information</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-basic-info"></i>
+                                    </div>
+                                    <div class="section-content active" id="basic-info">
+                                        <div class="form-group">
+                                            <label for="version">Version (required)</label>
+                                            <input type="text" class="form-control" id="version" name="version" value="v0" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="policy_id">Policy ID (required)</label>
+                                            <input type="text" class="form-control" id="policy_id" name="policy_id" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="description">Description</label>
+                                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Match Criteria Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('match-criteria')">
+                                        <h4><i class="fas fa-filter"></i> Match Criteria</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-match-criteria"></i>
+                                    </div>
+                                    <div class="section-content" id="match-criteria">
+                                        <div class="form-group">
+                                            <label>Agent Tags</label>
+                                            <div class="dynamic-list" id="agent-tags-list">
+                                                <!-- Dynamic agent tags will be added here -->
+                                            </div>
+                                            <button type="button" class="btn-add" onclick="addListItem('agent-tags-list', 'agent_tags')">Add Agent Tag</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Provenance Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('provenance')">
+                                        <h4><i class="fas fa-code-branch"></i> Provenance</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-provenance"></i>
+                                    </div>
+                                    <div class="section-content" id="provenance">
+                                        <div class="form-group">
+                                            <label for="provenance_source">Source</label>
+                                            <input type="text" class="form-control" id="provenance_source" name="provenance.source">
+                                        </div>
+                                        <div class="checkbox-group">
+                                            <input type="checkbox" id="provenance_signature_required" name="provenance.signature_required">
+                                            <label for="provenance_signature_required">Signature Required</label>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Approved Committers</label>
+                                            <div class="dynamic-list" id="approved-committers-list">
+                                                <!-- Dynamic approved committers will be added here -->
+                                            </div>
+                                            <button type="button" class="btn-add" onclick="addListItem('approved-committers-list', 'provenance.approved_committers')">Add Approved Committer</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Runtime Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('runtime')">
+                                        <h4><i class="fas fa-microchip"></i> Runtime</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-runtime"></i>
+                                    </div>
+                                    <div class="section-content" id="runtime">
+                                        <div class="checkbox-group">
+                                            <input type="checkbox" id="runtime_enclave_required" name="runtime.enclave_required">
+                                            <label for="runtime_enclave_required">Enclave Required</label>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="runtime_attestation_type">Attestation Type</label>
+                                            <select class="form-control" id="runtime_attestation_type" name="runtime.attestation_type">
+                                                <option value="">Select attestation type</option>
+                                                <option value="tpm">TPM</option>
+                                                <option value="sgx">SGX</option>
+                                                <option value="sev">SEV</option>
+                                                <option value="none">None</option>
+                                            </select>
+                                        </div>
+                                        <div class="checkbox-group">
+                                            <input type="checkbox" id="runtime_verified_at_boot" name="runtime.verified_at_boot">
+                                            <label for="runtime_verified_at_boot">Verified at Boot</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Behavior Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('behavior')">
+                                        <h4><i class="fas fa-chart-bar"></i> Behavior</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-behavior"></i>
+                                    </div>
+                                    <div class="section-content" id="behavior">
+                                        <div class="form-group">
+                                            <label for="behavior_minimum_positive_runs">Minimum Positive Runs</label>
+                                            <input type="number" class="form-control" id="behavior_minimum_positive_runs" name="behavior.minimum_positive_runs" min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="behavior_max_incidents">Max Incidents</label>
+                                            <input type="number" class="form-control" id="behavior_max_incidents" name="behavior.max_incidents" min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Incident Types Denylist</label>
+                                            <div class="dynamic-list" id="incident-types-denylist">
+                                                <!-- Dynamic incident types will be added here -->
+                                            </div>
+                                            <button type="button" class="btn-add" onclick="addListItem('incident-types-denylist', 'behavior.incident_types.denylist')">Add Incident Type</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Identity Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('identity')">
+                                        <h4><i class="fas fa-id-card"></i> Identity</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-identity"></i>
+                                    </div>
+                                    <div class="section-content" id="identity">
+                                        <div class="form-group">
+                                            <label for="identity_issuer">Issuer</label>
+                                            <input type="text" class="form-control" id="identity_issuer" name="identity.issuer">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="identity_subject_prefix">Subject Prefix</label>
+                                            <input type="text" class="form-control" id="identity_subject_prefix" name="identity.subject_prefix">
+                                        </div>
+                                        <div class="checkbox-group">
+                                            <input type="checkbox" id="identity_mfa_required" name="identity.mfa_required">
+                                            <label for="identity_mfa_required">MFA Required</label>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="identity_certificate_authority">Certificate Authority</label>
+                                            <input type="text" class="form-control" id="identity_certificate_authority" name="identity.certificate_authority">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Capabilities Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('capabilities')">
+                                        <h4><i class="fas fa-cogs"></i> Capabilities (required)</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-capabilities"></i>
+                                    </div>
+                                    <div class="section-content" id="capabilities">
+                                        <h5>Primitive Capabilities</h5>
+                                        <div id="primitives-container">
+                                            <!-- Dynamic primitive capabilities will be added here -->
+                                        </div>
+                                        <button type="button" class="btn-add" onclick="addPrimitive()">Add Primitive Capability</button>
+                                        
+                                        <h5 class="mt-4">Composed Capabilities</h5>
+                                        <div id="composed-container">
+                                            <!-- Dynamic composed capabilities will be added here -->
+                                        </div>
+                                        <button type="button" class="btn-add" onclick="addComposed()">Add Composed Capability</button>
+                                    </div>
+                                </div>
+
+                                <!-- Endpoint Access Management Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('endpoints')">
+                                        <h4><i class="fas fa-network-wired"></i> Endpoint Access Management</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-endpoints"></i>
+                                    </div>
+                                    <div class="section-content" id="endpoints">
+                                        <div class="form-group">
+                                            <label>Allowed Endpoints</label>
+                                            <div class="endpoint-builder">
+                                                <div id="endpoints-container">
+                                                    <!-- Dynamic endpoint rules will be added here -->
+                                                </div>
+                                                <button type="button" class="btn-add" onclick="addEndpointRule()">Add Endpoint Rule</button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-group mt-4">
+                                            <label>Quick Templates</label>
+                                            <div class="quick-templates">
+                                                <button type="button" class="btn btn-outline-info btn-sm me-2" onclick="addCommonEndpoints('web-server')">Web Server Endpoints</button>
+                                                <button type="button" class="btn btn-outline-info btn-sm me-2" onclick="addCommonEndpoints('api-service')">API Service Endpoints</button>
+                                                <button type="button" class="btn btn-outline-info btn-sm me-2" onclick="addCommonEndpoints('database')">Database Endpoints</button>
+                                                <button type="button" class="btn btn-outline-info btn-sm" onclick="addCommonEndpoints('admin')">Admin Endpoints</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Trust Score Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('trust-score')">
+                                        <h4><i class="fas fa-chart-line"></i> Trust Score Configuration</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-trust-score"></i>
+                                    </div>
+                                    <div class="section-content" id="trust-score">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="trust_score_minimum">Minimum Trust Score (0-100)</label>
+                                                    <input type="number" class="form-control" id="trust_score_minimum" name="trust_score.minimum" min="0" max="100" value="75">
+                                                    <small class="text-muted">Agents below this score will be denied access</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="trust-score-preview">
+                                                    <div class="score-indicator" id="score-indicator">
+                                                        <div class="score-bar" id="score-bar"></div>
+                                                        <span class="score-text" id="score-text">75</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <h5 class="mt-4">Component Weightings <small class="text-muted">(must total 1.0)</small></h5>
+                                        <div class="weightings-container">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="weight_identity">Identity Weight <span class="weight-percentage" id="identity-percentage">30%</span></label>
+                                                        <div class="weight-input-container">
+                                                            <input type="range" class="form-range weight-slider" id="weight_identity" name="trust_score.weightings.identity" min="0" max="1" step="0.05" value="0.3" oninput="updateWeightings()">
+                                                            <input type="number" class="form-control weight-number" value="0.3" min="0" max="1" step="0.05" onchange="syncSlider('weight_identity', this.value)">
+                                                        </div>
+                                                        <small class="text-muted">How much identity verification matters</small>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="weight_provenance">Provenance Weight <span class="weight-percentage" id="provenance-percentage">25%</span></label>
+                                                        <div class="weight-input-container">
+                                                            <input type="range" class="form-range weight-slider" id="weight_provenance" name="trust_score.weightings.provenance" min="0" max="1" step="0.05" value="0.25" oninput="updateWeightings()">
+                                                            <input type="number" class="form-control weight-number" value="0.25" min="0" max="1" step="0.05" onchange="syncSlider('weight_provenance', this.value)">
+                                                        </div>
+                                                        <small class="text-muted">How much code source verification matters</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="weight_runtime">Runtime Weight <span class="weight-percentage" id="runtime-percentage">35%</span></label>
+                                                        <div class="weight-input-container">
+                                                            <input type="range" class="form-range weight-slider" id="weight_runtime" name="trust_score.weightings.runtime" min="0" max="1" step="0.05" value="0.35" oninput="updateWeightings()">
+                                                            <input type="number" class="form-control weight-number" value="0.35" min="0" max="1" step="0.05" onchange="syncSlider('weight_runtime', this.value)">
+                                                        </div>
+                                                        <small class="text-muted">How much runtime security matters</small>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="weight_behavior">Behavior Weight <span class="weight-percentage" id="behavior-percentage">10%</span></label>
+                                                        <div class="weight-input-container">
+                                                            <input type="range" class="form-range weight-slider" id="weight_behavior" name="trust_score.weightings.behavior" min="0" max="1" step="0.05" value="0.1" oninput="updateWeightings()">
+                                                            <input type="number" class="form-control weight-number" value="0.1" min="0" max="1" step="0.05" onchange="syncSlider('weight_behavior', this.value)">
+                                                        </div>
+                                                        <small class="text-muted">How much past behavior matters</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="weighting-total">
+                                            Total Weight: <span id="total-weight" class="weight-total">1.00</span>
+                                            <span id="weight-warning" class="text-warning" style="display: none;">⚠ Weights should total 1.0</span>
+                                        </div>
+                                        
+                                        <div class="mt-3">
+                                            <h6>Quick Presets</h6>
+                                            <div class="preset-buttons">
+                                                <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="applyTrustPreset('balanced')">Balanced</button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="applyTrustPreset('security-focused')">Security Focused</button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="applyTrustPreset('identity-focused')">Identity Focused</button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="applyTrustPreset('behavior-focused')">Behavior Focused</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Actions Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('actions')">
+                                        <h4><i class="fas fa-play"></i> Actions</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-actions"></i>
+                                    </div>
+                                    <div class="section-content" id="actions">
+                                        <div class="form-group">
+                                            <label for="on_success">On Success</label>
+                                            <select class="form-control" id="on_success" name="actions.on_success">
+                                                <option value="">Select action</option>
+                                                <option value="allow">Allow</option>
+                                                <option value="log">Log</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="on_failure">On Failure</label>
+                                            <select class="form-control" id="on_failure" name="actions.on_failure">
+                                                <option value="">Select action</option>
+                                                <option value="deny">Deny</option>
+                                                <option value="log">Log</option>
+                                                <option value="alert">Alert</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="on_marginal">On Marginal</label>
+                                            <input type="text" class="form-control" id="on_marginal" name="actions.on_marginal" placeholder="String or object with ztat_provider">
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- ZTAT Section -->
+                                <div class="section-card">
+                                    <div class="section-header" onclick="toggleSection('ztat')">
+                                        <h4><i class="fas fa-key"></i> ZTAT (Zero Trust Access Token)</h4>
+                                        <i class="fas fa-chevron-down chevron" id="chevron-ztat"></i>
+                                    </div>
+                                    <div class="section-content" id="ztat">
+                                        <div class="form-group">
+                                            <label for="ztat_provider">Provider</label>
+                                            <input type="text" class="form-control" id="ztat_provider" name="ztat.provider">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="ztat_ttl">TTL (seconds)</label>
+                                            <input type="number" class="form-control" id="ztat_ttl" name="ztat.ttl" min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Approved Issuers</label>
+                                            <div class="dynamic-list" id="approved-issuers-list">
+                                                <!-- Dynamic approved issuers will be added here -->
+                                            </div>
+                                            <button type="button" class="btn-add" onclick="addListItem('approved-issuers-list', 'ztat.approved_issuers')">Add Approved Issuer</button>
+                                        </div>
+                                        <div class="checkbox-group">
+                                            <input type="checkbox" id="ztat_key_binding" name="ztat.key_binding">
+                                            <label for="ztat_key_binding">Key Binding</label>
+                                        </div>
+                                        <div class="checkbox-group">
+                                            <input type="checkbox" id="ztat_approval_required" name="ztat.approval_required">
+                                            <label for="ztat_approval_required">Approval Required</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+
+                            <div class="actions-bar">
+                                <div>
+                                    <button type="button" class="btn btn-secondary" onclick="loadExistingPolicy()">Load Existing Policy</button>
+                                    <button type="button" class="btn btn-warning" onclick="validatePolicy()">Validate</button>
+                                    <button type="button" class="btn btn-info" onclick="testEndpoint()">Test Endpoint</button>
+                                </div>
+                                <div>
+                                    <button type="button" class="btn btn-success" onclick="savePolicy()">Save Policy</button>
+                                    <button type="button" class="btn btn-primary" onclick="exportPolicy()">Export JSON</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Endpoint Testing Modal -->
+                            <div class="modal fade" id="endpointTestModal" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content bg-dark">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Test Endpoint Access</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="form-group">
+                                                <label for="test_method">HTTP Method</label>
+                                                <select class="form-control" id="test_method">
+                                                    <option value="GET">GET</option>
+                                                    <option value="POST">POST</option>
+                                                    <option value="PUT">PUT</option>
+                                                    <option value="DELETE">DELETE</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="test_path">Path</label>
+                                                <input type="text" class="form-control" id="test_path" placeholder="/api/v1/data">
+                                            </div>
+                                            <div id="test_result" class="mt-3" style="display: none;">
+                                                <h6>Test Result:</h6>
+                                                <div id="test_output" class="json-preview" style="max-height: 200px;"></div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            <button type="button" class="btn btn-primary" onclick="runEndpointTest()">Run Test</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- JSON Preview Column -->
+                        <div class="col-md-4">
+                            <div class="section-card">
+                                <h5><i class="fas fa-eye"></i> Live JSON Preview</h5>
+                                <div class="json-preview" id="json-preview">
+                                    {
+                                      "version": "v0"
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="none">
+    let primitiveCounter = 0;
+    let composedCounter = 0;
+    let endpointCounter = 0;
+
+    // Toggle section visibility
+    function toggleSection(sectionId) {
+        const content = document.getElementById(sectionId);
+        const chevron = document.getElementById('chevron-' + sectionId);
+        
+        content.classList.toggle('active');
+        chevron.classList.toggle('rotated');
+    }
+
+    // Add list item to dynamic lists
+    function addListItem(containerId, fieldName) {
+        const container = document.getElementById(containerId);
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'list-item';
+        
+        itemDiv.innerHTML = `
+            <input type="text" class="form-control" name="${fieldName}[]" placeholder="Enter value">
+            <button type="button" class="btn-remove" onclick="removeListItem(this)">Remove</button>
+        `;
+        
+        container.appendChild(itemDiv);
+        updatePreview();
+    }
+
+    // Remove list item
+    function removeListItem(button) {
+        button.parentElement.remove();
+        updatePreview();
+    }
+
+    // Add primitive capability
+    function addPrimitive() {
+        const container = document.getElementById('primitives-container');
+        const primitiveDiv = document.createElement('div');
+        primitiveDiv.className = 'section-card';
+        primitiveDiv.innerHTML = `
+            <h6>Primitive Capability ${primitiveCounter + 1}</h6>
+            <div class="form-group">
+                <label>ID</label>
+                <input type="text" class="form-control" name="capabilities.primitives[${primitiveCounter}].id" required>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <input type="text" class="form-control" name="capabilities.primitives[${primitiveCounter}].description">
+            </div>
+            <div class="form-group">
+                <label>Endpoints</label>
+                <div class="dynamic-list" id="primitive-endpoints-${primitiveCounter}">
+                </div>
+                <button type="button" class="btn-add" onclick="addListItem('primitive-endpoints-${primitiveCounter}', 'capabilities.primitives[${primitiveCounter}].endpoints')">Add Endpoint</button>
+            </div>
+            <div class="form-group">
+                <label>Tags</label>
+                <div class="dynamic-list" id="primitive-tags-${primitiveCounter}">
+                </div>
+                <button type="button" class="btn-add" onclick="addListItem('primitive-tags-${primitiveCounter}', 'capabilities.primitives[${primitiveCounter}].tags')">Add Tag</button>
+            </div>
+            <button type="button" class="btn-remove" onclick="removePrimitive(this)">Remove Primitive</button>
+        `;
+        
+        container.appendChild(primitiveDiv);
+        primitiveCounter++;
+        updatePreview();
+    }
+
+    // Add composed capability
+    function addComposed() {
+        const container = document.getElementById('composed-container');
+        const composedDiv = document.createElement('div');
+        composedDiv.className = 'section-card';
+        composedDiv.innerHTML = `
+            <h6>Composed Capability ${composedCounter + 1}</h6>
+            <div class="form-group">
+                <label>ID</label>
+                <input type="text" class="form-control" name="capabilities.composed[${composedCounter}].id" required>
+            </div>
+            <div class="form-group">
+                <label>Includes</label>
+                <div class="dynamic-list" id="composed-includes-${composedCounter}">
+                </div>
+                <button type="button" class="btn-add" onclick="addListItem('composed-includes-${composedCounter}', 'capabilities.composed[${composedCounter}].includes')">Add Include</button>
+            </div>
+            <div class="form-group">
+                <label>Tags</label>
+                <div class="dynamic-list" id="composed-tags-${composedCounter}">
+                </div>
+                <button type="button" class="btn-add" onclick="addListItem('composed-tags-${composedCounter}', 'capabilities.composed[${composedCounter}].tags')">Add Tag</button>
+            </div>
+            <button type="button" class="btn-remove" onclick="removeComposed(this)">Remove Composed</button>
+        `;
+        
+        container.appendChild(composedDiv);
+        composedCounter++;
+        updatePreview();
+    }
+
+    // Remove primitive capability
+    function removePrimitive(button) {
+        button.parentElement.remove();
+        updatePreview();
+    }
+
+    // Remove composed capability
+    function removeComposed(button) {
+        button.parentElement.remove();
+        updatePreview();
+    }
+
+    // Add endpoint rule
+    function addEndpointRule() {
+        const container = document.getElementById('endpoints-container');
+        const endpointDiv = document.createElement('div');
+        endpointDiv.className = 'endpoint-rule';
+        endpointDiv.innerHTML = `
+            <h6>Endpoint Rule ${endpointCounter + 1}</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Method</label>
+                        <select class="form-control" name="endpoints[${endpointCounter}].method">
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="DELETE">DELETE</option>
+                            <option value="*">Any</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Path Pattern</label>
+                        <input type="text" class="form-control" name="endpoints[${endpointCounter}].path" placeholder="/api/v1/data/*">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label>Action</label>
+                        <select class="form-control" name="endpoints[${endpointCounter}].action">
+                            <option value="allow">Allow</option>
+                            <option value="deny">Deny</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <input type="text" class="form-control" name="endpoints[${endpointCounter}].description" placeholder="What this endpoint rule does">
+            </div>
+            <button type="button" class="btn-remove" onclick="removeEndpointRule(this)">Remove Rule</button>
+        `;
+        
+        container.appendChild(endpointDiv);
+        endpointCounter++;
+        updatePreview();
+    }
+
+    // Remove endpoint rule
+    function removeEndpointRule(button) {
+        button.parentElement.remove();
+        updatePreview();
+    }
+
+    // Add common endpoint templates
+    function addCommonEndpoints(template) {
+        const templates = {
+            'web-server': [
+                { method: 'GET', path: '/', action: 'allow', description: 'Home page' },
+                { method: 'GET', path: '/static/*', action: 'allow', description: 'Static assets' },
+                { method: 'GET', path: '/health', action: 'allow', description: 'Health check' }
+            ],
+            'api-service': [
+                { method: 'GET', path: '/api/v1/*', action: 'allow', description: 'API endpoints' },
+                { method: 'POST', path: '/api/v1/*', action: 'allow', description: 'API creation' },
+                { method: 'GET', path: '/docs', action: 'allow', description: 'API documentation' }
+            ],
+            'database': [
+                { method: 'GET', path: '/api/v1/query', action: 'allow', description: 'Database queries' },
+                { method: 'POST', path: '/api/v1/query', action: 'allow', description: 'Database operations' },
+                { method: '*', path: '/admin/*', action: 'deny', description: 'Block admin access' }
+            ],
+            'admin': [
+                { method: 'GET', path: '/admin/dashboard', action: 'allow', description: 'Admin dashboard' },
+                { method: 'POST', path: '/admin/config', action: 'allow', description: 'Configuration updates' },
+                { method: 'DELETE', path: '/admin/*', action: 'deny', description: 'Block dangerous operations' }
+            ]
+        };
+
+        const rules = templates[template] || [];
+        rules.forEach(rule => {
+            addEndpointRule();
+            const containers = document.querySelectorAll('#endpoints-container .endpoint-rule');
+            const container = containers[containers.length - 1];
+            
+            container.querySelector('select[name*=".method"]').value = rule.method;
+            container.querySelector('input[name*=".path"]').value = rule.path;
+            container.querySelector('select[name*=".action"]').value = rule.action;
+            container.querySelector('input[name*=".description"]').value = rule.description;
+        });
+        
+        updatePreview();
+    }
+
+    // Update trust score weightings
+    function updateWeightings() {
+        const identity = parseFloat(document.getElementById('weight_identity').value);
+        const provenance = parseFloat(document.getElementById('weight_provenance').value);
+        const runtime = parseFloat(document.getElementById('weight_runtime').value);
+        const behavior = parseFloat(document.getElementById('weight_behavior').value);
+        
+        // Update percentage displays
+        document.getElementById('identity-percentage').textContent = Math.round(identity * 100) + '%';
+        document.getElementById('provenance-percentage').textContent = Math.round(provenance * 100) + '%';
+        document.getElementById('runtime-percentage').textContent = Math.round(runtime * 100) + '%';
+        document.getElementById('behavior-percentage').textContent = Math.round(behavior * 100) + '%';
+        
+        // Update corresponding number inputs
+        const sliders = document.querySelectorAll('.weight-slider');
+        const numbers = document.querySelectorAll('.weight-number');
+        sliders.forEach((slider, index) => {
+            numbers[index].value = slider.value;
+        });
+        
+        // Calculate total
+        const total = identity + provenance + runtime + behavior;
+        document.getElementById('total-weight').textContent = total.toFixed(2);
+        
+        // Show warning if not equal to 1.0
+        const warning = document.getElementById('weight-warning');
+        if (Math.abs(total - 1.0) > 0.01) {
+            warning.style.display = 'inline';
+            document.getElementById('total-weight').style.color = '#ffc107';
+        } else {
+            warning.style.display = 'none';
+            document.getElementById('total-weight').style.color = '#28a745';
+        }
+        
+        updatePreview();
+    }
+
+    // Sync slider with number input
+    function syncSlider(sliderId, value) {
+        document.getElementById(sliderId).value = value;
+        updateWeightings();
+    }
+
+    // Apply trust score presets
+    function applyTrustPreset(preset) {
+        const presets = {
+            'balanced': { identity: 0.25, provenance: 0.25, runtime: 0.25, behavior: 0.25 },
+            'security-focused': { identity: 0.15, provenance: 0.15, runtime: 0.6, behavior: 0.1 },
+            'identity-focused': { identity: 0.5, provenance: 0.2, runtime: 0.2, behavior: 0.1 },
+            'behavior-focused': { identity: 0.2, provenance: 0.2, runtime: 0.2, behavior: 0.4 }
+        };
+        
+        const config = presets[preset];
+        if (config) {
+            document.getElementById('weight_identity').value = config.identity;
+            document.getElementById('weight_provenance').value = config.provenance;
+            document.getElementById('weight_runtime').value = config.runtime;
+            document.getElementById('weight_behavior').value = config.behavior;
+            updateWeightings();
+        }
+    }
+
+    function formDataToPolicyObject() {
+        const form = document.getElementById('atpl-form');
+        const formData = new FormData(form);
+        const policy = {};
+
+        for (let [key, value] of formData.entries()) {
+            if (value.trim() === '') continue;
+
+            // Fix: Properly merge primitives and their tags into the same object
+            if (key.includes('[') && key.includes(']')) {
+                const match = key.match(/([^.]+)\[(\d+)\]\.(.+)/);
+                if (match) {
+                    const arrayKey = match[1]; // e.g., 'primitives'
+                    const index = parseInt(match[2]);
+                    const propertyPath = match[3]; // e.g., 'tags' or 'description'
+
+                    if (!policy.capabilities) policy.capabilities = {};
+                    if (!policy.capabilities[arrayKey]) policy.capabilities[arrayKey] = [];
+                    if (!policy.capabilities[arrayKey][index]) policy.capabilities[arrayKey][index] = {};
+
+                    // Support array properties (e.g., tags[])
+                    if (propertyPath.endsWith('[]')) {
+                        const prop = propertyPath.replace('[]', '');
+                        if (!policy.capabilities[arrayKey][index][prop]) policy.capabilities[arrayKey][index][prop] = [];
+                        policy.capabilities[arrayKey][index][prop].push(value);
+                    } else {
+                        policy.capabilities[arrayKey][index][propertyPath] = value;
+                    }
+                    continue;
+                }
+            }
+
+            // Handle arrays for other fields
+            if (key.includes('[]')) {
+                const arrayKey = key.replace('[]', '');
+                const keys = arrayKey.split('.');
+                let current = policy;
+
+                for (let i = 0; i < keys.length - 1; i++) {
+                    if (!current[keys[i]]) current[keys[i]] = {};
+                    current = current[keys[i]];
+                }
+
+                const lastKey = keys[keys.length - 1];
+                if (!current[lastKey]) current[lastKey] = [];
+                current[lastKey].push(value);
+            } else {
+                // Handle regular nested properties
+                const keys = key.split('.');
+                let current = policy;
+
+                for (let i = 0; i < keys.length - 1; i++) {
+                    if (!current[keys[i]]) current[keys[i]] = {};
+                    current = current[keys[i]];
+                }
+
+                current[keys[keys.length - 1]] = value;
+            }
+        }
+
+        // Handle checkboxes separately
+        const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            const keys = checkbox.name.split('.');
+            let current = policy;
+
+            for (let i = 0; i < keys.length - 1; i++) {
+                if (!current[keys[i]]) current[keys[i]] = {};
+                current = current[keys[i]];
+            }
+
+            current[keys[keys.length - 1]] = checkbox.checked;
+        });
+
+        // Convert arrays for capabilities
+        if (policy.capabilities) {
+            if (policy.capabilities.primitives) {
+                policy.capabilities.primitives = Object.values(policy.capabilities.primitives).filter(p => p && p.id);
+            }
+            if (policy.capabilities.composed) {
+                policy.capabilities.composed = Object.values(policy.capabilities.composed).filter(c => c && c.id);
+            }
+        }
+
+        // Convert arrays for endpoints
+        if (policy.endpoints) {
+            policy.endpoints = Object.values(policy.endpoints).filter(e => e && e.path);
+        }
+
+        return policy;
+    }
+
+    // Update JSON preview
+    function updatePreview() {
+        try {
+            const policy = formDataToPolicyObject();
+            document.getElementById('json-preview').textContent = JSON.stringify(policy, null, 2);
+        } catch (error) {
+            document.getElementById('json-preview').textContent = 'Error generating preview: ' + error.message;
+        }
+    }
+
+    // Save policy
+    function savePolicy() {
+        try {
+            const policy = formDataToPolicyObject();
+            
+            // Basic validation
+            if (!policy.version || !policy.policy_id) {
+                alert('Version and Policy ID are required fields.');
+                return;
+            }
+            
+            const csrfToken = document.getElementById('csrf-token').textContent;
+            
+            fetch('/api/v1/policies', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify(policy)
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.text();
+                } else {
+                    throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                }
+            })
+            .then(data => {
+                alert('Policy saved successfully: ' + data);
+            })
+            .catch(error => {
+                alert('Error saving policy: ' + error.message);
+                console.error('Save error:', error);
+            });
+        } catch (error) {
+            alert('Error preparing policy: ' + error.message);
+            console.error('Preparation error:', error);
+        }
+    }
+
+    // Validate policy
+    function validatePolicy() {
+        try {
+            const policy = formDataToPolicyObject();
+            
+            const csrfToken = document.getElementById('csrf-token').textContent;
+            
+            fetch('/api/v1/policies/validate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify(policy)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.valid) {
+                    alert('Policy validation passed!');
+                } else {
+                    alert('Validation errors:\n' + result.errors.join('\n'));
+                }
+            })
+            .catch(error => {
+                // Fallback to client-side validation
+                const errors = [];
+                if (!policy.version) errors.push('Version is required');
+                if (!policy.policy_id) errors.push('Policy ID is required');
+                if (!policy.capabilities) errors.push('Capabilities section is required');
+                
+                if (errors.length > 0) {
+                    alert('Validation errors:\n' + errors.join('\n'));
+                } else {
+                    alert('Policy validation passed! (client-side validation)');
+                }
+            });
+        } catch (error) {
+            alert('Error validating policy: ' + error.message);
+        }
+    }
+
+    // Populate form from policy object
+    function populateFormFromPolicy(policy) {
+        // Clear existing form
+        document.getElementById('atpl-form').reset();
+        
+        // Clear dynamic lists
+        document.getElementById('agent-tags-list').innerHTML = '';
+        document.getElementById('approved-committers-list').innerHTML = '';
+        document.getElementById('incident-types-denylist').innerHTML = '';
+        document.getElementById('approved-issuers-list').innerHTML = '';
+        document.getElementById('primitives-container').innerHTML = '';
+        document.getElementById('composed-container').innerHTML = '';
+        
+        // Reset counters
+        primitiveCounter = 0;
+        composedCounter = 0;
+        
+        // Populate basic fields
+        if (policy.version) document.getElementById('version').value = policy.version;
+        if (policy.policy_id) document.getElementById('policy_id').value = policy.policy_id;
+        if (policy.description) document.getElementById('description').value = policy.description;
+        
+        // Populate match criteria
+        if (policy.match && policy.match.agent_tags) {
+            policy.match.agent_tags.forEach(tag => {
+                addListItem('agent-tags-list', 'match.agent_tags');
+                const inputs = document.querySelectorAll('#agent-tags-list input');
+                inputs[inputs.length - 1].value = tag;
+            });
+        }
+        
+        // Populate identity
+        if (policy.identity) {
+            if (policy.identity.issuer) document.getElementById('identity_issuer').value = policy.identity.issuer;
+            if (policy.identity.subject_prefix) document.getElementById('identity_subject_prefix').value = policy.identity.subject_prefix;
+            if (policy.identity.mfa_required) document.getElementById('identity_mfa_required').checked = policy.identity.mfa_required;
+            if (policy.identity.certificate_authority) document.getElementById('identity_certificate_authority').value = policy.identity.certificate_authority;
+        }
+        
+        // Populate provenance
+        if (policy.provenance) {
+            if (policy.provenance.source) document.getElementById('provenance_source').value = policy.provenance.source;
+            if (policy.provenance.signature_required) document.getElementById('provenance_signature_required').checked = policy.provenance.signature_required;
+            if (policy.provenance.approved_committers) {
+                policy.provenance.approved_committers.forEach(committer => {
+                    addListItem('approved-committers-list', 'provenance.approved_committers');
+                    const inputs = document.querySelectorAll('#approved-committers-list input');
+                    inputs[inputs.length - 1].value = committer;
+                });
+            }
+        }
+        
+        // Populate runtime
+        if (policy.runtime) {
+            if (policy.runtime.enclave_required) document.getElementById('runtime_enclave_required').checked = policy.runtime.enclave_required;
+            if (policy.runtime.attestation_type) document.getElementById('runtime_attestation_type').value = policy.runtime.attestation_type;
+            if (policy.runtime.verified_at_boot) document.getElementById('runtime_verified_at_boot').checked = policy.runtime.verified_at_boot;
+        }
+        
+        // Populate behavior
+        if (policy.behavior) {
+            if (policy.behavior.minimum_positive_runs) document.getElementById('behavior_minimum_positive_runs').value = policy.behavior.minimum_positive_runs;
+            if (policy.behavior.max_incidents) document.getElementById('behavior_max_incidents').value = policy.behavior.max_incidents;
+            if (policy.behavior.incident_types && policy.behavior.incident_types.denylist) {
+                policy.behavior.incident_types.denylist.forEach(incident => {
+                    addListItem('incident-types-denylist', 'behavior.incident_types.denylist');
+                    const inputs = document.querySelectorAll('#incident-types-denylist input');
+                    inputs[inputs.length - 1].value = incident;
+                });
+            }
+        }
+        
+        // Populate capabilities
+        if (policy.capabilities) {
+            if (policy.capabilities.primitives) {
+                policy.capabilities.primitives.forEach(primitive => {
+                    addPrimitive();
+                    const containers = document.querySelectorAll('#primitives-container .section-card');
+                    const container = containers[containers.length - 1];
+                    
+                    if (primitive.id) container.querySelector('input[name*=".id"]').value = primitive.id;
+                    if (primitive.description) container.querySelector('input[name*=".description"]').value = primitive.description;
+
+                    if (primitive.endpoints) {
+                        const tagsList = container.querySelector('.dynamic-list');
+                        primitive.endpoints.forEach(endpoint => {
+                            addListItem(
+                                tagsList.id,
+                                'capabilities.primitives[' + (primitiveCounter - 1) + '].endpoint'
+                            );
+                            const inputs = tagsList.querySelectorAll('input');
+                            inputs[inputs.length - 1].value = endpoint;
+                        });
+                    }
+
+
+                    if (primitive.tags) {
+                        const tagsList = container.querySelector('.dynamic-list');
+                        primitive.tags.forEach(tag => {
+                            addListItem(tagsList.id, tagsList.id.replace('-', '.').replace('primitive.tags.', 'capabilities.primitives[' + (primitiveCounter - 1) + '].tags'));
+                            const inputs = tagsList.querySelectorAll('input');
+                            inputs[inputs.length - 1].value = tag;
+                        });
+                    }
+                });
+            }
+            
+            if (policy.capabilities.composed) {
+                policy.capabilities.composed.forEach(composed => {
+                    addComposed();
+                    const containers = document.querySelectorAll('#composed-container .section-card');
+                    const container = containers[containers.length - 1];
+                    
+                    if (composed.id) container.querySelector('input[name*=".id"]').value = composed.id;
+                    
+                    if (composed.includes) {
+                        const includesList = container.querySelector('.dynamic-list');
+                        composed.includes.forEach(include => {
+                            addListItem(includesList.id, includesList.id.replace('-', '.').replace('composed.includes.', 'capabilities.composed[' + (composedCounter - 1) + '].includes'));
+                            const inputs = includesList.querySelectorAll('input');
+                            inputs[inputs.length - 1].value = include;
+                        });
+                    }
+                });
+            }
+        }
+        
+        // Populate trust score
+        if (policy.trust_score) {
+            if (policy.trust_score.minimum) document.getElementById('trust_score_minimum').value = policy.trust_score.minimum;
+            if (policy.trust_score.weightings) {
+                if (policy.trust_score.weightings.identity) document.getElementById('weight_identity').value = policy.trust_score.weightings.identity;
+                if (policy.trust_score.weightings.provenance) document.getElementById('weight_provenance').value = policy.trust_score.weightings.provenance;
+                if (policy.trust_score.weightings.runtime) document.getElementById('weight_runtime').value = policy.trust_score.weightings.runtime;
+                if (policy.trust_score.weightings.behavior) document.getElementById('weight_behavior').value = policy.trust_score.weightings.behavior;
+            }
+        }
+        
+        // Populate actions
+        if (policy.actions) {
+            if (policy.actions.on_success) document.getElementById('on_success').value = policy.actions.on_success;
+            if (policy.actions.on_failure) document.getElementById('on_failure').value = policy.actions.on_failure;
+            if (policy.actions.on_marginal) document.getElementById('on_marginal').value = policy.actions.on_marginal;
+        }
+        
+        // Populate ZTAT
+        if (policy.ztat) {
+            if (policy.ztat.provider) document.getElementById('ztat_provider').value = policy.ztat.provider;
+            if (policy.ztat.ttl) document.getElementById('ztat_ttl').value = policy.ztat.ttl;
+            if (policy.ztat.key_binding) document.getElementById('ztat_key_binding').checked = policy.ztat.key_binding;
+            if (policy.ztat.approval_required) document.getElementById('ztat_approval_required').checked = policy.ztat.approval_required;
+            if (policy.ztat.approved_issuers) {
+                policy.ztat.approved_issuers.forEach(issuer => {
+                    addListItem('approved-issuers-list', 'ztat.approved_issuers');
+                    const inputs = document.querySelectorAll('#approved-issuers-list input');
+                    inputs[inputs.length - 1].value = issuer;
+                });
+            }
+        }
+        
+        updatePreview();
+    }
+
+    // Export policy as JSON file
+    function exportPolicy() {
+        try {
+            const policy = formDataToPolicyObject();
+            const blob = new Blob([JSON.stringify(policy, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = (policy.policy_id || 'atpl-policy') + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            alert('Error exporting policy: ' + error.message);
+        }
+    }
+
+    // Test endpoint access
+    function testEndpoint() {
+        const policy = formDataToPolicyObject();
+        if (!policy.policy_id) {
+            alert('Please set a policy ID first.');
+            return;
+        }
+        
+        // Show the modal (assuming Bootstrap 5)
+        const modal = new bootstrap.Modal(document.getElementById('endpointTestModal'));
+        modal.show();
+    }
+
+    // Run endpoint test
+    function runEndpointTest() {
+        try {
+            const policy = formDataToPolicyObject();
+            const method = document.getElementById('test_method').value;
+            const path = document.getElementById('test_path').value;
+            
+            if (!path) {
+                alert('Please enter a path to test.');
+                return;
+            }
+            
+            const testRequest = {
+                policy_id: policy.policy_id,
+                method: method,
+                path: path
+            };
+            
+            const csrfToken = document.getElementById('csrf-token').textContent;
+            
+            fetch('/api/v1/policies/test-endpoint', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify(testRequest)
+            })
+            .then(response => response.json())
+            .then(result => {
+                document.getElementById('test_result').style.display = 'block';
+                document.getElementById('test_output').textContent = JSON.stringify(result, null, 2);
+            })
+            .catch(error => {
+                document.getElementById('test_result').style.display = 'block';
+                document.getElementById('test_output').textContent = 'Error: ' + error.message;
+            });
+        } catch (error) {
+            alert('Error testing endpoint: ' + error.message);
+        }
+    }
+
+    // Load existing policy
+    function loadExistingPolicy() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,.yaml,.yml';
+        
+        input.onchange = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let policy;
+                    const content = e.target.result;
+                    
+                    if (file.name.endsWith('.json')) {
+                        policy = JSON.parse(content);
+                    } else {
+                        // For YAML files, we could add YAML parsing here
+                        alert('YAML support not implemented yet. Please use JSON files.');
+                        return;
+                    }
+                    
+                    populateFormFromPolicy(policy);
+                    alert('Policy loaded successfully!');
+                } catch (error) {
+                    alert('Error parsing policy file: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        };
+        
+        input.click();
+    }
+
+    // Initialize form
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add change listeners to update preview
+        const form = document.getElementById('atpl-form');
+        form.addEventListener('input', updatePreview);
+        form.addEventListener('change', updatePreview);
+        
+        // Initialize trust score controls
+        updateWeightings();
+        
+        // Add listener for trust score minimum changes
+        document.getElementById('trust_score_minimum').addEventListener('input', function() {
+            document.getElementById('score-text').textContent = this.value;
+        });
+        
+        // Initial preview update
+        updatePreview();
+    });
+</script>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const loadedPolicyId = /*[[${policy.policyId != null}]]*/ false;
+    const loadedPolicy = /*[[${policy}]]*/ false;
+
+    if (loadedPolicyId) {
+        populateFormFromPolicy(loadedPolicy);
+        console.log('Policy loaded from server');
+        // You could trigger a visual cue or notification here
+    }
+    /*]]>*/
+</script>
+</body>
+</html>

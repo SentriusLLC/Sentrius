@@ -1,0 +1,158 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels:
+    {{- include "sentrius.labels" . | nindent 4 }}
+data:
+  chat-helper.yaml: |
+    description: "Agent that handles logs and OpenAI access."
+    context: |
+      You are a helpful agent that is responding to users via a chat interface. Please respond to the user in a friendly and helpful manner.
+      Return responses in the following format:
+      {
+        "previousOperation": "<previousOperation>",
+        "nextOperation": "<nextOperation>",
+        "terminalSummaryForLLM": "<Summary of the terminal thus far for the next LLM assessment>",
+          "responseForUser": "<Response to the user>"
+      }
+  assessor-config.yaml: |
+    description: "Agent that handles logs and OpenAI access."
+    context: |
+      Your job is to fetch logs for currently open terminals and assess if the user is performing risky behavior.
+      If risk is medium or higher kill the terminal session.
+      Risk should be defined in a json response of the form:
+      {
+            "sessionId": "<id>",
+            "risk": "<low|medium|high>",
+            "description": "<why they received the risk>"
+      }
+  chat-atpl-helper.yaml: |
+    description: "Agent that handles logs and OpenAI access."
+    context: |
+      You help launch agents. User will define agent responsibilities that will fill in the agent context.
+      You can query status of the agent launch and return it to the user after you create them. Validate the agent
+      launch
+      by checking
+      if the agent is running.
+      regex for agent names: [a-z]([-a-z0-9]*[a-z0-9])? . use hyphens instead of underscores in agent name.
+  launcher.properties: |
+    spring.main.web-application-type=servlet
+    spring.thymeleaf.enabled=false
+    spring.freemarker.enabled=false
+    #flyway configuration
+    spring.flyway.enabled=false
+    #spring.datasource.url=jdbc:h2:mem:testdb
+    logging.level.org.springframework.web=DEBUG
+    logging.level.org.springframework.security=DEBUG
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    keycloak.realm=sentrius
+    keycloak.base-url={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}
+    agent.api.url={{ .Values.sentriusDomain }}
+    # Keycloak configuration
+    spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.launcherservice.oauth2.client_id }}
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.launcherservice.oauth2.authorization_grant_type }}
+    spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
+    spring.security.oauth2.client.registration.keycloak.scope={{ .Values.launcherservice.oauth2.scope }}
+    spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    # otel.traces.exporter=none
+    otel.metrics.exporter=none
+    otel.logs.exporter=none
+    otel.instrumentation.spring.enabled=false
+    otel.instrumentation.springboot.enabled=false
+
+    management.endpoints.web.exposure.include=health
+    management.endpoint.health.show-details=always
+    agent.ai.config=assessor-config.yaml
+    provenance.kafka.topic=none
+    provenance.kafka.enabled=false
+    # Serialization
+    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+    spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+    spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
+
+    # Reliability
+    spring.kafka.producer.retries=5
+    spring.kafka.producer.acks=all
+
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
+    # Timeout tuning
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+
+    sentrius.agent.registry=local
+    sentrius.agent.registry.version=latest
+    sentrius.agent.namespace={{ .Values.tenant }}
+  agent.properties: |
+    spring.main.web-application-type=servlet
+    spring.thymeleaf.enabled=false
+    spring.freemarker.enabled=false
+    #flyway configuration
+    spring.flyway.enabled=false
+    #spring.datasource.url=jdbc:h2:mem:testdb
+    logging.level.org.springframework.web=DEBUG
+    logging.level.org.springframework.security=DEBUG
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    keycloak.realm=sentrius
+    keycloak.base-url={{ .Values.keycloakDomain }}
+
+    # Keycloak configuration
+    spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.launcherservice.oauth2.client_id }}
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.launcherservice.oauth2.authorization_grant_type }}
+    spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
+    spring.security.oauth2.client.registration.keycloak.scope={{ .Values.launcherservice.oauth2.scope }}
+    spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakDomain }}/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakDomain }}/realms/sentrius
+    # otel.traces.exporter=none
+    otel.metrics.exporter=none
+    otel.logs.exporter=none
+    otel.instrumentation.spring.enabled=false
+    otel.instrumentation.springboot.enabled=false
+
+    management.endpoints.web.exposure.include=health
+    management.endpoint.health.show-details=always
+    agent.ai.config=assessor-config.yaml
+    provenance.kafka.topic=none
+    provenance.kafka.enabled=false
+    # Serialization
+    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+    spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+    spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
+
+    # Reliability
+    spring.kafka.producer.retries=5
+    spring.kafka.producer.acks=all
+
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
+    # Timeout tuning
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+
+    sentrius.agent.namespace={{ .Values.tenant }}
+    agents.ai.chat.agent.enabled=true
+    sentrius.agent.callback.format.url=http://sentrius-agent-%s.%s.svc.cluster.local:8090
+    agent.api.url={{ .Values.sentriusDomain }}
+    agent.open.ai.endpoint=http://sentrius-integrationproxy:8080/
+    agent.listen.websocket=true
+    server.port=8090

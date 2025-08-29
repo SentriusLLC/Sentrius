@@ -1,0 +1,138 @@
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+
+    <meta th:replace="~{fragments/header}">
+
+
+
+    <title>[[${systemOptions.systemLogoName}]] - Manage Rules / Distribute SSH Keys</title>
+</head>
+
+<body>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+<div class="container">
+    <h2>Forbidden Command Rule Configuration</h2>
+    <h6>Configure "[[${ruleName}]]". Enter the command to match along with the action. </h6>
+    <h6>The message to the user will be displayed while using their terminal. </h6>
+
+    <div class="row">
+        <form id="rule_form" action="javascript:void(0);" class="save_sys_form_add" autocomplete="off">
+
+
+        <input type="hidden" id="_csrf" name="_csrf" th:value="${_csrf.token}"/>
+            <input type="hidden" name="ruleClass" th:value="${ruleClass}">
+            <input type="hidden" name="ruleName" th:value="${ruleName}">
+            <div id="formToTable">
+
+            </div>
+            <a href="javascript:dd();" class="btn btn-primary">+</a>
+            <a href="javascript:ddM();" class="btn btn-primary">-</a>
+            <br />
+            <button type="button" class="btn btn-secondary submit_btn">Save Rule</button>
+
+        </form>
+
+    </div>
+</div>
+            </div>
+        </div>
+    </div>
+</div>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+
+    var count = 0;
+    function ddM(){
+        if (count >= 1) {
+            $("#com_" + count).remove();
+            count = count - 1;
+        }
+    }
+    function dd(){
+        var new_form = "<div id=\"com_" + count + "\"><table><tr><td>Command ( matched anywhere )" +
+            "</td><td><input type=\"text\" name=\"command_" + count + "\"" +
+            "className=\"form-control\" title=\"Rule Name\" size=\"25\">" +
+            "</td></tr><tr><td>Message to User</td><td><input type=\"text\" name=\"description_" + count + "\"" +
+            "className=\"form-control\" title=\"Message to User\" size=\"25\"></td></tr><tr><td>Rule Action</td>" +
+            "<td className=\"align_left\"><select name=\"action_" + count + "\" title=\"Rule Action\"" +
+            "className=\"form-select view_frm_select\">" +
+            "<option value=\"AUDIT\">AUDIT</option>"+
+            "<option value=\"DENY\">DENY</option>"+
+            "<option value=\"JIT\">JIT</option>"+
+            "<option value=\"WARN\">WARN</option>"+
+            "</select></td></tr></table></div>";
+        count= count + 1;
+        $("#formToTable").append(new_form);
+    }
+    $(document).ready(function () {
+        // Optional, ensure dd() is defined or remove it if not needed
+        if (typeof dd === 'function') {
+            dd();
+        }
+
+        const ruleForm = document.getElementById("rule_form");
+        if (ruleForm) {
+            console.log("alkhj");
+            const csrfElement = document.getElementById("_csrf");
+            if (!csrfElement) {
+                console.log("CSRF token element not found.");
+                return;
+            }
+            const csrf = csrfElement.value;
+
+            // Use the button click event listener
+            const submitBtn = document.querySelector('.submit_btn');
+            if (submitBtn) {
+                console.log("setting to click");
+                submitBtn.addEventListener('click', function(event) {
+                    event.preventDefault(); // Prevent default form submission
+                    console.log("User form submitted");
+
+                    const formData = new FormData(ruleForm);
+
+                    fetch('/api/v1/zerotrust/rules/save', {
+                        method: 'POST',
+                        body: JSON.stringify(Object.fromEntries(formData)), // Convert FormData to object
+                        headers: {
+                            'content-type': 'application/json',
+                            'X-CSRF-TOKEN': csrf // Include the CSRF token in the headers
+                        }
+                    })
+                        .then(response => {
+                            if (response.ok) {
+                                console.log(response);
+                                window.location.href = "/sso/v1/zerotrust/rules/list";
+                            }else {
+                                $("#alertTopError").text("Rule Not Added").show().delay(3000).fadeOut();
+                            }
+                        })
+                        .then(data => {
+                            console.log(data);
+                        })
+                        .catch((error) => {
+                            $("#alertTop").hide(); // Ensure jQuery is available or replace with vanilla JS
+                            $("#alertTopError").text("Rule Not Added").show().delay(3000).fadeOut();
+                            console.error("Error:", error);
+                        });
+                });
+            }
+            else {
+                console.log("Submit button not found.");
+            }
+        }
+    });
+
+    /*]]>*/
+
+</script>
+</body>
+
+</html>

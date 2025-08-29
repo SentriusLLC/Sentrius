@@ -1,0 +1,6 @@
+<!-- breadcrumbs.html -->
+<ul class="breadcrumb">
+    <li th:each="breadcrumb : ${breadcrumbs}">
+        <a th:href="@{${breadcrumb.url}}" th:text="${breadcrumb.name}"></a>
+    </li>
+</ul>

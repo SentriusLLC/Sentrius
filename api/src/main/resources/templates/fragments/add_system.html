@@ -1,0 +1,49 @@
+<div class="modal fade" id="hostFormModal" tabindex="-1" aria-labelledby="hostFormModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="hostForm" onsubmit="return false;">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="hostFormModalLabel">Add Host Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Other form fields -->
+                    <div class="mb-3">
+                        <label for="enclave" class="form-label">Enclave</label>
+                        <input type="text" class="form-control" id="enclave" name="enclave" placeholder="Enter or select an enclave" required>
+                    </div>
+                    <!-- Existing form fields (displayName, user, authorizedKeys, etc.) -->
+                    <div class="mb-3">
+                        <label for="displayName" class="form-label">Display Name</label>
+                        <input type="text" class="form-control" id="displayName" name="displayName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="user" class="form-label">User</label>
+                        <input type="text" class="form-control" id="user" name="user" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="user" class="form-label">User Password</label>
+                        <input type="password" class="form-control" id="sshPassword" name="sshPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="authorizedKeys" class="form-label">Authorized Keys</label>
+                        <input type="text" class="form-control" id="authorizedKeys" name="authorizedKeys" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="host" class="form-label">Host</label>
+                        <input type="text" class="form-control" id="host" name="host" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="port" class="form-label">Port</label>
+                        <input type="number" class="form-control" id="port" name="port" value="22" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                </div>
+                <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+            </form>
+        </div>
+    </div>
+</div>

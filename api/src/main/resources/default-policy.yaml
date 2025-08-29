@@ -1,0 +1,73 @@
+---
+version: "v0"
+description: "Default Policy For Unregistered Agents ( if configured )"
+match:
+  agent_tags:
+    - "env:prod"
+    - "classification:observer"
+behavior:
+  minimum_positive_runs: 5
+  max_incidents: 1
+  incident_types:
+    denylist:
+      - "policy_violation"
+actions:
+  on_success: "allow"
+  on_failure: "deny"
+  on_marginal:
+    action: "require_ztat"
+    ztat_provider: "ztat-service.internal"
+  capabilities:
+    primitives:
+      - id: "accessLLM"
+        description: "access llm"
+        endpoints:
+          - "/api/v1/chat/completions"
+      - id: "endpoints"
+        description: "endpoints "
+        endpoints:
+          - "/api/v1/capabilities/endpoints"
+      - id: "registration"
+        description: "registration "
+        endpoints:
+          - "/api/v1/agent/bootstrap/register"
+      - id: "context"
+        description: "context "
+        endpoints:
+          - "/api/v1/agent/context/"
+      - id: "verbs"
+        description: "verb endpoint "
+        endpoints:
+          - "/api/v1/capabilities/verbs"
+  composed:
+ztat:
+  provider: "ztat-service.internal"
+  ttl: "5m"
+  approved_issuers:
+    - "http://localhost:8080/"
+  key_binding: "RSA2048"
+  approval_required: true
+policy_id: "f3326ce2-f46f-405d-94b6-bda2b26db423"
+identity:
+  issuer: "https://keycloak.test.sentrius.cloud"
+  subject_prefix: "agent-"
+  mfa_required: true
+  certificate_authority: "Sentrius-CA"
+provenance:
+  source: "https://test.sentrius.cloud"
+  signature_required: true
+  approved_committers:
+    - "alice@example.com"
+runtime:
+  enclave_required: true
+  attestation_type: "aws-nitro"
+  verified_at_boot: true
+  allow_drift: true
+trust_score:
+  minimum: 80
+  marginalThreshold: 50
+  weightings:
+    identity: 0.5
+    provenance: 0.2
+    runtime: 0.3
+    behavior: 0.2

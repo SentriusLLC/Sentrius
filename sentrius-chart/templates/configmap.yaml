@@ -1,0 +1,548 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels:
+    {{- include "sentrius.labels" . | nindent 4 }}
+data:
+  assessor-config.yaml: |
+    description: "Agent that handles logs and OpenAI access."
+    context: |
+      Your job is to fetch logs for currently open terminals and assess if the user is performing risky behavior.
+      Risk should be defined in a json response of the form:
+      {
+        "assessments": [
+            {
+            "sessionId": "<id>",
+            "risk": "<low|medium|high>",
+            "description": "<why they received the risk>"
+            }
+        ]
+      }
+  agentproxy-application.properties: |
+    keystore.file=sso.jceks
+    keystore.password=${KEYSTORE_PASSWORD}
+    keystore.alias=KEYBOX-ENCRYPTION_KEY
+    spring.thymeleaf.enabled=true
+    spring.freemarker.enabled=false
+    management.metrics.enable.system.processor={{ .Values.metrics.enabled }}
+    spring.autoconfigure.exclude={{ .Values.metrics.class.exclusion }}
+    #flyway configuration
+    spring.main.web-application-type=reactive
+    spring.flyway.enabled=false
+    logging.level.org.springframework.web=INFO
+    logging.level.org.springframework.security=INFO
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    dynamic.properties.path=/config/dynamic.properties
+    keycloak.realm=sentrius
+    keycloak.base-url={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}
+    agent.api.url={{ .Values.sentriusDomain }}
+    # Keycloak configuration
+    spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.agentproxy.oauth2.client_id }}
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.sentriusagent.oauth2.authorization_grant_type }}
+    #spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
+    #spring.security.oauth2.client.registration.keycloak.scope={{ .Values.sentriusagent.oauth2.scope }}
+    spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.logs.exporter=none
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.resource.attributes.service.name=integration-proxy
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
+    provenance.kafka.topic=sentrius-provenance
+    # Serialization
+    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+    spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+    spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
+    # Reliability
+    spring.kafka.producer.retries=5
+    spring.kafka.producer.acks=all
+    # Timeout tuning
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
+  llmproxy-application.properties: |
+    keystore.file=sso.jceks
+    keystore.password=${KEYSTORE_PASSWORD}
+    keystore.alias=KEYBOX-ENCRYPTION_KEY
+    spring.main.web-application-type=servlet
+    spring.thymeleaf.enabled=true
+    spring.freemarker.enabled=false
+    management.metrics.enable.system.processor={{ .Values.metrics.enabled }}
+    spring.autoconfigure.exclude={{ .Values.metrics.class.exclusion }}
+    #flyway configuration
+    spring.flyway.enabled=false
+    spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
+    spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
+    spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+    spring.datasource.driver-class-name=org.postgresql.Driver
+    # Connection pool settings
+    spring.datasource.hikari.maximum-pool-size=10
+    spring.datasource.hikari.minimum-idle=5
+    spring.datasource.hikari.idle-timeout=30000
+    spring.datasource.hikari.max-lifetime=1800000
+    # Hibernate settings (optional, for JPA)
+    spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+    # Disable automatic schema generation in production
+    spring.jpa.hibernate.ddl-auto=none
+    # Ensure this path matches your project structure
+    #spring.flyway.locations=classpath:db/migration/
+    spring.flyway.baseline-on-migrate=true
+    logging.level.org.springframework.web=INFO
+    logging.level.org.springframework.security=INFO
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    dynamic.properties.path=/config/dynamic.properties
+    keycloak.realm=sentrius
+    keycloak.base-url={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}
+    agent.api.url={{ .Values.sentriusDomain }}
+    # Keycloak configuration
+    spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.sentriusagent.oauth2.client_id }}
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.sentriusagent.oauth2.authorization_grant_type }}
+    spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
+    spring.security.oauth2.client.registration.keycloak.scope={{ .Values.sentriusagent.oauth2.scope }}
+    spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.logs.exporter=none
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.resource.attributes.service.name=integration-proxy
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
+    provenance.kafka.topic=sentrius-provenance
+    # Serialization
+    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+    spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+    spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
+
+    # Reliability
+    spring.kafka.producer.retries=5
+    spring.kafka.producer.acks=all
+
+    # Timeout tuning
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
+  ai-agent-application.properties: |
+    spring.main.web-application-type=servlet
+    spring.thymeleaf.enabled=true
+    spring.freemarker.enabled=false
+    management.metrics.enable.system.processor={{ .Values.metrics.enabled }}
+    spring.autoconfigure.exclude={{ .Values.metrics.class.exclusion }}
+    #flyway configuration
+    spring.flyway.enabled=false
+    logging.level.org.springframework.web=INFO
+    logging.level.org.springframework.security=INFO
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    dynamic.properties.path=/config/dynamic.properties
+    keycloak.realm=sentrius
+    keycloak.base-url={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}
+    agent.api.url={{ .Values.sentriusDomain }}
+    # Keycloak configuration
+    spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.sentriusaiagent.oauth2.client_id }}
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.sentriusagent.oauth2.authorization_grant_type }}
+    spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
+    spring.security.oauth2.client.registration.keycloak.scope={{ .Values.sentriusagent.oauth2.scope }}
+    spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    agents.ai.registered.agent.enabled=true
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.resource.attributes.service.name=ai-agent
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
+    management.endpoints.web.exposure.include=health
+    management.endpoint.health.show-details=always
+    agent.open.ai.endpoint=http://sentrius-integrationproxy:8080/
+    agent.ai.config=assessor-config.yaml
+    provenance.kafka.topic=sentrius-provenance
+    # Serialization
+    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+    spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+    spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
+
+    # Reliability
+    spring.kafka.producer.retries=5
+    spring.kafka.producer.acks=all
+
+    # Timeout tuning
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
+
+  analysis-agent-application.properties: |
+    keystore.file=sso.jceks
+    keystore.password=${KEYSTORE_PASSWORD}
+    keystore.alias=KEYBOX-ENCRYPTION_KEY
+    keystore.algorithm=AES
+    spring.main.web-application-type=servlet
+    spring.thymeleaf.enabled=true
+    spring.freemarker.enabled=false
+    management.metrics.enable.system.processor={{ .Values.metrics.enabled }}
+    spring.autoconfigure.exclude={{ .Values.metrics.class.exclusion }}
+    #flyway configuration
+    spring.flyway.enabled=true
+    spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
+    spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
+    spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+    spring.datasource.driver-class-name=org.postgresql.Driver
+    # Connection pool settings
+    spring.datasource.hikari.maximum-pool-size=10
+    spring.datasource.hikari.minimum-idle=5
+    spring.datasource.hikari.idle-timeout=30000
+    spring.datasource.hikari.max-lifetime=1800000
+    # Hibernate settings (optional, for JPA)
+    spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+    # Disable automatic schema generation in production
+    spring.jpa.hibernate.ddl-auto=none
+    # Ensure this path matches your project structure
+    #spring.flyway.locations=classpath:db/migration/
+    spring.flyway.baseline-on-migrate=true
+    # Thymeleaf settings
+    spring.thymeleaf.prefix=classpath:/templates/
+    spring.thymeleaf.suffix=.html
+    logging.level.org.springframework.web=INFO
+    logging.level.org.springframework.security=INFO
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    dynamic.properties.path=/config/dynamic.properties
+    keycloak.realm=sentrius
+    keycloak.base-url={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}
+    agent.api.url={{ .Values.sentriusDomain }}
+    # Keycloak configuration
+    spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.sentriusagent.oauth2.client_id }}
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.sentriusagent.oauth2.authorization_grant_type }}
+    spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
+    spring.security.oauth2.client.registration.keycloak.scope={{ .Values.sentriusagent.oauth2.scope }}
+    spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    agents.session-analytics.enabled=true
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.resource.attributes.service.name=ai-agent
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
+    provenance.kafka.topic=sentrius-provenance
+    # Serialization
+    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+    spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+    spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
+
+    # Reliability
+    spring.kafka.producer.retries=5
+    spring.kafka.producer.acks=all
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
+
+    # Timeout tuning
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+  api-application.properties: |
+    org.springframework.context.ApplicationListener=your.package.DbEnvPrinter
+    keystore.file=sso.jceks
+    keystore.password=${KEYSTORE_PASSWORD}
+    keystore.alias=KEYBOX-ENCRYPTION_KEY
+    keystore.algorithm=AES
+    spring.main.web-application-type=servlet
+    spring.thymeleaf.enabled=true
+    spring.freemarker.enabled=false
+    management.metrics.enable.system.processor={{ .Values.metrics.enabled }}
+    spring.autoconfigure.exclude={{ .Values.metrics.class.exclusion }}
+    #flyway configuration
+    spring.flyway.enabled=true
+    spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
+    spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
+    spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+    spring.datasource.driver-class-name=org.postgresql.Driver
+    # Connection pool settings
+    spring.datasource.hikari.maximum-pool-size=10
+    spring.datasource.hikari.minimum-idle=5
+    spring.datasource.hikari.idle-timeout=30000
+    spring.datasource.hikari.max-lifetime=1800000
+    # Hibernate settings (optional, for JPA)
+    spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+    # Disable automatic schema generation in production
+    spring.jpa.hibernate.ddl-auto=none
+    # Ensure this path matches your project structure
+    #spring.flyway.locations=classpath:db/migration/
+    spring.flyway.baseline-on-migrate=true
+    # Thymeleaf settings
+    spring.thymeleaf.prefix=classpath:/templates/
+    spring.thymeleaf.suffix=.html
+    logging.level.org.springframework.web=INFO
+    logging.level.org.springframework.security=INFO
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    dynamic.properties.path=/config/dynamic.properties
+    keycloak.realm=sentrius
+    keycloak.base-url={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}
+    management.endpoints.web.exposure.include=health
+    management.endpoint.health.show-details=always
+    # Keycloak configuration
+    spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.sentrius.oauth2.client_id }}
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.sentrius.oauth2.authorization_grant_type }}
+    spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
+    spring.security.oauth2.client.registration.keycloak.scope={{ .Values.sentrius.oauth2.scope }}
+    spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    server.forward-headers-strategy=framework
+    https.redirect.enabled=true
+    https.required={{ .Values.certificates.enabled }}
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    jaeger.query.url=http://sentrius-jaeger:16686
+    otel.resource.attributes.service.name=sentrius-api
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
+    # Serialization
+    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+    spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+    spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
+
+    # Reliability
+    spring.kafka.producer.retries=5
+    spring.kafka.producer.acks=all
+
+    # Timeout tuning
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+    provenance.kafka.topic=sentrius-provenance
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
+    sentrius.agent.launcher.service=http://sentrius-agents-launcherservice:8080/
+    sentrius.agent.register.bootstrap.allow=true
+    sentrius.agent.bootstrap.policy=/config/default-policy.yaml
+    agentproxy.externalUrl={{ .Values.agentproxyDomain }}
+    integrationproxy.externalUrl=http://sentrius-integrationproxy:8080/
+    sentrius.integration.proxyUrl=http://sentrius-integrationproxy:8080/
+  default-policy.yaml: |
+    ---
+    version: "v0"
+    description: "Default Policy For Unregistered Agents ( if configured )"
+    match:
+      agent_tags:
+        - "env:prod"
+        - "classification:observer"
+    behavior:
+      minimum_positive_runs: 5
+      max_incidents: 1
+      incident_types:
+        denylist:
+          - "policy_violation"
+    actions:
+      on_success: "allow"
+      on_failure: "deny"
+      on_marginal:
+        action: "require_ztat"
+        ztat_provider: "ztat-service.internal"
+    capabilities:
+      primitives:
+        - id: "accessLLM"
+          description: "access llm"
+          endpoints:
+            - "/api/v1/chat/completions"
+        - id: "endpoints"
+          description: "endpoints "
+          endpoints:
+            - "/api/v1/capabilities/endpoints"
+        - id: "registration"
+          description: "registration "
+          endpoints:
+            - "/api/v1/agent/bootstrap/register"
+        - id: "verbs"
+          description: "verb endpoint "
+          endpoints:
+            - "/api/v1/capabilities/verbs"
+        - id: "createAgent"
+          description: "Create agent  "
+          endpoints:
+            - "/api/v1/agent/context"
+            - "/api/v1/agent/bootstrap/launcher/create"
+            - "/api/v1/agent/bootstrap/launcher/status"
+            - "/api/v1/capabilities/endpoints"
+      composed:
+    ztat:
+      provider: "ztat-service.internal"
+      ttl: "5m"
+      approved_issuers:
+        - "http://localhost:8080/"
+      key_binding: "RSA2048"
+      approval_required: true
+    policy_id: "f3326ce2-f46f-405d-94b6-bda2b26db423"
+    identity:
+      issuer: "https://keycloak.test.sentrius.cloud"
+      subject_prefix: "agent-"
+      mfa_required: true
+      certificate_authority: "Sentrius-CA"
+    provenance:
+      source: "https://test.sentrius.cloud"
+      signature_required: true
+      approved_committers:
+        - "alice@example.com"
+    runtime:
+      enclave_required: true
+      attestation_type: "aws-nitro"
+      verified_at_boot: true
+      allow_drift: true
+    trust_score:
+      minimum: 80
+      marginalThreshold: 50
+      weightings:
+        identity: 0.5
+        provenance: 0.2
+        runtime: 0.3
+        behavior: 0.2
+
+  dynamic.properties: |
+    auditorClass=io.sentrius.sso.automation.auditing.AccessTokenAuditor
+    twopartyapproval.option.LOCKING_SYSTEMS=true
+    requireProfileForLogin=true
+    maxJitDurationMs=1440000
+    sshEnabled=true
+    systemLogoName={{ .Values.tenant }}
+    AccessTokenAuditor.rule.4=io.sentrius.sso.automation.auditing.rules.OpenAISessionRule;Malicious AI Monitoring
+    AccessTokenAuditor.rule.5=io.sentrius.sso.automation.auditing.rules.TwoPartyAIMonitor;AI Second Party Monitor
+    AccessTokenAuditor.rule.6=io.sentrius.sso.automation.auditing.rules.SudoApproval;Sudo Approval
+    allowProxies=true
+    AccessTokenAuditor.rule.2=io.sentrius.sso.automation.auditing.rules.DeletePrevention;Delete Prevention
+    AccessTokenAuditor.rule.3=io.sentrius.sso.automation.auditing.rules.TwoPartySessionRule;Require Second Party Monitoring
+    AccessTokenAuditor.rule.0=io.sentrius.sso.automation.auditing.rules.CommandEvaluator;Restricted Commands
+    terminalsInNewTab=false
+    auditFlushIntervalMs=5000
+    AccessTokenAuditor.rule.1=io.sentrius.sso.automation.auditing.rules.AllowedCommandsRule;Approved Commands
+    knownHostsPath=/home/marc/.ssh/known_hosts
+    systemLogoPathLarge=/images/sentrius_large.jpg
+    maxJitUses=1
+    systemLogoPathSmall=/images/sentrius_small.png
+    enableInternalAudit=true
+    twopartyapproval.require.explanation.LOCKING_SYSTEMS=false
+    canApproveOwnJITs=false
+    yamlConfiguration=/app/demoInstaller.yml
+  sshproxy-application.properties: |
+    keystore.file=sso.jceks
+    keystore.password=${KEYSTORE_PASSWORD}
+    keystore.alias=KEYBOX-ENCRYPTION_KEY
+    spring.thymeleaf.enabled=true
+    spring.freemarker.enabled=false
+    management.metrics.enable.system.processor={{ .Values.metrics.enabled }}
+    spring.autoconfigure.exclude={{ .Values.metrics.class.exclusion }}
+    #flyway configuration
+    spring.main.web-application-type=reactive
+    spring.flyway.enabled=false
+    logging.level.org.springframework.web=INFO
+    logging.level.org.springframework.security=INFO
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.main.web-application-type=servlet
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    dynamic.properties.path=/config/dynamic.properties
+    keycloak.realm=sentrius
+    keycloak.base-url={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}
+    agent.api.url={{ .Values.sentriusDomain }}
+    # Keycloak configuration
+    spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.agentproxy.oauth2.client_id }}
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.sentriusagent.oauth2.authorization_grant_type }}
+    #spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
+    #spring.security.oauth2.client.registration.keycloak.scope={{ .Values.sentriusagent.oauth2.scope }}
+    spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.logs.exporter=none
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.resource.attributes.service.name=integration-proxy
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
+    provenance.kafka.topic=sentrius-provenance
+    # Serialization
+    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+    spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+    spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
+    # Reliability
+    spring.kafka.producer.retries=5
+    spring.kafka.producer.acks=all
+    # Timeout tuning
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
+    # SSH Proxy settings
+    sentrius.ssh-proxy.enabled=true
+    sentrius.ssh-proxy.port=2222
+    sentrius.ssh-proxy.host-key-path=/tmp/ssh-proxy-hostkey.ser
+    sentrius.ssh-proxy.max-concurrent-sessions=100
+    management.endpoints.web.exposure.include=health
+    management.endpoint.health.show-details=always
+    spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
+    spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
+    spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}

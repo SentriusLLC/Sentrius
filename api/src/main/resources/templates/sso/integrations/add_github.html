@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Add GitHub Integration</title>
+
+    <style>
+        .integration-form {
+            max-width: 600px;
+            margin: 2rem auto;
+            background: var(--bs-dark);
+            border: 1px solid #404040;
+            border-radius: 12px;
+            padding: 2rem;
+        }
+
+        .integration-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .integration-icon {
+            font-size: 3rem;
+            color: #0d6efd;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+
+        .form-control {
+            background: var(--bs-dark);
+            border: 1px solid #404040;
+            color: #fff;
+        }
+
+        .form-control:focus {
+            background: var(--bs-dark);
+            border-color: #0d6efd;
+            color: #fff;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0d6efd, #6610f2);
+            border: none;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid #404040;
+            color: #adb5bd;
+        }
+
+        .help-text {
+            font-size: 0.875rem;
+            color: #adb5bd;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+                
+                <div class="integration-form">
+                    <div class="integration-header">
+                        <i class="fa-brands fa-github integration-icon"></i>
+                        <h1>Connect GitHub</h1>
+                        <p class="text-muted">Integrate your GitHub repositories for seamless code management and workflow automation.</p>
+                    </div>
+
+                    <form th:action="@{/api/v1/integrations/github/add}" th:object="${githubIntegration}" method="post">
+                        <div class="form-group">
+                            <label for="name" class="form-label">Integration Name</label>
+                            <input type="text" id="name" name="name" class="form-control"
+                                   th:field="*{name}" placeholder="My GitHub Integration" required>
+                            <div class="help-text">Choose a name to identify this integration</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="baseUrl" class="form-label">GitHub URL</label>
+                            <input type="text" id="baseUrl" name="baseUrl" class="form-control"
+                                   th:field="*{baseUrl}" placeholder="https://github.com" value="https://github.com" required>
+                            <div class="help-text">For GitHub Enterprise, use your custom domain</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="username" class="form-label">GitHub Username</label>
+                            <input type="text" id="username" name="username" class="form-control"
+                                   th:field="*{username}" placeholder="Enter your GitHub username" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="apiToken" class="form-label">Personal Access Token</label>
+                            <input type="password" id="apiToken" name="apiToken" class="form-control"
+                                   th:field="*{apiToken}" placeholder="Enter your GitHub personal access token" required>
+                            <div class="help-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Generate a token at <a href="https://github.com/settings/tokens" target="_blank" class="text-primary">GitHub Settings</a>. 
+                                Required scopes: repo, read:user
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="/sso/v1/integrations" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-plug me-2"></i>Connect GitHub
+                            </button>
+                        </div>
+
+                        <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

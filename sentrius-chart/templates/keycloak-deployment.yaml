@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-keycloak
+  labels:
+    app: keycloak
+    release: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.keycloak.replicas }}
+  selector:
+    matchLabels:
+      app: keycloak
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: keycloak
+        release: {{ .Release.Name }}
+    spec:
+      initContainers:
+        - name: wait-for-keycloak-db
+          image: busybox
+          command: ['sh', '-c', 'until nc -z keycloak-db 5432; do echo waiting for keycloak-db; sleep 2; done;']
+      containers:
+        - name: keycloak
+          image: "{{ .Values.keycloak.image.repository }}:{{ .Values.keycloak.image.tag }}"
+          imagePullPolicy: "{{ .Values.keycloak.image.pullPolicy }}"
+          ports:
+            - containerPort: {{ .Values.keycloak.port }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.keycloak.readinessPath }}
+              port: {{ .Values.keycloak.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.keycloak.livenessPath }}
+              port: {{ .Values.keycloak.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+          env:
+            - name: KC_HTTP_PORT
+              value: "8081"
+            - name: KEYCLOAK_ADMIN
+              value: {{ .Values.keycloak.adminUser }}
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-keycloak-secrets
+                  key: admin-password
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL_HOST
+              value: keycloak-db
+            - name: KC_DB_DATABASE
+              value: {{ .Values.keycloak.db.database }}
+            - name: KC_DB_USERNAME
+              value: {{ .Values.keycloak.db.user }}
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-keycloak-secrets
+                  key: db-password
+            - name: KC_HOSTNAME
+              value: {{ .Values.keycloakHostname }}
+            - name: KC_HOSTNAME_STRICT
+              value: "false"
+            - name: KEYCLOAK_LOGLEVEL
+              value: DEBUG
+            - name: ROOT_LOGLEVEL
+              value: DEBUG
+            - name: ROOT_URL
+              value: {{ .Values.sentriusDomain }}
+            - name: REDIRECT_URIS
+              value: {{ .Values.sentriusDomain }}
+            - name: PROXY_ADDRESS_FORWARDING
+              value: "true"
+            - name: KC_HOSTNAME_STRICT_HTTPS
+              value: "false"
+            - name: KEYCLOAK_FRONTEND_URL
+              value: {{ .Values.keycloakDomain }}
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: GOOGLE_CLIENT_ID
+              value: {{ .Values.keycloak.google.clientId }}
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-keycloak-secrets
+                  key: client-secret
+            - name: SENTRIUS_APROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: agentproxy-client-secret
+            - name: SENTRIUS_API_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: sentrius-api-client-secret
+            - name: SENTRIUS_LAUNCHER_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: sentrius-launcher-service-client-secret
+            - name: JAVA_AGENTS_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: java-agents-client-secret
+            - name: AI_AGENT_ASSESSOR_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: ai-agent-assessor-client-secret

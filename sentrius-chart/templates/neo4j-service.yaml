@@ -1,0 +1,17 @@
+{{- if .Values.neo4j.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: neo4j
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.neo4j.port }}
+      targetPort: {{ .Values.neo4j.port }}
+      name: bolt
+    - port: {{ .Values.neo4j.httpPort }}
+      targetPort: {{ .Values.neo4j.httpPort }}
+      name: http
+  selector:
+    app: neo4j
+  {{- end }}
