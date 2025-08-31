@@ -53,9 +53,10 @@ public class MemoryAccessControlService {
         }
 
         // If agent is accessing its own memory, allow based on access level
+        /*
         if (agentId != null && agentId.equals(memory.getAgentId())) {
             return evaluateAgentAccess(memory, accessType);
-        }
+        }*/
 
         // Check if memory can be shared with the agent
         if (agentId != null && memory.canBeSharedWith(agentId)) {

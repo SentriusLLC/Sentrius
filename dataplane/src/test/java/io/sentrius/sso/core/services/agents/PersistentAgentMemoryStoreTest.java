@@ -1,5 +1,6 @@
 package io.sentrius.sso.core.services.agents;
 
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.agents.AgentMemory;
 import io.sentrius.sso.core.model.agents.MemoryAccessPolicy;
 import io.sentrius.sso.core.model.users.UserAttribute;
@@ -37,11 +38,12 @@ class PersistentAgentMemoryStoreTest {
 
     @BeforeEach
     void setUp() {
+        SystemOptions systemOptions = new SystemOptions();
         memoryStore = new PersistentAgentMemoryStore(
                 agentMemoryRepository,
                 policyRepository,
                 userAttributeRepository,
-                accessControlService
+                accessControlService, systemOptions
         );
     }
 

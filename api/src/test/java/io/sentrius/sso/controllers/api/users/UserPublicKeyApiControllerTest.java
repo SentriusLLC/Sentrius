@@ -1,6 +1,5 @@
-package io.sentrius.sso.controllers.api;
+package io.sentrius.sso.controllers.api.users;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.dto.UserPublicKeyDTO;
 import io.sentrius.sso.core.model.users.User;

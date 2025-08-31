@@ -1,10 +1,16 @@
 package io.sentrius.sso.controllers.api.agents;
 
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.agents.AgentMemoryDTO;
 import io.sentrius.sso.core.dto.agents.MemoryQueryDTO;
 import io.sentrius.sso.core.model.agents.AgentMemory;
+import io.sentrius.sso.core.services.ErrorOutputService;
+import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.agents.PersistentAgentMemoryStore;
 import io.sentrius.sso.core.services.agents.VectorAgentMemoryStore;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,12 +31,13 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/agents/memory")
-public class AgentMemoryController {
+public class AgentMemoryController extends BaseController {
 
     private final PersistentAgentMemoryStore memoryStore;
     private final VectorAgentMemoryStore vectorMemoryStore;
 
-    public AgentMemoryController(PersistentAgentMemoryStore memoryStore, VectorAgentMemoryStore vectorMemoryStore) {
+    public AgentMemoryController(PersistentAgentMemoryStore memoryStore, VectorAgentMemoryStore vectorMemoryStore, UserService userService, SystemOptions systemOptions, ErrorOutputService errorOutputService) {
+        super(userService, systemOptions, errorOutputService);
         this.memoryStore = memoryStore;
         this.vectorMemoryStore = vectorMemoryStore;
     }
@@ -38,18 +45,19 @@ public class AgentMemoryController {
     /**
      * Store agent memory
      */
-    @PostMapping("/{agentId}")
+    @PostMapping("/")
     public ResponseEntity<AgentMemoryDTO> storeMemory(
-            @PathVariable String agentId,
-            @RequestBody @Valid AgentMemoryDTO memoryDTO,
-            @RequestParam(defaultValue = "false") boolean generateEmbedding,
-            Principal principal) {
+        @RequestParam(name = "agentId") String agentId,
+        @RequestBody @Valid AgentMemoryDTO memoryDTO,
+        @RequestParam(defaultValue = "false") boolean generateEmbedding,
+        HttpServletRequest request, HttpServletResponse response) {
         
         log.info("Storing memory for agent: {}, key: {}, embedding: {}", 
                 agentId, memoryDTO.getMemoryKey(), generateEmbedding);
         
         try {
-            String userId = getUserId(principal);
+            var operatingUser = getOperatingUser(request,response);
+            String userId = operatingUser.getUserId();
             
             AgentMemory memory;
             
@@ -91,13 +99,14 @@ public class AgentMemoryController {
     public ResponseEntity<AgentMemoryDTO> retrieveMemory(
             @PathVariable String agentId,
             @PathVariable String memoryKey,
-            Principal principal) {
+            HttpServletRequest request, HttpServletResponse response) {
         
         log.debug("Retrieving memory for agent: {}, key: {}", agentId, memoryKey);
         
         try {
-            String userId = getUserId(principal);
-            
+            var operatingUser = getOperatingUser(request,response);
+            String userId = operatingUser.getUserId();
+
             Optional<AgentMemory> memoryOpt = memoryStore.retrieveMemory(agentId, memoryKey, userId);
             
             if (memoryOpt.isPresent()) {
@@ -119,13 +128,14 @@ public class AgentMemoryController {
     @PostMapping("/query")
     public ResponseEntity<Page<AgentMemoryDTO>> queryMemories(
             @RequestBody @Valid MemoryQueryDTO queryDTO,
-            Principal principal) {
+            HttpServletRequest request, HttpServletResponse response) {
         
         log.debug("Querying memories with filters: {}", queryDTO);
         
         try {
-            String userId = getUserId(principal);
-            
+            var operatingUser = getOperatingUser(request,response);
+            String userId = operatingUser.getUserId();
+
             PageRequest pageRequest = PageRequest.of(
                     queryDTO.getPage(),
                     queryDTO.getSize(),
@@ -155,13 +165,14 @@ public class AgentMemoryController {
     @GetMapping("/{agentId}/shareable")
     public ResponseEntity<List<AgentMemoryDTO>> getShareableMemories(
             @PathVariable String agentId,
-            Principal principal) {
+            HttpServletRequest request, HttpServletResponse response) {
         
         log.debug("Getting shareable memories for agent: {}", agentId);
         
         try {
-            String userId = getUserId(principal);
-            
+            var operatingUser = getOperatingUser(request,response);
+            String userId = operatingUser.getUserId();
+
             List<AgentMemory> shareableMemories = memoryStore.findShareableMemories(agentId, userId);
             List<AgentMemoryDTO> responseDTOs = shareableMemories.stream()
                     .map(this::convertToDTO)
@@ -183,24 +194,25 @@ public class AgentMemoryController {
             @PathVariable String agentId,
             @PathVariable String memoryKey,
             @RequestBody Map<String, Object> shareRequest,
-            Principal principal) {
+            HttpServletRequest request, HttpServletResponse response) {
         
         log.info("Sharing memory: agent={}, key={}", agentId, memoryKey);
         
         try {
-            String userId = getUserId(principal);
-            
+            var operatingUser = getOperatingUser(request,response);
+            String userId = operatingUser.getUserId();
+
             @SuppressWarnings("unchecked")
             List<String> targetAgentsList = (List<String>) shareRequest.get("targetAgents");
             String[] targetAgents = targetAgentsList.toArray(new String[0]);
             
             boolean success = memoryStore.shareMemoryWithAgents(agentId, memoryKey, targetAgents, userId);
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", success);
-            response.put("sharedWith", targetAgents);
+            Map<String, Object> userResponse = new HashMap<>();
+            userResponse.put("success", success);
+            userResponse.put("sharedWith", targetAgents);
             
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(userResponse);
             
         } catch (Exception e) {
             log.error("Error sharing memory: agent={}, key={}", agentId, memoryKey, e);
@@ -214,13 +226,14 @@ public class AgentMemoryController {
     @GetMapping("/search/markings/{marking}")
     public ResponseEntity<List<AgentMemoryDTO>> searchByMarkings(
             @PathVariable String marking,
-            Principal principal) {
+            HttpServletRequest request, HttpServletResponse response) {
         
         log.debug("Searching memories by marking: {}", marking);
         
         try {
-            String userId = getUserId(principal);
-            
+            var operatingUser = getOperatingUser(request,response);
+            String userId = operatingUser.getUserId();
+
             List<AgentMemory> memories = memoryStore.findMemoriesByMarkings(marking, userId);
             List<AgentMemoryDTO> responseDTOs = memories.stream()
                     .map(this::convertToDTO)
@@ -241,20 +254,21 @@ public class AgentMemoryController {
     public ResponseEntity<Map<String, Object>> deleteMemory(
             @PathVariable String agentId,
             @PathVariable String memoryKey,
-            Principal principal) {
+            HttpServletRequest request, HttpServletResponse response) {
         
         log.info("Deleting memory: agent={}, key={}", agentId, memoryKey);
         
         try {
-            String userId = getUserId(principal);
-            
+            var operatingUser = getOperatingUser(request,response);
+            String userId = operatingUser.getUserId();
+
             boolean success = memoryStore.deleteMemory(agentId, memoryKey, userId);
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", success);
-            response.put("deleted", success);
+            Map<String, Object> userResponse = new HashMap<>();
+            userResponse.put("success", success);
+            userResponse.put("deleted", success);
             
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(userResponse);
             
         } catch (Exception e) {
             log.error("Error deleting memory: agent={}, key={}", agentId, memoryKey, e);
@@ -283,17 +297,19 @@ public class AgentMemoryController {
      * Clean up expired memories (admin endpoint)
      */
     @PostMapping("/cleanup/expired")
-    public ResponseEntity<Map<String, Object>> cleanupExpiredMemories(Principal principal) {
-        log.info("Cleaning up expired memories, requested by: {}", getUserId(principal));
+    public ResponseEntity<Map<String, Object>> cleanupExpiredMemories(HttpServletRequest request, HttpServletResponse response) {
+        var operatingUser = getOperatingUser(request,response);
+        String userId = operatingUser.getUserId();
+        log.info("Cleaning up expired memories, requested by: {}", userId);
         
         try {
             memoryStore.cleanupExpiredMemories();
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Expired memories cleanup completed");
+            Map<String, Object> userResponse = new HashMap<>();
+            userResponse.put("success", true);
+            userResponse.put("message", "Expired memories cleanup completed");
             
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(userResponse);
             
         } catch (Exception e) {
             log.error("Error cleaning up expired memories", e);
@@ -309,7 +325,7 @@ public class AgentMemoryController {
     @PostMapping("/search/semantic")
     public ResponseEntity<List<AgentMemoryDTO>> semanticSearch(
             @RequestBody Map<String, Object> searchRequest,
-            Principal principal) {
+            HttpServletRequest request, HttpServletResponse response) {
         
         String queryText = (String) searchRequest.get("query");
         Integer limit = (Integer) searchRequest.getOrDefault("limit", 10);
@@ -318,8 +334,9 @@ public class AgentMemoryController {
         log.debug("Semantic search query: {}, limit: {}, threshold: {}", queryText, limit, threshold);
         
         try {
-            String userId = getUserId(principal);
-            
+            var operatingUser = getOperatingUser(request,response);
+            String userId = operatingUser.getUserId();
+
             List<AgentMemory> similarMemories = vectorMemoryStore.findSimilarMemories(
                     queryText, userId, limit, threshold);
             
@@ -342,7 +359,7 @@ public class AgentMemoryController {
     public ResponseEntity<List<AgentMemoryDTO>> semanticSearchForAgent(
             @PathVariable String agentId,
             @RequestBody Map<String, Object> searchRequest,
-            Principal principal) {
+            HttpServletRequest request, HttpServletResponse response) {
         
         String queryText = (String) searchRequest.get("query");
         Integer limit = (Integer) searchRequest.getOrDefault("limit", 10);
@@ -351,8 +368,9 @@ public class AgentMemoryController {
         log.debug("Agent semantic search - agent: {}, query: {}, limit: {}", agentId, queryText, limit);
         
         try {
-            String userId = getUserId(principal);
-            
+            var operatingUser = getOperatingUser(request,response);
+            String userId = operatingUser.getUserId();
+
             List<AgentMemory> similarMemories = vectorMemoryStore.findSimilarMemoriesForAgent(
                     queryText, agentId, userId, limit, threshold);
             
@@ -374,7 +392,7 @@ public class AgentMemoryController {
     @PostMapping("/search/hybrid")
     public ResponseEntity<List<AgentMemoryDTO>> hybridSearch(
             @RequestBody Map<String, Object> searchRequest,
-            Principal principal) {
+            HttpServletRequest request, HttpServletResponse response) {
         
         String searchTerm = (String) searchRequest.get("searchTerm");
         String markingsFilter = (String) searchRequest.get("markings");
@@ -384,8 +402,9 @@ public class AgentMemoryController {
         log.debug("Hybrid search - term: {}, markings: {}, limit: {}", searchTerm, markingsFilter, limit);
         
         try {
-            String userId = getUserId(principal);
-            
+            var operatingUser = getOperatingUser(request,response);
+            String userId = operatingUser.getUserId();
+
             List<AgentMemory> results = vectorMemoryStore.hybridSearch(
                     searchTerm, markingsFilter, userId, limit, threshold);
             
@@ -407,19 +426,21 @@ public class AgentMemoryController {
     @PostMapping("/embeddings/generate")
     public ResponseEntity<Map<String, Object>> generateMissingEmbeddings(
             @RequestParam(defaultValue = "100") int batchSize,
-            Principal principal) {
-        
+            HttpServletRequest request, HttpServletResponse response) {
+
+        var operatingUser = getOperatingUser(request,response);
+        String userId = operatingUser.getUserId();
         log.info("Generating missing embeddings, batch size: {}, requested by: {}", 
-                batchSize, getUserId(principal));
+                batchSize, userId);
         
         try {
             vectorMemoryStore.generateMissingEmbeddings(batchSize);
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Embedding generation started for batch size: " + batchSize);
+            Map<String, Object> userResponse = new HashMap<>();
+            userResponse.put("success", true);
+            userResponse.put("message", "Embedding generation started for batch size: " + batchSize);
             
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(userResponse);
             
         } catch (Exception e) {
             log.error("Error generating embeddings", e);
@@ -478,13 +499,4 @@ public class AgentMemoryController {
         return dto;
     }
 
-    /**
-     * Extract user ID from principal
-     */
-    private String getUserId(Principal principal) {
-        if (principal instanceof Authentication) {
-            return ((Authentication) principal).getName();
-        }
-        return principal != null ? principal.getName() : "system";
-    }
 }

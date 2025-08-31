@@ -79,6 +79,11 @@
         <artifactId>commons-codec</artifactId>
         <version>${commons-codec-version}</version>
       </dependency>
+        <dependency>
+            <groupId>org.apache.accumulo</groupId>
+            <artifactId>accumulo-access</artifactId>
+            <version>1.0.0-beta</version>
+        </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-collections4</artifactId>

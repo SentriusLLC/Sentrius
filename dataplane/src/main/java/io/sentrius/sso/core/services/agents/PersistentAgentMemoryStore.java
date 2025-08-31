@@ -1,10 +1,12 @@
 package io.sentrius.sso.core.services.agents;
 
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.agents.AgentMemory;
 import io.sentrius.sso.core.model.agents.MemoryAccessPolicy;
 import io.sentrius.sso.core.repository.AgentMemoryRepository;
 import io.sentrius.sso.core.repository.MemoryAccessPolicyRepository;
 import io.sentrius.sso.core.repository.UserAttributeRepository;
+import io.sentrius.sso.core.utils.JsonUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -30,28 +32,26 @@ public class PersistentAgentMemoryStore {
     private final MemoryAccessPolicyRepository policyRepository;
     private final UserAttributeRepository userAttributeRepository;
     private final MemoryAccessControlService accessControlService;
-    private final ObjectMapper objectMapper;
     
-    @Value("${sentrius.memory.enabled:true}")
-    private boolean memoryStoreEnabled;
+    private final SystemOptions systemOptions;
 
     public PersistentAgentMemoryStore(
             AgentMemoryRepository agentMemoryRepository,
             MemoryAccessPolicyRepository policyRepository,
             UserAttributeRepository userAttributeRepository,
-            MemoryAccessControlService accessControlService) {
+            MemoryAccessControlService accessControlService, SystemOptions systemOptions) {
         this.agentMemoryRepository = agentMemoryRepository;
         this.policyRepository = policyRepository;
         this.userAttributeRepository = userAttributeRepository;
         this.accessControlService = accessControlService;
-        this.objectMapper = new ObjectMapper();
+        this.systemOptions = systemOptions;
     }
 
     /**
      * Check if memory store is enabled via configuration
      */
     private boolean isMemoryStoreEnabled() {
-        return memoryStoreEnabled;
+        return systemOptions.getEnableMemoryStore();
     }
 
     /**
@@ -70,7 +70,7 @@ public class PersistentAgentMemoryStore {
         
         try {
             // Convert value to JSON string
-            String valueJson = objectMapper.writeValueAsString(memoryValue);
+            String valueJson = JsonUtil.MAPPER.writeValueAsString(memoryValue);
             
             // Check if memory already exists
             Optional<AgentMemory> existing = agentMemoryRepository.findByAgentIdAndMemoryKey(agentId, memoryKey);
@@ -149,7 +149,7 @@ public class PersistentAgentMemoryStore {
         }
         
         try {
-            T value = objectMapper.readValue(memoryOpt.get().getMemoryValue(), valueType);
+            T value = JsonUtil.MAPPER.readValue(memoryOpt.get().getMemoryValue(), valueType);
             return Optional.of(value);
         } catch (JsonProcessingException e) {
             log.error("Error deserializing memory value for agent: {}, key: {}", agentId, memoryKey, e);
@@ -168,7 +168,7 @@ public class PersistentAgentMemoryStore {
         }
         
         try {
-            JsonNode value = objectMapper.readTree(memoryOpt.get().getMemoryValue());
+            JsonNode value = JsonUtil.MAPPER.readTree(memoryOpt.get().getMemoryValue());
             return Optional.of(value);
         } catch (JsonProcessingException e) {
             log.error("Error parsing memory value as JsonNode for agent: {}, key: {}", agentId, memoryKey, e);

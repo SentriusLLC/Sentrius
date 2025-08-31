@@ -1,6 +1,7 @@
 package io.sentrius.sso.core.model.agents;
 
 import java.time.Instant;
+import io.sentrius.sso.core.model.FloatArrayToStringConverter;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -79,10 +80,12 @@ public class AgentMemory {
     private String metadata;
 
     @Column(name = "version")
+    @Builder.Default
     private Integer version = 1;
 
     // Vector embedding for semantic search (1536 dimensions for OpenAI embeddings)
-    @Column(name = "embedding", columnDefinition = "vector(1536)")
+    @Column(name = "embedding", columnDefinition = "TEXT")
+    @Convert(converter = FloatArrayToStringConverter.class)
     private float[] embedding;
 
     @PrePersist
@@ -98,7 +101,7 @@ public class AgentMemory {
 
     // Enum for predefined classifications
     public enum Classification {
-        PUBLIC, PRIVATE, SHARED, CONFIDENTIAL, SECRET
+        PUBLIC, PRIVATE, SHARED, CONFIDENTIAL
     }
 
     // Enum for predefined access levels

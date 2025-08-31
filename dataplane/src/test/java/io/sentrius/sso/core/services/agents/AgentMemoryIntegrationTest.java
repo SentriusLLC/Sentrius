@@ -1,5 +1,6 @@
 package io.sentrius.sso.core.services.agents;
 
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.agents.AgentMemory;
 import io.sentrius.sso.core.model.agents.MemoryAccessPolicy;
 import io.sentrius.sso.core.model.users.UserAttribute;
@@ -17,7 +18,11 @@ import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DataJpaTest
+@DataJpaTest(properties = {
+    "spring.jpa.hibernate.ddl-auto=create-drop",
+    "spring.jpa.show-sql=true"
+})
+
 @TestPropertySource(properties = {
     "spring.datasource.url=jdbc:h2:mem:testdb",
     "spring.jpa.hibernate.ddl-auto=create-drop"
@@ -37,6 +42,8 @@ class AgentMemoryIntegrationTest {
     private MemoryAccessControlService accessControlService;
     private PersistentAgentMemoryStore memoryStore;
 
+
+
     @BeforeEach
     void setUp() {
         // Clear all data
@@ -44,10 +51,12 @@ class AgentMemoryIntegrationTest {
         policyRepository.deleteAll();
         userAttributeRepository.deleteAll();
 
+        SystemOptions systemOptions = new SystemOptions();
+
         // Create services
         accessControlService = new MemoryAccessControlService(policyRepository, userAttributeRepository);
         memoryStore = new PersistentAgentMemoryStore(
-                agentMemoryRepository, policyRepository, userAttributeRepository, accessControlService);
+                agentMemoryRepository, policyRepository, userAttributeRepository, accessControlService, systemOptions);
 
         // Set up test data
         setupTestData();

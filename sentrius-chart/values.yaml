@@ -185,8 +185,9 @@ launcherservice:
 # PostgreSQL configuration
 postgres:
   image:
-    repository: postgres
-    tag: 15
+    repository: pgvector/pgvector
+    tag: pg15
+    pullPolicy: IfNotPresent
   port: 5432
   storageSize: 10Gi
   env:

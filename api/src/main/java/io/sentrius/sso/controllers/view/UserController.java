@@ -178,12 +178,23 @@ public class UserController extends BaseController {
     public String editUser(Model model, HttpServletRequest request, HttpServletResponse response,
                            @RequestParam("userId") String userId) throws GeneralSecurityException {
         model.addAttribute("globalAccessSet", UserType.createSuperUser().getAccessSet());
-        Long id = Long.parseLong(cryptoService.decrypt(userId));
+        var decryptedUserId = cryptoService.decrypt(userId);
+        Long id = Long.parseLong(decryptedUserId);
         User user = userService.getUserById(id);
         UserDTO userDTO = user.toDto();
+        userDTO.userId = userId;
+        List<UserAttribute> userAttributes = userAttributeService.getUserAttributes(userId);
+        for(UserAttribute attr : userAttributes) {
+            if(attr.getAttributeName().equals("VISIBILITY_EXPRESSION")) {
+                model.addAttribute("visibilityExpression", attr.getStringValue());
+            }
+        }
         var types = userService.getUserTypeList();
         model.addAttribute("userTypes",types);
         model.addAttribute("user", userDTO);
+        log.info("Editing user: {}", userDTO);
+        log.info("user id is {}", userId);
+        model.addAttribute("userId", userId);
         return "sso/users/edit_user";
     }
 

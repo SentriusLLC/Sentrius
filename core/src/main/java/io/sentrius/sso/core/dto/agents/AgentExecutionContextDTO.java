@@ -2,6 +2,7 @@ package io.sentrius.sso.core.dto.agents;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -38,6 +39,10 @@ public class AgentExecutionContextDTO {
     @Builder.Default
     private ObjectNode callParams = JsonUtil.MAPPER.createObjectNode();
 
+    @Builder.Default
+
+    private final Map<String,JsonNode> longTermMemories = new ConcurrentHashMap<>();
+
     // === Memory Management ===
 
     public void addToMemory(JsonNode node) {
@@ -55,6 +60,7 @@ public class AgentExecutionContextDTO {
         ObjectNode wrapper = JsonUtil.MAPPER.createObjectNode();
         wrapper.set(key, value);
         agentDataList.add(wrapper);
+
     }
 
     // === Persistent Memory Integration ===
@@ -78,7 +84,8 @@ public class AgentExecutionContextDTO {
             memoryMeta.put("persistent", true);
             
             // Add to data list with persistent flag
-            agentDataList.add(memoryMeta);
+            longTermMemories.put(key, memoryMeta);
+
         }
     }
 
@@ -101,10 +108,9 @@ public class AgentExecutionContextDTO {
     /**
      * Get list of memories marked for persistent storage
      */
-    public List<JsonNode> getPersistentMemoryItems() {
-        return agentDataList.stream()
-                .filter(node -> node.has("persistent") && node.get("persistent").asBoolean())
-                .collect(java.util.stream.Collectors.toList());
+    public Map<String, JsonNode> getPersistentMemoryItems() {
+
+            return longTermMemories;
     }
 
     /**
@@ -112,6 +118,14 @@ public class AgentExecutionContextDTO {
      */
     public boolean hasPersistentMemory() {
         return !getPersistentMemoryItems().isEmpty();
+    }
+
+    public Map<String, JsonNode> flushPersistentMemory() {
+        var persistentItems = getPersistentMemoryItems();
+        longTermMemories.clear();
+        return persistentItems;
+
+
     }
 
     public static void flatten(String prefix, JsonNode node, Map<String, JsonNode> map) {

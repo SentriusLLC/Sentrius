@@ -9,6 +9,7 @@ import io.sentrius.agent.analysis.api.AgentKeyService;
 import io.sentrius.agent.config.AgentConfigOptions;
 import io.sentrius.sso.core.dto.agents.AgentExecution;
 import io.sentrius.sso.core.dto.agents.AgentExecutionContextDTO;
+import io.sentrius.sso.core.dto.agents.AgentMemoryDTO;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.security.Ztat;
@@ -136,6 +137,19 @@ public class RegisteredAgent implements ApplicationListener<ApplicationReadyEven
                                 priorResponse = verbRegistry.execute(agentExecution,agentExecutionContext,
                                     priorResponse, verb, args);
                             }
+                            var memoryList = agentExecutionContext.flushPersistentMemory();
+                            if (memoryList != null) {
+                                for(var memory : memoryList.entrySet()){
+                                    AgentMemoryDTO dto = AgentMemoryDTO.builder()
+                                        .agentName(agentExecutionContext.getAgentContext().getName())
+                                        .memoryKey(memory.getKey())
+                                        .memoryValue(memory.getValue().toString())
+                                        .build();
+                                    agentClientService.storeMemory(agentExecution,
+                                        agentExecutionContext.getAgentContext().getName(), dto);
+                                }
+                            }
+
                             log.info("Node: {}", node);
                         }
 

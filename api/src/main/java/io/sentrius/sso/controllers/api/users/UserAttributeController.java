@@ -1,30 +1,43 @@
 package io.sentrius.sso.controllers.api.users;
 
-import io.sentrius.sso.core.dto.users.UserAttributeDTO;
-import io.sentrius.sso.core.model.users.UserAttribute;
-import io.sentrius.sso.core.services.users.UserAttributeService;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
-
-import jakarta.validation.Valid;
-import java.security.Principal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.dto.users.UserAttributeDTO;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.model.users.UserAttribute;
+import io.sentrius.sso.core.services.ErrorOutputService;
+import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.users.UserAttributeService;
+import io.sentrius.sso.core.utils.AccessUtil;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/users/attributes")
-public class UserAttributeController {
+public class UserAttributeController extends BaseController {
 
     private final UserAttributeService userAttributeService;
 
-    public UserAttributeController(UserAttributeService userAttributeService) {
+    public UserAttributeController(UserAttributeService userAttributeService, UserService userService, SystemOptions systemOptions, ErrorOutputService errorOutputService) {
+        super(userService, systemOptions, errorOutputService);
         this.userAttributeService = userAttributeService;
     }
 
@@ -32,12 +45,14 @@ public class UserAttributeController {
      * Get all attributes for the current user
      */
     @GetMapping("/me")
-    public ResponseEntity<List<UserAttributeDTO>> getMyAttributes(Principal principal) {
-        String userId = getUserId(principal);
-        log.debug("Getting attributes for user: {}", userId);
+    public ResponseEntity<List<UserAttributeDTO>> getMyAttributes(HttpServletRequest request, HttpServletResponse response) {
+
+        var operatingUser = getOperatingUser(request, response);
+
+        log.debug("Getting attributes for user: {}", operatingUser.getUserId());
         
         try {
-            List<UserAttribute> attributes = userAttributeService.getUserAttributes(userId);
+            List<UserAttribute> attributes = userAttributeService.getUserAttributes(operatingUser.getUserId());
             List<UserAttributeDTO> attributeDTOs = attributes.stream()
                     .map(this::convertToDTO)
                     .collect(Collectors.toList());
@@ -45,7 +60,7 @@ public class UserAttributeController {
             return ResponseEntity.ok(attributeDTOs);
             
         } catch (Exception e) {
-            log.error("Error getting attributes for user: {}", userId, e);
+            log.error("Error getting attributes for user: {}", operatingUser.getUserId(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -117,19 +132,20 @@ public class UserAttributeController {
     /**
      * Set a user attribute
      */
-    @PostMapping("/{userId}")
+    @PostMapping("/update")
     public ResponseEntity<UserAttributeDTO> setUserAttribute(
-            @PathVariable String userId,
+            @RequestParam("userId") String userId,
             @RequestBody @Valid UserAttributeDTO attributeDTO,
-            Principal principal) {
+            HttpServletRequest request, HttpServletResponse response) {
         
         log.info("Setting attribute {} for user: {}", attributeDTO.getAttributeName(), userId);
         
         try {
-            String requestingUserId = getUserId(principal);
+            var operatingUser = getOperatingUser(request, response);
+            String requestingUserId = operatingUser.getUserId();
             
             // Basic authorization - users can only modify their own attributes unless admin
-            if (!userId.equals(requestingUserId) && !isAdmin(principal)) {
+            if (!userId.equals(requestingUserId) && !AccessUtil.canAccess(operatingUser, ApplicationAccessEnum.CAN_MANAGE_APPLICATION)) {
                 log.warn("User {} attempted to modify attributes for user {}", requestingUserId, userId);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
@@ -161,15 +177,16 @@ public class UserAttributeController {
     public ResponseEntity<List<UserAttributeDTO>> setUserAttributes(
             @PathVariable String userId,
             @RequestBody Map<String, String> attributes,
-            Principal principal) {
+            HttpServletRequest request, HttpServletResponse response) {
         
         log.info("Setting {} attributes for user: {}", attributes.size(), userId);
         
         try {
-            String requestingUserId = getUserId(principal);
+            var operatingUser = getOperatingUser(request, response);
+            String requestingUserId = operatingUser.getUserId();
             
             // Basic authorization - users can only modify their own attributes unless admin
-            if (!userId.equals(requestingUserId) && !isAdmin(principal)) {
+            if (!userId.equals(requestingUserId) && !AccessUtil.canAccess(operatingUser, ApplicationAccessEnum.CAN_MANAGE_APPLICATION)) {
                 log.warn("User {} attempted to modify attributes for user {}", requestingUserId, userId);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
@@ -196,26 +213,27 @@ public class UserAttributeController {
     public ResponseEntity<Map<String, Object>> removeUserAttribute(
             @PathVariable String userId,
             @PathVariable String attributeName,
-            Principal principal) {
+            HttpServletRequest request, HttpServletResponse response) {
         
         log.info("Removing attribute {} for user: {}", attributeName, userId);
         
         try {
-            String requestingUserId = getUserId(principal);
+            var operatingUser = getOperatingUser(request, response);
+            String requestingUserId = operatingUser.getUserId();
             
             // Basic authorization - users can only modify their own attributes unless admin
-            if (!userId.equals(requestingUserId) && !isAdmin(principal)) {
+            if (!userId.equals(requestingUserId) && !AccessUtil.canAccess(operatingUser, ApplicationAccessEnum.CAN_MANAGE_APPLICATION)) {
                 log.warn("User {} attempted to remove attributes for user {}", requestingUserId, userId);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
             
             boolean success = userAttributeService.removeUserAttribute(userId, attributeName);
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", success);
-            response.put("removed", success);
+            Map<String, Object> userResponse = new HashMap<>();
+            userResponse.put("success", success);
+            userResponse.put("removed", success);
             
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(userResponse);
             
         } catch (Exception e) {
             log.error("Error removing attribute {} for user: {}", attributeName, userId, e);
@@ -229,15 +247,16 @@ public class UserAttributeController {
     @PostMapping("/{userId}/sync/keycloak")
     public ResponseEntity<List<UserAttributeDTO>> syncFromKeycloak(
             @PathVariable String userId,
-            Principal principal) {
+            HttpServletRequest request, HttpServletResponse response) {
         
         log.info("Syncing attributes from Keycloak for user: {}", userId);
         
         try {
-            String requestingUserId = getUserId(principal);
+            var operatingUser = getOperatingUser(request, response);
+            String requestingUserId = operatingUser.getUserId();
             
             // Basic authorization - users can sync their own attributes or admin can sync any
-            if (!userId.equals(requestingUserId) && !isAdmin(principal)) {
+            if (!userId.equals(requestingUserId) && !AccessUtil.canAccess(operatingUser, ApplicationAccessEnum.CAN_MANAGE_APPLICATION)) {
                 log.warn("User {} attempted to sync attributes for user {}", requestingUserId, userId);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
@@ -352,26 +371,4 @@ public class UserAttributeController {
                 .build();
     }
 
-    /**
-     * Extract user ID from principal
-     */
-    private String getUserId(Principal principal) {
-        if (principal instanceof Authentication) {
-            return ((Authentication) principal).getName();
-        }
-        return principal != null ? principal.getName() : "system";
-    }
-
-    /**
-     * Check if user is admin (simplified implementation)
-     */
-    private boolean isAdmin(Principal principal) {
-        if (principal instanceof Authentication) {
-            Authentication auth = (Authentication) principal;
-            return auth.getAuthorities().stream()
-                    .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN") || 
-                                          authority.getAuthority().equals("ADMIN"));
-        }
-        return false;
-    }
 }
