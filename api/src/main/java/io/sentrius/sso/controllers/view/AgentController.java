@@ -65,5 +65,10 @@ public class AgentController extends BaseController {
         return "sso/agents/agent_comms";
     }
 
+    @GetMapping("/memory/search")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public String searchAgentMemory(Model m) {
+        return "sso/agents/memory_search";
+    }
 
 }

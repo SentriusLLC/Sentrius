@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta th:replace="~{fragments/header}" />
+    <title>[[${systemOptions.systemLogoName}]] - Agent Memory Search</title>
+
+    <!-- Styles -->
+    <style>
+        body { background-color: #121212; color: #eaeaea; }
+        .container { margin-top: 20px; }
+        .toast-header { font-size: 1.5rem; font-weight: bold; margin-bottom: 15px; }
+        .modal-content { background-color: #1e1e1e; color: #eaeaea; }
+        .table-striped tbody tr:nth-of-type(odd) { background-color: #2b2b2b; }
+        .table-striped tbody tr:hover { background-color: #3a3a3a; }
+        .search-container {
+            background: #1e1e1e;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+        .memory-item {
+            background: #2b2b2b;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #0d6efd;
+        }
+        .memory-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .agent-badge {
+            background: #495057;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        .timestamp {
+            color: #adb5bd;
+            font-size: 0.9em;
+        }
+        .payload-content {
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .pagination-container {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .search-stats {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        .no-results {
+            text-align: center;
+            color: #6c757d;
+            padding: 40px;
+            font-style: italic;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+        .form-control, .form-select {
+            background-color: #2b2b2b;
+            border: 1px solid #495057;
+            color: #eaeaea;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: #2b2b2b;
+            border-color: #0d6efd;
+            color: #eaeaea;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+    </style>
+</head>
+<body>
+<div id="csrf-token" style="display: none;" th:text="${_csrf.token}"></div>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
+                <h2 class="toast-header">Agent Memory Search</h2>
+                
+                <!-- Search Form -->
+                <div class="search-container">
+                    <form id="searchForm">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="contentSearch" class="form-label">Search Content</label>
+                                <input type="text" id="contentSearch" class="form-control" 
+                                       placeholder="Enter keywords to search in memory content...">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="agentSearch" class="form-label">Agent Name</label>
+                                <input type="text" id="agentSearch" class="form-control" 
+                                       placeholder="Enter agent name to filter...">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="pageSize" class="form-label">Results per page</label>
+                                <select id="pageSize" class="form-select">
+                                    <option value="10">10</option>
+                                    <option value="20" selected>20</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-5">
+                                <label for="startDate" class="form-label">Start Date</label>
+                                <input type="datetime-local" id="startDate" class="form-control">
+                            </div>
+                            <div class="col-md-5">
+                                <label for="endDate" class="form-label">End Date</label>
+                                <input type="datetime-local" id="endDate" class="form-control">
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">Search</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Search Results -->
+                <div id="searchResults">
+                    <div id="loadingSpinner" class="loading" style="display: none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Searching agent memories...</p>
+                    </div>
+                    
+                    <div id="searchStats" class="search-stats" style="display: none;"></div>
+                    
+                    <div id="memoryResults"></div>
+                    
+                    <div id="noResults" class="no-results" style="display: none;">
+                        <i class="fas fa-search fa-3x mb-3"></i>
+                        <p>No memories found matching your search criteria.</p>
+                        <p>Try adjusting your search terms or date range.</p>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div id="paginationContainer" class="pagination-container" style="display: none;">
+                        <div>
+                            <button id="prevPage" class="btn btn-secondary" disabled>Previous</button>
+                            <span id="pageInfo" class="mx-3">Page 1 of 1</span>
+                            <button id="nextPage" class="btn btn-secondary" disabled>Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentPage = 0;
+let totalPages = 0;
+let currentSearchParams = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const searchForm = document.getElementById('searchForm');
+    const contentSearch = document.getElementById('contentSearch');
+    const agentSearch = document.getElementById('agentSearch');
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
+    const pageSize = document.getElementById('pageSize');
+    
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const searchStats = document.getElementById('searchStats');
+    const memoryResults = document.getElementById('memoryResults');
+    const noResults = document.getElementById('noResults');
+    const paginationContainer = document.getElementById('paginationContainer');
+    
+    const prevPage = document.getElementById('prevPage');
+    const nextPage = document.getElementById('nextPage');
+    const pageInfo = document.getElementById('pageInfo');
+    
+    // Load initial data
+    performSearch();
+    
+    searchForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        currentPage = 0;
+        performSearch();
+    });
+    
+    prevPage.addEventListener('click', function() {
+        if (currentPage > 0) {
+            currentPage--;
+            performSearch();
+        }
+    });
+    
+    nextPage.addEventListener('click', function() {
+        if (currentPage < totalPages - 1) {
+            currentPage++;
+            performSearch();
+        }
+    });
+    
+    function performSearch() {
+        showLoading();
+        
+        const params = new URLSearchParams();
+        
+        if (contentSearch.value.trim()) {
+            params.append('content', contentSearch.value.trim());
+        }
+        if (agentSearch.value.trim()) {
+            params.append('agent', agentSearch.value.trim());
+        }
+        if (startDate.value) {
+            params.append('startDate', startDate.value);
+        }
+        if (endDate.value) {
+            params.append('endDate', endDate.value);
+        }
+        
+        params.append('page', currentPage);
+        params.append('size', pageSize.value);
+        
+        currentSearchParams = Object.fromEntries(params);
+        
+        fetch(`/api/v1/agent/memory/search?${params.toString()}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + getToken(),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Search failed');
+            }
+            return response.json();
+        })
+        .then(data => {
+            hideLoading();
+            displayResults(data);
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Search error:', error);
+            showError('Failed to search agent memories. Please try again.');
+        });
+    }
+    
+    function showLoading() {
+        loadingSpinner.style.display = 'block';
+        searchStats.style.display = 'none';
+        memoryResults.innerHTML = '';
+        noResults.style.display = 'none';
+        paginationContainer.style.display = 'none';
+    }
+    
+    function hideLoading() {
+        loadingSpinner.style.display = 'none';
+    }
+    
+    function displayResults(data) {
+        totalPages = data.totalPages;
+        
+        // Update stats
+        searchStats.textContent = `Found ${data.totalElements} memories (Page ${data.number + 1} of ${data.totalPages})`;
+        searchStats.style.display = 'block';
+        
+        if (data.content && data.content.length > 0) {
+            // Display memory items
+            memoryResults.innerHTML = data.content.map(memory => `
+                <div class="memory-item">
+                    <div class="memory-header">
+                        <div>
+                            <span class="agent-badge">From: ${escapeHtml(memory.sourceAgent || 'Unknown')}</span>
+                            <span class="agent-badge">To: ${escapeHtml(memory.targetAgent || 'Unknown')}</span>
+                            <span class="badge bg-info">${escapeHtml(memory.messageType || 'Unknown')}</span>
+                        </div>
+                        <div class="timestamp">${formatTimestamp(memory.createdAt)}</div>
+                    </div>
+                    <div class="payload-content">${escapeHtml(memory.payload || 'No content')}</div>
+                </div>
+            `).join('');
+            
+            // Update pagination
+            updatePagination();
+            paginationContainer.style.display = 'flex';
+            noResults.style.display = 'none';
+        } else {
+            memoryResults.innerHTML = '';
+            paginationContainer.style.display = 'none';
+            noResults.style.display = 'block';
+        }
+    }
+    
+    function updatePagination() {
+        prevPage.disabled = currentPage === 0;
+        nextPage.disabled = currentPage >= totalPages - 1;
+        pageInfo.textContent = `Page ${currentPage + 1} of ${totalPages}`;
+    }
+    
+    function formatTimestamp(timestamp) {
+        if (!timestamp) return 'Unknown';
+        const date = new Date(timestamp);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    function getToken() {
+        // Get token from cookies or session storage
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'access_token') {
+                return value;
+            }
+        }
+        return '';
+    }
+    
+    function showError(message) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'alert alert-danger alert-dismissible fade show';
+        errorDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.main-content').insertBefore(errorDiv, document.querySelector('.search-container'));
+        
+        setTimeout(() => {
+            errorDiv.remove();
+        }, 5000);
+    }
+});
+</script>
+</body>
+</html>
