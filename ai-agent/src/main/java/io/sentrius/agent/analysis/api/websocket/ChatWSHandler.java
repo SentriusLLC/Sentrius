@@ -246,6 +246,20 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                         log.info("Next getArguments: {}", nextResponse.getArguments());
                                         lastVerbResponse = executionResponse;
                                         response = nextResponse;
+
+                                        var memory = websocketCommunication.getAgentExecutionContextDTO().flushPersistentMemory();
+                                        if (memory != null) {
+                                            for(var memoryEntry : memory.entrySet()){
+                                                agentClientService.storeMemory(chatAgent.getAgentExecution(),
+                                                    websocketCommunication.getAgentExecutionContextDTO().getAgentContext().getName(),
+                                                    io.sentrius.sso.core.dto.agents.AgentMemoryDTO.builder()
+                                                        .agentName(websocketCommunication.getAgentExecutionContextDTO().getAgentContext().getName())
+                                                        .memoryKey(memoryEntry.getKey())
+                                                        .memoryValue(memoryEntry.getValue().toString())
+                                                        .build());
+                                            }
+                                        }
+
                                     }while (nextResponse.getNextOperation() != null && !nextResponse.getNextOperation().isEmpty());
                                 }catch (Exception e){
                                     e.printStackTrace();

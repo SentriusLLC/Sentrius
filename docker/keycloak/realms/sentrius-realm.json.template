@@ -17,7 +17,8 @@
       "attributes": {
         "access.token.claim": "true",
         "id.token.claim": "true",
-        "userinfo.token.claim": "true"
+        "userinfo.token.claim": "true",
+        "initial.user.type": "System Admin"
       },
       "protocolMappers": [
         {
@@ -32,6 +33,20 @@
             "claim.name": "userType",
             "jsonType.label": "String",
             "user.attribute": "userType"
+          }
+        },
+        {
+          "name": "initialUserType",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "initial_user_type",
+            "jsonType.label": "String",
+            "claim.value": "System Admin",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
           }
         }
       ]

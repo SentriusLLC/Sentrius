@@ -161,7 +161,6 @@ public class ChatAgent extends BaseEnterpriseAgent {
         try {
             if (agentConfigOptions.getType().equalsIgnoreCase("chat-autonomous")) {
 
-
                 response = chatVerbs.promptAgent(agentExecution, agentExecutionContext, prompt);
             }
         } catch (ZtatException e) {
@@ -215,6 +214,19 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                     verbRegistry.getVerbs().get(response.getNextOperation()),
                                     planResponse
                                 );
+
+                                var memory = agentExecutionContext.flushPersistentMemory();
+                                if (memory != null) {
+                                    for(var memoryEntry : memory.entrySet()){
+                                        agentClientService.storeMemory(agentExecution,
+                                            agentExecutionContext.getAgentContext().getName(),
+                                            io.sentrius.sso.core.dto.agents.AgentMemoryDTO.builder()
+                                                .agentName(agentExecutionContext.getAgentContext().getName())
+                                                .memoryKey(memoryEntry.getKey())
+                                                .memoryValue(memoryEntry.getValue().toString())
+                                                .build());
+                                    }
+                                }
 
 
                                 response = nextResponse;

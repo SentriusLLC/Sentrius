@@ -30,6 +30,7 @@ import io.sentrius.agent.analysis.agents.agents.PromptBuilder;
 import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
 import io.sentrius.agent.analysis.model.AssessedTerminal;
 import io.sentrius.agent.analysis.model.Assessment;
+import io.sentrius.agent.analysis.model.LLMResponse;
 import io.sentrius.agent.analysis.model.ZtatAsessment;
 import io.sentrius.agent.analysis.model.ZtatResponse;
 import io.sentrius.agent.services.EndpointRegistry;
@@ -602,8 +603,9 @@ public class AgentVerbs extends VerbBase {
             agentName = agentName.replaceAll("_", "-");
         }
 
+        var originalContext = context.getExecutionArgument("context");
 
-        var requestDtoContext = context.getExecutionArgument("context").orElseThrow().toString();
+        var requestDtoContext = originalContext.orElseThrow().toString();
         requestDtoContext += ". Please request endpoints to perform your work.";
         AgentContextRequestDTO dto = AgentContextRequestDTO.builder().context(requestDtoContext).
             description(requestDtoContext).name(agentName).build();
@@ -618,14 +620,58 @@ public class AgentVerbs extends VerbBase {
             .build());
 
         // load the endpoints
+        var messages = new ArrayList<Message>();
 
-        ObjectNode endpointsLike = JsonUtil.MAPPER.createObjectNode();
-        endpointsLike.put("context", requestDtoContext);
-        context.setExecutionArgs(endpointsLike);
-        var endpoints = getEndpointsLike(execution, context);
-        log.info("Endpoints like {}", endpoints);
+        messages.add(Message.builder().role("system").content("The user will provide the context of what an agent to " +
+            "be created will do. Respond with a json response { \"endpoints_like\" : [ array ] } where array is the " +
+            "features " +
+                "or tools to be called. Do not put endpoints in there, just text and explanation of the endpoint. " +
+            "We'll perform a text " +
+            "search to find" +
+            " endpoints").build());
+        messages.add(Message.builder().role("user").content(originalContext.get().asText()).build());
 
-        context.addToMemory("endpoints", endpoints);
+        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+        var resp = llmService.askQuestion(execution, chatRequest);
+
+        Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
+//        log.info("Response is {}", resp);
+        ArrayNode endpointsLikeList = JsonUtil.MAPPER.createArrayNode();
+        for (Response.Choice choice : response.getChoices()) {
+            var content = choice.getMessage().getContent();
+            if (content.startsWith("```json")) {
+                content = content.substring(7, content.length() - 3);
+            } else if (content.startsWith("```")) {
+                content = content.substring(3, content.length() - 3);
+            }
+            log.info("content is {}", content);
+            if (null != content && !content.isEmpty()) {
+
+                var node = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readTree(content);
+
+                if (node.get("endpoints_like") == null || !node.get("endpoints_like").isArray()) {
+                    log.info("No endpoints_like found in response");
+                    continue;
+                }
+                var arrayNode = (ArrayNode) node.get("endpoints_like");
+                for (JsonNode localNode : arrayNode) {
+                    endpointsLikeList.add(localNode.asText());
+                }
+
+            }
+        }
+
+        if (endpointsLikeList.size() > 0) {
+
+            ObjectNode endpointsLike = JsonUtil.MAPPER.createObjectNode();
+            endpointsLike.put("context", originalContext.orElseThrow().toString());
+            endpointsLike.put("endpoints_like", endpointsLikeList);
+            context.setExecutionArgs(endpointsLike);
+            var endpoints = getEndpointsLike(execution, context);
+            log.info("Endpoints like {}", endpoints);
+
+            context.addToMemory("endpoints", endpoints);
+        }
 
         return createdContext;
     }

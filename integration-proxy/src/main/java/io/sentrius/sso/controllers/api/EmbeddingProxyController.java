@@ -93,7 +93,10 @@ public class EmbeddingProxyController extends BaseController {
 
             String text = (String) request.get("text");
             if (text == null || text.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("Text is required for embedding generation");
+                text = (String) request.get("input");
+                if (text == null || text.trim().isEmpty()) {
+                    return ResponseEntity.badRequest().body("Text is required for embedding generation");
+                }
             }
 
             // Prepare OpenAI API request

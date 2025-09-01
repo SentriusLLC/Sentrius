@@ -11,7 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -209,18 +211,24 @@ public class PersistentAgentMemoryStore {
      * Query memories with filters and pagination
      */
     public Page<AgentMemory> queryMemories(String agentId, String classification, String markings, 
-                                           String requestingUserId, Pageable pageable) {
+                                           String requestingUserId, Pageable requestedPageable) {
         log.debug("Querying memories with filters - agent: {}, classification: {}, markings: {}, user: {}", 
                   agentId, classification, markings, requestingUserId);
-        
-        Page<AgentMemory> memories = agentMemoryRepository.findMemoriesWithFilters(
+
+        Pageable pageable = PageRequest.of(requestedPageable.getPageNumber(), requestedPageable.getPageSize(), Sort.unsorted());
+
+        Page<AgentMemory> memories = agentMemoryRepository.findMemoriesWithFiltersNative(
                 agentId, classification, markings, Instant.now(), pageable);
-        
+
         // Note: For large datasets, consider implementing access control at the database level
         // For now, we filter in memory
-        return memories.map(memory -> 
+        var filteredMemories = memories.map(memory ->
                 accessControlService.canAccessMemory(memory, requestingUserId, agentId, "READ") ? memory : null)
                 .map(memory -> memory); // Remove nulls would need additional implementation
+        return filteredMemories.stream().filter(x -> x != null).collect(Collectors.toList())
+                .stream()
+                .collect(Collectors.collectingAndThen(Collectors.toList(), list ->
+                        new org.springframework.data.domain.PageImpl<>(list, pageable, list.size())));
     }
 
     /**

@@ -12,9 +12,11 @@ import com.google.common.collect.Maps;
 import io.sentrius.sso.core.dto.AgentCommunicationDTO;
 import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
 import io.sentrius.sso.core.dto.AgentRegistrationDTO;
+import io.sentrius.sso.core.dto.PagedResultDTO;
 import io.sentrius.sso.core.dto.agents.AgentContextDTO;
 import io.sentrius.sso.core.dto.agents.AgentContextRequestDTO;
 import io.sentrius.sso.core.dto.agents.AgentMemoryDTO;
+import io.sentrius.sso.core.dto.agents.MemoryQueryDTO;
 import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
 import io.sentrius.sso.core.dto.agents.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.AtatRequest;
@@ -315,12 +317,35 @@ public class AgentClientService {
     }
 
     public void storeMemory(AgentExecution execution, String agentId, AgentMemoryDTO memory) {
-        String url = "/agent/memory/store";
+        String url = "/api/v1/agents/memory/store";
         try {
             zeroTrustClientService.callPostOnApi(execution, url,memory,
                 Maps.immutableEntry("agentId",List.of(agentId)) );
         } catch (ZtatException e) {
             log.error("Failed to store memory for key {}", e.getMessage());
         }
+    }
+
+    public List<AgentMemoryDTO> retrieveMemories(AgentExecution execution, String agentId, MemoryQueryDTO query) {
+        String url = "/api/v1/agents/memory/query";
+        try {
+
+            PagedResultDTO<AgentMemoryDTO> page = zeroTrustClientService.callPostOnApi(
+                execution,
+                url,
+                query,
+                AgentMemoryDTO.class,
+                query.getPage(), query.getSize(), List.of("created_at,desc"), Maps.immutableEntry("agentId",
+                    List.of(agentId))
+            );
+
+
+
+            return page.getContent();
+
+        } catch (ZtatException e) {
+            log.error("Failed to store memory for key {}", e.getMessage());
+        }
+        return List.of();
     }
 }

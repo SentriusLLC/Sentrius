@@ -6,6 +6,7 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.ToString;
 import org.springframework.data.domain.Sort;
 
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MemoryQueryDTO {
 
@@ -31,8 +33,10 @@ public class MemoryQueryDTO {
     private String memoryType;
     
     // Pagination parameters
-    private Integer page;
-    private Integer size;
+    @Builder.Default
+    private Integer page = 0;
+    @Builder.Default
+    private Integer size = 100;
     private String sortBy;
     private Sort.Direction sortDirection;
     

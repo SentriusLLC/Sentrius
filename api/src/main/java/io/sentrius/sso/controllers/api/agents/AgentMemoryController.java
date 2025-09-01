@@ -45,7 +45,7 @@ public class AgentMemoryController extends BaseController {
     /**
      * Store agent memory
      */
-    @PostMapping("/")
+    @PostMapping("/store")
     public ResponseEntity<AgentMemoryDTO> storeMemory(
         @RequestParam(name = "agentId") String agentId,
         @RequestBody @Valid AgentMemoryDTO memoryDTO,
@@ -53,7 +53,7 @@ public class AgentMemoryController extends BaseController {
         HttpServletRequest request, HttpServletResponse response) {
         
         log.info("Storing memory for agent: {}, key: {}, embedding: {}", 
-                agentId, memoryDTO.getMemoryKey(), generateEmbedding);
+                agentId, memoryDTO.getMemoryKey(), generateEmbedding || memoryDTO.isHasEmbedding());
         
         try {
             var operatingUser = getOperatingUser(request,response);
@@ -64,12 +64,23 @@ public class AgentMemoryController extends BaseController {
             if (generateEmbedding) {
                 // Use vector store for embedding generation
                 memory = vectorMemoryStore.storeMemoryWithEmbedding(
-                        agentId,
-                        memoryDTO.getMemoryKey(),
-                        memoryDTO.getMemoryValue(),
-                        memoryDTO.getClassification(),
-                        memoryDTO.getMarkings(),
-                        userId
+                    agentId,
+                    memoryDTO.getMemoryKey(),
+                    memoryDTO.getMemoryValue(),
+                    memoryDTO.getClassification(),
+                    memoryDTO.getMarkings(),
+                    userId
+                );
+            } else if (memoryDTO.isHasEmbedding() && memoryDTO.getEmbedding() != null) {
+                // Store with provided embedding
+                memory = vectorMemoryStore.storeMemoryWithProvidedEmbedding(
+                    agentId,
+                    memoryDTO.getMemoryKey(),
+                    memoryDTO.getMemoryValue(),
+                    memoryDTO.getClassification(),
+                    memoryDTO.getMarkings(),
+                    memoryDTO.getEmbedding(),
+                    userId
                 );
             } else {
                 // Use traditional storage

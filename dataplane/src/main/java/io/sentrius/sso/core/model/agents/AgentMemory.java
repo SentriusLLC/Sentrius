@@ -1,7 +1,6 @@
 package io.sentrius.sso.core.model.agents;
 
 import java.time.Instant;
-import io.sentrius.sso.core.model.FloatArrayToStringConverter;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,6 +11,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Arrays;
@@ -75,17 +76,16 @@ public class AgentMemory {
     @Column(name = "shared_with_agents", columnDefinition = "TEXT")
     private String sharedWithAgents;
 
-    @Lob
-    @Column(name = "metadata", columnDefinition = "TEXT")
-    private String metadata;
+    @Column(name = "metadata", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private JsonNode metadata;
 
     @Column(name = "version")
     @Builder.Default
     private Integer version = 1;
 
-    // Vector embedding for semantic search (1536 dimensions for OpenAI embeddings)
-    @Column(name = "embedding", columnDefinition = "TEXT")
-    @Convert(converter = FloatArrayToStringConverter.class)
+    @Column(name = "embedding", columnDefinition = "vector(1536)")
+    @JdbcTypeCode(SqlTypes.VECTOR)
     private float[] embedding;
 
     @PrePersist
@@ -111,13 +111,13 @@ public class AgentMemory {
 
     // Helper methods for metadata
     public Map<String, Object> getMetadataAsMap() {
-        if (metadata == null || metadata.trim().isEmpty()) {
+        if (metadata == null || metadata.isNull()) {
             return new HashMap<>();
         }
         try {
             ObjectMapper mapper = new ObjectMapper();
-            return mapper.readValue(metadata, Map.class);
-        } catch (JsonProcessingException e) {
+            return mapper.convertValue(metadata, Map.class);
+        } catch (IllegalArgumentException e) {
             return new HashMap<>();
         }
     }
@@ -127,24 +127,16 @@ public class AgentMemory {
             this.metadata = null;
             return;
         }
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            this.metadata = mapper.writeValueAsString(metadataMap);
-        } catch (JsonProcessingException e) {
-            this.metadata = null;
-        }
+        ObjectMapper mapper = new ObjectMapper();
+        this.metadata = mapper.valueToTree(metadataMap);
     }
 
     public JsonNode getMetadataAsJsonNode() {
-        if (metadata == null || metadata.trim().isEmpty()) {
-            return null;
-        }
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            return mapper.readTree(metadata);
-        } catch (JsonProcessingException e) {
-            return null;
-        }
+        return metadata; // already a JsonNode, no parsing needed
+    }
+
+    public void setMetadataAsJsonNode(JsonNode jsonNode) {
+        this.metadata = jsonNode;
     }
 
     // Helper methods for markings

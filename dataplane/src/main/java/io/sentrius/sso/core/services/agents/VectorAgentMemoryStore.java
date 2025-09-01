@@ -284,4 +284,10 @@ public class VectorAgentMemoryStore {
                 .limit(limit)
                 .collect(Collectors.toList());
     }
+
+    public AgentMemory storeMemoryWithProvidedEmbedding(String agentId, String memoryKey, String memoryValue, String classification, String[] markings, float[] embedding, String userId) {
+        AgentMemory memory = persistentMemoryStore.storeMemory(agentId, memoryKey, memoryValue, classification, markings, userId);
+        memory.setEmbedding(embedding);
+        return agentMemoryRepository.save(memory);
+    }
 }

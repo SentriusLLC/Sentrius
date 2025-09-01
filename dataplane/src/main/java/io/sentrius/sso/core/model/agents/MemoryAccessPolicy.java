@@ -3,6 +3,7 @@ package io.sentrius.sso.core.model.agents;
 import java.time.Instant;
 import java.util.Map;
 import java.util.HashMap;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,6 +13,8 @@ import lombok.AllArgsConstructor;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Memory Access Policy defines fine-grained access control for agent memory operations.
@@ -58,13 +61,14 @@ public class MemoryAccessPolicy {
     @Column(name = "target_markings")
     private String targetMarkings;
 
-    @Lob
-    @Column(name = "required_user_attributes", columnDefinition = "TEXT")
-    private String requiredUserAttributes;
 
-    @Lob
-    @Column(name = "required_agent_attributes", columnDefinition = "TEXT")
-    private String requiredAgentAttributes;
+    @Column(name = "required_user_attributes", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private JsonNode requiredUserAttributes;
+
+    @Column(name = "required_agent_attributes", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private JsonNode requiredAgentAttributes;
 
     @Column(name = "access_type")
     private String accessType = "READ";
@@ -93,15 +97,14 @@ public class MemoryAccessPolicy {
         READ, WRITE, DELETE, FULL
     }
 
-    // Helper methods for attribute handling
     public Map<String, Object> getRequiredUserAttributesAsMap() {
-        if (requiredUserAttributes == null || requiredUserAttributes.trim().isEmpty()) {
+        if (requiredUserAttributes == null || requiredUserAttributes.isEmpty()) {
             return new HashMap<>();
         }
         try {
             ObjectMapper mapper = new ObjectMapper();
-            return mapper.readValue(requiredUserAttributes, Map.class);
-        } catch (JsonProcessingException e) {
+            return mapper.convertValue(requiredUserAttributes, Map.class);
+        } catch (IllegalArgumentException e) {
             return new HashMap<>();
         }
     }
@@ -111,22 +114,18 @@ public class MemoryAccessPolicy {
             this.requiredUserAttributes = null;
             return;
         }
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            this.requiredUserAttributes = mapper.writeValueAsString(attributesMap);
-        } catch (JsonProcessingException e) {
-            this.requiredUserAttributes = null;
-        }
+        ObjectMapper mapper = new ObjectMapper();
+        this.requiredUserAttributes = mapper.valueToTree(attributesMap);
     }
 
     public Map<String, Object> getRequiredAgentAttributesAsMap() {
-        if (requiredAgentAttributes == null || requiredAgentAttributes.trim().isEmpty()) {
+        if (requiredAgentAttributes == null || requiredAgentAttributes.isEmpty()) {
             return new HashMap<>();
         }
         try {
             ObjectMapper mapper = new ObjectMapper();
-            return mapper.readValue(requiredAgentAttributes, Map.class);
-        } catch (JsonProcessingException e) {
+            return mapper.convertValue(requiredAgentAttributes, Map.class);
+        } catch (IllegalArgumentException e) {
             return new HashMap<>();
         }
     }
@@ -136,13 +135,10 @@ public class MemoryAccessPolicy {
             this.requiredAgentAttributes = null;
             return;
         }
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            this.requiredAgentAttributes = mapper.writeValueAsString(attributesMap);
-        } catch (JsonProcessingException e) {
-            this.requiredAgentAttributes = null;
-        }
+        ObjectMapper mapper = new ObjectMapper();
+        this.requiredAgentAttributes = mapper.valueToTree(attributesMap);
     }
+
 
     // Helper methods for markings
     public String[] getTargetMarkingsArray() {

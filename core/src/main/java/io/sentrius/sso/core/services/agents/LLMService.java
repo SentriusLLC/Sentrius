@@ -35,11 +35,11 @@ public class LLMService implements EmbeddingService {
 
         var payload = Map.of("input", input, "model", "text-embedding-3-small");
 
-        var textResponse = zeroTrustClientService.callPostOnApi(dto, openAiEndpoint, "/chat/embeddings", payload);
+        var textResponse = zeroTrustClientService.callPostOnApi(dto, openAiEndpoint, "/embeddings/generate", payload);
 
         var response = JsonUtil.MAPPER.readTree(textResponse);
 
-        var vector = response.get("data").get(0).get("embedding");
+        var vector = response.get("embedding");
         float[] embedding = new float[vector.size()];
         for (int i = 0; i < vector.size(); i++) {
             embedding[i] = (float) vector.get(i).asDouble();
