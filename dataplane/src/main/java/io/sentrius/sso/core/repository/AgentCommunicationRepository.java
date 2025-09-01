@@ -30,4 +30,16 @@ public interface AgentCommunicationRepository extends JpaRepository<AgentCommuni
         Instant end,
         Pageable pageable
     );
+
+    // Agent Memory Search methods
+    Page<AgentCommunication> findByPayloadContainingIgnoreCase(String searchTerm, Pageable pageable);
+    
+    Page<AgentCommunication> findBySourceAgentContainingIgnoreCaseOrTargetAgentContainingIgnoreCase(
+        String sourceAgent, String targetAgent, Pageable pageable);
+    
+    Page<AgentCommunication> findByPayloadContainingIgnoreCaseAndCreatedAtBetween(
+        String searchTerm, Instant start, Instant end, Pageable pageable);
+    
+    Page<AgentCommunication> findBySourceAgentAndPayloadContainingIgnoreCase(
+        String sourceAgent, String searchTerm, Pageable pageable);
 }
