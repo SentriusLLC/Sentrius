@@ -34,6 +34,7 @@ public class EndpointRegistry {
     public void loadEndpoints(AgentExecution dto) throws ZtatException, JsonProcessingException {
         List<EndpointDescriptor> endpoints = agentClientService.getAvailableEndpoints(dto); // however you get them
 
+        List<AgentMemoryDTO> requestedMemories = new ArrayList<>();
         for (EndpointDescriptor ed : endpoints) {
             String key = buildKey(ed);
             String json = EndpointDescriptor.toEmbeddableJson(ed);
@@ -49,8 +50,13 @@ public class EndpointRegistry {
             if (existing != null && !existing.isEmpty() && existing.get(0).isHasEmbedding()) {
                 embedding = existing.get(0).getEmbedding();
                 log.info("Reusing existing embedding for {}", key);
+                log.info("Key={} | Embedding hash={} | First5={}",
+                    key,
+                    System.identityHashCode(embedding),
+                    Arrays.toString(Arrays.copyOfRange(embedding, 0, 5)));
+                embeddingMap.put(key, embedding);
             } else {
-                embedding = embeddingService.embed(dto, json);
+                //embedding = embeddingService.embed(dto, json);
 
                 AgentMemoryDTO memory = AgentMemoryDTO.builder()
                     .memoryKey(key)
@@ -61,18 +67,29 @@ public class EndpointRegistry {
                     .accessLevel("read")
                     .creatorUserId("system")
                     .hasEmbedding(true)
-                    .embedding(embedding)
                     .build();
+                requestedMemories.add(memory);
                 log.info("Storing embedding memory for {}", key);
-                agentClientService.storeMemory(dto, MEMORY_NAME, memory);
             }
-            log.info("Key={} | Embedding hash={} | First5={}",
-                key,
-                System.identityHashCode(embedding),
-                Arrays.toString(Arrays.copyOfRange(embedding, 0, 5)));
-            embeddingMap.put(key, embedding);
+
             descriptorMap.put(key, ed);
 
+        }
+
+        if (!requestedMemories.isEmpty()) {
+            List<String> texts = new ArrayList<>();
+            for (AgentMemoryDTO memory : requestedMemories) {
+                texts.add(memory.getMemoryValue());
+            }
+            List<float[]> embeddings = embeddingService.embed(dto, texts);
+            for (int i = 0; i < embeddings.size(); i++) {
+                float[] embedding = embeddings.get(i);
+                AgentMemoryDTO memory = requestedMemories.get(i);
+                memory.setEmbedding(embedding);
+                memory.setHasEmbedding(true);
+                embeddingMap.put(memory.getMemoryKey(), embedding);
+            }
+            agentClientService.storeMemories(dto, MEMORY_NAME, requestedMemories);
         }
     }
 

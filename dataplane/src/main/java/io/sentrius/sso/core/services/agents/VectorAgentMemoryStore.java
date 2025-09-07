@@ -1,8 +1,11 @@
 package io.sentrius.sso.core.services.agents;
 
+import io.sentrius.sso.core.dto.agents.AgentMemoryDTO;
 import io.sentrius.sso.core.model.agents.AgentMemory;
 import io.sentrius.sso.core.repository.AgentMemoryRepository;
+import io.sentrius.sso.core.services.endpoints.CosineSimilarity;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.accumulo.access.AccessEvaluator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -10,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Vector-enhanced agent memory store that provides semantic search capabilities
@@ -143,43 +147,76 @@ public class VectorAgentMemoryStore {
     /**
      * Hybrid search combining text and vector similarity with markings filter
      */
-    public List<AgentMemory> hybridSearch(String searchTerm, String markingsFilter, 
-                                         String requestingUserId, int limit, double threshold) {
+    public List<AgentMemory>  hybridSearch(
+        AccessEvaluator evaluator, String searchTerm, String markingsFilter,
+        String requestingUserId, int limit, double threshold) {
+
         log.debug("Hybrid search - term: {}, markings: {}, user: {}", searchTerm, markingsFilter, requestingUserId);
 
-        if (embeddingService == null || !embeddingService.isAvailable()) {
-            return persistentMemoryStore.findMemoriesByMarkings(markingsFilter, requestingUserId)
-                    .stream().limit(limit).collect(Collectors.toList());
-        }
-
         try {
+            // --- 1. Get semantic embedding
             float[] queryEmbedding = embeddingService.embed(searchTerm);
             if (queryEmbedding == null) {
+                log.warn("Embedding service returned null, falling back to lexical only");
                 return persistentMemoryStore.findMemoriesByMarkings(markingsFilter, requestingUserId)
-                        .stream().limit(limit).collect(Collectors.toList());
+                    .stream().limit(limit).collect(Collectors.toList());
             }
-            
+
             String embeddingString = Arrays.toString(queryEmbedding);
 
-            List<AgentMemory> results;
-            if (markingsFilter != null && !markingsFilter.trim().isEmpty()) {
-                results = agentMemoryRepository.findSimilarMemoriesByMarkings(embeddingString, markingsFilter, limit * 2);
-            } else {
-                results = agentMemoryRepository.hybridSearch(searchTerm, embeddingString, threshold, limit * 2);
+            // --- 2. Run lexical + semantic searches in parallel
+            List<AgentMemory> lexicalResults = persistentMemoryStore
+                .lexicalSearch(searchTerm, requestingUserId);
+
+            List<AgentMemory> semanticResults = (markingsFilter != null && !markingsFilter.trim().isEmpty())
+                ? agentMemoryRepository.findSimilarMemoriesByMarkings(embeddingString, markingsFilter, limit * 3)
+                : agentMemoryRepository.findSimilarMemories(embeddingString, limit * 3);
+
+            log.info("Lexical found {}, Semantic found {}", lexicalResults.size(), semanticResults.size());
+
+            // --- 3. Score + normalize
+            Map<Long, Double> scores = new HashMap<>();
+
+            // Boost lexical matches
+            for (AgentMemory m : lexicalResults) {
+                scores.put(m.getId(), 1.5);
             }
 
-            return results.stream()
-                    .filter(memory -> !memory.isExpired())
-                    .filter(memory -> accessControlService.canAccessMemory(memory, requestingUserId, null, "READ"))
-                    .limit(limit)
-                    .collect(Collectors.toList());
+            // Filter + score semantic matches
+            List<AgentMemory> filteredSemantic = semanticResults.stream()
+                .filter(m -> m.getEmbedding() != null)
+                .filter(m -> {
+                    float sim = CosineSimilarity.score(queryEmbedding, m.getEmbedding());
+                    double normalized = (sim + 1) / 2.0;
+                    log.info("Semantic match - ID: {}, similarity: {}, normalized: {}", m.getId(), sim, normalized);
+                    if (normalized >= threshold) {
+                        scores.merge(m.getId(), normalized, Double::sum);
+                        return true;
+                    }
+                    return false;
+                })
+                .toList();
+
+            // --- 5. Merge + dedupe + sort
+            Set<Long> seen = new HashSet<>();
+            return Stream.concat(lexicalResults.stream(), filteredSemantic.stream())
+                .filter(m -> seen.add(m.getId())) // dedupe by ID
+                .filter(m -> !m.isExpired())
+                .filter(m -> accessControlService.canAccessMemory(m, evaluator, requestingUserId, null, "READ"))
+                .sorted((a, b) -> Double.compare(
+                    scores.getOrDefault(b.getId(), 0.0),
+                    scores.getOrDefault(a.getId(), 0.0)))
+                .limit(limit)
+                .toList();
+
 
         } catch (Exception e) {
             log.error("Error in hybrid search", e);
             return persistentMemoryStore.findMemoriesByMarkings(markingsFilter, requestingUserId)
-                    .stream().limit(limit).collect(Collectors.toList());
+                .stream().limit(limit).collect(Collectors.toList());
         }
     }
+
 
     /**
      * Generate embeddings for memories that don't have them yet
@@ -251,6 +288,25 @@ public class VectorAgentMemoryStore {
         agentMemoryRepository.save(memory);
     }
 
+    public List<AgentMemoryDTO> generateEmbeddings(List<AgentMemoryDTO> memories) {
+        // Create text for embedding from memory content and metadata
+        List<String> textsForEmbedding = memories.stream()
+                .map(this::buildTextForEmbedding)
+                .collect(Collectors.toList());
+
+        // Generate embedding
+        List<float[]> embeddings = embeddingService.embed(textsForEmbedding);
+
+        if (embeddings == null || embeddings.size() != memories.size()) {
+            throw new RuntimeException("Failed to generate embeddings");
+        }
+        for(int i=0; i<memories.size(); i++) {
+            memories.get(i).setEmbedding(embeddings.get(i));
+            memories.get(i).setHasEmbedding(true);
+        }
+        return memories;
+    }
+
     private String buildTextForEmbedding(AgentMemory memory) {
         StringBuilder text = new StringBuilder();
         
@@ -272,6 +328,30 @@ public class VectorAgentMemoryStore {
             text.append("classification: ").append(memory.getClassification());
         }
         
+        return text.toString().trim();
+    }
+
+    private String buildTextForEmbedding(AgentMemoryDTO memory) {
+        StringBuilder text = new StringBuilder();
+
+        // Include memory key and value
+        if (memory.getMemoryKey() != null) {
+            text.append(memory.getMemoryKey()).append(" ");
+        }
+        if (memory.getMemoryValue() != null) {
+            text.append(memory.getMemoryValue()).append(" ");
+        }
+
+        // Include markings for context
+        if (memory.getMarkings() != null) {
+            text.append("markings: ").append(memory.getMarkings()).append(" ");
+        }
+
+        // Include classification for context
+        if (memory.getClassification() != null) {
+            text.append("classification: ").append(memory.getClassification());
+        }
+
         return text.toString().trim();
     }
 

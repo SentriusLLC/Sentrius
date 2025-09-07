@@ -1,5 +1,6 @@
 package io.sentrius.sso.core.services.agents;
 
+import java.util.List;
 import java.util.Map;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
@@ -39,11 +40,39 @@ public class LLMService implements EmbeddingService {
 
         var response = JsonUtil.MAPPER.readTree(textResponse);
 
-        var vector = response.get("embedding");
-        float[] embedding = new float[vector.size()];
-        for (int i = 0; i < vector.size(); i++) {
-            embedding[i] = (float) vector.get(i).asDouble();
+        var dataArray = response.get("data");
+        List<float[]> embeddings = new java.util.ArrayList<>();
+        for (var item : dataArray) {
+            var vector = item.get("embedding");
+            float[] embedding = new float[vector.size()];
+
+            for (int i = 0; i < vector.size(); i++) {
+                embedding[i] = (float) vector.get(i).asDouble();
+            }
+            embeddings.add(embedding);
         }
-        return embedding;
+        return embeddings.get(0);
+    }
+
+    @Override
+    public List<float[]> embed(TokenDTO dto, List<String> texts) throws ZtatException, JsonProcessingException {
+        var payload = Map.of("input", texts, "model", "text-embedding-3-small");
+
+        var textResponse = zeroTrustClientService.callPostOnApi(dto, openAiEndpoint, "/embeddings/generate", payload);
+
+        var response = JsonUtil.MAPPER.readTree(textResponse);
+
+        var dataArray = response.get("data");
+        List<float[]> embeddings = new java.util.ArrayList<>();
+        for (var item : dataArray) {
+            var vector = item.get("embedding");
+            float[] embedding = new float[vector.size()];
+
+            for (int i = 0; i < vector.size(); i++) {
+                embedding[i] = (float) vector.get(i).asDouble();
+            }
+            embeddings.add(embedding);
+        }
+        return embeddings;
     }
 }

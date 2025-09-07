@@ -159,7 +159,8 @@ public class ChatAgent extends BaseEnterpriseAgent {
         PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
         var prompt = promptBuilder.buildPrompt(false);
         try {
-            if (agentConfigOptions.getType().equalsIgnoreCase("chat-autonomous")) {
+            if (null != agentConfigOptions.getType() && agentConfigOptions.getType().equalsIgnoreCase("chat" +
+                "-autonomous")) {
 
                 response = chatVerbs.promptAgent(agentExecution, agentExecutionContext, prompt);
             }
@@ -170,7 +171,7 @@ public class ChatAgent extends BaseEnterpriseAgent {
         }
 
 
-        if (agentConfigOptions.getType().equalsIgnoreCase("chat-autonomous") && response == null) {
+        if (null != agentConfigOptions.getType() &&  agentConfigOptions.getType().equalsIgnoreCase("chat-autonomous") && response == null) {
             log.error("Chat autonomous agent mode enabled but no response received from promptAgent, shutting down...");
             throw new RuntimeException("Chat autonomous agent mode enabled but no response received from promptAgent");
         }
@@ -184,7 +185,8 @@ public class ChatAgent extends BaseEnterpriseAgent {
 
                     Thread.sleep(5_000);
                     agentClientService.heartbeat(agentExecution, agentExecution.getUser().getUsername());
-                    if (agentConfigOptions.getType().equalsIgnoreCase("chat-autonomous")) {
+                    if (null != agentConfigOptions.getType() &&  agentConfigOptions.getType().equalsIgnoreCase("chat" +
+                        "-autonomous")) {
                         log.info("Chat autonomous agent mode enabled, executing workload...");
                         VerbResponse priorResponse = null;
                         Map<String, Object> args = new HashMap<>();

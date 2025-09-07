@@ -590,7 +590,7 @@ public class AgentVerbs extends VerbBase {
         exampleJson = "{ \"context\": \"Notify when a new user is added\" }"
     )
     public AgentContextDTO createAgentContext(AgentExecution execution, AgentExecutionContextDTO context)
-        throws ZtatException, JsonProcessingException {
+        throws ZtatException, Exception {
         log.info("Creating agent context");
         var contextArgs = context.getExecutionArgs();
         if (contextArgs == null || contextArgs.isEmpty()) {
@@ -655,7 +655,19 @@ public class AgentVerbs extends VerbBase {
                 }
                 var arrayNode = (ArrayNode) node.get("endpoints_like");
                 for (JsonNode localNode : arrayNode) {
-                    endpointsLikeList.add(localNode.asText());
+                    if (localNode.isNull() || localNode.asText().isEmpty()) {
+                        continue;
+                    }
+                    if (localNode.has("method") && localNode.has("endpoint")) {
+
+                        if (localNode.get("endpoint").asText().isEmpty() || localNode.get("method").asText().isEmpty()) {
+                            log.info("Skipping empty endpoint or method");
+                            continue;
+                        }
+
+                        endpointsLikeList.add(localNode.asText());
+                    }
+
                 }
 
             }
@@ -817,11 +829,12 @@ public class AgentVerbs extends VerbBase {
     @Verb(name = "get_endpoints_like", returnType = AgentExecutionContextDTO.class, description = "Queries for endpoints in " +
         "the system that match the input text." ,
         returnName = "endpoints",
-        exampleJson = "{ \"endpoints_like\": [ \"listing users\", \"deleting users\" ] }",
+        argName = "endpoints_like",
+        exampleJson = "[ \"listing users\", \"deleting users\" ]",
          requiresTokenManagement = true )
     public ObjectNode getEndpointsLike(AgentExecution execution,
                                                      AgentExecutionContextDTO executionContextDTO)
-        throws ZtatException, JsonProcessingException {
+        throws ZtatException, Exception {
 
         var queryInput = executionContextDTO.getExecutionArgs();
         log.info("Querying for endpoints like: {}", queryInput);
@@ -848,97 +861,11 @@ public class AgentVerbs extends VerbBase {
         }
         contextNode.put("endpoints", endpoints);
 
-        /*
-        var endpoints = verbRegistry.getEndpoints();
-        ArrayNode endpointArray = JsonUtil.MAPPER.createArrayNode();
-        for (var verb : endpoints) {
-            if (verb.getPath() == null || verb.getPath().isEmpty()) {
-                log.warn("Skipping verb {} with empty path", verb.getName());
-                continue;
-            }
-            ObjectNode endpoint = JsonUtil.MAPPER.createObjectNode();
-            endpoint.put("name", verb.getName());
-            endpoint.put("description", verb.getDescription());
-            endpoint.put("method", verb.getHttpMethod());
-            ArrayNode parameters = JsonUtil.MAPPER.createArrayNode();
-            if (verb.getParameters() != null) {
-                for (var param : verb.getParameters()) {
-                    ObjectNode parameter = JsonUtil.MAPPER.createObjectNode();
-                    parameter.put("name", param.getName());
-                    parameter.put("description", param.getDescription());
-                    parameter.put("required", param.isRequired());
-                    parameter.put("type", param.getType());
-                    parameters.add(parameter);
-                }
-            }
-            endpoint.put("parameters", parameters);
-            var path = verb.getPath();
-            if (verb.getServiceUrl() != null && !verb.getServiceUrl().isEmpty()) {
-                if (path.startsWith("/")) {
-                    path = path.substring(1);
-                }
-                path = verb.getServiceUrl() + "/" + path;
-            }
-            endpoint.put("endpoint", path);
-            endpointArray.add(endpoint);
-        }
-        */
-        /*
-        var listedEndpoints = Message.builder().role("system").content("These are a list of available endpoints, " +
-            "description," +
-            " their " +
-            "name. The user will provide a description of necessary actions. return endpoints that meet the " +
-            "criteria with the name and endpoint in a json array. Endpoint may or may not contain a server url (ex : " +
-            "[ { \"name\": " +
-            "\"listUsers\", \"method\": \"GET\", \"endpoint\": \"https://server-url:8080/api/v1/users/list\" } ]:" + endpointArray).build();
-
-        contextNode.put("agentId", "agent1234");
-        contextNode.put("status", "Running");
-        List<Message> messages = new ArrayList<>();
-        messages.add( listedEndpoints);
-
-        messages.add(Message.builder().role("user").content(queryInput.toString()).build());
-        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
-        var resp = llmService.askQuestion(execution, chatRequest);
-
-        Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
-//        log.info("Response is {}", resp);
-        for (Response.Choice choice : response.getChoices()) {
-            var content = choice.getMessage().getContent();
-            if (content.startsWith("```json")) {
-                content = content.substring(7, content.length() - 3);
-            } else if (content.startsWith("```")) {
-                content = content.substring(3, content.length() - 3);
-            }
-            log.info("content is {}", content);
-            if (null != content && !content.isEmpty()) {
-                executionContextDTO.addMessages(choice.getMessage());
-                try {
-
-                    ObjectNode newResponse = JsonUtil.MAPPER.createObjectNode();
-                    JsonNode node = JsonUtil.MAPPER.readTree(content);
-
-                    if (node.isArray()) {
-                        ArrayNode arrayNode = (ArrayNode) node;
-                        newResponse.put("endpoints", arrayNode);
-                        return newResponse;
-                    } else {
-                        log.warn("Expected JSON array but got: {}", node.getNodeType());
-                    }
-
-                    return newResponse;
-                }catch (JsonParseException e) {
-                    log.error("Failed to parse terminal response: {}", e.getMessage());
-                    throw e;
-                }
-            }
-        }
-        */
         return contextNode;
     }
 
     @Verb(name = "call_endpoint", returnType = AgentExecutionContextDTO.class, description = "Executes an endpoint at the " +
-        "service. Input ", exampleJson = "{ \"endpoint\": \"url\", \"method\": \"httpMethod\", \"params\": { " +
+        "service. Input ", exampleJson = "{ \"endpoint\": \"<url>\", \"method\": \"httpMethod\", \"params\": { " +
         "\"param1\": " +
         "\"param1Value\", " +
         "\"param2\": " +
@@ -1029,10 +956,21 @@ public class AgentVerbs extends VerbBase {
             throw new IllegalArgumentException("Unsupported method: " + method);
         }
 
-        queryInput.addMessages(Message.builder().role("system").content("response from endpoint call: " + response).build());
+        if (!isHtml(response)) {
 
-        contextNode.put("response", response);
+
+            queryInput.addMessages(
+                Message.builder().role("system").content("response from endpoint call: " + response).build());
+
+            contextNode.put("response", response);
+        } else {
+            throw new RuntimeException("Received HTML response, likely an error page from " + endpoint);
+        }
         return contextNode;
+    }
+
+    private boolean isHtml(String response){
+        return response != null && (response.trim().startsWith("<!DOCTYPE html>") || response.trim().startsWith("<html"));
     }
 
     public String savePolicy(TokenDTO token, boolean includeDefault, ATPLPolicy policy) throws ZtatException {

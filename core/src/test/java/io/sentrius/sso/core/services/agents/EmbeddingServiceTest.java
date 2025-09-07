@@ -32,6 +32,10 @@ class EmbeddingServiceTest {
     
     @Mock
     private Authentication authentication;
+
+
+    @Mock
+    private ZeroTrustClientService zeroTrustClientService;
     
     @Mock
     private SecurityContext securityContext;
@@ -41,7 +45,7 @@ class EmbeddingServiceTest {
 
     @BeforeEach
     void setUp() {
-        embeddingService = new EmbeddingService(restTemplate, INTEGRATION_PROXY_URL);
+        embeddingService = new EmbeddingService(restTemplate, INTEGRATION_PROXY_URL, zeroTrustClientService);
     }
     
     @AfterEach
@@ -153,7 +157,7 @@ class EmbeddingServiceTest {
         
         // Act
         float[] result1 = embeddingService.embed("");
-        float[] result2 = embeddingService.embed(null);
+        float[] result2 = embeddingService.embed(List.of().toString());
         
         // Assert
         assertNull(result1);

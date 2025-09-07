@@ -18,6 +18,7 @@ import io.sentrius.sso.core.dto.TicketDTO;
 import io.sentrius.sso.core.integrations.ticketing.JiraService;
 import io.sentrius.sso.core.model.security.IntegrationSecurityToken;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.model.verbs.Endpoint;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
@@ -62,6 +63,7 @@ public class JiraProxyController extends BaseController {
     }
 
     @GetMapping("/rest/api/3/search")
+    @Endpoint(description = "Searches for JIRA issues using JQL or a simple query")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<?> searchForJiraIssue(
         @RequestHeader("Authorization") String token,
@@ -119,6 +121,7 @@ public class JiraProxyController extends BaseController {
     }
 
     @GetMapping("/rest/api/3/issue")
+    @Endpoint(description = "Retrieves details of a specific JIRA issue")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<?> fetchJiraIssue(
         @RequestHeader("Authorization") String token,
@@ -164,6 +167,7 @@ public class JiraProxyController extends BaseController {
     }
 
     @PostMapping("/rest/api/3/issue/comment")
+    @Endpoint(description = "Adds a comment to a JIRA issue")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<?> addCommentToJiraIssue(
         @RequestHeader("Authorization") String token,

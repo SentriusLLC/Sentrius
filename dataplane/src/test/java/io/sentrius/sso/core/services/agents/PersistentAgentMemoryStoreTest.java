@@ -34,6 +34,9 @@ class PersistentAgentMemoryStoreTest {
     @Mock
     private MemoryAccessControlService accessControlService;
 
+    @Mock
+    private EmbeddingService embeddingService;
+
     private PersistentAgentMemoryStore memoryStore;
 
     @BeforeEach
@@ -43,7 +46,7 @@ class PersistentAgentMemoryStoreTest {
                 agentMemoryRepository,
                 policyRepository,
                 userAttributeRepository,
-                accessControlService, systemOptions
+                accessControlService,embeddingService,  systemOptions
         );
     }
 

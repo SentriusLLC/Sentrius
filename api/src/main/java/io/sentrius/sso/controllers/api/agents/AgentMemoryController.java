@@ -1,20 +1,27 @@
 package io.sentrius.sso.controllers.api.agents;
 
+import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.agents.AgentMemoryDTO;
 import io.sentrius.sso.core.dto.agents.MemoryQueryDTO;
+import io.sentrius.sso.core.embeddings.EmbeddingService;
 import io.sentrius.sso.core.model.agents.AgentMemory;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.agents.PersistentAgentMemoryStore;
 import io.sentrius.sso.core.services.agents.VectorAgentMemoryStore;
+import io.sentrius.sso.core.services.users.UserAttributeService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.accumulo.access.AccessEvaluator;
+import org.apache.accumulo.access.Authorizations;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -22,6 +29,9 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.security.Principal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,70 +45,80 @@ public class AgentMemoryController extends BaseController {
 
     private final PersistentAgentMemoryStore memoryStore;
     private final VectorAgentMemoryStore vectorMemoryStore;
+    private final UserAttributeService userAttributeService;
+    private final EmbeddingService embeddingService;
 
-    public AgentMemoryController(PersistentAgentMemoryStore memoryStore, VectorAgentMemoryStore vectorMemoryStore, UserService userService, SystemOptions systemOptions, ErrorOutputService errorOutputService) {
+    public AgentMemoryController(PersistentAgentMemoryStore memoryStore, VectorAgentMemoryStore vectorMemoryStore, UserService userService, SystemOptions systemOptions, ErrorOutputService errorOutputService,
+                                 UserAttributeService userAttributeService,
+                                 EmbeddingService embeddingService
+    ) {
         super(userService, systemOptions, errorOutputService);
         this.memoryStore = memoryStore;
         this.vectorMemoryStore = vectorMemoryStore;
+        this.userAttributeService = userAttributeService;
+        this.embeddingService = embeddingService;
     }
 
     /**
      * Store agent memory
      */
     @PostMapping("/store")
-    public ResponseEntity<AgentMemoryDTO> storeMemory(
+    public ResponseEntity<List<AgentMemoryDTO>> storeMemories(
         @RequestParam(name = "agentId") String agentId,
-        @RequestBody @Valid AgentMemoryDTO memoryDTO,
+        @RequestBody List<AgentMemoryDTO> memoryDTOs,
         @RequestParam(defaultValue = "false") boolean generateEmbedding,
         HttpServletRequest request, HttpServletResponse response) {
-        
-        log.info("Storing memory for agent: {}, key: {}, embedding: {}", 
-                agentId, memoryDTO.getMemoryKey(), generateEmbedding || memoryDTO.isHasEmbedding());
+
+
+
         
         try {
             var operatingUser = getOperatingUser(request,response);
             String userId = operatingUser.getUserId();
-            
+
+            List<AgentMemoryDTO> agentMemoryDTOs = new ArrayList<>();
             AgentMemory memory;
-            
             if (generateEmbedding) {
-                // Use vector store for embedding generation
-                memory = vectorMemoryStore.storeMemoryWithEmbedding(
-                    agentId,
-                    memoryDTO.getMemoryKey(),
-                    memoryDTO.getMemoryValue(),
-                    memoryDTO.getClassification(),
-                    memoryDTO.getMarkings(),
-                    userId
-                );
-            } else if (memoryDTO.isHasEmbedding() && memoryDTO.getEmbedding() != null) {
-                // Store with provided embedding
-                memory = vectorMemoryStore.storeMemoryWithProvidedEmbedding(
-                    agentId,
-                    memoryDTO.getMemoryKey(),
-                    memoryDTO.getMemoryValue(),
-                    memoryDTO.getClassification(),
-                    memoryDTO.getMarkings(),
-                    memoryDTO.getEmbedding(),
-                    userId
-                );
-            } else {
-                // Use traditional storage
-                memory = memoryStore.storeMemory(
+
+                memoryDTOs = vectorMemoryStore.generateEmbeddings(memoryDTOs);
+
+            }
+
+            for(AgentMemoryDTO memoryDTO : memoryDTOs) {
+                log.info("Storing memory for agent: {}, key: {}, embedding: {}",
+                    agentId, memoryDTO.getMemoryKey(), generateEmbedding || memoryDTO.isHasEmbedding());
+                if (memoryDTO.isHasEmbedding() && memoryDTO.getEmbedding() != null) {
+                    // Store with provided embedding
+                    memory = vectorMemoryStore.storeMemoryWithProvidedEmbedding(
+                        agentId,
+                        memoryDTO.getMemoryKey(),
+                        memoryDTO.getMemoryValue(),
+                        memoryDTO.getClassification(),
+                        memoryDTO.getMarkings(),
+                        memoryDTO.getEmbedding(),
+                        userId
+                    );
+                } else {
+                    // Use traditional storage
+                    memory = memoryStore.storeMemory(
                         agentId,
                         memoryDTO.getMemoryKey(),
                         memoryDTO.getMemoryValue(),
                         memoryDTO.getClassification(),
                         memoryDTO.getMarkings(),
                         userId
-                );
-            }
-            
-            AgentMemoryDTO responseDTO = convertToDTO(memory);
-            return ResponseEntity.ok(responseDTO);
+                    );
+                }
+
+                AgentMemoryDTO responseDTO = convertToDTO(memory);
+
+                agentMemoryDTOs.add(responseDTO);
+
+        }
+        return ResponseEntity.ok(agentMemoryDTOs);
             
         } catch (Exception e) {
-            log.error("Error storing memory for agent: {}, key: {}", agentId, memoryDTO.getMemoryKey(), e);
+            log.error("Error storing memory for agent: {}, memoryDTOs: {}", agentId, memoryDTOs.size(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -152,12 +172,14 @@ public class AgentMemoryController extends BaseController {
                     queryDTO.getSize(),
                     Sort.by(queryDTO.getSortDirection(), queryDTO.getSortBy())
             );
-            
-            Page<AgentMemory> memories = memoryStore.queryMemories(
+
+
+            Page<AgentMemory> memories = memoryStore.findByMemoryKey(
                     queryDTO.getAgentId(),
                     queryDTO.getClassification(),
                     queryDTO.getMarkings(),
                     userId,
+                    queryDTO.getMemoryKey(),
                     pageRequest
             );
             
@@ -416,7 +438,18 @@ public class AgentMemoryController extends BaseController {
             var operatingUser = getOperatingUser(request,response);
             String userId = operatingUser.getUserId();
 
-            List<AgentMemory> results = vectorMemoryStore.hybridSearch(
+
+            var attributes  = userAttributeService.getUserAttributes(userId);
+
+            List<Authorizations> authorizations = new ArrayList<>();
+
+            for(var attr : attributes) {
+                authorizations.add( Authorizations.of( attr.getAttributeValue() ) );
+            }
+
+            AccessEvaluator evaluator = authorizations.isEmpty() ? null :  AccessEvaluator.of(authorizations);
+
+            List<AgentMemory> results = vectorMemoryStore.hybridSearch(evaluator,
                     searchTerm, markingsFilter, userId, limit, threshold);
             
             List<AgentMemoryDTO> responseDTOs = results.stream()
@@ -508,6 +541,79 @@ public class AgentMemoryController extends BaseController {
         }
         
         return dto;
+    }
+
+    @GetMapping("/search")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<Page<AgentMemoryDTO>> searchAgentMemory(
+        @RequestParam(required = false) String content,
+        @RequestParam(required = false, defaultValue = "") String markings,
+        @RequestParam(required = false) String agent,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size,
+        HttpServletRequest request, HttpServletResponse response) {
+
+        var operatingUser = getOperatingUser(request,response);
+
+        try {
+            log.info("Searching agent memory with parameters - content: '{}', agent: '{}', startDate: {}, endDate: {}, page: {}, size: {}",
+                content, agent, startDate, endDate, page, size);
+            var queryDTOBuilder = MemoryQueryDTO.builder()
+                .searchTerm(content)
+                .includeExpired(false)
+                .page(page)
+                .size(size)
+                .sortBy("createdAt")
+                .sortDirection(Sort.Direction.DESC);
+
+            if (agent != null && !agent.isBlank()) {
+                queryDTOBuilder.agentId(agent);
+            }
+
+            queryDTOBuilder.markings(markings);
+
+            var queryDTO = queryDTOBuilder.build();
+
+            PageRequest pageRequest = PageRequest.of(
+                queryDTO.getPage(),
+                queryDTO.getSize(),
+                Sort.by(queryDTO.getSortDirection(), queryDTO.getSortBy())
+            );
+
+            var attributes  = userAttributeService.getUserAttributes(operatingUser.getUserId()
+            );
+
+            List<Authorizations> authorizations = new ArrayList<>();
+
+            for(var attr : attributes) {
+                log.info("Searching agent memory with attributes - attribute: '{}'", attr);
+                authorizations.add( Authorizations.of( attr.getAttributeValue() ) );
+            }
+
+            log.info("Searching agent memory with authorizations - authorizations): '{}'", authorizations);
+            AccessEvaluator evaluator = authorizations.isEmpty() ? null :  AccessEvaluator.of(authorizations);
+
+            List<AgentMemory> results = vectorMemoryStore.hybridSearch(evaluator,
+                content, markings, operatingUser.getUserId(), 10, 0.75);
+
+            Page<AgentMemoryDTO> responseDTOs = results.stream()
+                .map(this::convertToDTO).collect(Collectors.collectingAndThen(
+                    Collectors.toList(),
+                    list -> {
+                        int start = Math.min((int)pageRequest.getOffset(), list.size());
+                        int end = Math.min((start + pageRequest.getPageSize()), list.size());
+                        return new org.springframework.data.domain.PageImpl<>(list.subList(start, end), pageRequest, list.size());
+                    }
+                ));
+
+            return ResponseEntity.ok(responseDTOs);
+
+        } catch (Exception e) {
+            log.error("Error searching agent memory", e);
+            return ResponseEntity.status(500).build();
+        }
     }
 
 }

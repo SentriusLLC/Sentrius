@@ -207,7 +207,7 @@ public class AgentClientService {
             .agentPublicKeyAlgo(keyType)
             .build();
 
-        var acommResponse = zeroTrustClientService.callPostOnApi(ask, registration);
+        var acommResponse = zeroTrustClientService.callPostOnApi(ask, false,  registration);
         return JsonUtil.MAPPER.readValue(acommResponse, AgentRegistrationDTO.class);
     }
 
@@ -319,10 +319,27 @@ public class AgentClientService {
     public void storeMemory(AgentExecution execution, String agentId, AgentMemoryDTO memory) {
         String url = "/api/v1/agents/memory/store";
         try {
+            log.info("Storing memory for agentId {}: {}", agentId, memory.getMemoryKey());
             zeroTrustClientService.callPostOnApi(execution, url,memory,
                 Maps.immutableEntry("agentId",List.of(agentId)) );
         } catch (ZtatException e) {
             log.error("Failed to store memory for key {}", e.getMessage());
+        }
+    }
+
+    public void storeMemories(AgentExecution execution, String agentId, List<AgentMemoryDTO> memories) {
+        String url = "/api/v1/agents/memory/store";
+        int batchSize = 25; // adjust based on your server limits
+
+        for (int i = 0; i < memories.size(); i += batchSize) {
+            List<AgentMemoryDTO> batch = memories.subList(i, Math.min(i + batchSize, memories.size()));
+            try {
+                log.info("Storing memory batch for agentId {}: {} items", agentId, batch.size());
+                zeroTrustClientService.callPostOnApi(execution, url, batch,
+                    Maps.immutableEntry("agentId", List.of(agentId)));
+            } catch (ZtatException e) {
+                log.error("Failed to store memory batch: {}", e.getMessage());
+            }
         }
     }
 

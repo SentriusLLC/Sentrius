@@ -137,6 +137,12 @@ public class EndpointScanningService {
                 method.getAnnotation(Endpoint.class).description() : "REST endpoint: " + httpMethod + " " + path;
 
         // Check for HTTP method annotations
+        if (method.isAnnotationPresent(Endpoint.class)) {
+            Endpoint mapping = method.getAnnotation(Endpoint.class);
+
+            description = mapping.description();  // <-- use custom description
+        }
+
         if (method.isAnnotationPresent(GetMapping.class)) {
             httpMethod = "GET";
             GetMapping mapping = method.getAnnotation(GetMapping.class);

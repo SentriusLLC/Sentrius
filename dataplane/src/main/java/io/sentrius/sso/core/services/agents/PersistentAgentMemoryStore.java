@@ -34,18 +34,20 @@ public class PersistentAgentMemoryStore {
     private final MemoryAccessPolicyRepository policyRepository;
     private final UserAttributeRepository userAttributeRepository;
     private final MemoryAccessControlService accessControlService;
+    private final EmbeddingService embeddingService;
     
     private final SystemOptions systemOptions;
 
     public PersistentAgentMemoryStore(
-            AgentMemoryRepository agentMemoryRepository,
-            MemoryAccessPolicyRepository policyRepository,
-            UserAttributeRepository userAttributeRepository,
-            MemoryAccessControlService accessControlService, SystemOptions systemOptions) {
+        AgentMemoryRepository agentMemoryRepository,
+        MemoryAccessPolicyRepository policyRepository,
+        UserAttributeRepository userAttributeRepository,
+        MemoryAccessControlService accessControlService, EmbeddingService embeddingService, SystemOptions systemOptions) {
         this.agentMemoryRepository = agentMemoryRepository;
         this.policyRepository = policyRepository;
         this.userAttributeRepository = userAttributeRepository;
         this.accessControlService = accessControlService;
+        this.embeddingService = embeddingService;
         this.systemOptions = systemOptions;
     }
 
@@ -210,7 +212,7 @@ public class PersistentAgentMemoryStore {
     /**
      * Query memories with filters and pagination
      */
-    public Page<AgentMemory> queryMemories(String agentId, String classification, String markings, 
+    public Page<AgentMemory> queryMemories(String agentId, String classification, String markings,
                                            String requestingUserId, Pageable requestedPageable) {
         log.debug("Querying memories with filters - agent: {}, classification: {}, markings: {}, user: {}", 
                   agentId, classification, markings, requestingUserId);
@@ -229,6 +231,58 @@ public class PersistentAgentMemoryStore {
                 .stream()
                 .collect(Collectors.collectingAndThen(Collectors.toList(), list ->
                         new org.springframework.data.domain.PageImpl<>(list, pageable, list.size())));
+    }
+
+    /**
+     * Query memories with filters and pagination
+     */
+    public Page<AgentMemory> findByMemoryKey(String agentId, String classification, String markings,
+                                           String requestingUserId, String memoryKey, Pageable requestedPageable) {
+        log.debug("Querying memories with filters - agent: {}, classification: {}, markings: {}, user: {}, memoryKey: {}",
+            agentId, classification, markings, requestingUserId, memoryKey);
+
+        Pageable pageable = PageRequest.of(requestedPageable.getPageNumber(), requestedPageable.getPageSize(), Sort.unsorted());
+
+
+        Optional<AgentMemory> memories = agentMemoryRepository.findByMemoryKey(memoryKey);
+
+
+        // Note: For large datasets, consider implementing access control at the database level
+        // For now, we filter in memory
+        var filteredMemories = memories.stream().map(memory ->
+                accessControlService.canAccessMemory(memory, requestingUserId, agentId, "READ") ? memory : null)
+            .map(memory -> memory); // Remove nulls would need additional implementation
+        return filteredMemories.filter(x -> x != null).collect(Collectors.toList())
+            .stream()
+            .collect(Collectors.collectingAndThen(Collectors.toList(), list ->
+                new org.springframework.data.domain.PageImpl<>(list, pageable, list.size())));
+    }
+
+    /**
+     * Query memories with filters and pagination
+     */
+    public Page<AgentMemory> queryMemories(String agentId, String classification, String markings,
+                                           String requestingUserId, String searchTerm, Pageable requestedPageable) {
+        log.debug("Querying memories with filters - agent: {}, classification: {}, markings: {}, user: {}, searchTerm: {}",
+            agentId, classification, markings, requestingUserId, searchTerm);
+
+        Pageable pageable = PageRequest.of(requestedPageable.getPageNumber(), requestedPageable.getPageSize(), Sort.unsorted());
+
+        float[] queryEmbedding = embeddingService.embed(searchTerm);
+        String embedding = Arrays.toString(queryEmbedding);
+        List<AgentMemory> memories = agentMemoryRepository.findNearestMemories(
+            embedding, agentId, classification, markings,  Instant.now(), requestedPageable.getPageSize());
+
+
+        // Note: For large datasets, consider implementing access control at the database level
+        // For now, we filter in memory
+        var filteredMemories = memories.stream().map(memory ->
+                accessControlService.canAccessMemory(memory, requestingUserId, agentId, "READ") ? memory : null)
+            .map(memory -> memory); // Remove nulls would need additional implementation
+        return filteredMemories.filter(x -> x != null).collect(Collectors.toList())
+            .stream()
+            .collect(Collectors.collectingAndThen(Collectors.toList(), list ->
+                new org.springframework.data.domain.PageImpl<>(list, pageable, list.size())));
     }
 
     /**
@@ -317,5 +371,34 @@ public class PersistentAgentMemoryStore {
         stats.put("shared_memories", agentMemoryRepository.countByClassification("SHARED"));
         
         return stats;
+    }
+
+    public List<AgentMemory> lexicalSearch(String searchTerm, String requestingUserId) {
+        if (!isMemoryStoreEnabled()) {
+            log.warn("Memory store is disabled - lexical search skipped");
+            return Collections.emptyList();
+        }
+
+        log.debug("Performing lexical search for term='{}' by user={}", searchTerm, requestingUserId);
+
+        // Limit to prevent unbounded results (configurable, e.g. 100)
+        int limit = 100;
+
+        List<AgentMemory> results = agentMemoryRepository.lexicalSearch(
+            searchTerm,
+            Instant.now(),
+            limit
+        );
+
+        log.info("Lexical search returned {} raw results for term='{}'", results.size(), searchTerm);
+
+        return results.stream()
+            .filter(memory -> !memory.isExpired())
+            .filter(memory -> accessControlService.canAccessMemory(
+                memory,
+                requestingUserId,
+                memory.getAgentId(),
+                "READ"))
+            .collect(Collectors.toList());
     }
 }

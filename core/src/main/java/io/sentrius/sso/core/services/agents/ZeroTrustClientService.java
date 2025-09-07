@@ -160,7 +160,7 @@ public class ZeroTrustClientService {
      * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
      */
     public <T> String callPostOnApi(String endpoint,@NonNull String apiEndpoint, T body) throws ZtatException {
-        return callPostOnApi(endpoint, apiEndpoint, body, null);
+        return callPostOnApi(endpoint, apiEndpoint, false, body, null);
     }
 
 
@@ -169,7 +169,14 @@ public class ZeroTrustClientService {
      * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
      */
     public <T> String callPostOnApi(@NonNull String apiEndpoint, T body) throws ZtatException {
-        return callPostOnApi(agentApiUrl, apiEndpoint, body, null);
+        return callPostOnApi(agentApiUrl, apiEndpoint, false, body, null);
+    }
+
+    /**
+     * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
+     */
+    public <T> String callPostOnApi(@NonNull String apiEndpoint,boolean setToken, T body) throws ZtatException {
+        return callPostOnApi(agentApiUrl, apiEndpoint, setToken, body, null);
     }
 
 
@@ -177,12 +184,17 @@ public class ZeroTrustClientService {
      * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
      */
     public <T> String callPostOnApi(@NonNull String apiEndpoint, T body, Map.Entry<String, List<String>>... params) throws ZtatException {
-        return callPostOnApi(agentApiUrl, apiEndpoint, body, params);
+        return callPostOnApi(agentApiUrl, apiEndpoint,false , body, params);
     }
 
-    <T> String callPostOnApi(String endpoint, @NonNull String apiEndpoint, T body,Map.Entry<String, List<String>>... params) throws ZtatException {
+    <T> String callPostOnApi(String endpoint, @NonNull String apiEndpoint, boolean setToken, T body,
+                             Map.Entry<String, List<String>>... params) throws ZtatException {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        if (setToken) {
+            String keycloakJwt = getKeycloakToken();
+            headers.setBearerAuth(keycloakJwt);
+        }
 
         log.info("Sending {}", body.toString());
         HttpEntity<T> requestEntity = new HttpEntity<>(body, headers);

@@ -15,10 +15,12 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,10 +57,10 @@ public class EmbeddingProxyController extends BaseController {
      */
     @PostMapping("/generate")
     public ResponseEntity<?> generateEmbedding(
-            @RequestHeader("Authorization") String token,
-            @RequestBody Map<String, Object> request,
-            HttpServletRequest httpRequest,
-            HttpServletResponse httpResponse) {
+        @RequestHeader("Authorization") String token,
+        @RequestBody Map<String, Object> request,
+        HttpServletRequest httpRequest,
+        HttpServletResponse httpResponse) {
 
         String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
 
@@ -78,10 +80,9 @@ public class EmbeddingProxyController extends BaseController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
         }
 
-        // Get OpenAI integration token
         var openAiToken = integrationSecurityTokenService.findByConnectionType("openai")
-                .stream().findFirst().orElse(null);
-        
+            .stream().findFirst().orElse(null);
+
         if (openAiToken == null) {
             log.warn("No OpenAI integration found for embedding generation");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No OpenAI integration found");
@@ -89,33 +90,49 @@ public class EmbeddingProxyController extends BaseController {
 
         try {
             ExternalIntegrationDTO integrationDTO = JsonUtil.MAPPER.readValue(
-                    openAiToken.getConnectionInfo(), ExternalIntegrationDTO.class);
+                openAiToken.getConnectionInfo(), ExternalIntegrationDTO.class);
 
-            String text = (String) request.get("text");
-            if (text == null || text.trim().isEmpty()) {
-                text = (String) request.get("input");
-                if (text == null || text.trim().isEmpty()) {
-                    return ResponseEntity.badRequest().body("Text is required for embedding generation");
-                }
+            Object inputObj = request.get("input");
+            if (inputObj == null) {
+                inputObj = request.get("text"); // support "text" as fallback
+            }
+            if (inputObj == null) {
+                return ResponseEntity.badRequest().body("Input is required for embedding generation");
             }
 
-            // Prepare OpenAI API request
+            List<String> inputs = new ArrayList<>();
+            if (inputObj instanceof String s) {
+                if (s.trim().isEmpty()) {
+                    return ResponseEntity.badRequest().body("Input string cannot be empty");
+                }
+                inputs.add(s);
+            } else if (inputObj instanceof List<?>) {
+                for (Object o : (List<?>) inputObj) {
+                    if (o instanceof String s && !s.trim().isEmpty()) {
+                        inputs.add(s);
+                    }
+                }
+            } else {
+                return ResponseEntity.badRequest().body("Input must be a string or an array of strings");
+            }
+
+            if (inputs.isEmpty()) {
+                return ResponseEntity.badRequest().body("No valid inputs provided");
+            }
+
+            // Call OpenAI
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + integrationDTO.getApiToken());
-            headers.set("Content-Type", "application/json");
+            headers.setContentType(MediaType.APPLICATION_JSON);
 
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("input", text);
+            requestBody.put("input", inputs);
             requestBody.put("model", "text-embedding-3-small");
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-            log.debug("Generating embedding for user: {}, text length: {}", 
-                     operatingUser.getUsername(), text.length());
-
-            // Make API call to OpenAI
             ResponseEntity<Map> response = restTemplate.exchange(
-                    openAiApiUrl, HttpMethod.POST, entity, Map.class);
+                openAiApiUrl, HttpMethod.POST, entity, Map.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 Map<String, Object> responseBody = response.getBody();
@@ -123,37 +140,44 @@ public class EmbeddingProxyController extends BaseController {
                 List<Map<String, Object>> data = (List<Map<String, Object>>) responseBody.get("data");
 
                 if (data != null && !data.isEmpty()) {
-                    @SuppressWarnings("unchecked")
-                    List<Double> embedding = (List<Double>) data.get(0).get("embedding");
+                    // Convert all embeddings to float arrays
+                    List<Map<String, Object>> embeddings = new ArrayList<>();
+                    for (int i = 0; i < data.size(); i++) {
+                        @SuppressWarnings("unchecked")
+                        List<Double> embedding = (List<Double>) data.get(i).get("embedding");
 
-                    // Convert to float array for consistency with database storage
-                    float[] result = new float[embedding.size()];
-                    for (int i = 0; i < embedding.size(); i++) {
-                        result[i] = embedding.get(i).floatValue();
+                        float[] result = new float[embedding.size()];
+                        for (int j = 0; j < embedding.size(); j++) {
+                            result[j] = embedding.get(j).floatValue();
+                        }
+
+                        Map<String, Object> embeddingMap = new HashMap<>();
+                        embeddingMap.put("object", "embedding");
+                        embeddingMap.put("index", i);
+                        embeddingMap.put("embedding", result);
+                        embeddings.add(embeddingMap);
                     }
 
-                    Map<String, Object> responseMap = new HashMap<>();
-                    responseMap.put("embedding", result);
-                    responseMap.put("dimensions", result.length);
-                    responseMap.put("text_length", text.length());
+                    // Wrap like OpenAI does
+                    Map<String, Object> wrapper = new HashMap<>();
+                    wrapper.put("object", "list");
+                    wrapper.put("data", embeddings);
 
-                    log.debug("Generated embedding with {} dimensions for user: {}", 
-                             result.length, operatingUser.getUsername());
-
-                    return ResponseEntity.ok(responseMap);
+                    return ResponseEntity.ok(wrapper);
                 }
             }
 
             log.warn("Failed to generate embedding - unexpected response format");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to generate embedding");
+                .body("Failed to generate embedding");
 
         } catch (Exception e) {
             log.error("Error generating embedding for user: {}", operatingUser.getUsername(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error generating embedding: " + e.getMessage());
+                .body("Error generating embedding: " + e.getMessage());
         }
     }
+
 
     /**
      * Generate embeddings for multiple texts in batch

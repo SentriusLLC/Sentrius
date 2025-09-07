@@ -113,6 +113,11 @@
                                        placeholder="Enter agent name to filter...">
                             </div>
                             <div class="col-md-4">
+                                <label for="markingsSearch" class="form-label">Markings</label>
+                                <input type="text" id="markingsSearch" class="form-control"
+                                       placeholder="Enter markings to filter...">
+                            </div>
+                            <div class="col-md-4">
                                 <label for="pageSize" class="form-label">Results per page</label>
                                 <select id="pageSize" class="form-select">
                                     <option value="10">10</option>
@@ -180,6 +185,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchForm = document.getElementById('searchForm');
     const contentSearch = document.getElementById('contentSearch');
     const agentSearch = document.getElementById('agentSearch');
+    const markingsSearch = document.getElementById('markingsSearch');
     const startDate = document.getElementById('startDate');
     const endDate = document.getElementById('endDate');
     const pageSize = document.getElementById('pageSize');
@@ -193,14 +199,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const prevPage = document.getElementById('prevPage');
     const nextPage = document.getElementById('nextPage');
     const pageInfo = document.getElementById('pageInfo');
-    
-    // Load initial data
-    performSearch();
+
     
     searchForm.addEventListener('submit', function(e) {
         e.preventDefault();
         currentPage = 0;
         performSearch();
+
+
     });
     
     prevPage.addEventListener('click', function() {
@@ -228,6 +234,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (agentSearch.value.trim()) {
             params.append('agent', agentSearch.value.trim());
         }
+        if (markingsSearch.value.trim()) {
+            params.append('markings', markingsSearch.value.trim());
+        }
         if (startDate.value) {
             params.append('startDate', startDate.value);
         }
@@ -240,10 +249,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         currentSearchParams = Object.fromEntries(params);
         
-        fetch(`/api/v1/agent/memory/search?${params.toString()}`, {
+        fetch(`/api/v1/agents/memory/search?${params.toString()}`, {
             method: 'GET',
             headers: {
-                'Authorization': 'Bearer ' + getToken(),
                 'Content-Type': 'application/json'
             }
         })
@@ -256,12 +264,18 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             hideLoading();
             displayResults(data);
+            const submitButton = searchForm.querySelector('button[type="submit"]');
+            submitButton.disabled = false;
+            submitButton.removeAttribute("aria-disabled");
+            submitButton.classList.remove("disabled");
         })
         .catch(error => {
             hideLoading();
             console.error('Search error:', error);
             showError('Failed to search agent memories. Please try again.');
         });
+
+
     }
     
     function showLoading() {
@@ -289,13 +303,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="memory-item">
                     <div class="memory-header">
                         <div>
-                            <span class="agent-badge">From: ${escapeHtml(memory.sourceAgent || 'Unknown')}</span>
-                            <span class="agent-badge">To: ${escapeHtml(memory.targetAgent || 'Unknown')}</span>
-                            <span class="badge bg-info">${escapeHtml(memory.messageType || 'Unknown')}</span>
+                            <span class="agent-badge">From: ${escapeHtml(memory.agentId || 'Unknown')}</span>
+                            <span class="agent-badge">Key: ${escapeHtml(memory.memoryKey || 'Unknown')}</span>
+                            <span class="badge bg-info">Type: ${escapeHtml(memory.memoryType || 'Unknown')}</span>
                         </div>
                         <div class="timestamp">${formatTimestamp(memory.createdAt)}</div>
                     </div>
-                    <div class="payload-content">${escapeHtml(memory.payload || 'No content')}</div>
+                    <div class="payload-content">${escapeHtml(memory.memoryValue || 'No content')}</div>
                 </div>
             `).join('');
             

@@ -38,7 +38,6 @@ import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.AgentContextService;
-import io.sentrius.sso.core.services.agents.AgentMemorySearchService;
 import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.services.auditing.AuditService;
 import io.sentrius.sso.core.services.security.CryptoService;
@@ -86,7 +85,6 @@ public class AgentApiController extends BaseController {
     final ZeroTrustRequestService ztatRequestService;
     final AgentContextService agentContextService;
     final AgentClientService agentClientService;
-    final AgentMemorySearchService agentMemorySearchService;
     final AppConfig appConfig;
 
     public AgentApiController(
@@ -99,7 +97,7 @@ public class AgentApiController extends BaseController {
         ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService, AgentService agentService,
         ProvenanceKafkaProducer provenanceKafkaProducer, ZeroTrustRequestService ztatRequestService,
         AgentContextService agentContextService, AgentClientService agentClientService, 
-        AgentMemorySearchService agentMemorySearchService, AppConfig appConfig
+         AppConfig appConfig
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
@@ -114,7 +112,6 @@ public class AgentApiController extends BaseController {
         this.ztatRequestService = ztatRequestService;
         this.agentContextService = agentContextService;
         this.agentClientService = agentClientService;
-        this.agentMemorySearchService = agentMemorySearchService;
         this.appConfig = appConfig;
     }
 
@@ -830,50 +827,6 @@ public class AgentApiController extends BaseController {
         return ResponseEntity.ok(dto);
     }
 
-    @GetMapping("/memory/search")
-    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
-    public ResponseEntity<?> searchAgentMemory(
-        @RequestParam(required = false) String content,
-        @RequestParam(required = false) String agent,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
-        @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "20") int size
-    ) {
-        try {
-            log.info("Searching agent memory with parameters - content: '{}', agent: '{}', startDate: {}, endDate: {}, page: {}, size: {}", 
-                     content, agent, startDate, endDate, page, size);
 
-            // Determine search type and execute appropriate search
-            if (content != null && !content.trim().isEmpty()) {
-                if (startDate != null && endDate != null) {
-                    // Search by content and date range
-                    var results = agentMemorySearchService.searchByContentAndDateRange(
-                        content.trim(), startDate, endDate, page, size);
-                    return ResponseEntity.ok(results);
-                } else if (agent != null && !agent.trim().isEmpty()) {
-                    // Search by specific agent and content
-                    var results = agentMemorySearchService.searchByAgentAndContent(
-                        agent.trim(), content.trim(), page, size);
-                    return ResponseEntity.ok(results);
-                } else {
-                    // Search by content only
-                    var results = agentMemorySearchService.searchByContent(content.trim(), page, size);
-                    return ResponseEntity.ok(results);
-                }
-            } else if (agent != null && !agent.trim().isEmpty()) {
-                // Search by agent only
-                var results = agentMemorySearchService.searchByAgent(agent.trim(), page, size);
-                return ResponseEntity.ok(results);
-            } else {
-                // Return all memories with pagination
-                var results = agentMemorySearchService.getAllMemories(page, size);
-                return ResponseEntity.ok(results);
-            }
-        } catch (Exception e) {
-            log.error("Error searching agent memory", e);
-            return ResponseEntity.status(500).body("Error searching agent memory: " + e.getMessage());
-        }
-    }
 
 }

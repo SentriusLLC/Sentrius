@@ -6,6 +6,7 @@ import io.sentrius.sso.core.model.users.UserAttribute;
 import io.sentrius.sso.core.repository.MemoryAccessPolicyRepository;
 import io.sentrius.sso.core.repository.UserAttributeRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.accumulo.access.AccessEvaluator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Service;
 
@@ -27,12 +28,14 @@ public class MemoryAccessControlService {
         this.userAttributeRepository = userAttributeRepository;
     }
 
-    /**
-     * Main ABAC evaluation method - determines if a user can access a memory item
-     */
-    public boolean canAccessMemory(AgentMemory memory, String userId, String agentId, String accessType) {
-        log.debug("Evaluating access for user: {}, agent: {}, memory: {}, access: {}", 
-                  userId, agentId, memory.getMemoryKey(), accessType);
+    public boolean canAccessMemory(AgentMemory memory, AccessEvaluator evaluator, String userId, String agentId,
+                                   String accessType) {
+        log.debug("Evaluating access for user: {}, agent: {}, memory: {}, access: {}",
+            userId, agentId, memory.getMemoryKey(), accessType);
+
+        log.info("Memory details - Classification: {}, Markings: {}, Creator: {}, Access Level: {}, Expired: {}",
+            memory.getClassification(), memory.getMarkings(), memory.getCreatorUserId(),
+            memory.getAccessLevel(), memory.isExpired());
 
         // Quick checks for obvious cases
         if (memory.isExpired()) {
@@ -41,7 +44,7 @@ public class MemoryAccessControlService {
         }
 
         // If memory is public and access type is READ, allow
-        if ("PUBLIC".equals(memory.getClassification()) && "READ".equals(accessType)) {
+        if ("PUBLIC".equalsIgnoreCase(memory.getClassification()) && "READ".equalsIgnoreCase(accessType)) {
             log.debug("Public memory read access granted");
             return true;
         }
@@ -65,13 +68,13 @@ public class MemoryAccessControlService {
 
         // Get user attributes for ABAC evaluation
         Map<String, Object> userAttributes = getUserAttributesMap(userId);
-        
+
         // Get agent attributes (if available)
         Map<String, Object> agentAttributes = getAgentAttributesMap(agentId);
 
         // Find applicable policies
         List<MemoryAccessPolicy> applicablePolicies = findApplicablePolicies(
-                memory.getClassification(), memory.getMarkings(), accessType);
+            memory.getClassification(), memory.getMarkings(), accessType);
 
         // Evaluate policies
         for (MemoryAccessPolicy policy : applicablePolicies) {
@@ -81,8 +84,22 @@ public class MemoryAccessControlService {
             }
         }
 
+        if (applicablePolicies.isEmpty()) {
+            if (null != evaluator){
+                if( evaluator.canAccess(memory.getMarkings()) ){
+                    return true;
+                }
+            }
+        }
+
         log.debug("Access denied - no applicable policies matched");
         return false;
+    }
+    /**
+     * Main ABAC evaluation method - determines if a user can access a memory item
+     */
+    public boolean canAccessMemory(AgentMemory memory, String userId, String agentId, String accessType) {
+        return canAccessMemory(memory, null, userId, agentId, accessType);
     }
 
     /**

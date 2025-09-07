@@ -1,5 +1,7 @@
 package io.sentrius.sso.core.services.agents;
 
+import io.sentrius.sso.core.exceptions.ZtatException;
+import io.sentrius.sso.core.utils.JsonUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -25,12 +27,16 @@ public class EmbeddingService {
 
     private final RestTemplate restTemplate;
     private final String integrationProxyUrl;
+    private final ZeroTrustClientService zeroTrustClientService;
 
     public EmbeddingService(
-            RestTemplate restTemplate,
-            @Value("${sentrius.integration-proxy.url:http://localhost:8081}") String integrationProxyUrl) {
+        RestTemplate restTemplate,
+        @Value("${sentrius.integration.proxyUrl:http://localhost:8081}") String integrationProxyUrl,
+        ZeroTrustClientService zeroTrustClientService
+    ) {
         this.restTemplate = restTemplate;
         this.integrationProxyUrl = integrationProxyUrl;
+        this.zeroTrustClientService = zeroTrustClientService;
     }
 
     /**
@@ -38,6 +44,7 @@ public class EmbeddingService {
      */
     public boolean isAvailable() {
         try {
+            /*
             String url = integrationProxyUrl + "/api/v1/embeddings/status";
             HttpHeaders headers = createAuthHeaders();
             if (headers == null) {
@@ -51,8 +58,10 @@ public class EmbeddingService {
                 Map<String, Object> status = response.getBody();
                 return Boolean.TRUE.equals(status.get("available"));
             }
+            *
+             */
             
-            return false;
+            return true;
         } catch (Exception e) {
             log.warn("Failed to check embedding service availability: {}", e.getMessage());
             return false;
@@ -70,48 +79,73 @@ public class EmbeddingService {
 
         try {
             String url = integrationProxyUrl + "/api/v1/embeddings/generate";
-            HttpHeaders headers = createAuthHeaders();
-            if (headers == null) {
-                log.warn("No authentication context available for embedding generation");
-                return null;
+
+            var payload = Map.of("input", text, "model", "text-embedding-3-small");
+
+            var responseStr = zeroTrustClientService.callPostOnApi(integrationProxyUrl, "/api/v1/embeddings/generate"
+                ,true,
+                payload);
+
+
+            var response = JsonUtil.MAPPER.readTree(responseStr);
+
+            var vector = response.get("embedding");
+            float[] embedding = new float[vector.size()];
+            for (int i = 0; i < vector.size(); i++) {
+                embedding[i] = (float) vector.get(i).asDouble();
             }
-            
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("text", text);
-            
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-            
-            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
-            
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                Map<String, Object> responseBody = response.getBody();
-                
-                if (responseBody.containsKey("embedding")) {
-                    Object embeddingObj = responseBody.get("embedding");
-                    
-                    if (embeddingObj instanceof float[]) {
-                        return (float[]) embeddingObj;
-                    } else if (embeddingObj instanceof List) {
-                        @SuppressWarnings("unchecked")
-                        List<Number> embeddingList = (List<Number>) embeddingObj;
-                        float[] result = new float[embeddingList.size()];
-                        for (int i = 0; i < embeddingList.size(); i++) {
-                            result[i] = embeddingList.get(i).floatValue();
-                        }
-                        
-                        log.debug("Generated embedding with {} dimensions for text length: {}", 
-                                result.length, text.length());
-                        return result;
-                    }
-                }
-            }
-            
-            log.warn("Failed to generate embedding - unexpected response format");
-            return null;
-            
+            return embedding;
+
         } catch (Exception e) {
             log.error("Error generating embedding for text: {}", text.substring(0, Math.min(100, text.length())), e);
             return null;
+        } catch (ZtatException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Generate embedding for the given text via integration proxy
+     */
+    public List<float []> embed(List<String> texts) {
+        if (texts == null || texts.isEmpty()) {
+            log.warn("Cannot generate embedding for empty text");
+            return null;
+        }
+
+        try {
+            String url = integrationProxyUrl + "/api/v1/embeddings/generate";
+
+            var payload = Map.of("input", texts, "model", "text-embedding-3-small");
+
+            var responseStr = zeroTrustClientService.callPostOnApi(integrationProxyUrl, "/api/v1/embeddings/generate"
+                ,true,
+                payload);
+
+
+            var response = JsonUtil.MAPPER.readTree(responseStr);
+
+            List<float []> embeddings = new java.util.ArrayList<>();
+            var data = response.get("data");
+            if (data.isArray() && !data.isEmpty()) {
+
+                for(var dataResponse : data) {
+
+                    var vector = dataResponse.get("embedding");
+                    float[] embedding = new float[vector.size()];
+                    for (int i = 0; i < vector.size(); i++) {
+                        embedding[i] = (float) vector.get(i).asDouble();
+                    }
+                    embeddings.add(embedding);
+                };
+            }
+            return embeddings;
+
+        } catch (Exception e) {
+            log.error("Error generating embedding for texts size is : {}", texts.size(), e);
+            return null;
+        } catch (ZtatException e) {
+            throw new RuntimeException(e);
         }
     }
 

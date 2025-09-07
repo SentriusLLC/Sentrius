@@ -90,6 +90,29 @@ public interface AgentMemoryRepository extends JpaRepository<AgentMemory, Long> 
         @Param("now") Instant now,
         Pageable pageable);
 
+
+    @Query(
+        value = """
+        SELECT * 
+        FROM agent_memory m
+        WHERE (:agentId IS NULL OR m.agent_id = :agentId)
+          AND (:classification IS NULL OR m.classification = :classification)
+          AND (:markings IS NULL OR m.markings LIKE CONCAT('%', CAST(:markings AS VARCHAR), '%'))
+          AND (m.expires_at IS NULL OR m.expires_at > :now)
+        ORDER BY m.embedding <#> CAST(:embedding AS vector)
+        LIMIT :limit
+        """,
+        nativeQuery = true
+    )
+    List<AgentMemory> findNearestMemories(
+        @Param("embedding") String embedding,
+        @Param("agentId") String agentId,
+        @Param("classification") String classification,
+        @Param("markings") String markings,
+        @Param("now") Instant now,
+        @Param("limit") int limit
+    );
+
     // === Expiration ===
 
     @Query("SELECT m FROM AgentMemory m WHERE m.expiresAt IS NULL OR m.expiresAt > :now")
@@ -121,8 +144,9 @@ public interface AgentMemoryRepository extends JpaRepository<AgentMemory, Long> 
     // === Embeddings ===
 
     @Query(
-        value = "SELECT m FROM AgentMemory m WHERE m.embedding IS NULL ORDER BY m.createdAt DESC",
-        nativeQuery = true)
+        value = "SELECT * FROM agent_memory WHERE embedding IS NULL ORDER BY created_at DESC",
+        nativeQuery = true
+    )
     List<AgentMemory> findMemoriesWithoutEmbeddings(Pageable pageable);
 
     // === Vector similarity searches ===
@@ -190,5 +214,22 @@ public interface AgentMemoryRepository extends JpaRepository<AgentMemory, Long> 
                                    @Param("queryEmbedding") String queryEmbedding,
                                    @Param("threshold") double threshold,
                                    @Param("limit") int limit);
+
+    // Lexical (keyword) search on content
+    @Query(value = """
+    SELECT * 
+    FROM agent_memory m
+    WHERE (LOWER(m.memory_value) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
+           OR LOWER(m.memory_key) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
+           OR LOWER(CAST(m.metadata AS TEXT)) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
+      AND (m.expires_at IS NULL OR m.expires_at > :now)
+    ORDER BY m.created_at DESC
+    LIMIT :limit
+    """,
+        nativeQuery = true)
+    List<AgentMemory> lexicalSearch(
+        @Param("searchTerm") String searchTerm,
+        @Param("now") Instant now,
+        @Param("limit") int limit);
 }
 
