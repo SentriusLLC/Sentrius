@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
-import io.sentrius.sso.core.embeddings.EmbeddingService;
+import io.sentrius.sso.core.embeddings.EmbeddingServiceIfc;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.utils.JsonUtil;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-public class LLMService implements EmbeddingService {
+public class LLMService implements EmbeddingServiceIfc {
 
     final ZeroTrustClientService zeroTrustClientService;
 

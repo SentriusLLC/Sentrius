@@ -5,11 +5,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
-import io.sentrius.sso.core.embeddings.EmbeddingService;
+import io.sentrius.sso.core.embeddings.EmbeddingServiceIfc;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.services.endpoints.CosineSimilarity;
 import lombok.extern.slf4j.Slf4j;
@@ -19,11 +17,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class EndpointSearcher {
 
-    private final EmbeddingService embeddingService;
+    private final EmbeddingServiceIfc embeddingService;
     private final EndpointRegistry endpointRegistry;
 
-    public EndpointSearcher(EmbeddingService embeddingService,
-                            EndpointRegistry endpointRegistry
+    public EndpointSearcher(
+        EmbeddingServiceIfc embeddingService,
+        EndpointRegistry endpointRegistry
     ) {
 
         this.embeddingService = embeddingService;

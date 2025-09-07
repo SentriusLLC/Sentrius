@@ -5,7 +5,7 @@ import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.agents.AgentMemoryDTO;
 import io.sentrius.sso.core.dto.agents.MemoryQueryDTO;
-import io.sentrius.sso.core.embeddings.EmbeddingService;
+import io.sentrius.sso.core.embeddings.EmbeddingServiceIfc;
 import io.sentrius.sso.core.model.agents.AgentMemory;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.services.ErrorOutputService;
@@ -24,14 +24,11 @@ import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,11 +43,11 @@ public class AgentMemoryController extends BaseController {
     private final PersistentAgentMemoryStore memoryStore;
     private final VectorAgentMemoryStore vectorMemoryStore;
     private final UserAttributeService userAttributeService;
-    private final EmbeddingService embeddingService;
+    private final EmbeddingServiceIfc embeddingService;
 
     public AgentMemoryController(PersistentAgentMemoryStore memoryStore, VectorAgentMemoryStore vectorMemoryStore, UserService userService, SystemOptions systemOptions, ErrorOutputService errorOutputService,
                                  UserAttributeService userAttributeService,
-                                 EmbeddingService embeddingService
+                                 EmbeddingServiceIfc embeddingService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.memoryStore = memoryStore;

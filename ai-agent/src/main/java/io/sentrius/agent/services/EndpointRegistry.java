@@ -11,11 +11,9 @@ import io.sentrius.sso.core.dto.agents.AgentExecution;
 import io.sentrius.sso.core.dto.agents.AgentMemoryDTO;
 import io.sentrius.sso.core.dto.agents.MemoryQueryDTO;
 import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
-import io.sentrius.sso.core.dto.ztat.TokenDTO;
-import io.sentrius.sso.core.embeddings.EmbeddingService;
+import io.sentrius.sso.core.embeddings.EmbeddingServiceIfc;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.services.agents.AgentClientService;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -29,7 +27,7 @@ public class EndpointRegistry {
     Map<String, EndpointDescriptor> descriptorMap = new HashMap<>();
 
     private final AgentClientService agentClientService;
-    private final EmbeddingService embeddingService;
+    private final EmbeddingServiceIfc embeddingService;
 
     public void loadEndpoints(AgentExecution dto) throws ZtatException, JsonProcessingException {
         List<EndpointDescriptor> endpoints = agentClientService.getAvailableEndpoints(dto); // however you get them

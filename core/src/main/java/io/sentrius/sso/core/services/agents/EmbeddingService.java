@@ -25,16 +25,13 @@ import java.util.Map;
 @Service
 public class EmbeddingService {
 
-    private final RestTemplate restTemplate;
     private final String integrationProxyUrl;
     private final ZeroTrustClientService zeroTrustClientService;
 
     public EmbeddingService(
-        RestTemplate restTemplate,
         @Value("${sentrius.integration.proxyUrl:http://localhost:8081}") String integrationProxyUrl,
         ZeroTrustClientService zeroTrustClientService
     ) {
-        this.restTemplate = restTemplate;
         this.integrationProxyUrl = integrationProxyUrl;
         this.zeroTrustClientService = zeroTrustClientService;
     }
@@ -149,49 +146,7 @@ public class EmbeddingService {
         }
     }
 
-    /**
-     * Generate embeddings for multiple texts in batch via integration proxy
-     */
-    public Map<String, float[]> embedBatch(List<String> texts) {
-        if (texts == null || texts.isEmpty()) {
-            return new HashMap<>();
-        }
 
-        try {
-            String url = integrationProxyUrl + "/api/v1/embeddings/generate/batch";
-            HttpHeaders headers = createAuthHeaders();
-            if (headers == null) {
-                log.warn("No authentication context available for batch embedding generation");
-                return new HashMap<>();
-            }
-            
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("texts", texts);
-            
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-            
-            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
-            
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                Map<String, Object> responseBody = response.getBody();
-                
-                if (responseBody.containsKey("embeddings")) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, float[]> embeddings = (Map<String, float[]>) responseBody.get("embeddings");
-                    
-                    log.debug("Generated batch embeddings for {} texts", embeddings.size());
-                    return embeddings;
-                }
-            }
-            
-            log.warn("Failed to generate batch embeddings - unexpected response format");
-            return new HashMap<>();
-            
-        } catch (Exception e) {
-            log.error("Error generating batch embeddings for {} texts", texts.size(), e);
-            return new HashMap<>();
-        }
-    }
 
     /**
      * Calculate cosine similarity between two embeddings

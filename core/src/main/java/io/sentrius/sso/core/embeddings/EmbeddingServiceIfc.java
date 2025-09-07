@@ -5,7 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 
-public interface EmbeddingService {
+public interface EmbeddingServiceIfc {
     float[] embed(TokenDTO dto, String text) throws ZtatException, JsonProcessingException;
     List<float[]> embed(TokenDTO dto, List<String> text) throws ZtatException, JsonProcessingException;
 }
