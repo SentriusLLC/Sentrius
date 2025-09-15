@@ -200,6 +200,20 @@
             <artifactId>classgraph</artifactId>
         </dependency>
 
+        <!-- Spring AI for vector support (optional) -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-pgvector-store</artifactId>
+            <version>${spring-ai-version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.80</version>
+            <scope>compile</scope>
+        </dependency>
+
     </dependencies>
 
 

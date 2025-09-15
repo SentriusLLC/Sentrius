@@ -1,4 +1,4 @@
-package io.sentrius.sso.controllers.api;
+package io.sentrius.sso.controllers.api.agents;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -96,7 +96,8 @@ public class AgentApiController extends BaseController {
         ATPLPolicyService atplPolicyService,
         ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService, AgentService agentService,
         ProvenanceKafkaProducer provenanceKafkaProducer, ZeroTrustRequestService ztatRequestService,
-        AgentContextService agentContextService, AgentClientService agentClientService, AppConfig appConfig
+        AgentContextService agentContextService, AgentClientService agentClientService, 
+         AppConfig appConfig
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
@@ -825,5 +826,7 @@ public class AgentApiController extends BaseController {
         log.info("Created new agent context: {}", dto);
         return ResponseEntity.ok(dto);
     }
+
+
 
 }

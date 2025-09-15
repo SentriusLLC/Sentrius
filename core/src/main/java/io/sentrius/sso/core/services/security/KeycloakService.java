@@ -54,6 +54,21 @@ public class KeycloakService {
         return user.getAttributes();
     }
 
+    public String extractInitialUserType(String token) {
+        if (token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+        var kid = JwtUtil.extractKid(token);
+        var publicKey = keycloak.getPublicKey(kid);
+        var claims = Jwts.parser()
+            .setSigningKey(publicKey)
+            .build()
+            .parseClaimsJws(token)
+            .getBody();
+
+        return claims.get("initial_user_type", String.class);
+    }
+
 
     /**
      * Validate a JWT using the Keycloak Public Key.

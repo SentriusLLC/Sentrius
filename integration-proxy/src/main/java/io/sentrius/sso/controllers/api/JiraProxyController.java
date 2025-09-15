@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
@@ -16,10 +18,12 @@ import io.sentrius.sso.core.dto.TicketDTO;
 import io.sentrius.sso.core.integrations.ticketing.JiraService;
 import io.sentrius.sso.core.model.security.IntegrationSecurityToken;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.model.verbs.Endpoint;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
 import io.sentrius.sso.core.services.security.KeycloakService;
+import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.integrations.exceptions.HttpException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -59,6 +63,7 @@ public class JiraProxyController extends BaseController {
     }
 
     @GetMapping("/rest/api/3/search")
+    @Endpoint(description = "Searches for JIRA issues using JQL or a simple query")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<?> searchForJiraIssue(
         @RequestHeader("Authorization") String token,
@@ -116,6 +121,7 @@ public class JiraProxyController extends BaseController {
     }
 
     @GetMapping("/rest/api/3/issue")
+    @Endpoint(description = "Retrieves details of a specific JIRA issue")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<?> fetchJiraIssue(
         @RequestHeader("Authorization") String token,
@@ -161,8 +167,9 @@ public class JiraProxyController extends BaseController {
     }
 
     @PostMapping("/rest/api/3/issue/comment")
+    @Endpoint(description = "Adds a comment to a JIRA issue")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
-    public ResponseEntity<?> addComment(
+    public ResponseEntity<?> addCommentToJiraIssue(
         @RequestHeader("Authorization") String token,
         @RequestParam(name="issueKey") String issueKey,
         @RequestBody CommentRequest commentRequest,
@@ -212,6 +219,67 @@ public class JiraProxyController extends BaseController {
                     .body("Failed to add comment to issue");
             }
             
+        } finally {
+            span.end();
+        }
+    }
+
+    @GetMapping("/rest/api/3/issue/comment")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
+    public ResponseEntity<?> getJiraIssueComments(
+        @RequestHeader("Authorization") String token,
+        @RequestParam(name="issueKey") String issueKey,
+        @RequestBody CommentRequest commentRequest,
+        HttpServletRequest request,
+        HttpServletResponse response
+    ) throws JsonProcessingException {
+
+        Span span = tracer.spanBuilder("jira-proxy-add-comment").startSpan();
+        try (Scope scope = span.makeCurrent()) {
+            String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+
+            if (!keycloakService.validateJwt(compactJwt)) {
+                log.warn("Invalid Keycloak token");
+                return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("Invalid Keycloak token");
+            }
+
+            var operatingUser = getOperatingUser(request, response);
+            if (null == operatingUser) {
+                return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("User not authenticated");
+            }
+
+            List<IntegrationSecurityToken> jiraIntegrations = integrationSecurityTokenService
+                .findByConnectionType("jira");
+
+            if (jiraIntegrations.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.SC_NOT_FOUND).body("No JIRA integration configured");
+            }
+
+            IntegrationSecurityToken jiraIntegration = jiraIntegrations.get(0);
+            JiraService jiraService = new JiraService(new RestTemplate(), jiraIntegration);
+
+            // Extract comment text from the request
+            String commentText = extractCommentText(commentRequest);
+            if (commentText == null || commentText.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Comment text is required");
+            }
+
+            List<String> comments  = jiraService.getComments(issueKey);
+
+            span.setAttribute("issue.key", issueKey);
+            span.setAttribute("comment.success", comments != null && !comments.isEmpty());
+
+            if (comments != null && !comments.isEmpty()) {
+                ObjectNode responseNode = JsonUtil.MAPPER.createObjectNode();
+                responseNode.putArray("comments").addAll(comments.stream()
+                    .map(TextNode::new)
+                    .toList());
+                return ResponseEntity.ok(responseNode);
+            } else {
+                return ResponseEntity.status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+                    .body("Failed to add comment to issue");
+            }
+
         } finally {
             span.end();
         }

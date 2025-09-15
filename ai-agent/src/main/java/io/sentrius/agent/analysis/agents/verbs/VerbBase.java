@@ -34,7 +34,7 @@ public abstract class VerbBase {
         this.agentDatabaseContext = agentDatabaseContext;
     }
 
-    protected AgentConfig getAgentConfig(AgentExecution execution) throws IOException, ZtatException {
+    public AgentConfig getAgentConfig(AgentExecution execution) throws IOException, ZtatException {
         AgentConfig config = null;
         if (agentDatabaseContext != null && !agentDatabaseContext.equals("none")) {
             AgentContextDTO agentContext = agentClientService.getAgentContext(execution,

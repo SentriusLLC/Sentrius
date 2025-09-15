@@ -12,8 +12,11 @@ import com.google.common.collect.Maps;
 import io.sentrius.sso.core.dto.AgentCommunicationDTO;
 import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
 import io.sentrius.sso.core.dto.AgentRegistrationDTO;
+import io.sentrius.sso.core.dto.PagedResultDTO;
 import io.sentrius.sso.core.dto.agents.AgentContextDTO;
 import io.sentrius.sso.core.dto.agents.AgentContextRequestDTO;
+import io.sentrius.sso.core.dto.agents.AgentMemoryDTO;
+import io.sentrius.sso.core.dto.agents.MemoryQueryDTO;
 import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
 import io.sentrius.sso.core.dto.agents.AgentExecution;
 import io.sentrius.sso.core.dto.ztat.AtatRequest;
@@ -204,7 +207,7 @@ public class AgentClientService {
             .agentPublicKeyAlgo(keyType)
             .build();
 
-        var acommResponse = zeroTrustClientService.callPostOnApi(ask, registration);
+        var acommResponse = zeroTrustClientService.callPostOnApi(ask, false,  registration);
         return JsonUtil.MAPPER.readValue(acommResponse, AgentRegistrationDTO.class);
     }
 
@@ -311,5 +314,55 @@ public class AgentClientService {
         String ask = "/agent/bootstrap/launcher/status";
 
         return zeroTrustClientService.callGetOnApi(execution, ask , Maps.immutableEntry("agentId", List.of(agentId)));
+    }
+
+    public void storeMemory(AgentExecution execution, String agentId, AgentMemoryDTO memory) {
+        String url = "/api/v1/agents/memory/store";
+        try {
+            log.info("Storing memory for agentId {}: {}", agentId, memory.getMemoryKey());
+            zeroTrustClientService.callPostOnApi(execution, url,memory,
+                Maps.immutableEntry("agentId",List.of(agentId)) );
+        } catch (ZtatException e) {
+            log.error("Failed to store memory for key {}", e.getMessage());
+        }
+    }
+
+    public void storeMemories(AgentExecution execution, String agentId, List<AgentMemoryDTO> memories) {
+        String url = "/api/v1/agents/memory/store";
+        int batchSize = 25; // adjust based on your server limits
+
+        for (int i = 0; i < memories.size(); i += batchSize) {
+            List<AgentMemoryDTO> batch = memories.subList(i, Math.min(i + batchSize, memories.size()));
+            try {
+                log.info("Storing memory batch for agentId {}: {} items", agentId, batch.size());
+                zeroTrustClientService.callPostOnApi(execution, url, batch,
+                    Maps.immutableEntry("agentId", List.of(agentId)));
+            } catch (ZtatException e) {
+                log.error("Failed to store memory batch: {}", e.getMessage());
+            }
+        }
+    }
+
+    public List<AgentMemoryDTO> retrieveMemories(AgentExecution execution, String agentId, MemoryQueryDTO query) {
+        String url = "/api/v1/agents/memory/query";
+        try {
+
+            PagedResultDTO<AgentMemoryDTO> page = zeroTrustClientService.callPostOnApi(
+                execution,
+                url,
+                query,
+                AgentMemoryDTO.class,
+                query.getPage(), query.getSize(), List.of("created_at,desc"), Maps.immutableEntry("agentId",
+                    List.of(agentId))
+            );
+
+
+
+            return page.getContent();
+
+        } catch (ZtatException e) {
+            log.error("Failed to store memory for key {}", e.getMessage());
+        }
+        return List.of();
     }
 }

@@ -17,6 +17,7 @@ keycloakFQDN: sentrius-keycloak.dev.svc.cluster.local
 sentriusFQDN: sentrius-sentrius.dev.svc.cluster.local
 integrationproxyFQDN: sentrius-integrationproxy.dev.svc.cluster.local
 agentProxyFQDN: sentrius-agentproxy.dev.svc.cluster.local
+otelFQDN: sentrius-jaeger.dev.svc.cluster.local
 
 
 

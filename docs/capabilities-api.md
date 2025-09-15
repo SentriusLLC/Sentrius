@@ -34,7 +34,7 @@ Returns all available endpoints (both REST and Verb) with optional filtering:
     "type": "REST",
     "httpMethod": "GET",
     "path": "/api/v1/users/list",
-    "className": "io.sentrius.sso.controllers.api.UserApiController",
+    "className": "io.sentrius.sso.controllers.api.users.UserApiController",
     "methodName": "listusers",
     "requiresAuthentication": true,
     "accessLimitations": {

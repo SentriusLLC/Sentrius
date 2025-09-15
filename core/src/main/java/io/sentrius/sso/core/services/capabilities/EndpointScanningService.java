@@ -6,6 +6,7 @@ import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.dto.capabilities.AccessLimitations;
 import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
 import io.sentrius.sso.core.dto.capabilities.ParameterDescriptor;
+import io.sentrius.sso.core.model.verbs.Endpoint;
 import io.sentrius.sso.core.model.verbs.Verb;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -132,8 +133,16 @@ public class EndpointScanningService {
     private EndpointDescriptor scanRestMethod(Class<?> clazz, Method method, String basePath) {
         String httpMethod = null;
         String path = basePath;
+        String description = method.getAnnotation(Endpoint.class) != null ?
+                method.getAnnotation(Endpoint.class).description() : "REST endpoint: " + httpMethod + " " + path;
 
         // Check for HTTP method annotations
+        if (method.isAnnotationPresent(Endpoint.class)) {
+            Endpoint mapping = method.getAnnotation(Endpoint.class);
+
+            description = mapping.description();  // <-- use custom description
+        }
+
         if (method.isAnnotationPresent(GetMapping.class)) {
             httpMethod = "GET";
             GetMapping mapping = method.getAnnotation(GetMapping.class);
@@ -180,7 +189,7 @@ public class EndpointScanningService {
 
         return EndpointDescriptor.builder()
                 .name(method.getName())
-                .description("REST endpoint: " + httpMethod + " " + path)
+                .description(description)
                 .type("REST")
                 .httpMethod(httpMethod)
                 .path(path)

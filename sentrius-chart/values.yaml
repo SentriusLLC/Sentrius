@@ -182,11 +182,21 @@ launcherservice:
     azure:
       service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
+qdrant:
+    image:
+        repository: qdrant/qdrant
+        tag: v1.9.0
+        pullPolicy: IfNotPresent
+    port: 6333
+    storageSize: 10Gi
+    resources: {}
+
 # PostgreSQL configuration
 postgres:
   image:
-    repository: postgres
-    tag: 15
+    repository: pgvector/pgvector
+    tag: pg15
+    pullPolicy: IfNotPresent
   port: 5432
   storageSize: 10Gi
   env:

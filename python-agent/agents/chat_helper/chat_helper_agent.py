@@ -53,7 +53,7 @@ class ChatHelperAgent(BaseAgent):
             return {
                 "previousOperation": "initialization",
                 "nextOperation": "waiting_for_user_input",
-                "terminalSummaryForLLM": "Chat helper agent initialized and ready",
+                "summaryForLLM": "Chat helper agent initialized and ready",
                 "responseForUser": "Hello! I'm your chat helper agent. How can I assist you today?"
             }
         
@@ -65,7 +65,7 @@ class ChatHelperAgent(BaseAgent):
         return {
             "previousOperation": "user_message_received",
             "nextOperation": "generate_response",
-            "terminalSummaryForLLM": f"User asked: {user_message}",
+            "summaryForLLM": f"User asked: {user_message}",
             "responseForUser": f"I received your message: '{user_message}'. I'm a helpful chat assistant ready to help!"
         }
     

@@ -2,6 +2,7 @@ package io.sentrius.sso.core.dto.agents;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -38,6 +39,10 @@ public class AgentExecutionContextDTO {
     @Builder.Default
     private ObjectNode callParams = JsonUtil.MAPPER.createObjectNode();
 
+    @Builder.Default
+
+    private final Map<String,JsonNode> longTermMemories = new ConcurrentHashMap<>();
+
     // === Memory Management ===
 
     public void addToMemory(JsonNode node) {
@@ -55,6 +60,72 @@ public class AgentExecutionContextDTO {
         ObjectNode wrapper = JsonUtil.MAPPER.createObjectNode();
         wrapper.set(key, value);
         agentDataList.add(wrapper);
+
+    }
+
+    // === Persistent Memory Integration ===
+
+    /**
+     * Store value to persistent memory with markings
+     */
+    public void addToPersistentMemory(String key, JsonNode value, String classification, String[] markings) {
+        // Add to short-term memory for immediate access
+        putStructuredToMemory(key, value);
+        
+        // Store metadata for persistent storage
+        if (agentContext != null) {
+            ObjectNode memoryMeta = JsonUtil.MAPPER.createObjectNode();
+            memoryMeta.put("key", key);
+            memoryMeta.set("value", value);
+            memoryMeta.put("classification", classification != null ? classification : "PRIVATE");
+            if (markings != null) {
+                memoryMeta.put("markings", String.join(",", markings));
+            }
+            memoryMeta.put("persistent", true);
+            
+            // Add to data list with persistent flag
+            longTermMemories.put(key, memoryMeta);
+
+        }
+    }
+
+    /**
+     * Store simple value to persistent memory
+     */
+    public void addToPersistentMemory(String key, String value, String classification, String[] markings) {
+        JsonNode jsonValue = JsonUtil.MAPPER.convertValue(value, JsonNode.class);
+        addToPersistentMemory(key, jsonValue, classification, markings);
+    }
+
+    /**
+     * Store object to persistent memory
+     */
+    public void addToPersistentMemory(String key, Object value, String classification, String[] markings) {
+        JsonNode jsonValue = JsonUtil.MAPPER.convertValue(value, JsonNode.class);
+        addToPersistentMemory(key, jsonValue, classification, markings);
+    }
+
+    /**
+     * Get list of memories marked for persistent storage
+     */
+    public Map<String, JsonNode> getPersistentMemoryItems() {
+
+            return longTermMemories;
+    }
+
+    /**
+     * Check if context has persistent memory items
+     */
+    public boolean hasPersistentMemory() {
+        return !getPersistentMemoryItems().isEmpty();
+    }
+
+    public Map<String, JsonNode> flushPersistentMemory() {
+        var persistentItems = getPersistentMemoryItems();
+        longTermMemories.clear();
+        return persistentItems;
+
+
     }
 
     public static void flatten(String prefix, JsonNode node, Map<String, JsonNode> map) {
