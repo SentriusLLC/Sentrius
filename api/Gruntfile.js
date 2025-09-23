@@ -24,6 +24,15 @@ module.exports = function(grunt) {
                         expand: true,
                         flatten: true,
                         src: [
+                            '<%= node %>/@arikael/guacamole-common-js/dist/js/index.js',
+                        ],
+                        dest: '<%= destJs %>/guacamole-common-js/',
+                        filter: 'isFile'
+                    },
+                    {
+                        expand: true,
+                        flatten: true,
+                        src: [
                             '<%= node %>/jointjs/dist/joint.js',
                         ],
                         dest: '<%= destJs %>/jointjs/',

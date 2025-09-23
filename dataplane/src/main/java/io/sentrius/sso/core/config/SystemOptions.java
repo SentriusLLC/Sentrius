@@ -145,15 +145,18 @@ public class SystemOptions {
 
   @Updatable(description = "This is the number of commands to evaluate for AI monitoring.")
   public Integer commandsToEvaluate = 5;
-
   /**
    * Purely for testing mode
    */
   @Updatable(description = "Allows admins to view and approve their own ZTAT ( Zero Trust Access Token) requests.")
   public Boolean canApproveOwnZtat = false;
 
+    @Updatable(description = "RDP Proxy domain.")
+    public String rdpProxyDomain = "https://rdpproxy-dev.local";
 
-  // the default path may be sufficient
+
+
+    // the default path may be sufficient
   @Updatable(description = "This is the path where uploaded files will be stored before distributed to remote systems.")
   public String uploadPath;
   public String sshKeyType = "rsa";

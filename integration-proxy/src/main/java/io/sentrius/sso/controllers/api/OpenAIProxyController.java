@@ -165,7 +165,7 @@ public class OpenAIProxyController extends BaseController {
             .actor(operatingUser.getUsername())
             .triggeringUser("LLM")
             .eventType(ProvenanceEvent.EventType.KNOWLEDGE_REQUESTED)
-            .outputSummary("prompt LLM" + chatRequest.getMessages().get(0).getContent())
+            .outputSummary("prompt LLM" + chatRequest.getMessages().get(0).getContentAsString())
             .timestamp(LocalDateTime.now().toInstant(java.time.ZoneOffset.UTC))
             .build();
         provenanceKafkaProducer.send(event);

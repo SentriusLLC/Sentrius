@@ -34,7 +34,8 @@
     "jointjs": "^3.7.7",
     "lodash": "^4.17.21",
     "backbone": "^1.6.0",
-    "cytoscape": "^3.31.2"
+    "cytoscape": "^3.31.2",
+    "@arikael/guacamole-common-js": "1.6.0"
   },
   "devDependencies": {
     "grunt": "^1.6.1",

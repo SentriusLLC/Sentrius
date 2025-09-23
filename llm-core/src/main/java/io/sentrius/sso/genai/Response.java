@@ -90,6 +90,6 @@ public class Response {
      * @return      a string that contains all responses in a Response object
      */
     public String concatenateResponses() {
-        return getChoices().stream().map(x -> x.getMessage().getContent()).collect(Collectors.joining());
+        return getChoices().stream().map(x -> x.getMessage().getContentAsString()).collect(Collectors.joining());
     }
 }

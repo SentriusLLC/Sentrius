@@ -38,9 +38,29 @@ public class Message {
     @JsonProperty(value = "role")
     public String role;
 
+    /**
+     * Content can be either a String (for text-only messages) or an Object (for multimodal messages with images).
+     * This allows the Message class to handle both regular chat messages and vision API messages.
+     */
     @JsonProperty(value = "content")
-    public String content;
+    public Object content;
 
     @JsonProperty(value = "refusal")
     public String refusal;
+    
+    /**
+     * Helper method to safely get content as a String.
+     * If content is a String, returns it directly.
+     * If content is a List or other Object, converts it to String.
+     */
+    public String getContentAsString() {
+        if (content == null) {
+            return null;
+        }
+        if (content instanceof String) {
+            return (String) content;
+        }
+        // For non-string content (e.g., multimodal array), return toString representation
+        return content.toString();
+    }
 }

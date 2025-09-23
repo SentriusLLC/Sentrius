@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+# deployment.yaml (pod template)
+metadata:
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+  name: sentrius-rdp-proxy
+  labels:
+    app: sentrius-rdp-proxy
+    release: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: sentrius-rdp-proxy
+  template:
+    metadata:
+      labels:
+        app: sentrius-rdp-proxy
+    spec:
+      containers:
+        - name: sentrius-rdp-proxy
+          image: "{{ .Values.rdpproxy.image.repository }}:{{ .Values.rdpproxy.image.tag }}"
+          imagePullPolicy: {{ .Values.rdpproxy.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.rdpproxy.port }}
+              name: http
+          env:
+            - name: GUACD_HOST
+              value: "localhost"
+            - name: GUACD_PORT
+              value: "4822"
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: rdpproxy-client-secret
+            - name: SENTRIUS_RDP_PROXY_ENABLED
+              value: "{{ .Values.rdpproxy.enabled }}"
+            - name: SENTRIUS_RDP_PROXY_PORT
+              value: "{{ .Values.rdpproxy.port }}"
+            - name: SENTRIUS_RDP_PROXY_CONNECTION_CONNECTION_TIMEOUT
+              value: "{{ .Values.rdpproxy.connection.connectionTimeout }}"
+            - name: SENTRIUS_RDP_PROXY_CONNECTION_KEEP_ALIVE_INTERVAL
+              value: "{{ .Values.rdpproxy.connection.keepAliveInterval }}"
+            - name: SENTRIUS_RDP_PROXY_CONNECTION_MAX_RETRIES
+              value: "{{ .Values.rdpproxy.connection.maxRetries }}"
+            
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: db-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: db-password
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: keystore-password
+          resources:
+            {{- toYaml .Values.rdpproxy.resources | nindent 12 }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+        
+        # Guacd sidecar container using official Apache Guacamole image
+        - name: guacd
+          image: "{{ .Values.rdpproxy.guacd.image.repository }}:{{ .Values.rdpproxy.guacd.image.tag }}"
+          imagePullPolicy: {{ .Values.rdpproxy.guacd.image.pullPolicy }}
+          ports:
+            - containerPort: 4822
+              name: guacd
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.rdpproxy.guacd.resources | nindent 12 }}
+          livenessProbe:
+            tcpSocket:
+              port: 4822
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 4822
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ .Release.Name }}-config

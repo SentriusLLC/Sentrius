@@ -78,5 +78,15 @@ public class AuditController extends BaseController {
 
         return "sso/sessions/view_terms";
     }
+    
+    @GetMapping("/rdp/view")
+    @LimitAccess(sshAccess ={ SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public String viewRdpSession(
+        HttpServletRequest request, HttpServletResponse response,
+        @RequestParam("sessionId") String sessionId, Model model) {
+        log.info("Viewing RDP session {}", sessionId);
+        model.addAttribute("sessionId", sessionId);
+        return "sso/sessions/rdp_session_view";
+    }
 
 }

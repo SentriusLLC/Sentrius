@@ -38,11 +38,11 @@ public class HostGroupService {
     @Autowired
     private TerminalSessionMetadataRepository terminalSessionMetadataRepository;
 
-    @Transactional
+    @Transactional(readOnly = true)
     public HostGroup getHostGroup(Long hostGroupId) {
         HostGroup hostGroup = hostGroupRepository.findById(hostGroupId)
             .orElseThrow(() -> new EntityNotFoundException("Host " + hostGroupId + " Group not found"));
-
+        Hibernate.initialize(hostGroup.getRules());
         return hostGroup;
     }
 
@@ -198,7 +198,16 @@ public class HostGroupService {
     
     @Transactional(readOnly = true)
     public List<HostGroup> getHostGroupsForUser(Long userId) {
-        return userRepository.findHostGroupsByUserId(userId).stream().toList();
+        var hostGroupList = userRepository.findHostGroupsByUserId(userId).stream().toList();
+
+        hostGroupList.forEach(hostGroup -> {
+            Hibernate.initialize(hostGroup.getHostSystems());
+            Hibernate.initialize(hostGroup.getRules());
+            hostGroup.getHostSystems().forEach(hostSystem -> {
+                Hibernate.initialize(hostSystem.getPublicKeyList());
+            });
+        });
+        return hostGroupList;
     }
 
     public List<HostGroup> getHostGroupsByName(String name) {

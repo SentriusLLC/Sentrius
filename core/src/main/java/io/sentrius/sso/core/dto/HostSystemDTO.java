@@ -25,4 +25,8 @@ public class HostSystemDTO {
 
     private String authorizedKeys;
 
+    private boolean isRdp;
+    private boolean rdpUser;
+    private boolean rdpPassword;
+
 }

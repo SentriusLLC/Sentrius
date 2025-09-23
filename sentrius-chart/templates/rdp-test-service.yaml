@@ -1,0 +1,18 @@
+{{- if .Values.rdpTest.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-rdp-test
+  labels:
+    app: rdp-test
+    release: {{ .Release.Name }}
+spec:
+  selector:
+    app: rdp-test
+  ports:
+    - protocol: TCP
+      port: {{ .Values.rdpTest.port }}
+      targetPort: {{ .Values.rdpTest.port }}
+      name: rdp
+  type: {{ .Values.rdpTest.serviceType }}
+{{- end }}

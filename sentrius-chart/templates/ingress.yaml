@@ -14,6 +14,8 @@ spec:
     - hosts:
         - "{{ .Values.keycloakSubdomain }}"
         - "{{ .Values.subdomain }}"
+        - "{{ .Values.agentproxySubdomain }}"
+        - "{{ .Values.rdpproxySubdomain }}"
       secretName: wildcard-cert-{{ .Values.tenant }}
   {{- end }}
   rules:
@@ -45,6 +47,16 @@ spec:
             backend:
               service:
                 name: {{ .Release.Name }}-agentproxy
+                port:
+                  number: 8080
+    - host: "{{ .Values.rdpproxySubdomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-rdp-proxy
                 port:
                   number: 8080
 {{- end }}

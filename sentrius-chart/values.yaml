@@ -5,15 +5,17 @@ namespace: default
 environment: "gke"  # Can be "gke", "aws", "azure", "local"
 
 tenant: sentrius-demo
-subdomain: "{{ .Values.tenant }}.sentrius.cloud"
-keycloakSubdomain: "keycloak.{{ .Values.tenant }}.sentrius.cloud"
-keycloakHostname: "keycloak.{{ .Values.tenant }}.sentrius.cloud"
-keycloakDomain: "https://keycloak.{{ .Values.tenant }}.sentrius.cloud"
+subdomain: "sentrius-demo.sentrius.cloud"
+keycloakSubdomain: "keycloak.sentrius-demo.sentrius.cloud"
+keycloakHostname: "keycloak.sentrius-demo.sentrius.cloud"
+keycloakDomain: "https://keycloak.sentrius-demo.sentrius.cloud"
 keycloakInternalDomain: http://sentrius-keycloak:8081 # Internal cluster communication
-sentriusDomain: "https://{{ .Values.tenant }}.sentrius.cloud"
+sentriusDomain: "https://sentrius-demo.sentrius.cloud"
 launcherFQDN: sentrius-launcher-service.dev.svc.cluster.local
-agentproxySubdomain: "agentproxy.{{ .Values.tenant }}.sentrius.cloud"
-agentproxyDomain: "https://agentproxy.{{ .Values.tenant }}.sentrius.cloud"
+agentproxySubdomain: "agentproxy.sentrius-demo.sentrius.cloud"
+agentproxyDomain: "https://agentproxy.sentrius-demo.sentrius.cloud"
+rdpproxySubdomain: "rdpproxy.sentrius-demo.sentrius.cloud"
+rdpproxyDomain: "https://rdpproxy.sentrius-demo.sentrius.cloud"
 
 metrics:
   enabled: true
@@ -208,6 +210,21 @@ ssh:
     pullPolicy: IfNotPresent
   port: 22
 
+rdpTest:
+  enabled: true
+  port: 3389
+  serviceType: NodePort   # or LoadBalancer in cloud
+  credentials: # can't change these without rebuilding the image
+    username: ubuntu
+    password: ubuntu
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1
+      memory: 1Gi
+
 # Secrets - Use external secret management or environment variables
 secrets:
   db:
@@ -393,3 +410,40 @@ sshproxy:
     connectionTimeout: 30000
     keepAliveInterval: 60000
     maxRetries: 3
+
+
+# RDP Proxy configuration
+rdpproxy:
+  enabled: true
+  image:
+    repository: sentrius-rdp-proxy
+    tag: tag
+    pullPolicy: IfNotPresent
+  port: 8080
+  oauth2:
+    client_id: sentrius-rdp-proxy
+    authorization_grant_type: authorization_code
+    redirect-uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
+    scope: openid,profile,email
+    issuer-uri: http://keycloak.{{ .Values.subdomain }}/realms/sentrius
+  serviceType: NodePort
+  nodePort: 30089  # Only used if serviceType is NodePort
+  resources: {}
+  connection:
+    # Connection settings for target SSH servers from database
+    connectionTimeout: 30000
+    keepAliveInterval: 60000
+    maxRetries: 3
+  # Guacd sidecar configuration
+  guacd:
+    image:
+      repository: guacamole/guacd
+      tag: "1.5.5"  # Match version with guacamole-common library
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"

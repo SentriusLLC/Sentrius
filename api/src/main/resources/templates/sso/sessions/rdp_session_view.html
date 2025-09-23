@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - RDP Session Details</title>
+    <style>
+        .session-info {
+            background-color: #2d3e50;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .session-info h4 {
+            color: #fff;
+            margin-bottom: 15px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #405d80;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #8ab4f8;
+        }
+        
+        .info-value {
+            color: #fff;
+        }
+        
+        .summary-section {
+            background-color: #2d3e50;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-section h4 {
+            color: #fff;
+            margin-bottom: 15px;
+        }
+        
+        .summary-content {
+            color: #e8eaed;
+            white-space: pre-wrap;
+            font-family: monospace;
+            background-color: #1e1e1e;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        
+        .screenshots-section {
+            margin-top: 20px;
+        }
+        
+        .screenshot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+        
+        .screenshot-card {
+            background-color: #2d3e50;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .screenshot-card:hover {
+            transform: scale(1.02);
+        }
+        
+        .screenshot-img {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+            border: 2px solid #405d80;
+        }
+        
+        .screenshot-info {
+            margin-top: 10px;
+            color: #8ab4f8;
+            font-size: 0.9em;
+        }
+        
+        .modal-content {
+            background-color: #2d3e50;
+        }
+        
+        .modal-body img {
+            width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<script>
+    $(document).ready(function() {
+        const sessionId = new URLSearchParams(window.location.search).get('sessionId');
+        
+        if (!sessionId) {
+            alert('No session ID provided');
+            window.location.href = '/sso/v1/sessions/audit/list';
+            return;
+        }
+        
+        // Load session details
+        $.get(`/api/v1/sessions/rdp/${sessionId}`, function(session) {
+            $('#session-id').text(session.sessionId);
+            $('#user-identifier').text(session.userIdentifier);
+            $('#target-identifier').text(session.targetIdentifier || 'N/A');
+            $('#session-start').text(session.sessionStart ? new Date(session.sessionStart).toLocaleString() : 'N/A');
+            $('#session-end').text(session.sessionEnd ? new Date(session.sessionEnd).toLocaleString() : 'Active');
+            
+            const duration = session.sessionStart && session.sessionEnd 
+                ? Math.round((new Date(session.sessionEnd) - new Date(session.sessionStart)) / 1000 / 60)
+                : 'N/A';
+            $('#session-duration').text(duration !== 'N/A' ? `${duration} minutes` : 'N/A');
+            $('#screenshot-count').text(session.screenshotCount || 0);
+            
+            if (session.summary) {
+                $('#session-summary').text(session.summary);
+            } else {
+                $('#session-summary').text('No analysis available yet. Analysis may be in progress.');
+            }
+        }).fail(function() {
+            alert('Failed to load session details');
+        });
+        
+        // Load screenshots
+        $.get(`/api/v1/sessions/rdp/${sessionId}/screenshots`, function(screenshots) {
+            const grid = $('#screenshots-grid');
+            grid.empty();
+            
+            if (screenshots.length === 0) {
+                grid.append('<p class="text-white">No screenshots available for this session.</p>');
+                return;
+            }
+            
+            screenshots.forEach(function(screenshot, index) {
+                const card = $('<div class="screenshot-card"></div>');
+                const img = $(`<img src="/api/v1/sessions/rdp/screenshot/${screenshot.id}/image" class="screenshot-img" alt="Screenshot ${index + 1}" />`);
+                const info = $(`<div class="screenshot-info">
+                    Screenshot #${index + 1}<br>
+                    Captured: ${new Date(screenshot.capturedAt).toLocaleString()}<br>
+                    Size: ${Math.round(screenshot.fileSize / 1024)} KB
+                </div>`);
+                
+                card.append(img).append(info);
+                card.on('click', function() {
+                    showScreenshotModal(screenshot.id, index + 1);
+                });
+                
+                grid.append(card);
+            });
+        }).fail(function() {
+            $('#screenshots-grid').html('<p class="text-danger">Failed to load screenshots</p>');
+        });
+        
+        function showScreenshotModal(screenshotId, index) {
+            $('#modal-screenshot-title').text(`Screenshot #${index}`);
+            $('#modal-screenshot-img').attr('src', `/api/v1/sessions/rdp/screenshot/${screenshotId}/image`);
+            $('#screenshotModal').modal('show');
+        }
+    });
+</script>
+
+<body>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
+                <div class="container-fluid">
+                    <div class="container">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3 class="text-white">RDP Session Details</h3>
+                            <a href="/sso/v1/sessions/audit/list" class="btn btn-secondary">Back to Sessions</a>
+                        </div>
+                        
+                        <!-- Session Information -->
+                        <div class="session-info">
+                            <h4>Session Information</h4>
+                            <div class="info-row">
+                                <span class="info-label">Session ID:</span>
+                                <span class="info-value" id="session-id">Loading...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">User:</span>
+                                <span class="info-value" id="user-identifier">Loading...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Target:</span>
+                                <span class="info-value" id="target-identifier">Loading...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Start Time:</span>
+                                <span class="info-value" id="session-start">Loading...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">End Time:</span>
+                                <span class="info-value" id="session-end">Loading...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Duration:</span>
+                                <span class="info-value" id="session-duration">Loading...</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Screenshots:</span>
+                                <span class="info-value" id="screenshot-count">Loading...</span>
+                            </div>
+                        </div>
+                        
+                        <!-- AI Analysis Summary -->
+                        <div class="summary-section">
+                            <h4>AI Analysis</h4>
+                            <div class="summary-content" id="session-summary">
+                                Loading analysis...
+                            </div>
+                        </div>
+                        
+                        <!-- Screenshots -->
+                        <div class="screenshots-section">
+                            <h4 class="text-white">Screenshots</h4>
+                            <div class="screenshot-grid" id="screenshots-grid">
+                                <p class="text-white">Loading screenshots...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Screenshot Modal -->
+<div class="modal fade" id="screenshotModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-white" id="modal-screenshot-title">Screenshot</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <img id="modal-screenshot-img" src="" alt="Full size screenshot" />
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+
+</html>

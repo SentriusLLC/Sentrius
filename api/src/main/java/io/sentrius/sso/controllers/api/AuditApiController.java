@@ -16,6 +16,10 @@ import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.model.sessions.SessionLog;
 import io.sentrius.sso.core.model.sessions.TerminalLogs;
+import io.sentrius.sso.core.model.sessions.RdpSessionSummary;
+import io.sentrius.sso.core.model.sessions.RdpSessionScreenshot;
+import io.sentrius.sso.core.repository.RdpSessionSummaryRepository;
+import io.sentrius.sso.core.repository.RdpSessionScreenshotRepository;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.auditing.AuditService;
@@ -29,6 +33,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -43,6 +48,8 @@ public class AuditApiController extends BaseController {
     final AppConfig appConfig;
     final RestTemplate restTemplate = new RestTemplate();
     final KeycloakService keycloakService;
+    private final RdpSessionSummaryRepository rdpSessionSummaryRepository;
+    private final RdpSessionScreenshotRepository rdpSessionScreenshotRepository;
 
     private WebClient webClient;
 
@@ -52,7 +59,9 @@ public class AuditApiController extends BaseController {
         ErrorOutputService errorOutputService,
         AuditService auditService,
         CryptoService cryptoService, SessionTrackingService sessionTrackingService, AppConfig appConfig,
-        KeycloakService keycloakService
+        KeycloakService keycloakService,
+        RdpSessionSummaryRepository rdpSessionSummaryRepository,
+        RdpSessionScreenshotRepository rdpSessionScreenshotRepository
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
@@ -60,6 +69,8 @@ public class AuditApiController extends BaseController {
         this.sessionTrackingService = sessionTrackingService;
         this.appConfig = appConfig;
         this.keycloakService = keycloakService;
+        this.rdpSessionSummaryRepository = rdpSessionSummaryRepository;
+        this.rdpSessionScreenshotRepository = rdpSessionScreenshotRepository;
         try {
             this.webClient = WebClient.builder().baseUrl(appConfig.getAgentProxyExternalUrl()).build();
         }
@@ -156,6 +167,67 @@ public class AuditApiController extends BaseController {
     @GetMapping("/map")
     public ResponseEntity<Map<String, Map<Integer, Long>>> getMap(HttpServletRequest request, HttpServletResponse response) {
         return ResponseEntity.ok(auditService.getSessionHeatmapData());
+    }
+    
+    /**
+     * List all RDP session summaries
+     */
+    @GetMapping("/rdp/list")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN}, sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<List<RdpSessionSummary>> listRdpSessions(HttpServletRequest request, HttpServletResponse response) {
+        List<RdpSessionSummary> sessions = rdpSessionSummaryRepository.findAll();
+        return ResponseEntity.ok(sessions);
+    }
+    
+    /**
+     * Get details for a specific RDP session
+     */
+    @GetMapping("/rdp/{sessionId}")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN}, sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<RdpSessionSummary> getRdpSession(
+        @PathVariable String sessionId,
+        HttpServletRequest request, 
+        HttpServletResponse response
+    ) {
+        return rdpSessionSummaryRepository.findBySessionId(sessionId)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
+    }
+    
+    /**
+     * Get screenshots for a specific RDP session
+     */
+    @GetMapping("/rdp/{sessionId}/screenshots")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN}, sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<List<RdpSessionScreenshot>> getRdpSessionScreenshots(
+        @PathVariable String sessionId,
+        HttpServletRequest request, 
+        HttpServletResponse response
+    ) {
+        List<RdpSessionScreenshot> screenshots = rdpSessionScreenshotRepository.findBySessionIdOrderByCapturedAtAsc(sessionId);
+        return ResponseEntity.ok(screenshots);
+    }
+    
+    /**
+     * Get a specific screenshot image
+     */
+    @GetMapping("/rdp/screenshot/{screenshotId}/image")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN}, sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<byte[]> getScreenshotImage(
+        @PathVariable Long screenshotId,
+        HttpServletRequest request, 
+        HttpServletResponse response
+    ) {
+        return rdpSessionScreenshotRepository.findById(screenshotId)
+            .map(screenshot -> {
+                HttpHeaders headers = new HttpHeaders();
+                String format = screenshot.getImageFormat() != null ? screenshot.getImageFormat().toLowerCase() : "png";
+                headers.setContentType(MediaType.parseMediaType("image/" + format));
+                return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(screenshot.getImageData());
+            })
+            .orElse(ResponseEntity.notFound().build());
     }
 
 }
