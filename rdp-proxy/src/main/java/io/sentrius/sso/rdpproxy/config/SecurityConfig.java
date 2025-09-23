@@ -118,6 +118,7 @@ public class SecurityConfig {
                                     JwtDecoder compositeJwtDecoder) throws Exception {
         http
             .securityMatcher("/guacamole/**")
+            .csrf(csrf -> csrf.disable())
             .requestCache(cache -> cache.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())

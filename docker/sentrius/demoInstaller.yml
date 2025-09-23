@@ -55,9 +55,12 @@ systems:
     authorizedKeys: ~/.ssh/authorized_keys
   - displayName: sentrius-rdp-test
     sshUser: ubuntu
-    password: ubuntu
+    port: 3389
+    host: sentrius-rdp-test
+    authorizedKeys: ~/.ssh/authorized_keys
     rdp: true
-    host: sentrius-rdp
+    rdpUser: ubuntu
+    rdpPassword: ubuntu
 
 ## Define groups of users who are assigned to systems
 ## also entails the configuration that is applied to groupf

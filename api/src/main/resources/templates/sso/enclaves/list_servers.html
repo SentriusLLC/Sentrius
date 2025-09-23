@@ -167,7 +167,6 @@
                 <th>System Name</th>
                 <th>Hostname</th>
                 <th>Host Enclave</th>
-                <th>User</th>
                 <th>Operations</th>
             </tr>
             </thead>
@@ -626,8 +625,7 @@
                 { data: 'displayName' },
                 { data: 'displayName' },
                 { data: 'group.displayName' },
-                { data: 'rdpUser' },
-                {
+               {
                     data: null,
                     render: function(data, type, row) {
                         const groupId = row.group ? row.group.groupId : -1; // Access group.id

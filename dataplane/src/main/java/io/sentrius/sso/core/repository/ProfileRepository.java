@@ -1,6 +1,7 @@
 package io.sentrius.sso.core.repository;
 
 import java.util.List;
+import java.util.Optional;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -11,4 +12,8 @@ public interface ProfileRepository extends JpaRepository<HostGroup, Long> {
     HostGroup getById(Long profileId);
 
     List<HostGroup> findAll();
+
+    Optional<HostGroup> findByName(String name);
+
+
 }

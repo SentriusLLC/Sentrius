@@ -153,8 +153,8 @@ public class HostSystem implements Host {
         dto.statusCd(this.statusCd);
         if (rdpEnabled) {
             dto.isRdp(true);
-            dto.rdpUser(rdpUser != null && !rdpUser.isEmpty());
-            dto.rdpPassword(rdpPassword != null && !rdpPassword.isEmpty());
+            dto.rdpUser(rdpUser);
+            dto.rdpPassword(rdpPassword);
         }
         dto.publicKeyList(this.publicKeyList != null ? new ArrayList<>(this.publicKeyList) : new ArrayList<>());
         dto.errorMsg(this.errorMsg);
@@ -175,8 +175,8 @@ public class HostSystem implements Host {
         dto.statusCd(this.statusCd);
         if (rdpEnabled) {
             dto.isRdp(true);
-            dto.rdpUser(rdpUser != null && !rdpUser.isEmpty());
-            dto.rdpPassword(rdpPassword != null && !rdpPassword.isEmpty());
+            dto.rdpUser(rdpUser);
+            dto.rdpPassword(rdpPassword);
         }
         dto.publicKeyList(this.publicKeyList != null ? new ArrayList<>(this.publicKeyList) : new ArrayList<>());
         dto.errorMsg(this.errorMsg);
@@ -209,12 +209,11 @@ public class HostSystem implements Host {
         hostSystem.setErrorMsg(dto.getErrorMsg());
         hostSystem.setPort(dto.getPort());
         hostSystem.setSshUser(dto.getSshUser());
-        if (dto.isRdp()) {
-            hostSystem.setRdpEnabled(dto.isRdp());
-            hostSystem.setRdpUser(dto.isRdpUser() ? dto.getSshUser() : "");
-            hostSystem.setRdpPassword(dto.isRdpPassword() ? dto.getPassword() : "");
+        if (dto.isRdp()){
+            hostSystem.setRdpEnabled(true);
+            hostSystem.setRdpUser(dto.getRdpUser());
+            hostSystem.setRdpPassword(dto.getRdpPassword());
         }
-
         return hostSystem;
     }
 

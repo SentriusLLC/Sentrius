@@ -22,7 +22,15 @@ cp "$ENV_FILE" "$ENV_FILE.bak"
 
 # --- Minikube Docker context ---
 if [[ "$ENV_TARGET" == "local" ]]; then
-    eval $(minikube -p minikube docker-env)
+    NODE_COUNT=$(minikube -p minikube node list 2>/dev/null | grep -c 'minikube')
+    if [[ "$NODE_COUNT" -eq 1 ]]; then
+        echo "🟢 Single-node Minikube detected — using docker-env"
+        eval $(minikube -p minikube docker-env)
+        USE_MINIKUBE_LOAD=false
+    else
+        echo "🟠 Multi-node Minikube detected — will use 'minikube image load' after builds"
+        USE_MINIKUBE_LOAD=true
+    fi
 fi
 
 
@@ -69,6 +77,12 @@ build_image() {
         docker build --no-cache "${BUILD_ARGS[@]}" -t "$name:$version" "$context_dir"
     else
         docker build "${BUILD_ARGS[@]}" -t "$name:$version" "$context_dir"
+    fi
+
+    # Sync image into Minikube if running multi-node
+    if [[ "$ENV_TARGET" == "local" && "$USE_MINIKUBE_LOAD" == true ]]; then
+        echo "📦 Loading $name:$version into Minikube nodes..."
+        minikube image load "$name:$version"
     fi
 
     if [ $? -ne 0 ]; then
@@ -127,6 +141,12 @@ build_keycloak_image() {
         echo "❌ Failed to build $name"
         cleanup_docker_context "$context_dir"
         exit 1
+    fi
+
+    # Sync image into Minikube if running multi-node
+    if [[ "$ENV_TARGET" == "local" && "$USE_MINIKUBE_LOAD" == true ]]; then
+        echo "📦 Loading $name:$version into Minikube nodes..."
+        minikube image load "$name:$version"
     fi
 
     if [[ "$ENV_TARGET" == "gcp" ]]; then

@@ -160,6 +160,16 @@ public class UserService {
                             .build();
                     ProfileDB.save(newHg);
 
+                    Optional<List<String>> assignedGroups = JwtUtil.getGroups(jwt);
+                    if (assignedGroups.isPresent()) {
+                        for(String groupName : assignedGroups.get()) {
+                            Optional<HostGroup> hg = ProfileDB.findByName(groupName);
+                            if (hg.isPresent()) {
+                                operatingUser.getHostGroups().add(hg.get());
+                            }
+                        }
+                    }
+
                     operatingUser.getHostGroups().add(newHg);
                     save(operatingUser);
                 } else {
