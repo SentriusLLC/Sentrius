@@ -4,7 +4,18 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 source ${SCRIPT_DIR}/base.sh
 source ${SCRIPT_DIR}/../base/base.sh
-source ${SCRIPT_DIR}/../../.local.env
+
+# For local deployments, use 'latest' tag instead of versioned tags
+SENTRIUS_VERSION="latest"
+SENTRIUS_SSH_VERSION="latest"
+SENTRIUS_KEYCLOAK_VERSION="latest"
+SENTRIUS_AGENT_VERSION="latest"
+SENTRIUS_AI_AGENT_VERSION="latest"
+LLMPROXY_VERSION="latest"
+LAUNCHER_VERSION="latest"
+AGENTPROXY_VERSION="latest"
+SSHPROXY_VERSION="latest"
+RDPPROXY_VERSION="latest"
 
 CERT_DIR="${SCRIPT_DIR}/../../docker/dev-certs"
 CERT_FILE="${CERT_DIR}/sentrius-ca.crt"
@@ -17,11 +28,6 @@ CERT_DIR="${SCRIPT_DIR}/../../docker/dev-certs"
 # set default to false
 DEPLOY_ADMINER=${DEPLOY_ADMINER:-false}
 ENABLE_RDP_CONTAINER=${ENABLE_RDP_CONTAINER:-true}
-
-# --- Load and back up environment file ---
-ENV_FILE="${SCRIPT_DIR}/../../.$ENV_TARGET.env"
-source "$ENV_FILE"
-cp "$ENV_FILE" "$ENV_FILE.bak"
 
 (source ${SCRIPT_DIR}/../base/generate-secrets.sh)
 
