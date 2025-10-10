@@ -16,6 +16,7 @@ ENV_TARGET="local"  # default mode
 CERT_DIR="${SCRIPT_DIR}/../../docker/dev-certs"
 # set default to false
 DEPLOY_ADMINER=${DEPLOY_ADMINER:-false}
+ENABLE_RDP_CONTAINER=${ENABLE_RDP_CONTAINER:-false}
 
 # --- Load and back up environment file ---
 ENV_FILE="${SCRIPT_DIR}/../../.$ENV_TARGET.env"
@@ -143,11 +144,13 @@ if [[ "$ENABLE_TLS" == "true" ]]; then
     SUBDOMAIN="sentrius-${TENANT}.local"
     APROXY_SUBDOMAIN="agentproxy-${TENANT}.local"
     KEYCLOAK_SUBDOMAIN="keycloak-${TENANT}.local"
+    RDPPROXY_SUBDOMAIN="rdpproxy-${TENANT}.local"
     KEYCLOAK_HOSTNAME=${KEYCLOAK_SUBDOMAIN}
     KEYCLOAK_DOMAIN="https://${KEYCLOAK_SUBDOMAIN}"
     KEYCLOAK_INTERNAL_DOMAIN="https://${KEYCLOAK_SUBDOMAIN}"
     SENTRIUS_DOMAIN="https://${SUBDOMAIN}"
     APROXY_DOMAIN="https://${APROXY_SUBDOMAIN}"
+    RDPPROXY_DOMAIN="https://${RDPPROXY_SUBDOMAIN}"
     CERTIFICATES_ENABLED="true"
     INGRESS_TLS_ENABLED="true"
     ENVIRONMENT="local"
@@ -156,11 +159,13 @@ else
     SUBDOMAIN="sentrius-sentrius"
     APROXY_SUBDOMAIN="sentrius-agentproxy"
     KEYCLOAK_SUBDOMAIN="sentrius-keycloak"
+    RDPPROXY_SUBDOMAIN="sentrius-rdp-proxy"
     KEYCLOAK_HOSTNAME="sentrius-keycloak:8081"
     KEYCLOAK_DOMAIN="http://sentrius-keycloak:8081"
     KEYCLOAK_INTERNAL_DOMAIN="http://sentrius-keycloak:8081"
     APROXY_DOMAIN="http://sentrius-agentproxy:8080"
     SENTRIUS_DOMAIN="http://sentrius-sentrius:8080"
+    RDPPROXY_DOMAIN="http://sentrius-rdp-proxy:8080"
     CERTIFICATES_ENABLED="false"
     INGRESS_TLS_ENABLED="false"
     ENVIRONMENT="local"
@@ -224,6 +229,7 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set metrics.enabled=false \
     --set metrics.class.exclusion="org.springframework.boot.actuate.autoconfigure.metrics.SystemMetricsAutoConfiguration" \
     --set agentproxySubdomain="${APROXY_SUBDOMAIN}" \
+    --set rdpproxySubdomain="${RDPPROXY_SUBDOMAIN}" \
     --set keycloakSubdomain="${KEYCLOAK_SUBDOMAIN}" \
     --set keycloakHostname="${KEYCLOAK_HOSTNAME}" \
     --set keycloakDomain="${KEYCLOAK_DOMAIN}" \
@@ -232,6 +238,7 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set secrets.db.password="${DB_PASSWORD}" \
     --set secrets.db.keystorePassword="${KEYSTORE_PASSWORD}" \
     --set agentproxyDomain="${APROXY_DOMAIN}" \
+    --set rdpproxyDomain="${RDPPROXY_DOMAIN}" \
     --set certificates.enabled=${CERTIFICATES_ENABLED} \
     --set ingress.tlsEnabled=${INGRESS_TLS_ENABLED} \
     --set launcherFQDN=sentrius-agents-launcherservice.${TENANT}-agents.svc.cluster.local \
@@ -261,6 +268,8 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set launcherservice.image.pullPolicy="Never" \
     --set launcherservice.image.tag=${LAUNCHER_VERSION} \
     --set sshproxy.image.tag=${SSHPROXY_VERSION} \
+    --set rdpproxy.image.tag=${RDPPROXY_VERSION} \
+    --set rdpTest.enabled=${ENABLE_RDP_CONTAINER} \
     --set neo4j.env.NEO4J_server_config_strict__validation__enabled="\"false\"" \
     --set sentriusagent.image.tag=${SENTRIUS_AGENT_VERSION} || { echo "Failed to deploy Sentrius with Helm"; exit 1; }
 

@@ -1,0 +1,40 @@
+{{- if .Values.rdpTest.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-rdp-test
+  labels:
+    app: rdp-test
+    release: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rdp-test
+  template:
+    metadata:
+      labels:
+        app: rdp-test
+    spec:
+      containers:
+        - name: rdp-test
+          image: "scottyhardy/docker-remote-desktop:latest"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ .Values.rdpTest.port }}
+              protocol: TCP
+          env:
+            - name: PASSWORD
+              value: "{{ .Values.rdpTest.credentials.password }}"
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.rdpTest.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.rdpTest.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 60
+{{- end }}
+

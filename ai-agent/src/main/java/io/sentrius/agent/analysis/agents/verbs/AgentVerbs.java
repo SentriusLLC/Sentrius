@@ -139,7 +139,7 @@ public class AgentVerbs extends VerbBase {
         Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
         //log.info("Response is {}", resp);
         for (Response.Choice choice : response.getChoices()) {
-            var content = choice.getMessage().getContent();
+            var content = choice.getMessage().getContentAsString();
             if (content.startsWith("```json")) {
                 content = content.substring(7, content.length() - 3);
             } else if (content.startsWith("```")) {
@@ -250,7 +250,7 @@ public class AgentVerbs extends VerbBase {
                 Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
                 //log.info("Response is {}", resp);
                 for (Response.Choice choice : response.getChoices()) {
-                    var content = choice.getMessage().getContent();
+                    var content = choice.getMessage().getContentAsString();
                     if (content.startsWith("```json")) {
                         content = content.substring(7, content.length() - 3);
                     }
@@ -328,7 +328,7 @@ public class AgentVerbs extends VerbBase {
                 Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
                 //log.info("Response is {}", resp);
                 for (Response.Choice choice : response.getChoices()) {
-                    var content = choice.getMessage().getContent();
+                    var content = choice.getMessage().getContentAsString();
                     if (content.startsWith("```json")) {
                         content = content.substring(7, content.length() - 3);
                     }
@@ -363,7 +363,7 @@ public class AgentVerbs extends VerbBase {
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             //log.info("Response is {}", resp);
             for (Response.Choice choice : response.getChoices()) {
-                var content = choice.getMessage().getContent();
+                var content = choice.getMessage().getContentAsString();
                 if (content.startsWith("```json")) {
                     content = content.substring(7, content.length() - 3);
                 }
@@ -494,7 +494,7 @@ public class AgentVerbs extends VerbBase {
             }
             var choice = response.getChoices().get(0);
 
-            var content = choice.getMessage().getContent();
+            var content = choice.getMessage().getContentAsString();
             if (content.startsWith("```json")) {
                 content = content.substring(7, content.length() - 3);
             }
@@ -558,7 +558,7 @@ public class AgentVerbs extends VerbBase {
                         }
                         choice = response.getChoices().get(0);
 
-                        content = choice.getMessage().getContent();
+                        content = choice.getMessage().getContentAsString();
                         if (content.startsWith("```json")) {
                             content = content.substring(7, content.length() - 3);
                         }
@@ -638,7 +638,7 @@ public class AgentVerbs extends VerbBase {
 //        log.info("Response is {}", resp);
         ArrayNode endpointsLikeList = JsonUtil.MAPPER.createArrayNode();
         for (Response.Choice choice : response.getChoices()) {
-            var content = choice.getMessage().getContent();
+            var content = choice.getMessage().getContentAsString();
             if (content.startsWith("```json")) {
                 content = content.substring(7, content.length() - 3);
             } else if (content.startsWith("```")) {
@@ -713,7 +713,7 @@ public class AgentVerbs extends VerbBase {
         Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
         //log.info("Response is {}", resp);
         for (Response.Choice choice : response.getChoices()) {
-            var content = choice.getMessage().getContent();
+            var content = choice.getMessage().getContentAsString();
             if (content.startsWith("```json")) {
                 content = content.substring(7, content.length() - 3);
             } else if (content.startsWith("```")) {

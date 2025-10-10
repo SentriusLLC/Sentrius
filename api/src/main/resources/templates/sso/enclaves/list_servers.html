@@ -3,9 +3,31 @@
 <head>
     <meta th:replace="~{fragments/header}">
     <script type="module" th:src="@{/js/chat.js}"></script>
+    <script th:src="@{/node/js/guacamole-common-js/index.js}"></script>
 
     <title>[[${systemOptions.systemLogoName}]] - View Hosts and Enclaves</title>
     <style>
+        #rdpDisplayWrapper {
+            width: 100%;
+            height: 80vh; /* take up 80% of viewport height */
+            border: 1px solid #444;
+            background: #000;
+            overflow: auto; /* scroll if remote desktop is larger */
+            position: relative;
+        }
+
+        #rdpDisplay {
+            min-width: 800px;   /* fallback minimum */
+            min-height: 600px;  /* fallback minimum */
+            display: block;
+        }
+
+        #rdpDisplay canvas {
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
         .grid-stack-item-content {
             background-color: #405d80;
             color: #fff;
@@ -22,6 +44,7 @@
         .grid-stack-item-content:hover {
             transform: scale(1.05);
         }
+
 
         #chat-container {
             position: fixed;
@@ -137,7 +160,6 @@
             <!-- Data will be dynamically loaded here -->
             </tbody>
         </table>
-        </table>
         <h3>Assigned RDP Servers</h3>
         <table id="rdp-table" class="display" style="width:100%">
             <thead>
@@ -183,6 +205,229 @@
             config = data;
             // proceed with code using config here
         });
+
+    function connectRdpSession(groupId, hostId) {
+        console.log("Connecting to RDP session for group:", groupId, "host:", hostId);
+        
+        // Hide any existing alerts
+        $("#alertTopError").hide();
+        $("#alertTop").hide();
+        
+        // Show loading
+        $("#alertTop").text("Connecting to RDP session...").show();
+        
+        // Get session data from server
+        fetch(`/api/v1/enclaves/hosts/rdp/connect/${groupId}/${hostId}`)
+            .then(response => response.json())
+            .then(sessionData => {
+                if (sessionData.websocketUrl) {
+                    // Open RDP modal with session data
+                    openRdpModal(sessionData);
+                } else {
+                    throw new Error("Invalid session data received");
+                }
+            })
+            .catch(error => {
+                console.error("Error connecting to RDP session:", error);
+                $("#alertTop").hide();
+                $("#alertTopError").text("Failed to connect to RDP session: " + error.message).show().delay(5000).fadeOut();
+            });
+    }
+    
+    function openRdpModal(sessionData) {
+        // Create RDP modal if it doesn't exist
+        if (!document.getElementById('rdpModal')) {
+            const modalHtml = `
+                <div class="modal fade" id="rdpModal" tabindex="-1" role="dialog" aria-labelledby="rdpModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg" role="document" style="max-width: 90%; margin: 1.75rem auto;">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="rdpModalLabel">RDP Session - <span id="rdpHostName"></span></h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <div id="rdpConnectionStatus" class="alert alert-info">
+                                    <i class="fa fa-spinner fa-spin"></i> Connecting to RDP server...
+                                </div>
+                                <div id="rdpDisplayWrapper">
+
+                                    <div id="rdpDisplay" style="border: 1px solid #ccc; background: #000; position: relative;">
+                                        <div id="rdpControls" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); padding: 5px; border-radius: 3px; z-index: 100;">
+                                            <button class="btn btn-sm btn-secondary" onclick="disconnectRdp()" title="Disconnect">
+                                                <i class="fa fa-power-off"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        // Set host name in modal
+        document.getElementById('rdpHostName').textContent = sessionData.displayName;
+        
+        // Show modal
+        $('#rdpModal').modal('show');
+        
+        // Hide alerts
+        $("#alertTop").hide();
+        
+        // Initialize RDP connection
+        initializeRdpConnection(sessionData);
+    }
+
+    function initializeRdpConnection(sessionData) {
+        // Build the WebSocket tunnel to guacd via your proxy
+        const u = new URL(sessionData.websocketUrl, sessionData.websocketHost);
+        u.protocol = (u.protocol === 'https:') ? 'wss:' : 'ws:';
+        const wsUrl = u.toString();
+
+        console.log("Connecting to Guacamole WebSocket:", wsUrl);
+        console.log("Connecting to Guacamole WebSocket:", sessionData.websocketUrl);
+        console.log("Connecting to Guacamole WebSocket:", sessionData.websocketHost);
+
+        const tunnel = new Guacamole.WebSocketTunnel(wsUrl);
+        const client = new Guacamole.Client(tunnel);
+
+        tunnel.onerror = function(status) {
+            console.error("Tunnel error:", status.code, status.message);
+        };
+        client.onerror = function(error) {
+            console.error("Client error:", error);
+        };
+
+        tunnel.onstatechange = function(state) {
+            console.log("Tunnel state:", state);
+        };
+        window.rdpClient = client;
+
+        // Attach Guacamole display to canvas container
+        const displayDiv = document.getElementById("rdpDisplay");
+
+        // Clear any previous content
+        displayDiv.innerHTML = '<div id="rdpControls" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); padding: 5px; border-radius: 3px; z-index: 100;"><button class="btn btn-sm btn-secondary" onclick="disconnectRdp()" title="Disconnect"><i class="fa fa-power-off"></i></button></div>';
+        
+        // Get the display element and append it
+        const guacDisplay = client.getDisplay().getElement();
+        displayDiv.appendChild(guacDisplay);
+
+        // Now connect
+        client.connect();
+
+        $('#rdpModal').on('shown.bs.modal', function () {
+            if (window.rdpClient) {
+                const display = window.rdpClient.getDisplay();
+                // Auto-scale the display to fit the modal
+                display.scale(1.0);
+                display.flush();
+            }
+        });
+
+
+        // Update status
+        const statusDiv = document.getElementById("rdpConnectionStatus");
+        statusDiv.className = "alert alert-warning";
+        statusDiv.innerHTML = "<i class='fa fa-spinner fa-spin'></i> Connecting...";
+
+        // Keyboard handler
+        const keyboard = new Guacamole.Keyboard(document);
+        keyboard.onkeydown = keysym => client.sendKeyEvent(1, keysym);
+        keyboard.onkeyup   = keysym => client.sendKeyEvent(0, keysym);
+
+        // Mouse handler
+        const mouse = new Guacamole.Mouse(client.getDisplay().getElement());
+        mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = state => {
+            client.sendMouseState(state);
+        };
+
+        // Clipboard handler (optional)
+        client.onclipboard = (stream, mimetype) => {
+            if (mimetype === "text/plain") {
+                const reader = new Guacamole.StringReader(stream);
+                let data = "";
+                reader.ontext = text => data += text;
+                reader.onend = () => console.log("Clipboard:", data);
+            }
+        };
+
+        // Error + state change handlers
+        client.onerror = error => {
+            statusDiv.className = "alert alert-danger";
+            statusDiv.innerHTML = "<i class='fa fa-exclamation-triangle'></i> Error: " + error.message;
+        };
+
+        client.onstatechange = state => {
+            switch(state) {
+                case 0: // Idle
+                    console.log("Idle");
+                    break;
+                case 1: // Connecting
+                    console.log("connecting to RDP server");
+                    statusDiv.className = "alert alert-success";
+                    statusDiv.innerHTML = "<i class='fa fa-check-circle'></i> Connecting...";
+                    client.getDisplay().flush();
+                    break;
+                case 2: // Connected
+                case 3: // connected
+                    console.log("Connected to RDP server");
+                    statusDiv.className = "alert alert-success";
+                    statusDiv.innerHTML = "<i class='fa fa-check-circle'></i> Connected";
+                    client.getDisplay().flush();
+                    break;
+                case 4: // Disconnected
+                    console.log("dis---Connected to RDP server");
+                    statusDiv.className = "alert alert-warning";
+                    statusDiv.innerHTML = "<i class='fa fa-info-circle'></i> Disconnected";
+                    tunnel.disconnect();
+                    break;
+            }
+        };
+    }
+
+
+
+
+    function disconnectRdp() {
+        if (window.rdpClient) {
+            window.rdpClient.disconnect();
+            window.rdpClient = null;
+        }
+        $('#rdpModal').modal('hide');
+    }
+
+    // Clean up when modal is hidden
+    $('#rdpModal').on('hidden.bs.modal', function () {
+        if (window.rdpClient) {
+            window.rdpClient.disconnect();
+            window.rdpClient = null;
+        }
+    });
+
+
+    function downloadRdpFile(groupId, hostId) {
+        console.log("Downloading RDP file for group:", groupId, "host:", hostId);
+        
+        // Create a download link for the RDP file
+        const downloadUrl = `/api/v1/enclaves/hosts/rdp/download/${groupId}/${hostId}`;
+        
+        // Create a temporary anchor element to trigger the download
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = ''; // Let the server determine the filename
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Show success message
+        $("#alertTopError").hide();
+        $("#alertTop").text("RDP file download initiated").show().delay(3000).fadeOut();
+    }
 
     function deleteServer(groupId,data) {
         // The API URL you want to call
@@ -333,10 +578,10 @@
                 }
             ]
         });
-        var url = '/api/v1/enclaves/hosts/list';
+        var url = '/api/v1/enclaves/hosts/list?type=SSH';
         console.log("group id: ", groupId);
         if (groupId && groupId !== '-1') {
-            url = `/api/v1/enclaves/hosts/list?groupId=${groupId}`;
+            url = `/api/v1/enclaves/hosts/list?groupId=${groupId}&type=SSH`;
             console.log("url is " + url);
         }
         let canDelete = [[${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_DEL_SYSTEMS')}]];
@@ -360,6 +605,36 @@
                         let ret=`<button class="btn btn-primary" onclick="connectToServer(${groupId}, ${id})">Connect</button> `;
                         if (canDelete) {
                             ret += `<button class="btn btn-primary" onclick="deleteServer(${groupId}, ${id})">Delete</button>`;
+                        }
+                        return ret;
+                    }
+                }
+
+            ]
+        });
+        url = '/api/v1/enclaves/hosts/list?type=RDP';
+        if (groupId && groupId !== '-1') {
+            url = `/api/v1/enclaves/hosts/list?groupId=${groupId}&type=RDP`;
+            console.log("url is " + url);
+        }
+        $('#rdp-table').DataTable({
+            ajax: {
+                url: url, // list
+                dataSrc: '', // Specify the property where the data is located (e.g. use 'data' if response has a "data" field)
+            },
+            columns: [
+                { data: 'displayName' },
+                { data: 'displayName' },
+                { data: 'group.displayName' },
+                { data: 'rdpUser' },
+                {
+                    data: null,
+                    render: function(data, type, row) {
+                        const groupId = row.group ? row.group.groupId : -1; // Access group.id
+                        const id = row.id;
+                        let ret=`<button class="btn btn-success" onclick="connectRdpSession(${groupId}, ${id})">Connect RDP</button> `;
+                        if (canDelete) {
+                            ret += `<button class="btn btn-danger" onclick="deleteServer(${groupId}, ${id})">Delete</button>`;
                         }
                         return ret;
                     }

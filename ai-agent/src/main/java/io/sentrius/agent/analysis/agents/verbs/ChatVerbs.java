@@ -106,14 +106,14 @@ public class ChatVerbs extends VerbBase{
                 "terminal output if needed " +
                 "for clarity of the next LLM request and for the user. Ensure your all future responses meets this " +
                 "json format (LLMResponse format): " + terminalResponse).build());
-            messages.add(Message.builder().role("user").content(userMessage.getContent()).build());
+            messages.add(Message.builder().role("user").content(userMessage.getContentAsString()).build());
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
             executionContext.addMessages( messages );
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             log.info("Response is {}", resp);
             for (Response.Choice choice : response.getChoices()) {
-                var content = choice.getMessage().getContent();
+                var content = choice.getMessage().getContentAsString();
                 if (content.startsWith("```json")) {
                     content = content.substring(7, content.length() - 3);
                 } else if (content.startsWith("```")) {
@@ -152,7 +152,7 @@ public class ChatVerbs extends VerbBase{
             messages.addAll(history);
 
             executionContext.addMessages( userMessage );
-            messages.add(Message.builder().role("user").content(userMessage.getContent()).build());
+            messages.add(Message.builder().role("user").content(userMessage.getContentAsString()).build());
 
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
@@ -160,7 +160,7 @@ public class ChatVerbs extends VerbBase{
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             log.info("Response is {}", resp);
             for (Response.Choice choice : response.getChoices()) {
-                var content = choice.getMessage().getContent();
+                var content = choice.getMessage().getContentAsString();
                 if (content.startsWith("```json")) {
                     content = content.substring(7, content.length() - 3);
                 } else if (content.startsWith("```")) {
@@ -230,7 +230,7 @@ public class ChatVerbs extends VerbBase{
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             log.info("Response is {}", resp);
             for (Response.Choice choice : response.getChoices()) {
-                var content = choice.getMessage().getContent();
+                var content = choice.getMessage().getContentAsString();
                 if (content.startsWith("```json")) {
                     content = content.substring(7, content.length() - 3);
                 } else if (content.startsWith("```")) {
@@ -300,7 +300,10 @@ public class ChatVerbs extends VerbBase{
     private int getMessageSize(Message msg) {
         int size = 0;
         if (msg.role != null) size += msg.role.length();
-        if (msg.content != null) size += msg.content.length();
+        if (msg.content != null) {
+            String contentStr = msg.getContentAsString();
+            if (contentStr != null) size += contentStr.length();
+        }
         if (msg.refusal != null) size += msg.refusal.length();
         return size;
     }
@@ -365,7 +368,7 @@ public class ChatVerbs extends VerbBase{
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             log.info("Response is {}", resp);
             for (Response.Choice choice : response.getChoices()) {
-                var content = choice.getMessage().getContent();
+                var content = choice.getMessage().getContentAsString();
                 executionContext.addMessages(choice.getMessage());
                 if (content.startsWith("```json")) {
                     content = content.substring(7, content.length() - 3);

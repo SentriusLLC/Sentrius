@@ -618,7 +618,7 @@
                                     <a href="#" id="disable-systems-button" class="btn btn-danger">Lock Down Enclaves</a>
                                     <a href="/sso/v1/system/settings" class="btn btn-primary">Update Settings</a>
                                     <a href="/sso/v1/sessions/audit/list" class="btn btn-primary"
-                                       th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">Audit User</a>
+                                       th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">Audit Sessions</a>
                                 </div>
 
                             </div>

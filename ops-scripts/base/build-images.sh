@@ -110,6 +110,7 @@ build_keycloak_image() {
           --build-arg SENTRIUS_LAUNCHER_CLIENT_SECRET="$SENTRIUS_LAUNCHER_CLIENT_SECRET" \
           --build-arg JAVA_AGENTS_CLIENT_SECRET="$JAVA_AGENTS_CLIENT_SECRET" \
           --build-arg AI_AGENT_ASSESSOR_CLIENT_SECRET="$AI_AGENT_ASSESSOR_CLIENT_SECRET" \
+          --build-arg SENTRIUS_RDPPROXY_CLIENT_SECRET="$SENTRIUS_RDPPROXY_CLIENT_SECRET" \
           "$context_dir"
     else
         docker build "${BUILD_ARGS[@]}" -t "$name:$version" \
@@ -118,6 +119,7 @@ build_keycloak_image() {
           --build-arg SENTRIUS_LAUNCHER_CLIENT_SECRET="$SENTRIUS_LAUNCHER_CLIENT_SECRET" \
           --build-arg JAVA_AGENTS_CLIENT_SECRET="$JAVA_AGENTS_CLIENT_SECRET" \
           --build-arg AI_AGENT_ASSESSOR_CLIENT_SECRET="$AI_AGENT_ASSESSOR_CLIENT_SECRET" \
+          --build-arg SENTRIUS_RDPPROXY_CLIENT_SECRET="$SENTRIUS_RDPPROXY_CLIENT_SECRET" \
           "$context_dir"
     fi
 
@@ -150,6 +152,8 @@ update_integrationproxy=false
 update_launcher=false
 update_agent_proxy=false
 update_ssh_proxy=false
+update_rdp_proxy=false
+
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -162,7 +166,8 @@ while [[ "$#" -gt 0 ]]; do
         --sentrius-integration-proxy) update_integrationproxy=true ;;
         --sentrius-agent-proxy) update_agent_proxy=true ;;
         --sentrius-ssh-proxy) update_ssh_proxy=true ;;
-        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_integrationproxy=true; update_launcher=true; update_agent_proxy=true; update_ssh_proxy=true; ;;
+        --sentrius-rdp-proxy) update_rdp_proxy=true ;;
+        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_integrationproxy=true; update_launcher=true; update_agent_proxy=true; update_ssh_proxy=true; update_rdp_proxy=true; ;;
         --no-cache) NO_CACHE=true ;;
         --include-dev-certs) INCLUDE_DEV_CERTS=true ;;
         *) echo "Unknown flag: $1"; exit 1 ;;
@@ -247,4 +252,12 @@ if $update_ssh_proxy; then
     build_image "sentrius-ssh-proxy" "$SSHPROXY_VERSION" "${SCRIPT_DIR}/../../docker/ssh-proxy"
     rm docker/ssh-proxy/sshproxy.jar
     update_env_var "SSHPROXY_VERSION" "$SSHPROXY_VERSION"
+fi
+
+if $update_rdp_proxy; then
+    cp rdp-proxy/target/rdp-proxy-*.jar docker/rdp-proxy/rdpproxy.jar
+    RDPPROXY_VERSION=$(increment_patch_version $RDPPROXY_VERSION)
+    build_image "sentrius-rdp-proxy" "$RDPPROXY_VERSION" "${SCRIPT_DIR}/../../docker/rdp-proxy"
+    rm docker/rdp-proxy/rdpproxy.jar
+    update_env_var "RDPPROXY_VERSION" "$RDPPROXY_VERSION"
 fi

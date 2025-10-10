@@ -116,3 +116,8 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-oauth2-secrets
                   key: ai-agent-assessor-client-secret
+            - name: SENTRIUS_RDPPROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: rdpproxy-client-secret

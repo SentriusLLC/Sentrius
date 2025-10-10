@@ -1,3 +1,5 @@
+-- Enable pgvector extension for PostgreSQL vector operations
+CREATE EXTENSION IF NOT EXISTS vector;
 -- Create agent memory store with markings support
 CREATE TABLE agent_memory (
     id BIGSERIAL PRIMARY KEY,

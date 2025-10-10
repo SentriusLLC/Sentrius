@@ -4,6 +4,7 @@ import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.utils.JsonUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -23,6 +24,7 @@ import java.util.Map;
  */
 @Slf4j
 @Service
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class EmbeddingService {
 
     private final String integrationProxyUrl;

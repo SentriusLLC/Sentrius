@@ -9,9 +9,11 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import io.sentrius.agent.analysis.biometrics.TerminalBiometricProcessor;
 import io.sentrius.sso.core.model.categorization.CommandCategory;
 import io.sentrius.sso.core.model.metadata.AnalyticsTracking;
 import io.sentrius.sso.core.model.metadata.TerminalBehaviorMetrics;
+import io.sentrius.sso.core.model.metadata.TerminalBiometricMetrics;
 import io.sentrius.sso.core.model.metadata.TerminalCommand;
 import io.sentrius.sso.core.model.metadata.TerminalRiskIndicator;
 import io.sentrius.sso.core.model.metadata.TerminalSessionMetadata;
@@ -42,6 +44,7 @@ public class SessionAnalyticsAgent {
     private final TerminalSessionMetadataService sessionMetadataService;
     private final TerminalCommandService commandService;
     private final TerminalBehaviorMetricsService behaviorMetricsService;
+    private final TerminalBiometricProcessor biometricProcessor;
     private final TerminalRiskIndicatorService riskIndicatorService;
     private final UserExperienceMetricsService experienceMetricsService;
     private final AnalyticsTrackingRepository trackingRepository;
@@ -100,13 +103,15 @@ public class SessionAnalyticsAgent {
         }
 
         TerminalBehaviorMetrics behaviorMetrics = behaviorMetricsService.computeMetricsForSession(session);
+        // Process biometric data using actual terminal logs
+        TerminalBiometricMetrics biometricMetrics = biometricProcessor.processTerminalLogs(session, terminalLogs);
         TerminalRiskIndicator riskIndicators = riskIndicatorService.computeRiskIndicators(session, commands);
         UserExperienceMetrics experienceMetrics = experienceMetricsService.calculateExperienceMetrics(
             session.getUser(), session, commands
         );
 
-        log.info("Processed session {}: Behavior Metrics: {}, Risk Indicators: {}, Experience Metrics: {}",
-            session.getId(), behaviorMetrics, riskIndicators, experienceMetrics);
+        log.info("Processed session {}: Behavior Metrics: {}, Biometric Metrics: {}, Risk Indicators: {}, Experience Metrics: {}",
+            session.getId(), behaviorMetrics, biometricMetrics, riskIndicators, experienceMetrics);
     }
 
     private void saveToTracking(Long sessionId, String status) {

@@ -32,7 +32,7 @@ export function countRules(){
 }
 
 export function countAssignedSystems(){
-    fetch('/api/v1/enclaves/hosts/list')
+    fetch('/api/v1/enclaves/hosts/list?type=ALL')
         .then(response => response.json())
         .then(data => {
             if (null != data) {

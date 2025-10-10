@@ -5,7 +5,9 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import lombok.NonNull;
+import org.springframework.stereotype.Service;
 
+@Service
 public class PublicKeyManager {
 
     final Set<String> keys = new LinkedHashSet<>();

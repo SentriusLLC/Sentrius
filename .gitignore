@@ -61,3 +61,4 @@ api/node
 # Ignore Generated keys if they exist
 docker/dev-certs/sentrius-ca.crt
 docker/dev-certs/sentrius-ca.key
+docker/*/dev-certs/sentrius-ca.crt

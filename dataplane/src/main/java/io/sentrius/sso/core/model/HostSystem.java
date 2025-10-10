@@ -101,7 +101,26 @@ public class HostSystem implements Host {
     @Column(name = "proxied_ssh_port")
     private Integer proxiedSSHPort = 0;
 
+    // RDP Support fields
+    @Builder.Default
+    @Column(name = "rdp_enabled")
+    private boolean rdpEnabled = false;
 
+    @Builder.Default
+    @Column(name = "rdp_user")
+    private String rdpUser = "Administrator";
+
+    @Builder.Default
+    @Column(name = "rdp_password")
+    private String rdpPassword = "";
+
+    @Builder.Default
+    @Column(name = "rdp_port")
+    private Integer rdpPort = 3389;
+
+    @Builder.Default
+    @Column(name = "rdp_domain")
+    private String rdpDomain = "";
 
     @OneToMany(mappedBy = "hostSystem", cascade = CascadeType.ALL,orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ProxyHost> proxies;
@@ -132,6 +151,11 @@ public class HostSystem implements Host {
         dto.displayName(this.displayName);
         dto.host(this.host);
         dto.statusCd(this.statusCd);
+        if (rdpEnabled) {
+            dto.isRdp(true);
+            dto.rdpUser(rdpUser != null && !rdpUser.isEmpty());
+            dto.rdpPassword(rdpPassword != null && !rdpPassword.isEmpty());
+        }
         dto.publicKeyList(this.publicKeyList != null ? new ArrayList<>(this.publicKeyList) : new ArrayList<>());
         dto.errorMsg(this.errorMsg);
         dto.port(this.port);
@@ -149,6 +173,11 @@ public class HostSystem implements Host {
         dto.displayName(this.displayName);
         dto.host(this.host);
         dto.statusCd(this.statusCd);
+        if (rdpEnabled) {
+            dto.isRdp(true);
+            dto.rdpUser(rdpUser != null && !rdpUser.isEmpty());
+            dto.rdpPassword(rdpPassword != null && !rdpPassword.isEmpty());
+        }
         dto.publicKeyList(this.publicKeyList != null ? new ArrayList<>(this.publicKeyList) : new ArrayList<>());
         dto.errorMsg(this.errorMsg);
         dto.port(this.port);
