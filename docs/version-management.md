@@ -96,13 +96,16 @@ If you get "image not found" errors:
 
 ### Want to use specific versions locally
 
-If you need specific versions for local testing, you can manually override:
+If you need specific versions for local testing, you can override via environment variables:
 ```bash
-# In deploy-helm.sh, temporarily set:
-SENTRIUS_VERSION="1.2.3"
+# Override a single service version
+SENTRIUS_VERSION="1.2.3" ./ops-scripts/local/deploy-helm.sh
+
+# Override multiple service versions
+SENTRIUS_VERSION="1.2.3" SENTRIUS_SSH_VERSION="1.1.5" ./ops-scripts/local/deploy-helm.sh
 ```
 
-Or pass it to helm directly:
+Or pass it directly to helm:
 ```bash
 helm upgrade --install sentrius ./sentrius-chart \
   --set sentrius.image.tag=1.2.3 \
