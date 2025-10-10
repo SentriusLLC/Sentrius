@@ -53,6 +53,11 @@ systems:
     port: 22
     host: sentrius-bad-ssh
     authorizedKeys: ~/.ssh/authorized_keys
+  - displayName: sentrius-rdp-test
+    sshUser: ubuntu
+    password: ubuntu
+    rdp: true
+    host: sentrius-rdp
 
 ## Define groups of users who are assigned to systems
 ## also entails the configuration that is applied to groupf
@@ -63,6 +68,7 @@ managementGroups:
     description: test group
     systems:
       - SSH-HOST
+      - sentrius-rdp-test
     configuration:
       configurationName: testConfig
       terminalsLocked: false

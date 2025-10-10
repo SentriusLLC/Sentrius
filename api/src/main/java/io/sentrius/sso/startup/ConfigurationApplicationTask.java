@@ -584,7 +584,7 @@ public class ConfigurationApplicationTask {
         throws SQLException, GeneralSecurityException {
         List<User> users = new ArrayList<>();
         Map<Long, Set<Long>> assignments = new HashMap<>();
-        if (null != installConfiguration.getUsers()) {
+        if (null != installConfiguration.getNpes()) {
             for (var userDTO : installConfiguration.getUsers()) {
                 if (userDTO.getPassword() == null || userDTO.getPassword().isEmpty()) {
                     log.warn("User {} has no password");
@@ -612,8 +612,6 @@ public class ConfigurationApplicationTask {
                 }
 
                 User user = User.from(userDTO, type.get());
-
-                user.setIdentityType(IdentityType.NON_PERSON_ENTITY);
 
                 
 
@@ -714,8 +712,8 @@ public class ConfigurationApplicationTask {
         throws SQLException, GeneralSecurityException {
         List<User> users = new ArrayList<>();
         Map<Long, Set<Long>> assignments = new HashMap<>();
-        if (null != installConfiguration.getUsers()) {
-            for (var userDTO : installConfiguration.getUsers()) {
+        if (null != installConfiguration.getNpes()) {
+            for (var userDTO : installConfiguration.getNpes()) {
                 if (userDTO.getPassword() == null || userDTO.getPassword().isEmpty()) {
                     log.warn("User {} has no password");
                     userDTO.setPassword(UUID.randomUUID().toString());
@@ -742,6 +740,7 @@ public class ConfigurationApplicationTask {
                 }
 
                 User user = User.from(userDTO, type.get());
+                user.setIdentityType(IdentityType.NON_PERSON_ENTITY);
 
 
 
