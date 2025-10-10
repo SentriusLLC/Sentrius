@@ -24,6 +24,9 @@ public class UserDTO {
     public String password;
 
     @Builder.Default
+    public Boolean isNpe= false;
+
+    @Builder.Default
     public String status = "ACTIVE";
 
     @Builder.Default

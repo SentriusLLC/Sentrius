@@ -209,6 +209,12 @@ public class HostSystem implements Host {
         hostSystem.setErrorMsg(dto.getErrorMsg());
         hostSystem.setPort(dto.getPort());
         hostSystem.setSshUser(dto.getSshUser());
+        if (dto.isRdp()) {
+            hostSystem.setRdpEnabled(dto.isRdp());
+            hostSystem.setRdpUser(dto.isRdpUser() ? dto.getSshUser() : "");
+            hostSystem.setRdpPassword(dto.isRdpPassword() ? dto.getPassword() : "");
+        }
+
         return hostSystem;
     }
 
