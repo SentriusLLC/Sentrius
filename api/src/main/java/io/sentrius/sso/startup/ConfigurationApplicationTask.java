@@ -527,7 +527,6 @@ public class ConfigurationApplicationTask {
                 if ( shouldInsertSystem(systemObj)) {
                     if (action) {
                         var sys = systemRepository.save(systemObj);
-                        log.info("Creating system {}, with id {}", system.getDisplayName(), sys.getId());
                     }
                     sideEffects.add(
                         SideEffect.builder().sideEffectDescription("Creating system " + system.getDisplayName()).type(
