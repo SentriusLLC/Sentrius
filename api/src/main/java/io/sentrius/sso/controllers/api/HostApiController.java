@@ -317,7 +317,7 @@ public class HostApiController extends BaseController {
             
             // Validate access to the host group
             Optional<HostGroup> hostGroupOpt = hostGroupService.getHostGroupWithHostSystems(user, enclaveId);
-            if (hostGroupOpt.isEmpty()) {
+            if (!AccessUtil.canAccess(user, SSHAccessEnum.CAN_MANAGE_SYSTEMS) && hostGroupOpt.isEmpty() ) {
                 // log.warn("User {} does not have access to host group {}", user.getUsername(), enclaveId);
                 return ResponseEntity.badRequest().build();
             }

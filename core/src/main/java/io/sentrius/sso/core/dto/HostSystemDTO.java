@@ -25,9 +25,8 @@ public class HostSystemDTO {
 
     private String authorizedKeys;
 
-    @Builder.Default
-    private boolean isRdp = false;
-    private boolean rdpUser;
-    private boolean rdpPassword;
+    private boolean isRdp;
+    private String rdpUser;
+    private String rdpPassword;
 
 }

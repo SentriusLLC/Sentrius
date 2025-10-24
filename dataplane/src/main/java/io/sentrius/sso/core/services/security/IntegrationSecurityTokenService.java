@@ -65,7 +65,6 @@ public class IntegrationSecurityTokenService {
     public List<IntegrationSecurityToken> findByConnectionType(String connectionType) {
         return repository.findByConnectionType(connectionType).stream().map(token -> {
             // decrypt the connecting info
-            log.info("IntegrationSecurityTokenService.findByConnectionType: {}", token);
             IntegrationSecurityToken unmanaged = IntegrationSecurityToken.builder()
                 .id(token.getId())
                 .connectionType(token.getConnectionType())

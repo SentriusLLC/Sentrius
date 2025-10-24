@@ -2,7 +2,9 @@ package io.sentrius.sso.startup;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.DigestInputStream;
 import java.security.GeneralSecurityException;
@@ -14,6 +16,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -89,60 +92,82 @@ public class ConfigurationApplicationTask {
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void afterStartup() throws IOException, GeneralSecurityException, JSchException, SQLException {
-        // Your logic here
+        String yamlPath = systemOptions.getYamlConfiguration();
+        if (StringUtils.isEmpty(yamlPath)) {
+            log.info("No configuration file found");
+            return;
+        }
 
-        if (!StringUtils.isEmpty(systemOptions.getYamlConfiguration())) {
-            log.info("Checking for configuration file {}", systemOptions.getYamlConfiguration());
-            var digestStream = new DigestInputStream(
-                new FileInputStream(systemOptions.getYamlConfiguration()),
-                MessageDigest.getInstance("SHA256")
-            );
-            MessageDigest digest = digestStream.getMessageDigest();
-            var hash = new String(digest.digest());
+        Path yamlFile = Paths.get(yamlPath);
+        if (!Files.exists(yamlFile)) {
+            log.warn("Configuration file {} not found", yamlFile);
+            return;
+        }
 
-            AtomicBoolean recreate = new AtomicBoolean(false);
-            configurationOptionRepository.findLatestByConfigurationName("yamlConfigurationFileHash")
-                .ifPresentOrElse(
-                    configurationOption -> {
-                        if (!hash.equals(configurationOption.getConfigurationValue())) {
-                            log.info("Configuration file hash has changed, recreating database");
-                            recreate.set(true);
-                        }else {
-                            log.info("Configuration file hash has not changed");
-                        }
-                        configurationOption.setConfigurationValue(hash);
-                        configurationOptionRepository.save(configurationOption);
-                    },
-                    () -> {
-                        log.info("No configuration file hash found, creating one");
-                        var configurationOption = new ConfigurationOption();
-                        configurationOption.setConfigurationName("yamlConfigurationFileHash");
-                        configurationOption.setConfigurationValue(hash);
-                        configurationOptionRepository.save(configurationOption);
-                        recreate.set(true);
-                    }
-                );
+        log.info("Checking for configuration file {}", yamlFile);
 
-            Boolean deleteFile = systemOptions.getDeleteYamlConfigurationFile();
-            if (null == deleteFile) {
-                deleteFile = true;
+        // --- Compute SHA-256 hash of file ---
+        String hash;
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            try (InputStream in = Files.newInputStream(yamlFile);
+                 DigestInputStream dis = new DigestInputStream(in, md)) {
+                byte[] buffer = new byte[8192];
+                while (dis.read(buffer) != -1) {
+                    // Consume stream fully to update digest
+                }
             }
-            if (deleteFile) {
-                Files.delete(Paths.get(systemOptions.getYamlConfiguration()));
+            byte[] digest = md.digest();
+            StringBuilder sb = new StringBuilder(digest.length * 2);
+            for (byte b : digest) sb.append(String.format("%02x", b));
+            hash = sb.toString();
+        } catch (Exception e) {
+            throw new IOException("Unable to compute SHA-256 for " + yamlFile, e);
+        }
+
+        AtomicBoolean recreate = new AtomicBoolean(false);
+
+        configurationOptionRepository.findLatestByConfigurationName("yamlConfigurationFileHash")
+            .ifPresentOrElse(existing -> {
+                String oldHash = existing.getConfigurationValue();
+                if (!hash.equalsIgnoreCase(oldHash)) {
+                    log.info("Configuration file hash changed. Recreating database.");
+                    recreate.set(true);
+                } else {
+                    log.info("Configuration file hash unchanged ({}).", hash);
+                }
+                existing.setConfigurationValue(hash);
+                configurationOptionRepository.save(existing);
+            }, () -> {
+                log.info("No configuration file hash found; creating one.");
+                var option = new ConfigurationOption();
+                option.setConfigurationName("yamlConfigurationFileHash");
+                option.setConfigurationValue(hash);
+                configurationOptionRepository.save(option);
+                recreate.set(true);
+            });
+
+        Boolean deleteFile = systemOptions.getDeleteYamlConfigurationFile();
+        if (deleteFile == null) deleteFile = true;
+
+        if (deleteFile) {
+            try {
+                Files.deleteIfExists(yamlFile);
+                log.info("Deleted configuration file {}", yamlFile);
+            } catch (IOException e) {
+                log.warn("Failed to delete configuration file {}", yamlFile, e);
             }
+        }
 
-            if (recreate.get()) {
-                log.info("Recreating database");
-                var installConfiguration =
-                    InstallConfiguration.fromYaml(new FileInputStream(systemOptions.getYamlConfiguration()));
-                // recreate the database
-
+        if (recreate.get()) {
+            log.info("Recreating database using configuration {}", yamlFile);
+            try (InputStream in = Files.newInputStream(yamlFile)) {
+                var installConfiguration = InstallConfiguration.fromYaml(in);
                 initialize(installConfiguration, true);
             }
-        } else {
-            log.info("No configuration file found");
         }
     }
+
     @Transactional
     public List<SideEffect> createStaticType(UserType type, boolean action) throws SQLException,
         GeneralSecurityException {
@@ -498,6 +523,7 @@ public class ConfigurationApplicationTask {
         if (null != installConfiguration.getSystems()) {
             for (var system : installConfiguration.getSystems()) {
                 var systemObj = HostSystem.fromDTO(system);
+                log.info("Processing system {} with host {} and port {}", systemObj.getDisplayName(), systemObj.getHost(), systemObj.getPort());
                 if ( shouldInsertSystem(systemObj)) {
                     if (action) {
                         var sys = systemRepository.save(systemObj);
@@ -518,7 +544,8 @@ public class ConfigurationApplicationTask {
             return true;
         }
         for(HostSystem system : systems) {
-            if (system.getHost().equals(systemObj.getHost()) && system.getPort() == systemObj.getPort()) {
+            if (system.getHost().equals(systemObj.getHost()) && Objects.equals(system.getPort(), systemObj.getPort())) {
+                log.info("System {} with host {} and port {} already exists", systemObj.getDisplayName(), systemObj.getHost(), systemObj.getPort());
                 return false;
             }
         }

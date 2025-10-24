@@ -1,9 +1,12 @@
 package io.sentrius.sso.core.services.security;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.jsonwebtoken.Jwts;
@@ -87,6 +90,19 @@ public class JwtUtil {
         return Optional.empty();
 
     }
+
+    public static Optional<List<String>> getGroups(ObjectNode jwt) {
+        return Optional.ofNullable(jwt.get("claims"))
+            .map(c -> c.get("assignedGroups"))
+            .filter(JsonNode::isArray)
+            .map(arr -> {
+                List<String> groups = new ArrayList<>();
+                arr.forEach(n -> groups.add(n.asText()));
+                return groups;
+            });
+    }
+
+
 
     public static String extractKid(String jwt) {
         try {

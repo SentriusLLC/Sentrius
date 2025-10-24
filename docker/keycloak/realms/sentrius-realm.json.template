@@ -373,7 +373,10 @@
       "enabled": true,
       "emailVerified": true,
       "attributes": {
-        "userType": "Full Access"
+        "userType": "Full Access",
+        "assignedGroups": [
+            "testGroup"
+            ]
       },
       "credentials": [
         {
