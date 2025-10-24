@@ -15,10 +15,12 @@ if [[ "$1" == "local" || "$1" == "gcp" ]]; then
     shift
 fi
 
-# --- Load and back up environment file ---
-ENV_FILE=".$ENV_TARGET.env"
-source "$ENV_FILE"
-cp "$ENV_FILE" "$ENV_FILE.bak"
+# --- Load environment file only for GCP (versions needed for registry) ---
+if [[ "$ENV_TARGET" == "gcp" ]]; then
+    ENV_FILE=".$ENV_TARGET.env"
+    source "$ENV_FILE"
+    cp "$ENV_FILE" "$ENV_FILE.bak"
+fi
 
 # --- Minikube Docker context ---
 if [[ "$ENV_TARGET" == "local" ]]; then
@@ -65,6 +67,11 @@ build_image() {
     local version=$2
     local context_dir=$3
 
+    # For local builds, always use 'latest' tag
+    if [[ "$ENV_TARGET" == "local" ]]; then
+        version="latest"
+    fi
+
     echo "Building $name:$version..."
     prepare_docker_context "$context_dir"
 
@@ -97,7 +104,6 @@ build_image() {
         docker push "$REGISTRY/$name:$version"
         echo "✅ Pushed $REGISTRY/$name:$version"
     else
-        docker tag "$name:$version" "$name:latest"
         echo "✅ Built locally: $name:$version"
     fi
 
@@ -108,6 +114,11 @@ build_keycloak_image() {
     local name=$1
     local version=$2
     local context_dir=$3
+
+    # For local builds, always use 'latest' tag
+    if [[ "$ENV_TARGET" == "local" ]]; then
+        version="latest"
+    fi
 
     echo "Building $name:$version..."
     prepare_docker_context "$context_dir"
@@ -155,7 +166,6 @@ build_keycloak_image() {
         docker push "$REGISTRY/$name:$version"
         echo "✅ Pushed $REGISTRY/$name:$version"
     else
-        docker tag "$name:$version" "$name:latest"
         echo "✅ Built locally: $name:$version"
     fi
 
@@ -204,38 +214,58 @@ fi
 # --- Build Steps ---
 if $update_sentrius; then
     cp api/target/sentrius-api-*.jar docker/sentrius/sentrius.jar
-    SENTRIUS_VERSION=$(increment_patch_version $SENTRIUS_VERSION)
+    if [[ "$ENV_TARGET" == "gcp" ]]; then
+        SENTRIUS_VERSION=$(increment_patch_version $SENTRIUS_VERSION)
+        update_env_var "SENTRIUS_VERSION" "$SENTRIUS_VERSION"
+    else
+        SENTRIUS_VERSION="latest"
+    fi
     build_image "sentrius" "$SENTRIUS_VERSION" "${SCRIPT_DIR}/../../docker/sentrius/"
     rm docker/sentrius/sentrius.jar
-    update_env_var "SENTRIUS_VERSION" "$SENTRIUS_VERSION"
 fi
 
 if $update_sentrius_ssh; then
-    SENTRIUS_SSH_VERSION=$(increment_patch_version $SENTRIUS_SSH_VERSION)
+    if [[ "$ENV_TARGET" == "gcp" ]]; then
+        SENTRIUS_SSH_VERSION=$(increment_patch_version $SENTRIUS_SSH_VERSION)
+        update_env_var "SENTRIUS_SSH_VERSION" "$SENTRIUS_SSH_VERSION"
+    else
+        SENTRIUS_SSH_VERSION="latest"
+    fi
     build_image "sentrius-ssh" "$SENTRIUS_SSH_VERSION" "${SCRIPT_DIR}/../../docker/fake-ssh"
-    update_env_var "SENTRIUS_SSH_VERSION" "$SENTRIUS_SSH_VERSION"
 fi
 
 if $update_sentrius_keycloak; then
-    SENTRIUS_KEYCLOAK_VERSION=$(increment_patch_version $SENTRIUS_KEYCLOAK_VERSION)
+    if [[ "$ENV_TARGET" == "gcp" ]]; then
+        SENTRIUS_KEYCLOAK_VERSION=$(increment_patch_version $SENTRIUS_KEYCLOAK_VERSION)
+        update_env_var "SENTRIUS_KEYCLOAK_VERSION" "$SENTRIUS_KEYCLOAK_VERSION"
+    else
+        SENTRIUS_KEYCLOAK_VERSION="latest"
+    fi
     build_keycloak_image "sentrius-keycloak" "$SENTRIUS_KEYCLOAK_VERSION" "${SCRIPT_DIR}/../../docker/keycloak"
-    update_env_var "SENTRIUS_KEYCLOAK_VERSION" "$SENTRIUS_KEYCLOAK_VERSION"
 fi
 
 if $update_sentrius_agent; then
     cp analytics/target/analytics-*.jar docker/sentrius-agent/agent.jar
-    SENTRIUS_AGENT_VERSION=$(increment_patch_version $SENTRIUS_AGENT_VERSION)
+    if [[ "$ENV_TARGET" == "gcp" ]]; then
+        SENTRIUS_AGENT_VERSION=$(increment_patch_version $SENTRIUS_AGENT_VERSION)
+        update_env_var "SENTRIUS_AGENT_VERSION" "$SENTRIUS_AGENT_VERSION"
+    else
+        SENTRIUS_AGENT_VERSION="latest"
+    fi
     build_image "sentrius-agent" "$SENTRIUS_AGENT_VERSION" "${SCRIPT_DIR}/../../docker/sentrius-agent"
     rm docker/sentrius-agent/agent.jar
-    update_env_var "SENTRIUS_AGENT_VERSION" "$SENTRIUS_AGENT_VERSION"
 fi
 
 if $update_sentrius_ai_agent; then
     cp ai-agent/target/ai-agent-*.jar docker/sentrius-ai-agent/agent.jar
-    SENTRIUS_AI_AGENT_VERSION=$(increment_patch_version $SENTRIUS_AI_AGENT_VERSION)
+    if [[ "$ENV_TARGET" == "gcp" ]]; then
+        SENTRIUS_AI_AGENT_VERSION=$(increment_patch_version $SENTRIUS_AI_AGENT_VERSION)
+        update_env_var "SENTRIUS_AI_AGENT_VERSION" "$SENTRIUS_AI_AGENT_VERSION"
+    else
+        SENTRIUS_AI_AGENT_VERSION="latest"
+    fi
     build_image "sentrius-ai-agent" "$SENTRIUS_AI_AGENT_VERSION" "${SCRIPT_DIR}/../../docker/sentrius-ai-agent"
     rm docker/sentrius-ai-agent/agent.jar
-    update_env_var "SENTRIUS_AI_AGENT_VERSION" "$SENTRIUS_AI_AGENT_VERSION"
 
     cp ai-agent/target/ai-agent-*.jar docker/sentrius-launchable-agent/agent.jar
     build_image "sentrius-launchable-agent" "$SENTRIUS_AI_AGENT_VERSION" "${SCRIPT_DIR}/../../docker/sentrius-launchable-agent"
@@ -244,40 +274,60 @@ fi
 
 if $update_integrationproxy; then
     cp integration-proxy/target/sentrius-integration-proxy-*.jar docker/integrationproxy/llmproxy.jar
-    LLMPROXY_VERSION=$(increment_patch_version $LLMPROXY_VERSION)
+    if [[ "$ENV_TARGET" == "gcp" ]]; then
+        LLMPROXY_VERSION=$(increment_patch_version $LLMPROXY_VERSION)
+        update_env_var "LLMPROXY_VERSION" "$LLMPROXY_VERSION"
+    else
+        LLMPROXY_VERSION="latest"
+    fi
     build_image "sentrius-integration-proxy" "$LLMPROXY_VERSION" "${SCRIPT_DIR}/../../docker/integrationproxy"
     rm docker/integrationproxy/llmproxy.jar
-    update_env_var "LLMPROXY_VERSION" "$LLMPROXY_VERSION"
 fi
 
 if $update_launcher; then
     cp agent-launcher/target/agent-launcher-*.jar docker/sentrius-launcher-service/launcher.jar
-    LAUNCHER_VERSION=$(increment_patch_version $LAUNCHER_VERSION)
+    if [[ "$ENV_TARGET" == "gcp" ]]; then
+        LAUNCHER_VERSION=$(increment_patch_version $LAUNCHER_VERSION)
+        update_env_var "LAUNCHER_VERSION" "$LAUNCHER_VERSION"
+    else
+        LAUNCHER_VERSION="latest"
+    fi
     build_image "sentrius-launcher-service" "$LAUNCHER_VERSION" "${SCRIPT_DIR}/../../docker/sentrius-launcher-service"
     rm docker/sentrius-launcher-service/launcher.jar
-    update_env_var "LAUNCHER_VERSION" "$LAUNCHER_VERSION"
 fi
 
 if $update_agent_proxy; then
     cp agent-proxy/target/sentrius-agent-proxy-*.jar docker/agent-proxy/agentproxy.jar
-    AGENTPROXY_VERSION=$(increment_patch_version $AGENTPROXY_VERSION)
+    if [[ "$ENV_TARGET" == "gcp" ]]; then
+        AGENTPROXY_VERSION=$(increment_patch_version $AGENTPROXY_VERSION)
+        update_env_var "AGENTPROXY_VERSION" "$AGENTPROXY_VERSION"
+    else
+        AGENTPROXY_VERSION="latest"
+    fi
     build_image "sentrius-agent-proxy" "$AGENTPROXY_VERSION" "${SCRIPT_DIR}/../../docker/agent-proxy"
     rm docker/agent-proxy/agentproxy.jar
-    update_env_var "AGENTPROXY_VERSION" "$AGENTPROXY_VERSION"
 fi
 
 if $update_ssh_proxy; then
     cp ssh-proxy/target/ssh-proxy-*.jar docker/ssh-proxy/sshproxy.jar
-    SSHPROXY_VERSION=$(increment_patch_version $SSHPROXY_VERSION)
+    if [[ "$ENV_TARGET" == "gcp" ]]; then
+        SSHPROXY_VERSION=$(increment_patch_version $SSHPROXY_VERSION)
+        update_env_var "SSHPROXY_VERSION" "$SSHPROXY_VERSION"
+    else
+        SSHPROXY_VERSION="latest"
+    fi
     build_image "sentrius-ssh-proxy" "$SSHPROXY_VERSION" "${SCRIPT_DIR}/../../docker/ssh-proxy"
     rm docker/ssh-proxy/sshproxy.jar
-    update_env_var "SSHPROXY_VERSION" "$SSHPROXY_VERSION"
 fi
 
 if $update_rdp_proxy; then
     cp rdp-proxy/target/rdp-proxy-*.jar docker/rdp-proxy/rdpproxy.jar
-    RDPPROXY_VERSION=$(increment_patch_version $RDPPROXY_VERSION)
+    if [[ "$ENV_TARGET" == "gcp" ]]; then
+        RDPPROXY_VERSION=$(increment_patch_version $RDPPROXY_VERSION)
+        update_env_var "RDPPROXY_VERSION" "$RDPPROXY_VERSION"
+    else
+        RDPPROXY_VERSION="latest"
+    fi
     build_image "sentrius-rdp-proxy" "$RDPPROXY_VERSION" "${SCRIPT_DIR}/../../docker/rdp-proxy"
     rm docker/rdp-proxy/rdpproxy.jar
-    update_env_var "RDPPROXY_VERSION" "$RDPPROXY_VERSION"
 fi

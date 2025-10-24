@@ -48,6 +48,8 @@ package-lock.json
 
 .settings/*
 .env.bak
+.local.env.bak
+.gcp.env.bak
 cp.env.bak
 .generated.env
 api/node_modules/
