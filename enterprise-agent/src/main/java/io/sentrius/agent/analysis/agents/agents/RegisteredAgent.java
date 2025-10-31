@@ -3,6 +3,7 @@ package io.sentrius.agent.analysis.agents.agents;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
 import io.sentrius.agent.analysis.api.AgentKeyService;
@@ -147,15 +148,28 @@ public class RegisteredAgent  extends BaseEnterpriseAgent {
                                     priorResponse, verb, args);
                             }
                             var memoryList = agentExecutionContext.flushPersistentMemory();
-                            if (memoryList != null) {
+                            if (memoryList != null && !memoryList.isEmpty()) {
                                 for(var memory : memoryList.entrySet()){
+                                    JsonNode memoryMeta = memory.getValue();
+                                    
+                                    // Extract metadata from the memory node
+                                    String classification = memoryMeta.has("classification") ? 
+                                        memoryMeta.get("classification").asText() : "PRIVATE";
+                                    String markings = memoryMeta.has("markings") ? 
+                                        memoryMeta.get("markings").asText() : null;
+                                    JsonNode value = memoryMeta.has("value") ? 
+                                        memoryMeta.get("value") : memoryMeta;
+                                    
                                     AgentMemoryDTO dto = AgentMemoryDTO.builder()
                                         .agentName(agentExecutionContext.getAgentContext().getName())
                                         .memoryKey(memory.getKey())
-                                        .memoryValue(memory.getValue().toString())
+                                        .memoryValue(value.toString())
+                                        .classification(classification)
+                                        .markings(markings != null ? markings.split(",") : null)
                                         .build();
                                     agentClientService.storeMemory(agentExecution,
                                         agentExecutionContext.getAgentContext().getName(), dto);
+                                    log.info("Stored memory: {} with classification: {}", memory.getKey(), classification);
                                 }
                             }
 

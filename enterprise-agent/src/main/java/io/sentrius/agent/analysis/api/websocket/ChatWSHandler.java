@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentrius.agent.analysis.agents.agents.ChatAgent;
 import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
@@ -248,15 +249,28 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                         response = nextResponse;
 
                                         var memory = websocketCommunication.getAgentExecutionContextDTO().flushPersistentMemory();
-                                        if (memory != null) {
+                                        if (memory != null && !memory.isEmpty()) {
                                             for(var memoryEntry : memory.entrySet()){
+                                                JsonNode memoryMeta = memoryEntry.getValue();
+                                                
+                                                // Extract metadata from the memory node
+                                                String classification = memoryMeta.has("classification") ? 
+                                                    memoryMeta.get("classification").asText() : "PRIVATE";
+                                                String markings = memoryMeta.has("markings") ? 
+                                                    memoryMeta.get("markings").asText() : null;
+                                                JsonNode value = memoryMeta.has("value") ? 
+                                                    memoryMeta.get("value") : memoryMeta;
+                                                
                                                 agentClientService.storeMemory(chatAgent.getAgentExecution(),
                                                     websocketCommunication.getAgentExecutionContextDTO().getAgentContext().getName(),
                                                     io.sentrius.sso.core.dto.agents.AgentMemoryDTO.builder()
                                                         .agentName(websocketCommunication.getAgentExecutionContextDTO().getAgentContext().getName())
                                                         .memoryKey(memoryEntry.getKey())
-                                                        .memoryValue(memoryEntry.getValue().toString())
+                                                        .memoryValue(value.toString())
+                                                        .classification(classification)
+                                                        .markings(markings != null ? markings.split(",") : null)
                                                         .build());
+                                                log.info("Stored memory: {} with classification: {}", memoryEntry.getKey(), classification);
                                             }
                                         }
 

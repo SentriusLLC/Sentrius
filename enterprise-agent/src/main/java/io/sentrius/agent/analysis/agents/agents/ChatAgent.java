@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
 import io.sentrius.agent.analysis.agents.verbs.ChatVerbs;
 import io.sentrius.agent.analysis.api.AgentKeyService;
@@ -218,15 +219,28 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                 );
 
                                 var memory = agentExecutionContext.flushPersistentMemory();
-                                if (memory != null) {
+                                if (memory != null && !memory.isEmpty()) {
                                     for(var memoryEntry : memory.entrySet()){
+                                        JsonNode memoryMeta = memoryEntry.getValue();
+                                        
+                                        // Extract metadata from the memory node
+                                        String classification = memoryMeta.has("classification") ? 
+                                            memoryMeta.get("classification").asText() : "PRIVATE";
+                                        String markings = memoryMeta.has("markings") ? 
+                                            memoryMeta.get("markings").asText() : null;
+                                        JsonNode value = memoryMeta.has("value") ? 
+                                            memoryMeta.get("value") : memoryMeta;
+                                        
                                         agentClientService.storeMemory(agentExecution,
                                             agentExecutionContext.getAgentContext().getName(),
                                             io.sentrius.sso.core.dto.agents.AgentMemoryDTO.builder()
                                                 .agentName(agentExecutionContext.getAgentContext().getName())
                                                 .memoryKey(memoryEntry.getKey())
-                                                .memoryValue(memoryEntry.getValue().toString())
+                                                .memoryValue(value.toString())
+                                                .classification(classification)
+                                                .markings(markings != null ? markings.split(",") : null)
                                                 .build());
+                                        log.info("Stored memory: {} with classification: {}", memoryEntry.getKey(), classification);
                                     }
                                 }
 

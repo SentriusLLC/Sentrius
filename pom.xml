@@ -17,7 +17,7 @@
     <module>agent-proxy</module>
     <module>integration-proxy</module>
     <module>analytics</module>
-    <module>ai-agent</module>
+    <module>enterprise-agent</module>
     <module>agent-launcher</module>
     <module>ssh-proxy</module>
     <module>rdp-proxy</module>

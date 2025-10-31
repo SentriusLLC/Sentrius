@@ -64,7 +64,7 @@ export MAX_HEAP="${MAX_HEAP:-8192m}"
 
 # build the project
 
-pushd ai-agent
+pushd enterprise-agent
 
 mvn spring-boot:run \
   -Dspring-boot.run.jvmArguments="-Xms${MIN_HEAP} -Xmx${MAX_HEAP}"   -Dspring-boot.run.arguments="--spring.config.location=file:./src/main/resources/challenger.properties --agent.ai.config=challenger-config.yaml"

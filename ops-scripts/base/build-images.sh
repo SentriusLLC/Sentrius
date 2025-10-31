@@ -257,7 +257,7 @@ if $update_sentrius_agent; then
 fi
 
 if $update_sentrius_ai_agent; then
-    cp ai-agent/target/ai-agent-*.jar docker/sentrius-ai-agent/agent.jar
+    cp enterprise-agent/target/enterprise-agent-*.jar docker/sentrius-ai-agent/agent.jar
     if [[ "$ENV_TARGET" == "gcp" ]]; then
         SENTRIUS_AI_AGENT_VERSION=$(increment_patch_version $SENTRIUS_AI_AGENT_VERSION)
         update_env_var "SENTRIUS_AI_AGENT_VERSION" "$SENTRIUS_AI_AGENT_VERSION"
@@ -267,7 +267,7 @@ if $update_sentrius_ai_agent; then
     build_image "sentrius-ai-agent" "$SENTRIUS_AI_AGENT_VERSION" "${SCRIPT_DIR}/../../docker/sentrius-ai-agent"
     rm docker/sentrius-ai-agent/agent.jar
 
-    cp ai-agent/target/ai-agent-*.jar docker/sentrius-launchable-agent/agent.jar
+    cp enterprise-agent/target/enterprise-agent-*.jar docker/sentrius-launchable-agent/agent.jar
     build_image "sentrius-launchable-agent" "$SENTRIUS_AI_AGENT_VERSION" "${SCRIPT_DIR}/../../docker/sentrius-launchable-agent"
     rm docker/sentrius-launchable-agent/agent.jar
 fi

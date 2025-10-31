@@ -70,7 +70,7 @@ export MAX_HEAP="${MAX_HEAP:-8192m}"
 # 3. Run Maven
 ######################################
 
-pushd ai-agent
+pushd enterprise-agent
 
 mvn spring-boot:run \
   -Dspring-boot.run.jvmArguments="-Xms${MIN_HEAP} -Xmx${MAX_HEAP}" \

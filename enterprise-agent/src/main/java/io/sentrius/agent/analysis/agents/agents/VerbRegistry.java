@@ -187,12 +187,12 @@ public class VerbRegistry {
 
                 JsonNode execNode = JsonUtil.MAPPER.valueToTree(exec);
                 log.info("Interpreting output for AgentExecutionContextDTO: {}", execNode);
-                // add the output
+                // add the output - store all verb operations in memory with PRIVATE classification
                 if (null != thisVerb.getReturnName() && !thisVerb.getReturnName().isEmpty()) {
                     contextDTO.addToMemory(thisVerb.getReturnName(), execNode);
-                    contextDTO.addToPersistentMemory(thisVerb.getReturnName(), execNode, "VERB", AGENT_MARKINGS);
+                    contextDTO.addToPersistentMemory(thisVerb.getReturnName(), execNode, "PRIVATE", AGENT_MARKINGS);
                 } else {
-                    contextDTO.addToPersistentMemory(verb, execNode, "VERB", AGENT_MARKINGS);
+                    contextDTO.addToPersistentMemory(verb, execNode, "PRIVATE", AGENT_MARKINGS);
                     contextDTO.addToMemory(verb, execNode);
                 }
 
@@ -226,12 +226,12 @@ public class VerbRegistry {
                             method.invoke(instance, agentExecution, contextDTO) :
                             method.invoke(instance, contextDTO);
                         JsonNode execNode = JsonUtil.MAPPER.valueToTree(exec);
-                        // add the output
+                        // add the output - store all verb operations in memory with PRIVATE classification after retry
                         if (null != thisVerb.getReturnName() && !thisVerb.getReturnName().isEmpty()) {
-                            contextDTO.addToPersistentMemory(thisVerb.getReturnName(), execNode, "VERB", AGENT_MARKINGS);
+                            contextDTO.addToPersistentMemory(thisVerb.getReturnName(), execNode, "PRIVATE", AGENT_MARKINGS);
                             contextDTO.addToMemory(thisVerb.getReturnName(), execNode);
                         } else {
-                            contextDTO.addToPersistentMemory(verb, execNode, "VERB", AGENT_MARKINGS);
+                            contextDTO.addToPersistentMemory(verb, execNode, "PRIVATE", AGENT_MARKINGS);
                             contextDTO.addToMemory(verb, execNode);
                         }
 
