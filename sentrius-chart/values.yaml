@@ -365,8 +365,8 @@ kafka:
   enabled: true
   serverName: sentrius-kafka:9092
   image:
-    repository: bitnami/kafka
-    tag: 3.6.0
+    repository: apache/kafka
+    tag: 4.1.0
     pullPolicy: IfNotPresent
   port: 9092
   # Remove or comment out the zookeeper section

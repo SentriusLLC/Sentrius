@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - User Attributes</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #eaeaea;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container-fluid {
+            margin-top: 20px;
+        }
+        
+        .sidebar {
+            min-height: 100vh;
+            position: sticky;
+            top: 0;
+        }
+        
+        .main-content {
+            max-width: 1600px;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #2b2b2b;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #f8f9fa;
+        }
+
+        .filters-container {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-item {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-item label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #adb5bd;
+        }
+
+        .filter-item input, .filter-item select {
+            width: 100%;
+            padding: 8px 12px;
+            background-color: #2b2b2b;
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: #eaeaea;
+        }
+
+        .table-container {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            color: #eaeaea;
+        }
+
+        th {
+            background-color: #2b2b2b;
+            color: #f8f9fa;
+            font-weight: 600;
+            text-align: left;
+            padding: 12px;
+            border-bottom: 2px solid #444;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #3c3c3c;
+        }
+
+        tr:hover {
+            background-color: #252525;
+        }
+
+        .badge {
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .badge-active {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .badge-expired {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .badge-keycloak {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .badge-local {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.875rem;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1050;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.7);
+        }
+
+        .modal-content {
+            background-color: #1e1e1e;
+            margin: 5% auto;
+            padding: 0;
+            border: 1px solid #444;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #f8f9fa;
+        }
+
+        .close {
+            font-size: 28px;
+            font-weight: bold;
+            color: #adb5bd;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+
+        .close:hover {
+            color: #f8f9fa;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #adb5bd;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: #2b2b2b;
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: #eaeaea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #444;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .empty-state-text {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .sync-status {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sync-info {
+            display: flex;
+            gap: 30px;
+        }
+
+        .sync-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sync-label {
+            font-size: 0.85rem;
+            color: #adb5bd;
+            margin-bottom: 5px;
+        }
+
+        .sync-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #f8f9fa;
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 8px;
+        }
+    </style>
+</head>
+
+<body>
+<div id="csrf-token" style="display: none;" th:text="${_csrf.token}"></div>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div class="page-header">
+                    <h1 class="page-title">User Attributes</h1>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-success" onclick="syncAllFromKeycloak()">
+                            <i class="fas fa-sync"></i> Sync All from Keycloak
+                        </button>
+                        <button class="btn btn-primary" onclick="openAddAttributeModal()">
+                            <i class="fas fa-plus"></i> Add Attribute
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sync Status -->
+                <div class="sync-status">
+                    <div class="sync-info">
+                        <div class="sync-item">
+                            <span class="sync-label">Last Sync</span>
+                            <span class="sync-value" id="lastSyncTime">Never</span>
+                        </div>
+                        <div class="sync-item">
+                            <span class="sync-label">Total Users</span>
+                            <span class="sync-value" id="totalUsers">-</span>
+                        </div>
+                        <div class="sync-item">
+                            <span class="sync-label">Total Attributes</span>
+                            <span class="sync-value" id="totalAttributes">-</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="loadUserAttributes()">
+                        <i class="fas fa-redo"></i> Refresh
+                    </button>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters-container">
+                    <div class="filter-row">
+                        <div class="filter-item">
+                            <label>Search User</label>
+                            <input type="text" id="filterUser" placeholder="Username or ID" onkeyup="filterTable()">
+                        </div>
+                        <div class="filter-item">
+                            <label>Attribute Name</label>
+                            <input type="text" id="filterAttribute" placeholder="Attribute name" onkeyup="filterTable()">
+                        </div>
+                        <div class="filter-item">
+                            <label>Source</label>
+                            <select id="filterSource" onchange="filterTable()">
+                                <option value="">All Sources</option>
+                                <option value="keycloak">Keycloak</option>
+                                <option value="local">Local</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label>Status</label>
+                            <select id="filterStatus" onchange="filterTable()">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="expired">Expired</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="table-container">
+                    <table id="attributesTable">
+                        <thead>
+                            <tr>
+                                <th>User ID</th>
+                                <th>Username</th>
+                                <th>Attribute Name</th>
+                                <th>Attribute Value</th>
+                                <th>Source</th>
+                                <th>Valid From</th>
+                                <th>Valid Until</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attributesTableBody">
+                            <tr>
+                                <td colspan="9" class="empty-state">
+                                    <div class="empty-state-icon">📋</div>
+                                    <div class="empty-state-text">No user attributes found</div>
+                                    <div style="color: #868e96;">Click "Sync All from Keycloak" to import attributes</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Attribute Modal -->
+<div id="attributeModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modalTitle">Add User Attribute</h2>
+            <button class="close" onclick="closeAttributeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="attributeForm">
+                <input type="hidden" id="assignmentId">
+                <div class="form-group">
+                    <label>User ID *</label>
+                    <input type="text" id="userId" required placeholder="Enter user ID">
+                </div>
+                <div class="form-group">
+                    <label>Attribute Name *</label>
+                    <input type="text" id="attributeName" required placeholder="e.g., department, clearance_level">
+                </div>
+                <div class="form-group">
+                    <label>Attribute Value *</label>
+                    <input type="text" id="attributeValue" required placeholder="e.g., engineering, high">
+                </div>
+                <div class="form-group">
+                    <label>Valid From</label>
+                    <input type="datetime-local" id="validFrom">
+                </div>
+                <div class="form-group">
+                    <label>Valid Until</label>
+                    <input type="datetime-local" id="validUntil">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="syncToKeycloak" checked>
+                        Sync to Keycloak
+                    </label>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeAttributeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveAttribute()">Save</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let allAttributes = [];
+
+// Load user attributes on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadUserAttributes();
+});
+
+function loadUserAttributes() {
+    fetch('/api/v1/abac/user-attributes')
+        .then(response => response.json())
+        .then(data => {
+            allAttributes = data;
+            updateSyncStatus();
+            renderTable(data);
+        })
+        .catch(error => {
+            console.error('Error loading attributes:', error);
+            showError('Failed to load user attributes');
+        });
+}
+
+function updateSyncStatus() {
+    // Update last sync time
+    fetch('/api/v1/abac/sync-status')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('lastSyncTime').textContent = data.lastSyncTime || 'Never';
+            document.getElementById('totalUsers').textContent = data.totalUsers || '0';
+            document.getElementById('totalAttributes').textContent = data.totalAttributes || '0';
+        })
+        .catch(error => console.error('Error loading sync status:', error));
+}
+
+function renderTable(attributes) {
+    const tbody = document.getElementById('attributesTableBody');
+    
+    if (attributes.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <div class="empty-state-text">No user attributes found</div>
+                    <div style="color: #868e96;">Click "Sync All from Keycloak" to import attributes</div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = attributes.map(attr => `
+        <tr>
+            <td>${attr.targetId || '-'}</td>
+            <td>${attr.username || '-'}</td>
+            <td>${attr.attributeName}</td>
+            <td>${attr.attributeValue}</td>
+            <td><span class="badge ${attr.syncedFromKeycloak ? 'badge-keycloak' : 'badge-local'}">
+                ${attr.syncedFromKeycloak ? 'Keycloak' : 'Local'}
+            </span></td>
+            <td>${attr.validFrom ? new Date(attr.validFrom).toLocaleDateString() : '-'}</td>
+            <td>${attr.validUntil ? new Date(attr.validUntil).toLocaleDateString() : '-'}</td>
+            <td><span class="badge ${attr.isActive ? 'badge-active' : 'badge-expired'}">
+                ${attr.isActive ? 'Active' : 'Expired'}
+            </span></td>
+            <td class="actions-cell">
+                <button class="btn btn-sm btn-primary" onclick="editAttribute(${attr.id})">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-success" onclick="syncUserFromKeycloak('${attr.targetId}')">
+                    <i class="fas fa-sync"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteAttribute(${attr.id})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filterTable() {
+    const userFilter = document.getElementById('filterUser').value.toLowerCase();
+    const attrFilter = document.getElementById('filterAttribute').value.toLowerCase();
+    const sourceFilter = document.getElementById('filterSource').value;
+    const statusFilter = document.getElementById('filterStatus').value;
+    
+    const filtered = allAttributes.filter(attr => {
+        const matchesUser = !userFilter || 
+            (attr.targetId && attr.targetId.toLowerCase().includes(userFilter)) ||
+            (attr.username && attr.username.toLowerCase().includes(userFilter));
+        const matchesAttr = !attrFilter || attr.attributeName.toLowerCase().includes(attrFilter);
+        const matchesSource = !sourceFilter || 
+            (sourceFilter === 'keycloak' && attr.syncedFromKeycloak) ||
+            (sourceFilter === 'local' && !attr.syncedFromKeycloak);
+        const matchesStatus = !statusFilter ||
+            (statusFilter === 'active' && attr.isActive) ||
+            (statusFilter === 'expired' && !attr.isActive);
+        
+        return matchesUser && matchesAttr && matchesSource && matchesStatus;
+    });
+    
+    renderTable(filtered);
+}
+
+function openAddAttributeModal() {
+    document.getElementById('modalTitle').textContent = 'Add User Attribute';
+    document.getElementById('attributeForm').reset();
+    document.getElementById('assignmentId').value = '';
+    document.getElementById('attributeModal').style.display = 'block';
+}
+
+function closeAttributeModal() {
+    document.getElementById('attributeModal').style.display = 'none';
+}
+
+function editAttribute(id) {
+    const attr = allAttributes.find(a => a.id === id);
+    if (!attr) return;
+    
+    document.getElementById('modalTitle').textContent = 'Edit User Attribute';
+    document.getElementById('assignmentId').value = attr.id;
+    document.getElementById('userId').value = attr.targetId;
+    document.getElementById('attributeName').value = attr.attributeName;
+    document.getElementById('attributeValue').value = attr.attributeValue;
+    document.getElementById('validFrom').value = attr.validFrom ? attr.validFrom.substring(0, 16) : '';
+    document.getElementById('validUntil').value = attr.validUntil ? attr.validUntil.substring(0, 16) : '';
+    document.getElementById('syncToKeycloak').checked = attr.syncedFromKeycloak;
+    document.getElementById('attributeModal').style.display = 'block';
+}
+
+function saveAttribute() {
+    const id = document.getElementById('assignmentId').value;
+    const userId = document.getElementById('userId').value;
+    const attributeName = document.getElementById('attributeName').value;
+    const attributeValue = document.getElementById('attributeValue').value;
+    const validFrom = document.getElementById('validFrom').value;
+    const validUntil = document.getElementById('validUntil').value;
+    const syncToKeycloak = document.getElementById('syncToKeycloak').checked;
+    
+    if (!userId || !attributeName || !attributeValue) {
+        showError('Please fill in all required fields');
+        return;
+    }
+    
+    const data = {
+        targetId: userId,
+        targetType: 'USER',
+        attributeName: attributeName,
+        attributeValue: attributeValue,
+        validFrom: validFrom || null,
+        validUntil: validUntil || null,
+        syncToKeycloak: syncToKeycloak
+    };
+
+    const csrfToken = document.getElementById('csrf-token').textContent;
+
+    const url = id ? `/api/v1/abac/user-attributes/${id}` : '/api/v1/abac/user-attributes';
+    const method = id ? 'PUT' : 'POST';
+    
+    fetch(url, {
+        method: method,
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken},
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Failed to save attribute');
+        return response.json();
+    })
+    .then(() => {
+        closeAttributeModal();
+        loadUserAttributes();
+        showSuccess(id ? 'Attribute updated successfully' : 'Attribute added successfully');
+    })
+    .catch(error => {
+        console.error('Error saving attribute:', error);
+        showError('Failed to save attribute');
+    });
+}
+
+function deleteAttribute(id) {
+    if (!confirm('Are you sure you want to delete this attribute?')) return;
+
+    const csrfToken = document.getElementById('csrf-token').textContent;
+    fetch(`/api/v1/abac/user-attributes/${id}`, {method: 'DELETE', headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken}})
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to delete');
+            loadUserAttributes();
+            showSuccess('Attribute deleted successfully');
+        })
+        .catch(error => {
+            console.error('Error deleting attribute:', error);
+            showError('Failed to delete attribute');
+        });
+}
+
+function syncAllFromKeycloak() {
+    if (!confirm('This will sync all user attributes from Keycloak. Continue?')) return;
+    
+    showInfo('Syncing from Keycloak...');
+    const csrfToken = document.getElementById('csrf-token').textContent;
+    fetch('/api/v1/abac/sync/all', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken}})
+        .then(response => response.json())
+        .then(data => {
+            loadUserAttributes();
+            showSuccess(`Synced ${data.syncedUsers || 0} users with ${data.syncedAttributes || 0} attributes`);
+        })
+        .catch(error => {
+            console.error('Error syncing from Keycloak:', error);
+            showError('Failed to sync from Keycloak');
+        });
+}
+
+function syncUserFromKeycloak(userId) {
+    showInfo(`Syncing user ${userId} from Keycloak...`);
+    const csrfToken = document.getElementById('csrf-token').textContent;
+    fetch(`/api/v1/abac/sync/user/${userId}`, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken}})
+        .then(response => response.json())
+        .then(() => {
+            loadUserAttributes();
+            showSuccess(`User ${userId} synced successfully`);
+        })
+        .catch(error => {
+            console.error('Error syncing user:', error);
+            showError('Failed to sync user from Keycloak');
+        });
+}
+
+function showSuccess(message) {
+    // Reuse existing alert mechanism if available
+    alert(message);
+}
+
+function showError(message) {
+    alert('Error: ' + message);
+}
+
+function showInfo(message) {
+    console.log('Info:', message);
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('attributeModal');
+    if (event.target == modal) {
+        closeAttributeModal();
+    }
+}
+</script>
+</body>
+</html>

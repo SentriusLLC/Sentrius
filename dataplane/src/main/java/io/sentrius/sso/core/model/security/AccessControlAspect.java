@@ -24,6 +24,10 @@ import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
+import io.sentrius.sso.core.services.users.UserAttributeService;
+import io.sentrius.sso.core.services.abac.PolicyEvaluator;
+import io.sentrius.sso.core.services.abac.EvaluationContext;
+import io.sentrius.sso.core.services.abac.PolicyDecision;
 import io.sentrius.sso.core.trust.ZtatPolicy;
 import io.sentrius.sso.core.utils.AccessUtil;
 import io.sentrius.sso.core.utils.JsonUtil;
@@ -31,11 +35,12 @@ import io.sentrius.sso.provenance.ProvenanceEvent;
 import io.sentrius.sso.provenance.kafka.ProvenanceKafkaProducer;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -52,7 +57,6 @@ import java.util.UUID;
 @Aspect
 @Component
 @Slf4j
-@RequiredArgsConstructor
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class AccessControlAspect {
 
@@ -65,6 +69,37 @@ public class AccessControlAspect {
     private final ApplicationEnvironmentConfig applicationConfig;
     private final SystemOptions systemOptions;
     private final ProvenanceKafkaProducer provenanceKafkaProducer;
+    
+    // Use @Lazy to avoid circular dependency issues with UserAttributeService
+    @Lazy
+    @Autowired(required = false)
+    private UserAttributeService userAttributeService;
+    
+    // Use @Lazy to avoid circular dependency issues with PolicyEvaluator
+    @Lazy
+    @Autowired(required = false)
+    private PolicyEvaluator policyEvaluator;
+    
+    public AccessControlAspect(
+            UserService userService,
+            KeycloakService keycloakService,
+            ZeroTrustAccessTokenService zeroTrustAccessTokenService,
+            ZeroTrustRequestService zeroTrustRequestService,
+            ATPLPolicyService atplPolicyService,
+            AgentService agentService,
+            ApplicationEnvironmentConfig applicationConfig,
+            SystemOptions systemOptions,
+            ProvenanceKafkaProducer provenanceKafkaProducer) {
+        this.userService = userService;
+        this.keycloakService = keycloakService;
+        this.zeroTrustAccessTokenService = zeroTrustAccessTokenService;
+        this.zeroTrustRequestService = zeroTrustRequestService;
+        this.atplPolicyService = atplPolicyService;
+        this.agentService = agentService;
+        this.applicationConfig = applicationConfig;
+        this.systemOptions = systemOptions;
+        this.provenanceKafkaProducer = provenanceKafkaProducer;
+    }
     static List<String> allowedEndpoints = new ArrayList<>();
     static {
         allowedEndpoints.add("/api/v1/zerotrust/accesstoken/status");
@@ -272,6 +307,15 @@ public class AccessControlAspect {
                         break;
                     }
                 }
+                
+                // Check custom attributes
+                for (var customAttr : accessAnnotation.customAttributes()) {
+                    if (!checkCustomAttribute(operatingUser, customAttr)) {
+                        log.debug("Access Denied to {} at {} due to custom attribute {}", operatingUser, endpoint, customAttr);
+                        canAccess = false;
+                        break;
+                    }
+                }
 
                 if (!canAccess) {
                     log.info("Access Denied....");
@@ -337,6 +381,100 @@ public class AccessControlAspect {
 
     protected boolean canAccess(User operatingUser, UserAccessEnum access) throws SQLException, GeneralSecurityException {
         return AccessUtil.canAccess(operatingUser, access);
+    }
+    
+    /**
+     * Check if user has the required custom attribute value using ABAC PolicyEvaluator.
+     * Falls back to UserAttributeService if PolicyEvaluator is not available.
+     * Custom attribute format: "attributeName=attributeValue"
+     * @param operatingUser The user to check
+     * @param customAttr The custom attribute requirement (e.g., "department=engineering")
+     * @param endpoint The endpoint being accessed
+     * @return true if user has the required attribute value, false otherwise
+     */
+    protected boolean checkCustomAttribute(User operatingUser, String customAttr, String endpoint) {
+        if (customAttr == null || customAttr.isEmpty()) {
+            return true;
+        }
+        
+        // Try PolicyEvaluator first (ABAC approach)
+        if (policyEvaluator != null) {
+            try {
+                log.debug("Using PolicyEvaluator for custom attribute check: {}", customAttr);
+                
+                // Build evaluation context
+                EvaluationContext context = policyEvaluator.buildContext(
+                    operatingUser.getUserId(), 
+                    endpoint
+                );
+                
+                // Parse the custom attribute to add it to context if not already present
+                String[] parts = customAttr.split("=", 2);
+                if (parts.length == 2) {
+                    String attributeName = parts[0].trim();
+                    String requiredValue = parts[1].trim();
+                    
+                    // Ensure the required attribute is in context
+                    if (context.getAttribute("SUBJECT", attributeName) == null) {
+                        context.addSubjectAttribute(attributeName, requiredValue);
+                    }
+                }
+                
+                // Evaluate using PolicyEvaluator
+                PolicyDecision decision = policyEvaluator.evaluate(context, endpoint, "ACCESS");
+                
+                log.debug("PolicyEvaluator decision for user {}: {} -> {}", 
+                    operatingUser.getUsername(), customAttr, decision.isAllowed());
+                
+                return decision.isAllowed();
+                
+            } catch (Exception e) {
+                log.warn("PolicyEvaluator failed, falling back to UserAttributeService: {}", e.getMessage());
+                // Fall through to UserAttributeService
+            }
+        }
+        
+        // Fallback to UserAttributeService (legacy approach)
+        if (userAttributeService == null) {
+            log.warn("Neither PolicyEvaluator nor UserAttributeService available, denying access for: {}", customAttr);
+            return false;
+        }
+        
+        // Parse the custom attribute requirement
+        String[] parts = customAttr.split("=", 2);
+        if (parts.length != 2) {
+            log.warn("Invalid custom attribute format: {}. Expected format: 'attributeName=attributeValue'", customAttr);
+            return false;
+        }
+        
+        String attributeName = parts[0].trim();
+        String requiredValue = parts[1].trim();
+        
+        try {
+            // Get the user's attribute value
+            boolean hasAttribute = userAttributeService.userHasAttributeValue(
+                operatingUser.getUserId(), 
+                attributeName, 
+                requiredValue
+            );
+            
+            log.debug("UserAttributeService check for user {}: {}={} -> {}", 
+                operatingUser.getUsername(), attributeName, requiredValue, hasAttribute);
+            
+            return hasAttribute;
+        } catch (Exception e) {
+            log.error("Error checking custom attribute {} for user {}", customAttr, operatingUser.getUsername(), e);
+            return false;
+        }
+    }
+    
+    /**
+     * Legacy method for backward compatibility
+     */
+    protected boolean checkCustomAttribute(User operatingUser, String customAttr) {
+        HttpServletRequest request = getCurrentHttpRequest();
+        String endpoint = request != null ? request.getRequestURI() : "";
+        return checkCustomAttribute(operatingUser, customAttr, endpoint);
     }
 
     private HttpServletRequest getCurrentHttpRequest() {

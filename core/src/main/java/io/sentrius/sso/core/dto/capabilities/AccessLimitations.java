@@ -34,6 +34,7 @@ public class AccessLimitations {
     private SystemOperationsEnum[] systemOperations;
     private ZeroTrustAccessTokenEnum[] ztatAccess;
     private EndpointThreat endpointThreat;
+    private String[] customAttributes;
     
     @Builder.Default
     private boolean hasLimitAccess = false;

@@ -36,4 +36,10 @@ public @interface LimitAccess {
 
   EndpointThreat endpointThreat() default EndpointThreat.NONE;
 
+  /**
+   * Custom attributes required for access. Format: "attributeName=attributeValue"
+   * Example: customAttributes = {"department=engineering", "clearance_level=high"}
+   */
+  String[] customAttributes() default {};
+
 }

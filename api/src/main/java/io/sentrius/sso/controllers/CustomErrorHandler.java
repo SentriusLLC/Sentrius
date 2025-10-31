@@ -42,6 +42,7 @@ public class CustomErrorHandler implements ErrorController {
 
         // Log as needed
         log.error("Error occurred: Status code {}, message {}", statusCode, message, ex);
+        log.error(response.toString());
 
         boolean isAjax = "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
         if (isAjax) {
