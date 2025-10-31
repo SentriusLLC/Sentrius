@@ -363,6 +363,17 @@ public class UserService {
         return user;
     }
 
+    public Optional<List<User>> findByUsernameLike(String username) {
+        var users = UserDB.searchByUsernameLike(username);
+        if (users.isEmpty()) {
+            return Optional.empty();
+        }
+        for (User user : users) {
+            Hibernate.initialize(user.getAuthorizationType());
+        }
+        return Optional.of(users);
+    }
+
     /**
      * Saves a user to the repository.
      *

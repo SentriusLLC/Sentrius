@@ -73,18 +73,8 @@
                 </a>
             </li>
             <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
-                <a href="/sso/v1/custom-attributes/mappings" class="nav-link px-0 align-middle">
-                    <i class="fas fa-user-tag"></i> <span class="ms-1 d-none d-sm-inline">Custom Attributes</span>
-                </a>
-            </li>
-            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
-                <a href="/sso/v1/user-attributes" class="nav-link px-0 align-middle">
-                    <i class="fas fa-id-badge"></i> <span class="ms-1 d-none d-sm-inline">User Attributes</span>
-                </a>
-            </li>
-            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
-                <a href="/sso/v1/attribute-definitions" class="nav-link px-0 align-middle">
-                    <i class="fas fa-list-alt"></i> <span class="ms-1 d-none d-sm-inline">Attribute Definitions</span>
+                <a href="/sso/v1/attributes/manage" class="nav-link px-0 align-middle">
+                    <i class="fas fa-tags"></i> <span class="ms-1 d-none d-sm-inline">Attributes (ABAC)</span>
                 </a>
             </li>
             <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">

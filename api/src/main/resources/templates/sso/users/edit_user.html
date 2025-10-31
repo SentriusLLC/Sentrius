@@ -66,11 +66,19 @@
 
                     <button type="submit" class="btn btn-success">Save Changes</button>
                     <a href="/sso/v1/users/list" class="btn btn-secondary">Cancel</a>
+                    <a th:href="@{/sso/v1/attributes/manage?tab=assignments&userId={userId}(userId=${user.userId})}" 
+                       class="btn btn-primary" style="margin-left: 10px;">
+                        <i class="fas fa-tags"></i> Manage Attributes
+                    </a>
                 </form>
 
                 <!-- Visibility Expression Section -->
                 <hr class="my-4"/>
                 <h4>Access Policy Expression (ABAC)</h4>
+                <p class="text-muted">
+                    Define attribute-based access control expressions for this user. 
+                    <a href="/sso/v1/attributes/manage" target="_blank">Learn more about ABAC <i class="fas fa-external-link-alt"></i></a>
+                </p>
                 <div id="attributeAlert"></div>
                 <div class="input-group mb-3">
                     <input type="text" id="visibilityExpression" class="form-control"

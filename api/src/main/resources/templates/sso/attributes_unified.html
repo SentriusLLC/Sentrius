@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Attribute Management</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #eaeaea;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container-fluid {
+            margin-top: 20px;
+        }
+        
+        .sidebar {
+            min-height: 100vh;
+            position: sticky;
+            top: 0;
+        }
+        
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #2b2b2b;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #f8f9fa;
+        }
+
+        .page-description {
+            background: #1e1e1e;
+            border-left: 4px solid #007bff;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 5px;
+        }
+
+        .page-description h5 {
+            margin-bottom: 10px;
+            color: #007bff;
+        }
+
+        .page-description p {
+            margin-bottom: 10px;
+            color: #adb5bd;
+            line-height: 1.6;
+        }
+
+        .tabs-container {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .nav-tabs {
+            border-bottom: 2px solid #2b2b2b;
+            gap: 5px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .nav-tabs .nav-link {
+            color: #adb5bd;
+            background-color: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            padding: 12px 24px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: #f8f9fa;
+            background-color: #2b2b2b;
+            border-radius: 5px 5px 0 0;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #007bff;
+            background-color: transparent;
+            border-bottom: 3px solid #007bff;
+        }
+
+        .tab-content-section {
+            display: none;
+        }
+
+        .tab-content-section.active {
+            display: block;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #f8f9fa;
+        }
+
+        .info-card {
+            background: #2b2b2b;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-card-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #f8f9fa;
+        }
+
+        .info-card-text {
+            color: #adb5bd;
+            font-size: 0.95rem;
+        }
+
+        .code {
+            background-color: #2b2b2b;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #4fc3f7;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.875rem;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .table-container {
+            background: transparent;
+            border-radius: 8px;
+            padding: 20px 0;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            color: #eaeaea;
+        }
+
+        th {
+            background-color: #2b2b2b;
+            color: #f8f9fa;
+            font-weight: 600;
+            text-align: left;
+            padding: 12px;
+            border-bottom: 2px solid #444;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #3c3c3c;
+        }
+
+        tr:hover {
+            background-color: #252525;
+        }
+
+        .badge {
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .badge-subject { background-color: #007bff; color: white; }
+        .badge-resource { background-color: #28a745; color: white; }
+        .badge-action { background-color: #ffc107; color: #000; }
+        .badge-environment { background-color: #17a2b8; color: white; }
+        .badge-keycloak { background-color: #6f42c1; color: white; }
+        .badge-active { background-color: #28a745; color: white; }
+        .badge-expired { background-color: #dc3545; color: white; }
+        .badge-local { background-color: #6c757d; color: white; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1050;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.7);
+        }
+
+        .modal-content {
+            background-color: #1e1e1e;
+            margin: 5% auto;
+            padding: 0;
+            border: 1px solid #444;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #f8f9fa;
+        }
+
+        .close {
+            font-size: 28px;
+            font-weight: bold;
+            color: #adb5bd;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+
+        .close:hover {
+            color: #f8f9fa;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #adb5bd;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: #2b2b2b;
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: #eaeaea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #444;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .empty-state-text {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 8px;
+        }
+
+        .scope-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .scope-tab {
+            padding: 8px 16px;
+            background-color: #2b2b2b;
+            border: 1px solid #444;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .scope-tab.active {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+        .scope-tab:hover {
+            background-color: #3c3c3c;
+        }
+
+        .filters-container {
+            background: #2b2b2b;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-item {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-item label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #adb5bd;
+            font-size: 0.9rem;
+        }
+
+        .filter-item input, .filter-item select {
+            width: 100%;
+            padding: 8px 12px;
+            background-color: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: #eaeaea;
+        }
+
+        .sync-status {
+            background: #2b2b2b;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sync-info {
+            display: flex;
+            gap: 30px;
+        }
+
+        .sync-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sync-label {
+            font-size: 0.85rem;
+            color: #adb5bd;
+            margin-bottom: 5px;
+        }
+
+        .sync-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #f8f9fa;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background-color: rgba(40, 167, 69, 0.2);
+            border: 1px solid #28a745;
+            color: #28a745;
+        }
+
+        .alert-error {
+            background-color: rgba(220, 53, 69, 0.2);
+            border: 1px solid #dc3545;
+            color: #dc3545;
+        }
+
+        /* Autocomplete dropdown styling */
+        .autocomplete-container {
+            position: relative;
+        }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: #2b2b2b;
+            border: 1px solid #444;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .autocomplete-dropdown.show {
+            display: block;
+        }
+
+        .autocomplete-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            color: #eaeaea;
+        }
+
+        .autocomplete-item:hover,
+        .autocomplete-item.selected {
+            background-color: #3c3c3c;
+        }
+
+        .autocomplete-item strong {
+            color: #007bff;
+        }
+
+        .autocomplete-loading {
+            padding: 10px 12px;
+            color: #adb5bd;
+            text-align: center;
+        }
+
+        .autocomplete-no-results {
+            padding: 10px 12px;
+            color: #6c757d;
+            text-align: center;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+<input type="hidden" id="_csrf" name="_csrf" th:value="${_csrf.token}" />
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <!-- Include sidebar -->
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        
+        <!-- Main content -->
+        <div class="col py-3">
+            <div class="main-content">
+                <div class="page-header">
+                    <h1 class="page-title">Attribute-Based Access Control (ABAC)</h1>
+                </div>
+
+                <div class="page-description">
+                    <h5>Understanding ABAC in Sentrius</h5>
+                    <p>
+                        <strong>Attribute-Based Access Control (ABAC)</strong> provides fine-grained access control by evaluating attributes 
+                        of users, resources, actions, and the environment. Sentrius implements ABAC through three key components:
+                    </p>
+                    <p>
+                        <strong>1. Attribute Definitions:</strong> Define the schema for attributes (e.g., <span class="code">department</span>, 
+                        <span class="code">clearance_level</span>) that can be assigned to users, resources, or other entities.
+                    </p>
+                    <p>
+                        <strong>2. User Assignments:</strong> Assign specific attribute values to users (e.g., user "john.doe" has 
+                        <span class="code">department=engineering</span>). These can be synced from Keycloak or managed locally.
+                    </p>
+                    <p>
+                        <strong>3. Access Mappings:</strong> Define which attribute values are required to access specific endpoints 
+                        (e.g., <span class="code">/api/v1/chat/**</span> requires <span class="code">department=engineering</span>).
+                    </p>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: #2b2b2b; border-radius: 5px; border-left: 4px solid #28a745;">
+                        <h5 style="color: #28a745; margin-bottom: 15px;">📋 How to Use ABAC - Step by Step</h5>
+                        <div style="margin-bottom: 12px;">
+                            <strong style="color: #f8f9fa;">Step 1:</strong> <span style="color: #adb5bd;">Go to <strong>Attribute Definitions</strong> tab and create an attribute (e.g., <span class="code">department</span> with type STRING)</span>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <strong style="color: #f8f9fa;">Step 2:</strong> <span style="color: #adb5bd;">Go to <strong>User Assignments</strong> tab and assign values to users (e.g., assign <span class="code">department=engineering</span> to user "john.doe")</span>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <strong style="color: #f8f9fa;">Step 3:</strong> <span style="color: #adb5bd;">Go to <strong>Access Mappings</strong> tab and create access rules (e.g., require <span class="code">department=engineering</span> to access <span class="code">/api/v1/chat/**</span>)</span>
+                        </div>
+                        <div style="margin-top: 15px; padding: 10px; background: rgba(0, 123, 255, 0.1); border-radius: 5px;">
+                            <strong style="color: #007bff;">💡 Example Use Case:</strong> <span style="color: #adb5bd;">Restrict sensitive API endpoints to users with <span class="code">clearance_level=high</span>, ensuring only authorized personnel can access critical systems.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tabs-container">
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="definitions-tab" data-tab="definitions" role="tab">
+                                <i class="fas fa-list-alt"></i> Attribute Definitions
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="assignments-tab" data-tab="assignments" role="tab">
+                                <i class="fas fa-id-badge"></i> User Assignments
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="mappings-tab" data-tab="mappings" role="tab">
+                                <i class="fas fa-user-tag"></i> Access Mappings
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <!-- Attribute Definitions Tab -->
+                        <div class="tab-content-section active" id="definitions" role="tabpanel">
+                            <div class="section-header">
+                                <div class="section-title">Attribute Definitions</div>
+                                <button class="btn btn-primary" onclick="openAddDefinitionModal()">
+                                    <i class="fas fa-plus"></i> Add Definition
+                                </button>
+                            </div>
+
+                            <div class="info-card">
+                                <div class="info-card-title">📝 Step 1: About Attribute Definitions</div>
+                                <div class="info-card-text">
+                                    Define attribute schemas that can be used across the ABAC system. Attributes can apply to subjects 
+                                    (users, roles), resources (endpoints, data), actions (operations), or environment (context).
+                                    <br><br>
+                                    <strong>Example:</strong> Create a <span class="code">department</span> attribute of type STRING with scope SUBJECT. 
+                                    This allows you to track which department each user belongs to.
+                                </div>
+                            </div>
+
+                            <!-- Scope Tabs -->
+                            <div class="scope-tabs">
+                                <div class="scope-tab active" data-scope="ALL" onclick="filterByScope('ALL')">
+                                    All Scopes
+                                </div>
+                                <div class="scope-tab" data-scope="SUBJECT" onclick="filterByScope('SUBJECT')">
+                                    Subject
+                                </div>
+                                <div class="scope-tab" data-scope="RESOURCE" onclick="filterByScope('RESOURCE')">
+                                    Resource
+                                </div>
+                                <div class="scope-tab" data-scope="ACTION" onclick="filterByScope('ACTION')">
+                                    Action
+                                </div>
+                                <div class="scope-tab" data-scope="ENVIRONMENT" onclick="filterByScope('ENVIRONMENT')">
+                                    Environment
+                                </div>
+                            </div>
+
+                            <div class="table-container">
+                                <table id="definitionsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Attribute Name</th>
+                                            <th>Scope</th>
+                                            <th>Data Type</th>
+                                            <th>Description</th>
+                                            <th>Keycloak Attribute</th>
+                                            <th>Created</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="definitionsTableBody">
+                                        <tr>
+                                            <td colspan="7" class="empty-state">
+                                                <div class="empty-state-icon">📝</div>
+                                                <div class="empty-state-text">No attribute definitions found</div>
+                                                <div style="color: #868e96;">Click "Add Definition" to create your first attribute</div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- User Assignments Tab -->
+                        <div class="tab-content-section" id="assignments" role="tabpanel">
+                            <div class="section-header">
+                                <div class="section-title">User Attribute Assignments</div>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="btn btn-success" onclick="syncAllFromKeycloak()">
+                                        <i class="fas fa-sync"></i> Sync All from Keycloak
+                                    </button>
+                                    <button class="btn btn-primary" onclick="openAddAttributeModal()">
+                                        <i class="fas fa-plus"></i> Add Attribute
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="info-card">
+                                <div class="info-card-title">👥 Step 2: About User Attribute Assignments</div>
+                                <div class="info-card-text">
+                                    Manage attribute values assigned to individual users. Attributes can be synced from Keycloak 
+                                    or managed locally with optional validity periods.
+                                    <br><br>
+                                    <strong>Example:</strong> After creating the <span class="code">department</span> attribute, assign 
+                                    <span class="code">department=engineering</span> to user "john.doe" and 
+                                    <span class="code">department=finance</span> to user "jane.smith". You can also set expiration dates 
+                                    for temporary access.
+                                </div>
+                            </div>
+
+                            <!-- Sync Status -->
+                            <div class="sync-status">
+                                <div class="sync-info">
+                                    <div class="sync-item">
+                                        <span class="sync-label">Last Sync</span>
+                                        <span class="sync-value" id="lastSyncTime">Never</span>
+                                    </div>
+                                    <div class="sync-item">
+                                        <span class="sync-label">Total Users</span>
+                                        <span class="sync-value" id="totalUsers">-</span>
+                                    </div>
+                                    <div class="sync-item">
+                                        <span class="sync-label">Total Attributes</span>
+                                        <span class="sync-value" id="totalAttributes">-</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-secondary btn-sm" onclick="loadUserAttributes()">
+                                    <i class="fas fa-redo"></i> Refresh
+                                </button>
+                            </div>
+
+                            <!-- Filters -->
+                            <div class="filters-container">
+                                <div class="filter-row">
+                                    <div class="filter-item">
+                                        <label>Search User</label>
+                                        <input type="text" id="filterUser" placeholder="Username or ID" onkeyup="filterAttributesTable()">
+                                    </div>
+                                    <div class="filter-item">
+                                        <label>Attribute Name</label>
+                                        <input type="text" id="filterAttribute" placeholder="Attribute name" onkeyup="filterAttributesTable()">
+                                    </div>
+                                    <div class="filter-item">
+                                        <label>Source</label>
+                                        <select id="filterSource" onchange="filterAttributesTable()">
+                                            <option value="">All Sources</option>
+                                            <option value="keycloak">Keycloak</option>
+                                            <option value="local">Local</option>
+                                        </select>
+                                    </div>
+                                    <div class="filter-item">
+                                        <label>Status</label>
+                                        <select id="filterStatus" onchange="filterAttributesTable()">
+                                            <option value="">All Status</option>
+                                            <option value="active">Active</option>
+                                            <option value="expired">Expired</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-container">
+                                <table id="attributesTable">
+                                    <thead>
+                                        <tr>
+                                            <th>User ID</th>
+                                            <th>Username</th>
+                                            <th>Attribute Name</th>
+                                            <th>Attribute Value</th>
+                                            <th>Source</th>
+                                            <th>Valid From</th>
+                                            <th>Valid Until</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="attributesTableBody">
+                                        <tr>
+                                            <td colspan="9" class="empty-state">
+                                                <div class="empty-state-icon">📋</div>
+                                                <div class="empty-state-text">No user attributes found</div>
+                                                <div style="color: #868e96;">Click "Sync All from Keycloak" to import attributes</div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Access Mappings Tab -->
+                        <div class="tab-content-section" id="mappings" role="tabpanel">
+                            <div class="section-header">
+                                <div class="section-title">Access Mappings</div>
+                                <button class="btn btn-primary" onclick="openCreateMappingModal()">
+                                    <i class="fas fa-plus"></i> Add Mapping
+                                </button>
+                            </div>
+
+                            <div class="info-card">
+                                <div class="info-card-title">🔒 Step 3: About Access Mappings</div>
+                                <div class="info-card-text">
+                                    Define attribute requirements for accessing specific endpoints. This enables fine-grained 
+                                    access control based on user properties. This is where you enforce the rules!
+                                    <br><br>
+                                    <strong>Example:</strong> Create a mapping for endpoint <span class="code">/api/v1/chat/**</span> 
+                                    requiring <span class="code">department=engineering</span>. Now only users with 
+                                    <span class="code">department=engineering</span> (like john.doe) can access the chat API, while 
+                                    users with other departments (like jane.smith with finance) will be denied.
+                                </div>
+                            </div>
+
+                            <div id="alertContainer"></div>
+
+                            <div class="table-container">
+                                <table id="mappingsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Endpoint</th>
+                                            <th>Attribute Name</th>
+                                            <th>Required Value</th>
+                                            <th>Description</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="mappingsTableBody">
+                                        <!-- Populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                                <div id="emptyMappingsState" class="empty-state" style="display: none;">
+                                    <div class="empty-state-icon">📋</div>
+                                    <div class="empty-state-text">No custom attribute mappings defined yet</div>
+                                    <p>Click "Add Mapping" to create your first custom attribute requirement</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals will be included here -->
+<!-- Add/Edit Definition Modal -->
+<div id="definitionModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="definitionModalTitle">Add Attribute Definition</h2>
+            <button class="close" onclick="closeDefinitionModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="definitionForm">
+                <input type="hidden" id="definitionId">
+                <div class="form-group">
+                    <label>Attribute Name *</label>
+                    <input type="text" id="defAttributeName" required placeholder="e.g., department, clearance_level">
+                </div>
+                <div class="form-group">
+                    <label>Scope *</label>
+                    <select id="attributeScope" required>
+                        <option value="">Select scope...</option>
+                        <option value="SUBJECT">SUBJECT - User, Role, Group attributes</option>
+                        <option value="RESOURCE">RESOURCE - Endpoint, Data entity attributes</option>
+                        <option value="ACTION">ACTION - Operation attributes</option>
+                        <option value="ENVIRONMENT">ENVIRONMENT - Context attributes</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Data Type *</label>
+                    <select id="dataType" required>
+                        <option value="STRING">STRING</option>
+                        <option value="INTEGER">INTEGER</option>
+                        <option value="BOOLEAN">BOOLEAN</option>
+                        <option value="DATE">DATE</option>
+                        <option value="LIST">LIST</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="defDescription" placeholder="Describe what this attribute represents"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Keycloak Attribute Name</label>
+                    <input type="text" id="keycloakAttributeName" placeholder="Corresponding Keycloak attribute (optional)">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="isRequired">
+                        Required Attribute
+                    </label>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeDefinitionModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveDefinition()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit User Attribute Modal -->
+<div id="attributeModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="attributeModalTitle">Add User Attribute</h2>
+            <button class="close" onclick="closeAttributeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="attributeForm">
+                <input type="hidden" id="assignmentId">
+                <div class="form-group">
+                    <label>User ID *</label>
+                    <div class="autocomplete-container">
+                        <input type="text" id="userId" required placeholder="Start typing username..." autocomplete="off">
+                        <div class="autocomplete-dropdown" id="userIdDropdown"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Attribute Name *</label>
+                    <div class="autocomplete-container">
+                        <input type="text" id="attributeName" required placeholder="Start typing attribute name..." autocomplete="off">
+                        <div class="autocomplete-dropdown" id="attributeNameDropdown"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Attribute Value *</label>
+                    <input type="text" id="attributeValue" required placeholder="e.g., engineering, high">
+                </div>
+                <div class="form-group">
+                    <label>Valid From</label>
+                    <input type="datetime-local" id="validFrom">
+                </div>
+                <div class="form-group">
+                    <label>Valid Until</label>
+                    <input type="datetime-local" id="validUntil">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="syncToKeycloak" checked>
+                        Sync to Keycloak
+                    </label>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeAttributeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveAttribute()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Mapping Modal -->
+<div id="mappingModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="mappingModalTitle">Add Custom Attribute Mapping</h2>
+            <button class="close" onclick="closeMappingModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="mappingForm">
+                <input type="hidden" id="mappingId">
+                
+                <div class="form-group">
+                    <label for="endpoint">Endpoint Pattern *</label>
+                    <input type="text" id="endpoint" required placeholder="/api/v1/chat/**">
+                </div>
+
+                <div class="form-group">
+                    <label for="mapAttributeName">Attribute Name *</label>
+                    <input type="text" id="mapAttributeName" required placeholder="department">
+                </div>
+
+                <div class="form-group">
+                    <label for="requiredValue">Required Value *</label>
+                    <input type="text" id="requiredValue" required placeholder="engineering">
+                </div>
+
+                <div class="form-group">
+                    <label for="mapDescription">Description (Optional)</label>
+                    <textarea id="mapDescription" rows="3" placeholder="Describe the purpose of this mapping..."></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeMappingModal()">Cancel</button>
+            <button class="btn btn-success" onclick="saveMapping()">Save</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // State management
+    let allDefinitions = [];
+    let currentScope = 'ALL';
+    let allAttributes = [];
+    let mappings = [];
+    const csrfToken = document.getElementById('_csrf').value;
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        const userId = urlParams.get('userId');
+
+        // Validate and sanitize userId
+        const sanitizedUserId = userId ? userId.replace(/[^a-zA-Z0-9\-_@.]/g, '') : null;
+
+        // Pre-fill user filter if provided
+        if (sanitizedUserId && tabParam === 'assignments') {
+            document.getElementById('filterUser').value = sanitizedUserId;
+        }
+
+        // Determine initial tab
+        let initialTab = 'definitions';
+        if (tabParam === 'assignments') {
+            initialTab = 'assignments';
+        } else if (tabParam === 'mappings') {
+            initialTab = 'mappings';
+        }
+
+        // Load initial tab
+        if (initialTab !== 'definitions') {
+            switchTab(initialTab);
+        } else {
+            loadDefinitions();
+        }
+
+        // Setup tab listeners
+        document.querySelectorAll('.nav-link[data-tab]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const tabId = this.getAttribute('data-tab');
+                switchTab(tabId);
+            });
+        });
+    });
+
+    // Tab switching
+    function switchTab(tabId) {
+        // Hide all sections
+        document.querySelectorAll('.tab-content-section').forEach(section => {
+            section.classList.remove('active');
+        });
+        
+        // Remove active from all links
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        
+        // Show selected section
+        document.getElementById(tabId).classList.add('active');
+        document.getElementById(tabId + '-tab').classList.add('active');
+        
+        // Load data for the tab
+        if (tabId === 'definitions') {
+            loadDefinitions();
+        } else if (tabId === 'assignments') {
+            loadUserAttributes();
+        } else if (tabId === 'mappings') {
+            loadMappings();
+        }
+    }
+
+    // ===== ATTRIBUTE DEFINITIONS =====
+    function loadDefinitions() {
+        fetch('/api/v1/abac/attribute-definitions')
+            .then(response => response.json())
+            .then(data => {
+                allDefinitions = data;
+                renderDefinitionsTable(data);
+            })
+            .catch(error => {
+                console.error('Error loading definitions:', error);
+            });
+    }
+
+    function renderDefinitionsTable(definitions) {
+        const tbody = document.getElementById('definitionsTableBody');
+        
+        if (definitions.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="empty-state">
+                        <div class="empty-state-icon">📝</div>
+                        <div class="empty-state-text">No attribute definitions found</div>
+                        <div style="color: #868e96;">Click "Add Definition" to create your first attribute</div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        tbody.innerHTML = definitions.map(def => `
+            <tr>
+                <td><strong>${escapeHtml(def.attributeName)}</strong></td>
+                <td><span class="badge badge-${def.attributeScope.toLowerCase()}">${def.attributeScope}</span></td>
+                <td>${def.dataType}</td>
+                <td>${escapeHtml(def.description || '-')}</td>
+                <td>${def.keycloakAttributeName ? `<span class="badge badge-keycloak">${escapeHtml(def.keycloakAttributeName)}</span>` : '-'}</td>
+                <td>${new Date(def.createdAt).toLocaleDateString()}</td>
+                <td class="actions-cell">
+                    <button class="btn btn-sm btn-primary" onclick="editDefinition(${def.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteDefinition(${def.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function filterByScope(scope) {
+        currentScope = scope;
+        
+        document.querySelectorAll('.scope-tab').forEach(tab => {
+            tab.classList.remove('active');
+            if (tab.getAttribute('data-scope') === scope) {
+                tab.classList.add('active');
+            }
+        });
+        
+        const filtered = scope === 'ALL' 
+            ? allDefinitions 
+            : allDefinitions.filter(def => def.attributeScope === scope);
+        
+        renderDefinitionsTable(filtered);
+    }
+
+    function openAddDefinitionModal() {
+        document.getElementById('definitionModalTitle').textContent = 'Add Attribute Definition';
+        document.getElementById('definitionForm').reset();
+        document.getElementById('definitionId').value = '';
+        document.getElementById('definitionModal').style.display = 'block';
+    }
+
+    function closeDefinitionModal() {
+        document.getElementById('definitionModal').style.display = 'none';
+    }
+
+    function editDefinition(id) {
+        const def = allDefinitions.find(d => d.id === id);
+        if (!def) return;
+        
+        document.getElementById('definitionModalTitle').textContent = 'Edit Attribute Definition';
+        document.getElementById('definitionId').value = def.id;
+        document.getElementById('defAttributeName').value = def.attributeName;
+        document.getElementById('attributeScope').value = def.attributeScope;
+        document.getElementById('dataType').value = def.dataType;
+        document.getElementById('defDescription').value = def.description || '';
+        document.getElementById('keycloakAttributeName').value = def.keycloakAttributeName || '';
+        document.getElementById('isRequired').checked = def.isRequired || false;
+        document.getElementById('definitionModal').style.display = 'block';
+    }
+
+    function saveDefinition() {
+        const id = document.getElementById('definitionId').value;
+        const data = {
+            attributeName: document.getElementById('defAttributeName').value,
+            attributeScope: document.getElementById('attributeScope').value,
+            dataType: document.getElementById('dataType').value,
+            description: document.getElementById('defDescription').value,
+            keycloakAttributeName: document.getElementById('keycloakAttributeName').value || null,
+            isRequired: document.getElementById('isRequired').checked
+        };
+        
+        if (!data.attributeName || !data.attributeScope || !data.dataType) {
+            alert('Please fill in all required fields');
+            return;
+        }
+        
+        const url = id ? `/api/v1/abac/attribute-definitions/${id}` : '/api/v1/abac/attribute-definitions';
+        const method = id ? 'PUT' : 'POST';
+        
+        fetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken},
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to save definition');
+            return response.json();
+        })
+        .then(() => {
+            closeDefinitionModal();
+            loadDefinitions();
+            alert(id ? 'Definition updated successfully' : 'Definition added successfully');
+        })
+        .catch(error => {
+            console.error('Error saving definition:', error);
+            alert('Error: Failed to save definition');
+        });
+    }
+
+    function deleteDefinition(id) {
+        if (!confirm('Are you sure you want to delete this attribute definition? This may affect existing policies.')) return;
+        
+        fetch(`/api/v1/abac/attribute-definitions/${id}`, {
+            method: 'DELETE',
+            headers: {'X-CSRF-TOKEN': csrfToken}
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to delete');
+            loadDefinitions();
+            alert('Definition deleted successfully');
+        })
+        .catch(error => {
+            console.error('Error deleting definition:', error);
+            alert('Error: Failed to delete definition');
+        });
+    }
+
+    // ===== USER ATTRIBUTES =====
+    function loadUserAttributes() {
+        fetch('/api/v1/abac/user-attributes')
+            .then(response => response.json())
+            .then(data => {
+                allAttributes = data;
+                updateSyncStatus();
+                renderAttributesTable(data);
+            })
+            .catch(error => {
+                console.error('Error loading attributes:', error);
+            });
+    }
+
+    function updateSyncStatus() {
+        fetch('/api/v1/abac/sync-status')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('lastSyncTime').textContent = data.lastSyncTime || 'Never';
+                document.getElementById('totalUsers').textContent = data.totalUsers || '0';
+                document.getElementById('totalAttributes').textContent = data.totalAttributes || '0';
+            })
+            .catch(error => console.error('Error loading sync status:', error));
+    }
+
+    function renderAttributesTable(attributes) {
+        const tbody = document.getElementById('attributesTableBody');
+        
+        if (attributes.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <div class="empty-state-text">No user attributes found</div>
+                        <div style="color: #868e96;">Click "Sync All from Keycloak" to import attributes</div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        tbody.innerHTML = attributes.map(attr => `
+            <tr>
+                <td>${escapeHtml(attr.targetId || '-')}</td>
+                <td>${escapeHtml(attr.username || '-')}</td>
+                <td>${escapeHtml(attr.attributeName)}</td>
+                <td>${escapeHtml(attr.attributeValue)}</td>
+                <td><span class="badge ${attr.syncedFromKeycloak ? 'badge-keycloak' : 'badge-local'}">
+                    ${attr.syncedFromKeycloak ? 'Keycloak' : 'Local'}
+                </span></td>
+                <td>${attr.validFrom ? new Date(attr.validFrom).toLocaleDateString() : '-'}</td>
+                <td>${attr.validUntil ? new Date(attr.validUntil).toLocaleDateString() : '-'}</td>
+                <td><span class="badge ${attr.isActive ? 'badge-active' : 'badge-expired'}">
+                    ${attr.isActive ? 'Active' : 'Expired'}
+                </span></td>
+                <td class="actions-cell">
+                    <button class="btn btn-sm btn-primary" onclick="editAttribute(${attr.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-success" onclick="syncUserFromKeycloak('${escapeHtml(attr.targetId)}')">
+                        <i class="fas fa-sync"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteAttribute(${attr.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function filterAttributesTable() {
+        const userFilter = document.getElementById('filterUser').value.toLowerCase();
+        const attrFilter = document.getElementById('filterAttribute').value.toLowerCase();
+        const sourceFilter = document.getElementById('filterSource').value;
+        const statusFilter = document.getElementById('filterStatus').value;
+        
+        const filtered = allAttributes.filter(attr => {
+            const matchesUser = !userFilter || 
+                (attr.targetId && attr.targetId.toLowerCase().includes(userFilter)) ||
+                (attr.username && attr.username.toLowerCase().includes(userFilter));
+            const matchesAttr = !attrFilter || attr.attributeName.toLowerCase().includes(attrFilter);
+            const matchesSource = !sourceFilter || 
+                (sourceFilter === 'keycloak' && attr.syncedFromKeycloak) ||
+                (sourceFilter === 'local' && !attr.syncedFromKeycloak);
+            const matchesStatus = !statusFilter ||
+                (statusFilter === 'active' && attr.isActive) ||
+                (statusFilter === 'expired' && !attr.isActive);
+            
+            return matchesUser && matchesAttr && matchesSource && matchesStatus;
+        });
+        
+        renderAttributesTable(filtered);
+    }
+
+    function closeAttributeModal() {
+        document.getElementById('attributeModal').style.display = 'none';
+    }
+
+    function editAttribute(id) {
+        const attr = allAttributes.find(a => a.id === id);
+        if (!attr) return;
+        
+        document.getElementById('attributeModalTitle').textContent = 'Edit User Attribute';
+        document.getElementById('assignmentId').value = attr.id;
+        document.getElementById('userId').value = attr.targetId;
+        document.getElementById('attributeName').value = attr.attributeName;
+        document.getElementById('attributeValue').value = attr.attributeValue;
+        document.getElementById('validFrom').value = attr.validFrom ? attr.validFrom.substring(0, 16) : '';
+        document.getElementById('validUntil').value = attr.validUntil ? attr.validUntil.substring(0, 16) : '';
+        document.getElementById('syncToKeycloak').checked = attr.syncedFromKeycloak;
+        document.getElementById('attributeModal').style.display = 'block';
+    }
+
+    function saveAttribute() {
+        const id = document.getElementById('assignmentId').value;
+        const data = {
+            targetId: document.getElementById('userId').value,
+            targetType: 'USER',
+            attributeName: document.getElementById('attributeName').value,
+            attributeValue: document.getElementById('attributeValue').value,
+            validFrom: document.getElementById('validFrom').value || null,
+            validUntil: document.getElementById('validUntil').value || null,
+            syncToKeycloak: document.getElementById('syncToKeycloak').checked
+        };
+        
+        if (!data.targetId || !data.attributeName || !data.attributeValue) {
+            alert('Please fill in all required fields');
+            return;
+        }
+        
+        const url = id ? `/api/v1/abac/user-attributes/${id}` : '/api/v1/abac/user-attributes';
+        const method = id ? 'PUT' : 'POST';
+        
+        fetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken},
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to save attribute');
+            return response.json();
+        })
+        .then(() => {
+            closeAttributeModal();
+            loadUserAttributes();
+            alert(id ? 'Attribute updated successfully' : 'Attribute added successfully');
+        })
+        .catch(error => {
+            console.error('Error saving attribute:', error);
+            alert('Error: Failed to save attribute');
+        });
+    }
+
+    function deleteAttribute(id) {
+        if (!confirm('Are you sure you want to delete this attribute?')) return;
+        
+        fetch(`/api/v1/abac/user-attributes/${id}`, {
+            method: 'DELETE',
+            headers: {'X-CSRF-TOKEN': csrfToken}
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to delete');
+            loadUserAttributes();
+            alert('Attribute deleted successfully');
+        })
+        .catch(error => {
+            console.error('Error deleting attribute:', error);
+            alert('Error: Failed to delete attribute');
+        });
+    }
+
+    function syncAllFromKeycloak() {
+        if (!confirm('This will sync all user attributes from Keycloak. Continue?')) return;
+        
+        fetch('/api/v1/abac/sync/all', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken}
+        })
+        .then(response => response.json())
+        .then(data => {
+            loadUserAttributes();
+            alert(`Synced ${data.syncedUsers || 0} users with ${data.syncedAttributes || 0} attributes`);
+        })
+        .catch(error => {
+            console.error('Error syncing from Keycloak:', error);
+            alert('Error: Failed to sync from Keycloak');
+        });
+    }
+
+    function syncUserFromKeycloak(userId) {
+        fetch(`/api/v1/abac/sync/user/${userId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken}
+        })
+        .then(response => response.json())
+        .then(() => {
+            loadUserAttributes();
+            alert(`User ${userId} synced successfully`);
+        })
+        .catch(error => {
+            console.error('Error syncing user:', error);
+            alert('Error: Failed to sync user from Keycloak');
+        });
+    }
+
+    // ===== ACCESS MAPPINGS =====
+    function loadMappings() {
+        fetch('/api/v1/custom-attribute-mappings')
+            .then(response => response.json())
+            .then(data => {
+                mappings = data;
+                renderMappingsTable();
+            })
+            .catch(error => {
+                console.error('Error loading mappings:', error);
+            });
+    }
+
+    function renderMappingsTable() {
+        const tbody = document.getElementById('mappingsTableBody');
+        const emptyState = document.getElementById('emptyMappingsState');
+        const table = document.getElementById('mappingsTable');
+
+        if (mappings.length === 0) {
+            table.style.display = 'none';
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        table.style.display = 'table';
+        emptyState.style.display = 'none';
+
+        tbody.innerHTML = mappings.map(mapping => `
+            <tr>
+                <td><span class="code">${escapeHtml(mapping.endpoint)}</span></td>
+                <td>${escapeHtml(mapping.attributeName)}</td>
+                <td>${escapeHtml(mapping.requiredValue)}</td>
+                <td>${escapeHtml(mapping.description || '-')}</td>
+                <td>
+                    <span class="badge ${mapping.isActive ? 'badge-active' : 'badge-inactive'}">
+                        ${mapping.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                </td>
+                <td class="actions-cell">
+                    <button class="btn btn-primary btn-sm" onclick="editMapping(${mapping.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteMapping(${mapping.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function openCreateMappingModal() {
+        document.getElementById('mappingModalTitle').textContent = 'Add Custom Attribute Mapping';
+        document.getElementById('mappingForm').reset();
+        document.getElementById('mappingId').value = '';
+        document.getElementById('mappingModal').style.display = 'block';
+    }
+
+    function closeMappingModal() {
+        document.getElementById('mappingModal').style.display = 'none';
+    }
+
+    function editMapping(id) {
+        const mapping = mappings.find(m => m.id === id);
+        if (!mapping) return;
+
+        document.getElementById('mappingModalTitle').textContent = 'Edit Custom Attribute Mapping';
+        document.getElementById('mappingId').value = mapping.id;
+        document.getElementById('endpoint').value = mapping.endpoint;
+        document.getElementById('mapAttributeName').value = mapping.attributeName;
+        document.getElementById('requiredValue').value = mapping.requiredValue;
+        document.getElementById('mapDescription').value = mapping.description || '';
+        document.getElementById('mappingModal').style.display = 'block';
+    }
+
+    function saveMapping() {
+        const id = document.getElementById('mappingId').value;
+        const data = {
+            endpoint: document.getElementById('endpoint').value,
+            attributeName: document.getElementById('mapAttributeName').value,
+            requiredValue: document.getElementById('requiredValue').value,
+            description: document.getElementById('mapDescription').value,
+            isActive: true
+        };
+
+        const url = id ? `/api/v1/custom-attribute-mappings/${id}` : '/api/v1/custom-attribute-mappings';
+        const method = id ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to save mapping');
+            return response.json();
+        })
+        .then(() => {
+            closeMappingModal();
+            showMappingAlert(`Mapping ${id ? 'updated' : 'created'} successfully`, 'success');
+            loadMappings();
+        })
+        .catch(error => {
+            console.error('Error saving mapping:', error);
+            showMappingAlert('Error saving mapping', 'error');
+        });
+    }
+
+    function deleteMapping(id) {
+        if (!confirm('Are you sure you want to delete this mapping?')) return;
+
+        fetch(`/api/v1/custom-attribute-mappings/${id}`, {
+            method: 'DELETE',
+            headers: {'X-CSRF-TOKEN': csrfToken}
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to delete mapping');
+            showMappingAlert('Mapping deleted successfully', 'success');
+            loadMappings();
+        })
+        .catch(error => {
+            console.error('Error deleting mapping:', error);
+            showMappingAlert('Error deleting mapping', 'error');
+        });
+    }
+
+    function showMappingAlert(message, type) {
+        const alertContainer = document.getElementById('alertContainer');
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`;
+        alert.textContent = message;
+        alertContainer.appendChild(alert);
+
+        setTimeout(() => {
+            alert.remove();
+        }, 5000);
+    }
+
+    // Utility function
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ===== AUTOCOMPLETE FUNCTIONALITY =====
+    let userSearchTimeout = null;
+    let attributeSearchTimeout = null;
+
+    // Setup autocomplete for User ID field
+    function setupUserIdAutocomplete() {
+        const input = document.getElementById('userId');
+        const dropdown = document.getElementById('userIdDropdown');
+
+        input.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            clearTimeout(userSearchTimeout);
+            
+            if (query.length < 2) {
+                dropdown.classList.remove('show');
+                return;
+            }
+
+            dropdown.innerHTML = '<div class="autocomplete-loading">Searching users...</div>';
+            dropdown.classList.add('show');
+
+            userSearchTimeout = setTimeout(() => {
+                fetch(`/api/v1/users/search?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('User search results:', data);
+                        const users = Array.isArray(data) ? data : data.content || [];
+                        if (users.length === 0) {
+                            dropdown.innerHTML = '<div class="autocomplete-no-results">No users found</div>';
+                        } else {
+                            dropdown.innerHTML = users.map(user => `
+                <div class="autocomplete-item" data-userid="${escapeHtml(user.username)}" data-username="${escapeHtml(user.username || user.userId)}">
+                    <strong>${escapeHtml(user.username || user.userId)}</strong>
+                    ${user.email ? '<br><small style="color: #adb5bd;">' + escapeHtml(user.email) + '</small>' : ''}
+                </div>
+            `).join('');
+
+                            dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+                                item.addEventListener('click', function() {
+                                    const userId = this.getAttribute('data-userid');
+                                    const username = this.getAttribute('data-username');
+                                    input.value = userId;
+                                    dropdown.classList.remove('show');
+                                });
+                            });
+                        }
+                    })
+
+                        .catch(error => {
+                        console.error('Error searching users:', error);
+                        dropdown.innerHTML = '<div class="autocomplete-no-results">Error loading users</div>';
+                    });
+            }, 300);
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+    }
+
+    // Setup autocomplete for Attribute Name field
+    function setupAttributeNameAutocomplete() {
+        const input = document.getElementById('attributeName');
+        const dropdown = document.getElementById('attributeNameDropdown');
+
+        input.addEventListener('input', function() {
+            const query = this.value.trim().toLowerCase();
+            
+            clearTimeout(attributeSearchTimeout);
+            
+            if (query.length < 1) {
+                dropdown.classList.remove('show');
+                return;
+            }
+
+            attributeSearchTimeout = setTimeout(() => {
+                // Filter from allDefinitions loaded earlier
+                const filtered = allDefinitions.filter(def => 
+                    def.attributeName.toLowerCase().includes(query)
+                );
+
+                if (filtered.length === 0) {
+                    dropdown.innerHTML = '<div class="autocomplete-no-results">No attributes found</div>';
+                    dropdown.classList.add('show');
+                } else {
+                    dropdown.innerHTML = filtered.map(def => `
+                        <div class="autocomplete-item" data-attrname="${escapeHtml(def.attributeName)}">
+                            <strong>${escapeHtml(def.attributeName)}</strong>
+                            <br><small style="color: #adb5bd;">
+                                ${def.attributeScope} - ${def.dataType}
+                                ${def.description ? ': ' + escapeHtml(def.description) : ''}
+                            </small>
+                        </div>
+                    `).join('');
+                    dropdown.classList.add('show');
+
+                    // Add click handlers
+                    dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+                        item.addEventListener('click', function() {
+                            const attrName = this.getAttribute('data-attrname');
+                            input.value = attrName;
+                            dropdown.classList.remove('show');
+                        });
+                    });
+                }
+            }, 200);
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+    }
+
+    // Initialize autocomplete when modal opens
+    function openAddAttributeModal() {
+        document.getElementById('attributeModalTitle').textContent = 'Add User Attribute';
+        document.getElementById('attributeForm').reset();
+        document.getElementById('assignmentId').value = '';
+        document.getElementById('attributeModal').style.display = 'block';
+        
+        // Setup autocomplete on first open
+        if (!window.autocompleteInitialized) {
+            setupUserIdAutocomplete();
+            setupAttributeNameAutocomplete();
+            window.autocompleteInitialized = true;
+        }
+    }
+
+    // Close modals when clicking outside
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = 'none';
+        }
+    }
+</script>
+</body>
+</html>

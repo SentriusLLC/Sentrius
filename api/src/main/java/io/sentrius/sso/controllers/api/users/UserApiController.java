@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.BooleanNode;
@@ -20,6 +21,7 @@ import io.sentrius.sso.core.dto.UserPublicKeyDTO;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.model.security.UserType;
+import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.enums.UserAccessEnum;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.dto.UserDTO;
@@ -137,6 +139,29 @@ public class UserApiController extends BaseController {
     }
 
 
+    @GetMapping("/search")
+    @LimitAccess(userAccess = {UserAccessEnum.CAN_VIEW_USERS})
+    public ResponseEntity<List<UserDTO>> findUsersByName(
+        @RequestParam(name = "query") String userId) {
+
+        log.debug("Finding users with attribute userId={}", userId);
+
+        try {
+            Optional<List<User>> userIds = userService.findByUsernameLike(userId);
+            if (userIds.isPresent()) {
+                log.info("Found users with attribute userId={}", userId);
+                List<UserDTO> userDTOs = userIds.get().stream().map(User::toDto).toList();
+                return ResponseEntity.ok(userDTOs);
+            } else {
+                log.info("No users with attribute userId={}", userId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+
+        } catch (Exception e) {
+            log.error("Error finding users with attribute", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 
     @PostMapping("add")
     @LimitAccess(userAccess = {UserAccessEnum.CAN_EDIT_USERS})

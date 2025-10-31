@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.users.UserAttributeDTO;
@@ -90,6 +91,7 @@ public class UserAttributeController extends BaseController {
      * Get user attributes as a map
      */
     @GetMapping("/{userId}/map")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<Map<String, String>> getUserAttributesAsMap(@PathVariable String userId) {
         log.debug("Getting attributes map for user: {}", userId);
         
@@ -107,6 +109,7 @@ public class UserAttributeController extends BaseController {
      * Get a specific user attribute
      */
     @GetMapping("/{userId}/{attributeName}")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<UserAttributeDTO> getUserAttribute(
             @PathVariable String userId,
             @PathVariable String attributeName) {
@@ -133,6 +136,7 @@ public class UserAttributeController extends BaseController {
      * Set a user attribute
      */
     @PostMapping("/update")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<UserAttributeDTO> setUserAttribute(
             @RequestParam("userId") String userId,
             @RequestBody @Valid UserAttributeDTO attributeDTO,
@@ -174,6 +178,7 @@ public class UserAttributeController extends BaseController {
      * Set multiple user attributes at once
      */
     @PostMapping("/{userId}/bulk")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<List<UserAttributeDTO>> setUserAttributes(
             @PathVariable String userId,
             @RequestBody Map<String, String> attributes,
@@ -210,6 +215,7 @@ public class UserAttributeController extends BaseController {
      * Remove a user attribute
      */
     @DeleteMapping("/{userId}/{attributeName}")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<Map<String, Object>> removeUserAttribute(
             @PathVariable String userId,
             @PathVariable String attributeName,
@@ -245,6 +251,7 @@ public class UserAttributeController extends BaseController {
      * Sync user attributes from Keycloak
      */
     @PostMapping("/{userId}/sync/keycloak")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<List<UserAttributeDTO>> syncFromKeycloak(
             @PathVariable String userId,
             HttpServletRequest request, HttpServletResponse response) {
@@ -278,6 +285,7 @@ public class UserAttributeController extends BaseController {
      * Check if user has specific attribute value
      */
     @GetMapping("/{userId}/check")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<Map<String, Boolean>> checkUserAttribute(
             @PathVariable String userId,
             @RequestParam String attributeName,
@@ -303,6 +311,7 @@ public class UserAttributeController extends BaseController {
      * Find users with specific attribute (admin endpoint)
      */
     @GetMapping("/search")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<List<String>> findUsersWithAttribute(
             @RequestParam String attributeName,
             @RequestParam String attributeValue) {
@@ -323,6 +332,7 @@ public class UserAttributeController extends BaseController {
      * Get all unique attribute names (admin endpoint)
      */
     @GetMapping("/names")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<List<String>> getAllAttributeNames() {
         log.debug("Getting all unique attribute names");
         

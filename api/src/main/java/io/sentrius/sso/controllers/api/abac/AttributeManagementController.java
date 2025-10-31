@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -243,8 +244,13 @@ public class AttributeManagementController {
         dto.setTargetId(assignment.getTargetId());
         dto.setAttributeName(assignment.getAttributeDefinition().getAttributeName());
         dto.setAttributeValue(assignment.getAttributeValue());
-        dto.setValidFrom(LocalDateTime.from(assignment.getValidFrom()));
-        dto.setValidUntil(LocalDateTime.from(assignment.getValidUntil()));
+        if (assignment.getValidFrom() != null) {
+            dto.setValidFrom(LocalDateTime.ofInstant(assignment.getValidFrom(), ZoneOffset.UTC));
+        }
+        if (assignment.getValidUntil() != null) {
+            dto.setValidUntil(LocalDateTime.ofInstant(assignment.getValidUntil(), ZoneOffset.UTC));
+        }
+
         dto.setSyncedFromKeycloak(assignment.getSyncedFromKeycloak());
         dto.setActive(assignment.getIsActive());
         return dto;

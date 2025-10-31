@@ -475,6 +475,17 @@ let allAttributes = [];
 
 // Load user attributes on page load
 document.addEventListener('DOMContentLoaded', function() {
+    // Check for userId in URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const userIdParam = urlParams.get('userId');
+    
+    if (userIdParam) {
+        // Sanitize and validate userId before using it
+        const sanitizedUserId = userIdParam.replace(/[^a-zA-Z0-9\-_@.]/g, '');
+        // Pre-fill the user filter with sanitized value
+        document.getElementById('filterUser').value = sanitizedUserId;
+    }
+    
     loadUserAttributes();
 });
 

@@ -18,6 +18,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByUsername(String username);
 
+    @Query("SELECT u FROM User u WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :username, '%'))")
+    List<User> searchByUsernameLike(@Param("username") String username);
+
 
     @Query("SELECT u.hostGroups FROM User u WHERE u.id = :userId")
     Set<HostGroup> findHostGroupsByUserId(@Param("userId") Long userId);
