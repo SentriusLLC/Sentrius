@@ -736,8 +736,7 @@ public class AgentVerbs extends VerbBase {
 
     @Verb(name = "create_agent", returnType = AgentExecutionContextDTO.class, description = "Creates an agent who has the " +
         "context. a previously defined contextId is required. previously defined endpoints can be used to build a " +
-        "trust policy. must call create_agent_context before this verb. agent type is chat, chat-autonomous, or " +
-        "autonomous. chat is chat only, chat-autonomous is chat and autonomous. determine based on workload.",
+        "trust policy. must call create_agent_context before this verb. agent type is chat or chat-autonomous. chat is chat only, chat-autonomous is chat and autonomous. determine based on workload.",
         exampleJson = "{  \"agentName\": \"agentName\", \"agentType\": \"agentType\" }",
         requiresTokenManagement = true )
     public ObjectNode createAgent(AgentExecution execution, AgentExecutionContextDTO context)
@@ -848,12 +847,18 @@ public class AgentVerbs extends VerbBase {
         ArrayNode endpoints = JsonUtil.MAPPER.createArrayNode();
         for(JsonNode node : parsedQuery) {
             if (!node.isTextual()) {
-                throw new IllegalArgumentException("All items in 'endpoints_like' must be strings");
+                if (node.has("arg1")){
+                    node = node.get("arg1");
+                    if (!node.isTextual()) {
+                        throw new IllegalArgumentException("All items in 'endpoints_like' must be strings");
+                    }
+                }
             }
             var endpointList = endpointSearcher.getEndpointsLike(execution, node.asText());
+            JsonNode finalNode = node;
             endpointList.forEach(endpoint -> {
                 ObjectNode endpointNode = JsonUtil.MAPPER.createObjectNode();
-                endpointNode.put("name", node.asText());
+                endpointNode.put("name", finalNode.asText());
                 endpointNode.put("method", endpoint.getHttpMethod());
                 endpointNode.put("endpoint", endpoint.getPath());
                 endpoints.add(endpointNode);

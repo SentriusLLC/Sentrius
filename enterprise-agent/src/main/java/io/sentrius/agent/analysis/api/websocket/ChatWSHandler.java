@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.sentrius.agent.analysis.agents.agents.ChatAgent;
 import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
 import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
@@ -39,6 +40,8 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "agents.ai.chat.agent.enabled", havingValue = "true", matchIfMissing = false)
 public class ChatWSHandler extends TextWebSocketHandler {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     final UserCommunicationService userCommunicationService;
     final ZeroTrustClientService zeroTrustClientService;
@@ -102,11 +105,17 @@ public class ChatWSHandler extends TextWebSocketHandler {
         userCommunicationService.createSession(queryParams.get("sessionId"), session);
 
 
+        // Automatically pause the agent when chat session is established
+        if (!chatAgent.isPaused()) {
+            log.info("Automatically pausing agent due to new chat session");
+            chatAgent.pauseAgent();
+        }
+
         ProvenanceEvent provenanceEvent = ProvenanceEvent.builder()
             .eventType(ProvenanceEvent.EventType.USER_CHAT_AGENT)
             .actor("admin")
             .triggeringUser(chatAgent.getAgentExecution().getUser().getName())
-            .outputSummary("New chat session established")
+            .outputSummary("New chat session established - agent paused")
             .sessionId(session.getId())
             .build();
 
@@ -145,7 +154,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
                         if (auditLog.getMessage().equals("heartbeat")) {
                             return;
                         }
-                        var json = new ObjectMapper().readTree(auditLog.getMessage());
+                        var json = OBJECT_MAPPER.readTree(auditLog.getMessage());
                         if ("challenge-response".equals(json.get("type").asText())) {
                             String signature = json.get("signature").asText();
                             String publicKey = json.get("publicKey").asText();
@@ -163,6 +172,124 @@ public class ChatWSHandler extends TextWebSocketHandler {
                             } else {
                                 log.warn("ZTAT challenge failed for session {}", session.getId());
                                 session.close();
+                            }
+                            return;
+                        } else if ("pause-agent".equals(json.get("type").asText())) {
+                            log.info("Received pause command from session {}", sessionId);
+                            chatAgent.pauseAgent();
+                            websocketCommunication.setAgentPausedBySession(true);
+                            
+                            var pauseResponse = Session.ChatMessage.newBuilder()
+                                .setMessage("Agent autonomous operations have been paused. All state has been preserved including execution context and ztats.")
+                                .setSender("agent")
+                                .setChatGroupId("")
+                                .setSessionId(websocketCommunication.getUniqueIdentifier())
+                                .setTimestamp(System.currentTimeMillis())
+                                .build();
+                            messageBytes = pauseResponse.toByteArray();
+                            String base64Message = Base64.getEncoder().encodeToString(messageBytes);
+                            session.sendMessage(new TextMessage(base64Message));
+                            return;
+                        } else if ("resume-agent".equals(json.get("type").asText())) {
+                            log.info("Received resume command from session {}", sessionId);
+                            chatAgent.resumeAgent();
+                            
+                            var resumeResponse = Session.ChatMessage.newBuilder()
+                                .setMessage("Agent autonomous operations have been resumed. Continuing from saved state.")
+                                .setSender("agent")
+                                .setChatGroupId("")
+                                .setSessionId(websocketCommunication.getUniqueIdentifier())
+                                .setTimestamp(System.currentTimeMillis())
+                                .build();
+                            messageBytes = resumeResponse.toByteArray();
+                            String base64Message = Base64.getEncoder().encodeToString(messageBytes);
+                            session.sendMessage(new TextMessage(base64Message));
+                            return;
+                        } else if ("agent-status".equals(json.get("type").asText())) {
+                            log.info("Received status query from session {}", sessionId);
+                            String status = chatAgent.isPaused() ? "PAUSED" : "RUNNING";
+                            
+                            var statusResponse = Session.ChatMessage.newBuilder()
+                                .setMessage(String.format("Agent status: %s", status))
+                                .setSender("agent")
+                                .setChatGroupId("")
+                                .setSessionId(websocketCommunication.getUniqueIdentifier())
+                                .setTimestamp(System.currentTimeMillis())
+                                .build();
+                            messageBytes = statusResponse.toByteArray();
+                            String base64Message = Base64.getEncoder().encodeToString(messageBytes);
+                            session.sendMessage(new TextMessage(base64Message));
+                            return;
+                        } else if ("modify-context".equals(json.get("type").asText())) {
+                            log.info("Received modify-context command from session {}", sessionId);
+                            
+                            // Extract modification details first
+                            final String contextKey = json.has("contextKey") ? json.get("contextKey").asText() : null;
+                            final String contextValue = json.has("contextValue") ? json.get("contextValue").asText() : null;
+                            final String operation = json.has("operation") ? json.get("operation").asText() : null;
+                            
+                            try {
+                                // Use the agent's modifyContextIfPaused method to ensure thread-safe modification
+                                boolean modified = chatAgent.modifyContextIfPaused(() -> {
+                                    try {
+                                        // Perform modifications while holding the agent's pause lock
+                                        if (contextKey != null && contextValue != null) {
+                                            // Update the agent's execution context
+                                            JsonNode valueNode = OBJECT_MAPPER.readTree(contextValue);
+                                            websocketCommunication.getAgentExecutionContextDTO().addToMemory(contextKey, valueNode);
+                                            log.info("Updated context: {} = {}", contextKey, contextValue);
+                                        }
+                                        
+                                        if (operation != null) {
+                                            // Change the next operation
+                                            ObjectNode opNode = OBJECT_MAPPER.createObjectNode();
+                                            opNode.put("nextOperation", operation);
+                                            websocketCommunication.getAgentExecutionContextDTO().addToMemory("nextOperation", opNode);
+                                            log.info("Changed next operation to: {}", operation);
+                                        }
+                                    } catch (Exception e) {
+                                        log.error("Error parsing context value: {}", e.getMessage(), e);
+                                        throw new RuntimeException("Failed to parse context value: " + e.getMessage(), e);
+                                    }
+                                });
+                                
+                                if (!modified) {
+                                    // Agent was not paused
+                                    var errorResponse = Session.ChatMessage.newBuilder()
+                                        .setMessage("Cannot modify context while agent is running. Please pause the agent first.")
+                                        .setSender("agent")
+                                        .setChatGroupId("")
+                                        .setSessionId(websocketCommunication.getUniqueIdentifier())
+                                        .setTimestamp(System.currentTimeMillis())
+                                        .build();
+                                    messageBytes = errorResponse.toByteArray();
+                                    String base64Message = Base64.getEncoder().encodeToString(messageBytes);
+                                    session.sendMessage(new TextMessage(base64Message));
+                                    return;
+                                }
+                                
+                                var modifyResponse = Session.ChatMessage.newBuilder()
+                                    .setMessage("Agent context has been modified. Changes will take effect when agent is resumed.")
+                                    .setSender("agent")
+                                    .setChatGroupId("")
+                                    .setSessionId(websocketCommunication.getUniqueIdentifier())
+                                    .setTimestamp(System.currentTimeMillis())
+                                    .build();
+                                messageBytes = modifyResponse.toByteArray();
+                                String base64Message = Base64.getEncoder().encodeToString(messageBytes);
+                                session.sendMessage(new TextMessage(base64Message));
+                            } catch (Exception e) {
+                                log.error("Error modifying context: {}", e.getMessage(), e);
+                                var errorResponse = Session.ChatMessage.newBuilder()
+                                    .setMessage("Failed to modify context: " + e.getMessage())
+                                    .setSender("agent")
+                                    .setChatGroupId("")
+                                    .setSessionId(websocketCommunication.getUniqueIdentifier())
+                                    .setTimestamp(System.currentTimeMillis())
+                                    .build();
+                                messageBytes = errorResponse.toByteArray();
+                                String base64Message = Base64.getEncoder().encodeToString(messageBytes);
+                                session.sendMessage(new TextMessage(base64Message));
                             }
                             return;
                         } else if ("user-message".equals(json.get("type").asText())) {
@@ -319,6 +446,11 @@ public class ChatWSHandler extends TextWebSocketHandler {
                 userCommunicationService.remove(sessionId);
 
                 log.info("Connection closed, session ID: " + sessionId);
+
+                if (chatAgent.isPaused()){
+                    log.info("Resuming agent as chat session has ended");
+                    chatAgent.resumeAgent();
+                }
             }
         }
     }

@@ -34,4 +34,8 @@ public class WebSocky {
     AgentExecutionContextDTO agentExecutionContextDTO = AgentExecutionContextDTO.builder()
             .build();
 
+    // Track if this specific chat session has paused the agent
+    @Builder.Default
+    private boolean agentPausedBySession = false;
+
 }

@@ -50,6 +50,8 @@ public class ChatAgent extends BaseEnterpriseAgent {
     final ChatVerbs chatVerbs;
 
     private volatile boolean running = true;
+    private volatile boolean paused = false;
+    private final Object pauseLock = new Object();
     private Thread workerThread;
 
     private AgentExecution agentExecution;
@@ -181,6 +183,23 @@ public class ChatAgent extends BaseEnterpriseAgent {
         List<VerbResponse> verbResponses = new ArrayList<>();
         while(running) {
 
+                // Check if agent is paused if autonomous mode
+                if (null != agentConfigOptions.getType() &&  agentConfigOptions.getType().equalsIgnoreCase("chat" +
+                    "-autonomous")) {
+                    synchronized (pauseLock) {
+                        while (paused) {
+                            try {
+                                log.info("Agent paused, waiting for resume command...");
+                                pauseLock.wait();
+                                log.info("Agent resumed from pause.");
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                log.warn("Agent interrupted while paused");
+                                break;
+                            }
+                        }
+                    }
+                }
 
                 try {
 
@@ -277,16 +296,117 @@ public class ChatAgent extends BaseEnterpriseAgent {
 
     }
 
+    /**
+     * Pause the agent's autonomous operations.
+     * Preserves the current state including execution context and ztats.
+     */
+    public void pauseAgent() {
+        synchronized (pauseLock) {
+            if (!paused) {
+                paused = true;
+                log.info("Agent paused - state preserved");
+                
+                // Submit provenance event for pause
+                try {
+                    agentClientService.submitProvenance(
+                        agentExecution,
+                        io.sentrius.sso.provenance.ProvenanceEvent.builder()
+                            .eventType(io.sentrius.sso.provenance.ProvenanceEvent.EventType.AGENT_PAUSED)
+                            .actor(agentExecution.getUser().getUsername())
+                            .triggeringUser(agentExecution.getUser().getUsername())
+                            .outputSummary("Agent autonomous operations paused by user")
+                            .build()
+                    );
+                } catch (Exception e) {
+                    log.error("Failed to submit pause provenance event", e);
+                }
+            }
+        }
+    }
+
+    /**
+     * Resume the agent's autonomous operations.
+     * Continues from the previously saved state.
+     */
+    public void resumeAgent() {
+        synchronized (pauseLock) {
+            if (paused) {
+                paused = false;
+                pauseLock.notifyAll();
+                log.info("Agent resumed - continuing operations");
+                
+                // Submit provenance event for resume
+                try {
+                    agentClientService.submitProvenance(
+                        agentExecution,
+                        io.sentrius.sso.provenance.ProvenanceEvent.builder()
+                            .eventType(io.sentrius.sso.provenance.ProvenanceEvent.EventType.AGENT_RESUMED)
+                            .actor(agentExecution.getUser().getUsername())
+                            .triggeringUser(agentExecution.getUser().getUsername())
+                            .outputSummary("Agent autonomous operations resumed by user")
+                            .build()
+                    );
+                } catch (Exception e) {
+                    log.error("Failed to submit resume provenance event", e);
+                }
+            }
+        }
+    }
+
+    /**
+     * Check if the agent is currently paused.
+     */
+    public boolean isPaused() {
+        return paused;
+    }
+
+    /**
+     * Execute a context modification if the agent is paused.
+     * This method ensures thread-safe modification of agent context.
+     * 
+     * @param modifier The runnable that performs the context modification
+     * @return true if the modification was performed, false if agent is not paused
+     */
+    public boolean modifyContextIfPaused(Runnable modifier) {
+        synchronized (pauseLock) {
+            if (paused) {
+                modifier.run();
+                return true;
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Get the current agent execution context.
+     * This includes all state, messages, and execution data.
+     */
+    public AgentExecution getAgentExecution() {
+        return agentExecution;
+    }
+
+    /**
+     * Set the agent execution context.
+     * Public method primarily for testing purposes.
+     * Should not be used in production code.
+     */
+    public void setAgentExecution(AgentExecution agentExecution) {
+        this.agentExecution = agentExecution;
+    }
+
     @PreDestroy
     public void shutdown() {
         log.info("Shutting down ChatAgent...");
         running = false;
+        
+        // Wake up any paused threads
+        synchronized (pauseLock) {
+            paused = false;
+            pauseLock.notifyAll();
+        }
+        
         if (workerThread != null) {
             workerThread.interrupt();
         }
-    }
-
-    public AgentExecution getAgentExecution() {
-        return agentExecution;
     }
 }
