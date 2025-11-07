@@ -8,6 +8,7 @@ import io.sentrius.sso.core.services.abac.PolicyEvaluator;
 import io.sentrius.sso.provenance.ProvenanceEvent;
 import io.sentrius.sso.provenance.ProvenanceLogger;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,9 @@ import java.util.UUID;
 /**
  * Sentrius GenerationManager: spawn next agent generation from parent under ATPL policy.
  * Clone memory, decay trust, and record lineage.
+ * 
+ * Note: ProvenanceLogger is optional. When not available, provenance events are skipped.
+ * This allows the service to work in dataplane without requiring API-layer dependencies.
  */
 @Slf4j
 @Service
@@ -40,7 +44,7 @@ public class GenerationManager {
             AgentContextRepository agentContextRepository,
             LearningService learningService,
             PolicyEvaluator policyEvaluator,
-            ProvenanceLogger provenanceLogger,
+            @Autowired(required = false) ProvenanceLogger provenanceLogger,
             VectorAgentMemoryStore vectorMemoryStore) {
         this.agentContextRepository = agentContextRepository;
         this.learningService = learningService;
@@ -158,6 +162,11 @@ public class GenerationManager {
      * Logs provenance event for generation creation.
      */
     private void logGenerationCreation(AgentContext parent, AgentContext child, String requestingUserId) {
+        if (provenanceLogger == null) {
+            log.debug("ProvenanceLogger not available, skipping generation creation event logging");
+            return;
+        }
+        
         ProvenanceEvent event = ProvenanceEvent.builder()
                 .eventId(UUID.randomUUID().toString())
                 .sessionId(child.getId().toString())

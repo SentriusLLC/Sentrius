@@ -455,6 +455,36 @@ public class AgentApiController extends BaseController {
         return ResponseEntity.of(policy);
     }
 
+    @GetMapping("/info")
+    @ResponseBody
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<Map<String, String>> getAgentInfo(@RequestParam String agentId) throws GeneralSecurityException {
+        var aid = URLDecoder.decode(agentId, StandardCharsets.UTF_8);
+        var agent = cryptoService.decrypt(aid);
+        var operatingUser = userService.getUserByUserid(agent);
+        
+        // Try to get agent type from user attributes, default to 'chat'
+        String agentType = "chat"; // default
+        try {
+            var keycloakUser = keycloakService.getUser(operatingUser.getUserId());
+            if (keycloakUser != null && keycloakUser.getAttributes() != null) {
+                var typeAttr = keycloakUser.getAttributes().get("agentType");
+                if (typeAttr != null && !typeAttr.isEmpty()) {
+                    agentType = typeAttr.get(0);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not retrieve agent type from Keycloak, using default: {}", e.getMessage());
+        }
+        
+        log.info("Returning agent info for {}: type={}", agent, agentType);
+        return ResponseEntity.ok(Map.of(
+            "agentId", agent,
+            "agentType", agentType,
+            "agentName", operatingUser.getUsername()
+        ));
+    }
+
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     @PostMapping("/policy/update")
     public ResponseEntity<Void> updatePolicy(@RequestParam String agentId, @RequestBody String newPolicy)

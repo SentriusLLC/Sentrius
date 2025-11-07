@@ -9,6 +9,7 @@ import io.sentrius.sso.core.services.abac.PolicyEvaluator;
 import io.sentrius.sso.provenance.ProvenanceEvent;
 import io.sentrius.sso.provenance.ProvenanceLogger;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,9 @@ import java.util.stream.Collectors;
 /**
  * LearningService: reflect on agent events and summarize experiences into semantic memory.
  * Use vector embeddings and provenance tracking.
+ * 
+ * Note: ProvenanceLogger is optional. When not available, provenance events are skipped.
+ * This allows the service to work in dataplane without requiring API-layer dependencies.
  */
 @Slf4j
 @Service
@@ -40,7 +44,7 @@ public class LearningService {
             AgentMemoryRepository agentMemoryRepository,
             VectorAgentMemoryStore vectorMemoryStore,
             PolicyEvaluator policyEvaluator,
-            ProvenanceLogger provenanceLogger,
+            @Autowired(required = false) ProvenanceLogger provenanceLogger,
             EmbeddingService embeddingService) {
         this.agentMemoryRepository = agentMemoryRepository;
         this.vectorMemoryStore = vectorMemoryStore;
@@ -239,6 +243,11 @@ public class LearningService {
     }
 
     private void logReflectionEvent(String agentId, int episodicCount, int semanticCount, String userId) {
+        if (provenanceLogger == null) {
+            log.debug("ProvenanceLogger not available, skipping reflection event logging");
+            return;
+        }
+        
         ProvenanceEvent event = ProvenanceEvent.builder()
                 .eventId(UUID.randomUUID().toString())
                 .sessionId(agentId)
@@ -339,6 +348,11 @@ public class LearningService {
     }
 
     private void logMemoryInheritance(AgentContext parent, AgentContext child, int memoryCount) {
+        if (provenanceLogger == null) {
+            log.debug("ProvenanceLogger not available, skipping memory inheritance event logging");
+            return;
+        }
+        
         ProvenanceEvent event = ProvenanceEvent.builder()
                 .eventId(UUID.randomUUID().toString())
                 .sessionId(child.getId().toString())

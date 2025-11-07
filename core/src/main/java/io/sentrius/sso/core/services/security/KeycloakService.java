@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.resource.ClientResource;
 import org.keycloak.admin.client.resource.ClientsResource;
 import org.keycloak.admin.client.resource.RoleMappingResource;
+import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.ClientRepresentation;
 import org.keycloak.representations.idm.CredentialRepresentation;
@@ -387,6 +388,22 @@ public class KeycloakService {
             ClientResource createdClient = clients.get(clientId);
 
             String serviceAccountUserId = createdClient.getServiceAccountUser().getId();
+            
+            // Store agent type as user attribute
+            if (agent.getAgentType() != null && !agent.getAgentType().isEmpty()) {
+                try {
+                    UserResource userResource = keycloak.getKeycloak().realm(realm).users().get(serviceAccountUserId);
+                    UserRepresentation userRep = userResource.toRepresentation();
+                    if (userRep.getAttributes() == null) {
+                        userRep.setAttributes(new java.util.HashMap<>());
+                    }
+                    userRep.getAttributes().put("agentType", List.of(agent.getAgentType()));
+                    userResource.update(userRep);
+                    log.info("Stored agent type '{}' for service account user {}", agent.getAgentType(), serviceAccountUserId);
+                } catch (Exception e) {
+                    log.warn("Failed to store agent type attribute: {}", e.getMessage());
+                }
+            }
 
             // Step 5: Assign realm-management roles
             RoleMappingResource roleMapping = keycloak.getKeycloak().realm(realm)
@@ -413,6 +430,7 @@ public class KeycloakService {
                 .agentPublicKey(agent.getAgentPublicKey())
                 .clientSecret(secret.getValue())
                 .clientId(clientId)
+                .agentType(agent.getAgentType())
                 .build();
         }
     }
