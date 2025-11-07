@@ -1,0 +1,289 @@
+package io.sentrius.sentrius.analysis.agents.verbs;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
+import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
+import io.sentrius.agent.services.EndpointRegistry;
+import io.sentrius.agent.services.EndpointSearcher;
+import io.sentrius.sso.core.dto.agents.AgentContextDTO;
+import io.sentrius.sso.core.dto.agents.AgentExecution;
+import io.sentrius.sso.core.dto.agents.AgentExecutionContextDTO;
+import io.sentrius.sso.core.exceptions.ZtatException;
+import io.sentrius.sso.core.services.agents.AgentClientService;
+import io.sentrius.sso.core.services.agents.AgentExecutionService;
+import io.sentrius.sso.core.services.agents.LLMService;
+import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
+import io.sentrius.sso.core.utils.JsonUtil;
+import io.sentrius.sso.genai.Message;
+import io.sentrius.sso.genai.model.LLMRequest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+class AgentVerbsTest {
+
+    @Mock
+    private ZeroTrustClientService zeroTrustClientService;
+
+    @Mock
+    private LLMService llmService;
+
+    @Mock
+    private VerbRegistry verbRegistry;
+
+    @Mock
+    private AgentClientService agentClientService;
+
+    @Mock
+    private EndpointRegistry endpointRegistry;
+
+    @Mock
+    private EndpointSearcher endpointSearcher;
+
+    @Mock
+    private AgentExecutionService agentExecutionService;
+
+    private AgentVerbs agentVerbs;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        agentVerbs = new AgentVerbs(
+            "test-config.yaml",
+            "none",
+            zeroTrustClientService,
+            llmService,
+            verbRegistry,
+            agentClientService,
+            endpointRegistry,
+            endpointSearcher,
+            agentExecutionService
+        );
+    }
+
+    @Test
+    void getCurrentAgentStatusReturnsErrorWhenNoContextFound() throws Exception, ZtatException {
+        // Given
+        String executionId = UUID.randomUUID().toString();
+        AgentExecution execution = AgentExecution.builder()
+            .executionId(executionId)
+            .build();
+        AgentExecutionContextDTO context = AgentExecutionContextDTO.builder().build();
+
+        when(agentExecutionService.getExecutionContextDTO(executionId)).thenReturn(null);
+
+        // When
+        ObjectNode result = agentVerbs.getCurrentAgentStatus(execution, context);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.has("error"));
+        assertEquals("No execution context found for this agent", result.get("error").asText());
+    }
+
+    @Test
+    void getCurrentAgentStatusReturnsStatusInfoWithMessages() throws Exception, ZtatException {
+        // Given
+        String executionId = UUID.randomUUID().toString();
+        AgentExecution execution = AgentExecution.builder()
+            .executionId(executionId)
+            .build();
+
+        // Create execution context with messages
+        AgentExecutionContextDTO statusContext = AgentExecutionContextDTO.builder().build();
+        statusContext.addMessages(Message.builder().role("user").content("Test message 1").build());
+        statusContext.addMessages(Message.builder().role("assistant").content("Test response 1").build());
+        statusContext.addMessages(Message.builder().role("user").content("Test message 2").build());
+
+        // Add some short-term memory
+        Map<String, com.fasterxml.jackson.databind.JsonNode> memory = new HashMap<>();
+        memory.put("task1", JsonUtil.MAPPER.valueToTree("completed"));
+        memory.put("task2", JsonUtil.MAPPER.valueToTree("in-progress"));
+        statusContext.getAgentShortTermMemory().putAll(memory);
+
+        // Add agent context
+        AgentContextDTO agentContext = AgentContextDTO.builder()
+            .contextId(UUID.randomUUID())
+            .name("test-agent")
+            .description("Test agent description")
+            .context("Test context")
+            .build();
+        statusContext.setAgentContext(agentContext);
+
+        AgentExecutionContextDTO requestContext = AgentExecutionContextDTO.builder().build();
+        ObjectNode queryArgs = JsonUtil.MAPPER.createObjectNode();
+        queryArgs.put("query", "What is the current status?");
+        requestContext.setExecutionArgs(queryArgs);
+
+        when(agentExecutionService.getExecutionContextDTO(executionId)).thenReturn(statusContext);
+
+        // Mock LLM response
+        String llmResponse = "{"
+            + "\"choices\": ["
+            + "  {"
+            + "    \"message\": {"
+            + "      \"content\": \"{\\\"answer\\\": \\\"The agent has 3 messages and 2 memory items.\\\", \\\"details\\\": \\\"Agent is currently processing tasks.\\\"}\""
+            + "    }"
+            + "  }"
+            + "]"
+            + "}";
+        when(llmService.askQuestion(eq(execution), any(LLMRequest.class))).thenReturn(llmResponse);
+
+        // When
+        ObjectNode result = agentVerbs.getCurrentAgentStatus(execution, requestContext);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.has("statusInfo"), "Result should contain statusInfo");
+        
+        ObjectNode statusInfo = (ObjectNode) result.get("statusInfo");
+        assertNotNull(statusInfo);
+        assertEquals(executionId, statusInfo.get("executionId").asText());
+        assertEquals(3, statusInfo.get("messageCount").asInt());
+        assertEquals(2, statusInfo.get("shortTermMemorySize").asInt());
+        assertTrue(statusInfo.has("agentContext"));
+        
+        ObjectNode agentContextInfo = (ObjectNode) statusInfo.get("agentContext");
+        assertEquals("test-agent", agentContextInfo.get("name").asText());
+        assertEquals("Test agent description", agentContextInfo.get("description").asText());
+    }
+
+    @Test
+    void getCurrentAgentStatusHandlesDefaultQueryWhenNotProvided() throws Exception, ZtatException {
+        // Given
+        String executionId = UUID.randomUUID().toString();
+        AgentExecution execution = AgentExecution.builder()
+            .executionId(executionId)
+            .build();
+
+        AgentExecutionContextDTO statusContext = AgentExecutionContextDTO.builder().build();
+        statusContext.addMessages(Message.builder().role("user").content("Test message").build());
+
+        AgentExecutionContextDTO requestContext = AgentExecutionContextDTO.builder().build();
+        // No query provided in execution args
+
+        when(agentExecutionService.getExecutionContextDTO(executionId)).thenReturn(statusContext);
+
+        // Mock LLM response
+        String llmResponse = "{"
+            + "\"choices\": ["
+            + "  {"
+            + "    \"message\": {"
+            + "      \"content\": \"{\\\"answer\\\": \\\"Agent is active with 1 message.\\\"}\" "
+            + "    }"
+            + "  }"
+            + "]"
+            + "}";
+        when(llmService.askQuestion(eq(execution), any(LLMRequest.class))).thenReturn(llmResponse);
+
+        // When
+        ObjectNode result = agentVerbs.getCurrentAgentStatus(execution, requestContext);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.has("statusInfo"));
+        ObjectNode statusInfo = (ObjectNode) result.get("statusInfo");
+        assertEquals(1, statusInfo.get("messageCount").asInt());
+    }
+
+    @Test
+    void getCurrentAgentStatusHandlesLLMResponseWithoutJSON() throws Exception, ZtatException {
+        // Given
+        String executionId = UUID.randomUUID().toString();
+        AgentExecution execution = AgentExecution.builder()
+            .executionId(executionId)
+            .build();
+
+        AgentExecutionContextDTO statusContext = AgentExecutionContextDTO.builder().build();
+        statusContext.addMessages(Message.builder().role("user").content("Test message").build());
+
+        AgentExecutionContextDTO requestContext = AgentExecutionContextDTO.builder().build();
+
+        when(agentExecutionService.getExecutionContextDTO(executionId)).thenReturn(statusContext);
+
+        // Mock LLM response with plain text
+        String llmResponse = "{"
+            + "\"choices\": ["
+            + "  {"
+            + "    \"message\": {"
+            + "      \"content\": \"The agent is currently active and has processed 1 message.\""
+            + "    }"
+            + "  }"
+            + "]"
+            + "}";
+        when(llmService.askQuestion(eq(execution), any(LLMRequest.class))).thenReturn(llmResponse);
+
+        // When
+        ObjectNode result = agentVerbs.getCurrentAgentStatus(execution, requestContext);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.has("answer"));
+        assertEquals("The agent is currently active and has processed 1 message.", result.get("answer").asText());
+        assertTrue(result.has("statusInfo"));
+    }
+
+    @Test
+    void getCurrentAgentStatusIncludesPersistentMemory() throws Exception, ZtatException {
+        // Given
+        String executionId = UUID.randomUUID().toString();
+        AgentExecution execution = AgentExecution.builder()
+            .executionId(executionId)
+            .build();
+
+        AgentExecutionContextDTO statusContext = AgentExecutionContextDTO.builder().build();
+        statusContext.addMessages(Message.builder().role("user").content("Test message").build());
+        
+        // Add agent context first (required for persistent memory to work)
+        AgentContextDTO agentContext = AgentContextDTO.builder()
+            .contextId(UUID.randomUUID())
+            .name("test-agent")
+            .description("Test agent description")
+            .context("Test context")
+            .build();
+        statusContext.setAgentContext(agentContext);
+        
+        // Add persistent memory (after setting agent context)
+        statusContext.addToPersistentMemory("persistentKey1", "persistentValue1", "PRIVATE", null);
+        statusContext.addToPersistentMemory("persistentKey2", "persistentValue2", "PUBLIC", new String[]{"MARKING1"});
+
+        AgentExecutionContextDTO requestContext = AgentExecutionContextDTO.builder().build();
+
+        when(agentExecutionService.getExecutionContextDTO(executionId)).thenReturn(statusContext);
+
+        // Mock LLM response
+        String llmResponse = "{"
+            + "\"choices\": ["
+            + "  {"
+            + "    \"message\": {"
+            + "      \"content\": \"{\\\"answer\\\": \\\"Agent has persistent memory.\\\"}\" "
+            + "    }"
+            + "  }"
+            + "]"
+            + "}";
+        when(llmService.askQuestion(eq(execution), any(LLMRequest.class))).thenReturn(llmResponse);
+
+        // When
+        ObjectNode result = agentVerbs.getCurrentAgentStatus(execution, requestContext);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.has("statusInfo"));
+        ObjectNode statusInfo = (ObjectNode) result.get("statusInfo");
+        assertEquals(2, statusInfo.get("persistentMemorySize").asInt());
+        assertTrue(statusInfo.has("persistentMemoryKeys"));
+    }
+}

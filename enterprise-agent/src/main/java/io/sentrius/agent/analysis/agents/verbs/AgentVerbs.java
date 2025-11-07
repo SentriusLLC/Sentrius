@@ -739,6 +739,124 @@ public class AgentVerbs extends VerbBase {
         return JsonUtil.MAPPER.createObjectNode();
     }
 
+    @Verb(
+        name = "get_current_agent_status", returnType = ObjectNode.class, description =
+        "Queries and summarizes questions against the current agent's memory, history, and context. " +
+        "Provides detailed information about agent state including messages, short-term memory, and execution context.",
+        requiresTokenManagement = true,
+        argName = "query",
+        exampleJson = "{ \"query\": \"What tasks has the agent completed?\" }"
+    )
+    public ObjectNode getCurrentAgentStatus(AgentExecution execution, AgentExecutionContextDTO context)
+        throws ZtatException, JsonProcessingException {
+        var status = agentExecutionService.getExecutionContextDTO(execution.getExecutionId());
+        
+        if (status == null) {
+            ObjectNode errorNode = JsonUtil.MAPPER.createObjectNode();
+            errorNode.put("error", "No execution context found for this agent");
+            return errorNode;
+        }
+
+        // Get the user's query if provided
+        Optional<JsonNode> queryNode = context.getExecutionArgument("query");
+        String userQuery = queryNode.map(JsonNode::asText).orElse("Provide a summary of the agent's current status");
+
+        // Build context information
+        ObjectNode statusInfo = JsonUtil.MAPPER.createObjectNode();
+        statusInfo.put("executionId", execution.getExecutionId());
+        statusInfo.put("messageCount", status.getMessages().size());
+        statusInfo.put("shortTermMemorySize", status.getAgentShortTermMemory().size());
+        statusInfo.put("persistentMemorySize", status.getPersistentMemoryItems().size());
+        statusInfo.put("dataListSize", status.getAgentDataList().size());
+        
+        // Add agent context if available
+        if (status.getAgentContext() != null) {
+            ObjectNode agentContextInfo = JsonUtil.MAPPER.createObjectNode();
+            agentContextInfo.put("name", status.getAgentContext().getName());
+            if (status.getAgentContext().getContextId() != null) {
+                agentContextInfo.put("contextId", status.getAgentContext().getContextId().toString());
+            }
+            agentContextInfo.put("description", status.getAgentContext().getDescription());
+            statusInfo.set("agentContext", agentContextInfo);
+        }
+
+        // Add short-term memory keys
+        ArrayNode memoryKeys = JsonUtil.MAPPER.createArrayNode();
+        status.getAgentShortTermMemory().keySet().forEach(memoryKeys::add);
+        statusInfo.set("memoryKeys", memoryKeys);
+
+        // Add persistent memory keys
+        ArrayNode persistentMemoryKeys = JsonUtil.MAPPER.createArrayNode();
+        status.getPersistentMemoryItems().keySet().forEach(persistentMemoryKeys::add);
+        statusInfo.set("persistentMemoryKeys", persistentMemoryKeys);
+
+        // Prepare messages for LLM query
+        List<Message> messages = new ArrayList<>();
+        
+        messages.add(Message.builder().role("system").content(
+            "You are analyzing the current state of an AI agent. " +
+            "You have access to the agent's execution history, memory, and context. " +
+            "Answer the user's query based on this information. " +
+            "Provide a clear, concise response in JSON format with the following structure: " +
+            "{ \"answer\": \"your answer\", \"details\": \"additional details if relevant\" }"
+        ).build());
+
+        messages.add(Message.builder().role("system").content(
+            "Agent Status Information: " + statusInfo.toString()
+        ).build());
+
+        // Include recent message history (last 20 messages)
+        List<Message> recentMessages = ListUtils.getLastNElements(status.getMessages(), 20);
+        if (!recentMessages.isEmpty()) {
+            messages.add(Message.builder().role("system").content(
+                "Recent message history (last " + recentMessages.size() + " messages):"
+            ).build());
+            messages.addAll(recentMessages);
+        }
+
+        messages.add(Message.builder().role("user").content(userQuery).build());
+
+        // Query LLM
+        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+        var resp = llmService.askQuestion(execution, chatRequest);
+        context.addMessages(messages);
+        Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
+        
+        for (Response.Choice choice : response.getChoices()) {
+            var content = choice.getMessage().getContentAsString();
+            if (content.startsWith("```json")) {
+                content = content.substring(7, content.length() - 3);
+            } else if (content.startsWith("```")) {
+                content = content.substring(3, content.length() - 3);
+            }
+            
+            log.info("LLM response content: {}", content);
+            
+            if (null != content && !content.isEmpty()) {
+                try {
+                    JsonNode responseNode = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readTree(content);
+                    if (responseNode.isObject()) {
+                        ObjectNode result = (ObjectNode) responseNode;
+                        result.set("statusInfo", statusInfo);
+                        return result;
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to parse LLM response as JSON, returning as plain text", e);
+                    ObjectNode result = JsonUtil.MAPPER.createObjectNode();
+                    result.put("answer", content);
+                    result.set("statusInfo", statusInfo);
+                    return result;
+                }
+            }
+        }
+
+        // Fallback response
+        ObjectNode result = JsonUtil.MAPPER.createObjectNode();
+        result.put("answer", "Unable to generate a response");
+        result.set("statusInfo", statusInfo);
+        return result;
+    }
+
     @Verb(name = "create_agent", returnType = AgentExecutionContextDTO.class, description = "Creates an agent who has the " +
         "context. a previously defined contextId is required. previously defined endpoints can be used to build a " +
         "trust policy. must call create_agent_context before this verb. agent type is chat or chat-autonomous. chat is chat only, chat-autonomous is chat and autonomous. determine based on workload.",
