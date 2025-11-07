@@ -2,7 +2,9 @@ package io.sentrius.sso.core.services;
 
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -17,6 +19,7 @@ import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.model.security.UserType;
 import io.sentrius.sso.core.repository.UserTypeRepository;
+import io.sentrius.sso.core.services.abac.AttributeManagementService;
 import io.sentrius.sso.core.services.security.AuthService;
 import io.sentrius.sso.core.services.security.CookieService;
 import io.sentrius.sso.core.services.security.CryptoService;
@@ -30,6 +33,8 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
+import org.keycloak.representations.idm.UserRepresentation;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Service;
@@ -59,6 +64,9 @@ public class UserService {
     private final UserTypeRepository userTypeRepository;
     private final CryptoService cryptoService;
     private final KeycloakService keycloakService;
+
+    @Autowired(required = false)
+    private AttributeManagementService attributeManagementService;
 
     private final CacheLoader<String, Boolean> isNpe = new CacheLoader<>() {
         /**
@@ -154,6 +162,10 @@ public class UserService {
                             .build();
                     log.info("Creating new user: {}", operatingUser);
                     save(operatingUser);
+                    
+                    // Sync user attributes from Keycloak when user is first created
+                    syncUserAttributesFromKeycloak(userIdStr.get());
+                    
                     HostGroup newHg = HostGroup.builder()
                             .name("Host Enclave for " + operatingUser.getUsername())
                             .description(operatingUser.getUsername() + "'s Host Enclave")
@@ -465,5 +477,88 @@ public class UserService {
     public User extractByJwt(String compactJwt) {
         var username = keycloakService.extractUsername(compactJwt);
         return getUserByUsername(username);
+    }
+
+    /**
+     * Sync user attributes from Keycloak.
+     * Called when a new user is created in Sentrius to pull their attributes from Keycloak.
+     * 
+     * @param userId The Keycloak user ID
+     */
+    private void syncUserAttributesFromKeycloak(String userId) {
+        if (attributeManagementService == null) {
+            log.debug("AttributeManagementService not available, skipping attribute sync for user {}", userId);
+            return;
+        }
+        
+        try {
+            UserRepresentation keycloakUser = keycloakService.getUser(userId);
+            if (keycloakUser == null) {
+                log.warn("User {} not found in Keycloak, cannot sync attributes", userId);
+                return;
+            }
+            
+            Map<String, String> attributes = new HashMap<>();
+            if (keycloakUser.getAttributes() != null) {
+                keycloakUser.getAttributes().forEach((key, values) -> {
+                    if (!values.isEmpty()) {
+                        attributes.put(key, values.get(0));
+                    }
+                });
+            }
+            
+            if (!attributes.isEmpty()) {
+                attributeManagementService.syncUserAttributesFromKeycloak(userId, attributes);
+                log.info("Synced {} attributes for new user {}", attributes.size(), userId);
+            }
+        } catch (Exception e) {
+            log.error("Failed to sync attributes from Keycloak for user {}", userId, e);
+        }
+    }
+
+    /**
+     * Create a user in Keycloak when they are created in Sentrius.
+     * This ensures bidirectional synchronization.
+     * 
+     * @param user The User object to create in Keycloak
+     * @return The Keycloak user ID if successful, null otherwise
+     */
+    public String createUserInKeycloak(User user) {
+        try {
+            // Split name into first and last name if possible
+            String firstName = user.getName();
+            String lastName = "";
+            if (user.getName() != null && user.getName().contains(" ")) {
+                String[] parts = user.getName().split(" ", 2);
+                firstName = parts[0];
+                lastName = parts[1];
+            }
+            
+            String keycloakUserId = keycloakService.createUser(
+                user.getUsername(),
+                user.getEmailAddress(),
+                firstName,
+                lastName,
+                null // No initial attributes
+            );
+            
+            if (keycloakUserId != null) {
+                log.info("Successfully created user {} in Keycloak with ID {}", user.getUsername(), keycloakUserId);
+                
+                // Update the user in Sentrius with the Keycloak ID if not already set
+                if (user.getUserId() == null || user.getUserId().isEmpty()) {
+                    user.setUserId(keycloakUserId);
+                    save(user);
+                }
+                
+                return keycloakUserId;
+            } else {
+                log.warn("Failed to create user {} in Keycloak", user.getUsername());
+                return null;
+            }
+        } catch (Exception e) {
+            log.error("Exception while creating user {} in Keycloak", user.getUsername(), e);
+            return null;
+        }
     }
 }

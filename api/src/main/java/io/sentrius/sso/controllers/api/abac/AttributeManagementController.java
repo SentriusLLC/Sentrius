@@ -89,7 +89,7 @@ public class AttributeManagementController {
         if (dto.isSyncToKeycloak() && dto.getTargetType().equals("USER")) {
             Map<String, String> attrs = new HashMap<>();
             attrs.put(dto.getAttributeName(), dto.getAttributeValue());
-            attributeManagementService.syncUserAttributesFromKeycloak(dto.getTargetId(), attrs);
+            //attributeManagementService.syncUserAttributesToKeycloak(dto.getTargetId(), attrs);
         }
 
         return ResponseEntity.ok(toAssignmentDTO(assignment));
@@ -244,6 +244,7 @@ public class AttributeManagementController {
         dto.setTargetId(assignment.getTargetId());
         dto.setAttributeName(assignment.getAttributeDefinition().getAttributeName());
         dto.setAttributeValue(assignment.getAttributeValue());
+        dto.setSource(assignment.getSource().name());
         if (assignment.getValidFrom() != null) {
             dto.setValidFrom(LocalDateTime.ofInstant(assignment.getValidFrom(), ZoneOffset.UTC));
         }

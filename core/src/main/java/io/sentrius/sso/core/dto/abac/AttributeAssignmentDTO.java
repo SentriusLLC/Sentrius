@@ -12,6 +12,7 @@ public class AttributeAssignmentDTO {
     private String username; // For display
     private String attributeName;
     private String attributeValue;
+    private String source;
     private LocalDateTime validFrom;
     private LocalDateTime validUntil;
     private boolean syncedFromKeycloak;

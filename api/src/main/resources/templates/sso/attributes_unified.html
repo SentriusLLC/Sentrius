@@ -714,7 +714,7 @@
                                         <select id="filterSource" onchange="filterAttributesTable()">
                                             <option value="">All Sources</option>
                                             <option value="keycloak">Keycloak</option>
-                                            <option value="local">Local</option>
+                                            <option value="sentrius">Sentrius</option>
                                         </select>
                                     </div>
                                     <div class="filter-item">
@@ -1229,7 +1229,7 @@
                 <td>${escapeHtml(attr.attributeName)}</td>
                 <td>${escapeHtml(attr.attributeValue)}</td>
                 <td><span class="badge ${attr.syncedFromKeycloak ? 'badge-keycloak' : 'badge-local'}">
-                    ${attr.syncedFromKeycloak ? 'Keycloak' : 'Local'}
+                    ${attr.syncedFromKeycloak ? 'Keycloak' : 'Sentrius'}
                 </span></td>
                 <td>${attr.validFrom ? new Date(attr.validFrom).toLocaleDateString() : '-'}</td>
                 <td>${attr.validUntil ? new Date(attr.validUntil).toLocaleDateString() : '-'}</td>

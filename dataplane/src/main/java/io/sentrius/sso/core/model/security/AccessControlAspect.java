@@ -28,6 +28,8 @@ import io.sentrius.sso.core.services.users.UserAttributeService;
 import io.sentrius.sso.core.services.abac.PolicyEvaluator;
 import io.sentrius.sso.core.services.abac.EvaluationContext;
 import io.sentrius.sso.core.services.abac.PolicyDecision;
+import io.sentrius.sso.core.services.customattributes.CustomAttributeMappingService;
+import io.sentrius.sso.core.model.customattributes.CustomAttributeMapping;
 import io.sentrius.sso.core.trust.ZtatPolicy;
 import io.sentrius.sso.core.utils.AccessUtil;
 import io.sentrius.sso.core.utils.JsonUtil;
@@ -79,6 +81,11 @@ public class AccessControlAspect {
     @Lazy
     @Autowired(required = false)
     private PolicyEvaluator policyEvaluator;
+    
+    // Use @Lazy to avoid circular dependency issues with CustomAttributeMappingService
+    @Lazy
+    @Autowired(required = false)
+    private CustomAttributeMappingService customAttributeMappingService;
     
     public AccessControlAspect(
             UserService userService,
@@ -283,7 +290,7 @@ public class AccessControlAspect {
 
                     ProvenanceEvent event = ProvenanceEvent.builder()
                         .eventId(UUID.randomUUID().toString())
-                        .sessionId(operatingUser.getUserId())
+                        .sessionId(operatingUser.getUsername())
                         .actor(operatingUser.getUsername())
                         .triggeringUser(operatingUser.getUsername())
                         .eventType(ProvenanceEvent.EventType.ENDPOINT_ACCESS)
@@ -308,13 +315,19 @@ public class AccessControlAspect {
                     }
                 }
                 
-                // Check custom attributes
+                // Check custom attributes from annotation
                 for (var customAttr : accessAnnotation.customAttributes()) {
-                    if (!checkCustomAttribute(operatingUser, customAttr)) {
+                    if (!checkCustomAttribute(operatingUser, customAttr, endpoint)) {
                         log.debug("Access Denied to {} at {} due to custom attribute {}", operatingUser, endpoint, customAttr);
                         canAccess = false;
                         break;
                     }
+                }
+                
+                // Check custom attributes defined in database for this endpoint
+                if (canAccess && !checkDatabaseEndpointAttributes(operatingUser, endpoint)) {
+                    log.debug("Access Denied to {} at {} due to database endpoint attributes", operatingUser, endpoint);
+                    canAccess = false;
                 }
 
                 if (!canAccess) {
@@ -397,36 +410,46 @@ public class AccessControlAspect {
             return true;
         }
         
-        // Try PolicyEvaluator first (ABAC approach)
+        // Parse the custom attribute requirement
+        String[] parts = customAttr.split("=", 2);
+        if (parts.length != 2) {
+            log.warn("Invalid custom attribute format: {}. Expected format: 'attributeName=attributeValue'", customAttr);
+            return false;
+        }
+        
+        String attributeName = parts[0].trim();
+        String requiredValue = parts[1].trim();
+        
+        // Try PolicyEvaluator first to check user's attributes from database
         if (policyEvaluator != null) {
             try {
-                log.debug("Using PolicyEvaluator for custom attribute check: {}", customAttr);
+                log.debug("Using PolicyEvaluator to check if user has attribute: {}", customAttr);
                 
-                // Build evaluation context
+                // Build evaluation context which loads user's AttributeAssignments
                 EvaluationContext context = policyEvaluator.buildContext(
-                    operatingUser.getUserId(), 
+                    operatingUser.getUsername(),
                     endpoint
                 );
                 
-                // Parse the custom attribute to add it to context if not already present
-                String[] parts = customAttr.split("=", 2);
-                if (parts.length == 2) {
-                    String attributeName = parts[0].trim();
-                    String requiredValue = parts[1].trim();
+                // Check if the user has the required attribute value
+                Object userAttributeValue = context.getAttribute("SUBJECT", attributeName);
+                
+                log.info("Checking custom attribute {} for user {} at endpoint {}, context is {}", 
+                    customAttr, operatingUser.getUsername(), endpoint, context);
+                
+                if (userAttributeValue != null) {
+                    String userValue = userAttributeValue.toString();
+                    boolean matches = userValue.equals(requiredValue);
                     
-                    // Ensure the required attribute is in context
-                    if (context.getAttribute("SUBJECT", attributeName) == null) {
-                        context.addSubjectAttribute(attributeName, requiredValue);
-                    }
+                    log.debug("User {} has {}={}, required value: {}, matches: {}", 
+                        operatingUser.getUsername(), attributeName, userValue, requiredValue, matches);
+                    
+                    return matches;
+                } else {
+                    log.debug("User {} does not have attribute: {}", 
+                        operatingUser.getUsername(), attributeName);
+                    return false;
                 }
-                
-                // Evaluate using PolicyEvaluator
-                PolicyDecision decision = policyEvaluator.evaluate(context, endpoint, "ACCESS");
-                
-                log.debug("PolicyEvaluator decision for user {}: {} -> {}", 
-                    operatingUser.getUsername(), customAttr, decision.isAllowed());
-                
-                return decision.isAllowed();
                 
             } catch (Exception e) {
                 log.warn("PolicyEvaluator failed, falling back to UserAttributeService: {}", e.getMessage());
@@ -440,20 +463,10 @@ public class AccessControlAspect {
             return false;
         }
         
-        // Parse the custom attribute requirement
-        String[] parts = customAttr.split("=", 2);
-        if (parts.length != 2) {
-            log.warn("Invalid custom attribute format: {}. Expected format: 'attributeName=attributeValue'", customAttr);
-            return false;
-        }
-        
-        String attributeName = parts[0].trim();
-        String requiredValue = parts[1].trim();
-        
         try {
             // Get the user's attribute value
             boolean hasAttribute = userAttributeService.userHasAttributeValue(
-                operatingUser.getUserId(), 
+                operatingUser.getUsername(),
                 attributeName, 
                 requiredValue
             );
@@ -465,6 +478,53 @@ public class AccessControlAspect {
         } catch (Exception e) {
             log.error("Error checking custom attribute {} for user {}", customAttr, operatingUser.getUsername(), e);
             return false;
+        }
+    }
+    
+    /**
+     * Check if user satisfies ABAC policies defined in database for this endpoint.
+     * Uses PolicyEvaluator to evaluate access policies and rules configured via the ABAC management UI.
+     * @param operatingUser The user to check
+     * @param endpoint The endpoint being accessed
+     * @return true if user satisfies all access policies, false otherwise
+     */
+    protected boolean checkDatabaseEndpointAttributes(User operatingUser, String endpoint) {
+        if (customAttributeMappingService == null) {
+            log.debug("CustomAttributeMappingService not available, skipping database endpoint attribute checks");
+            return true; // Allow access if service is not available
+        }
+        
+        try {
+            // Get custom attribute mappings for this endpoint from the database
+            List<CustomAttributeMapping> mappings = customAttributeMappingService.getMappingsByEndpoint(endpoint);
+            
+            if (mappings == null || mappings.isEmpty()) {
+                log.debug("No custom attribute mappings found for endpoint: {}", endpoint);
+                return true; // No mappings defined, allow access
+            }
+            
+            log.debug("Found {} custom attribute mapping(s) for endpoint: {}", mappings.size(), endpoint);
+            
+            // Check each mapping requirement
+            for (CustomAttributeMapping mapping : mappings) {
+                String attributeString = mapping.toCustomAttributeString();
+                log.debug("Checking database-defined custom attribute: {}", attributeString);
+                
+                if (!checkCustomAttribute(operatingUser, attributeString, endpoint)) {
+                    log.info("User {} does not satisfy database custom attribute requirement: {} for endpoint: {}", 
+                        operatingUser.getUsername(), attributeString, endpoint);
+                    return false;
+                }
+            }
+            
+            log.debug("User {} satisfies all database custom attribute requirements for endpoint: {}", 
+                operatingUser.getUsername(), endpoint);
+            return true;
+            
+        } catch (Exception e) {
+            log.error("Error checking database custom attribute mappings for endpoint {} and user {}", 
+                endpoint, operatingUser.getUsername(), e);
+            return false; // Deny access on error for security
         }
     }
     

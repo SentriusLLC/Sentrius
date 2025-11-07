@@ -97,6 +97,41 @@ class AccessControlAspectCustomAttributeTest {
         assertTrue(result);
         verify(userAttributeService, never()).userHasAttributeValue(anyString(), anyString(), anyString());
     }
+    
+    /**
+     * Test helper class that mimics the checkCustomAttribute logic from AccessControlAspect
+     */
+    static class AccessControlAspectTestHelper {
+        private final UserAttributeService userAttributeService;
+
+        public AccessControlAspectTestHelper(UserAttributeService userAttributeService) {
+            this.userAttributeService = userAttributeService;
+        }
+
+        public boolean checkCustomAttribute(User operatingUser, String customAttr) {
+            if (customAttr == null || customAttr.isEmpty()) {
+                return true;
+            }
+
+            String[] parts = customAttr.split("=", 2);
+            if (parts.length != 2) {
+                return false;
+            }
+
+            String attributeName = parts[0].trim();
+            String requiredValue = parts[1].trim();
+
+            try {
+                return userAttributeService.userHasAttributeValue(
+                        operatingUser.getUserId(),
+                        attributeName,
+                        requiredValue
+                );
+            } catch (Exception e) {
+                return false;
+            }
+        }
+    }
 
     @Test
     void checkCustomAttribute_WithWhitespace_TrimsCorrectly() {
@@ -155,41 +190,5 @@ class AccessControlAspectCustomAttributeTest {
         // Assert
         assertTrue(result);
         verify(userAttributeService).userHasAttributeValue("user-123", "clearance_level", "top_secret");
-    }
-
-    /**
-     * Helper class to test the protected checkCustomAttribute method
-     * This mimics the logic in AccessControlAspect
-     */
-    static class AccessControlAspectTestHelper {
-        private final UserAttributeService userAttributeService;
-
-        public AccessControlAspectTestHelper(UserAttributeService userAttributeService) {
-            this.userAttributeService = userAttributeService;
-        }
-
-        public boolean checkCustomAttribute(User operatingUser, String customAttr) {
-            if (customAttr == null || customAttr.isEmpty()) {
-                return true;
-            }
-
-            String[] parts = customAttr.split("=", 2);
-            if (parts.length != 2) {
-                return false;
-            }
-
-            String attributeName = parts[0].trim();
-            String requiredValue = parts[1].trim();
-
-            try {
-                return userAttributeService.userHasAttributeValue(
-                        operatingUser.getUserId(),
-                        attributeName,
-                        requiredValue
-                );
-            } catch (Exception e) {
-                return false;
-            }
-        }
     }
 }

@@ -379,6 +379,7 @@ data:
     agentproxy.externalUrl={{ .Values.agentproxyDomain }}
     integrationproxy.externalUrl=http://sentrius-integrationproxy:8080/
     sentrius.integration.proxyUrl=http://sentrius-integrationproxy:8080/
+    sentrius.abac.keycloak-sync.enabled=true
   default-policy.yaml: |
     ---
     version: "v0"

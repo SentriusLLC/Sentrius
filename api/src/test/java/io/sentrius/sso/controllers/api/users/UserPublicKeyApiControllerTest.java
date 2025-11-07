@@ -12,6 +12,7 @@ import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.UserCustomizationService;
 import io.sentrius.sso.core.services.SessionService;
 import io.sentrius.sso.core.services.security.CryptoService;
+import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.agents.AgentService;
@@ -82,6 +83,9 @@ public class UserPublicKeyApiControllerTest {
     @Mock
     private HttpServletResponse response;
 
+    @Mock
+    private KeycloakService keycloakService;
+
     private UserApiController controller;
 
     @BeforeEach
@@ -99,7 +103,8 @@ public class UserPublicKeyApiControllerTest {
             zeroTrustRequestService, 
             zeroTrustAccessTokenService, 
             agentService, 
-            zeroTrustClientService
+            zeroTrustClientService,
+            keycloakService
         );
     }
 

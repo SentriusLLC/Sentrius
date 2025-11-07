@@ -38,6 +38,7 @@ import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.services.security.CryptoService;
+import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.services.users.UserAttributeService;
@@ -76,6 +77,7 @@ public class UserApiController extends BaseController {
     final ZeroTrustAccessTokenService ztatService;
     final AgentService agentService;
     final ZeroTrustClientService zeroTrustClientService;
+    final KeycloakService keycloakService;
 
 
     @Value("${agentproxy.externalUrl:}")
@@ -100,7 +102,7 @@ public class UserApiController extends BaseController {
         SessionService sessionService,
         ZeroTrustRequestService ztatRequestService,
         ZeroTrustAccessTokenService ztatService, AgentService agentService,
-        ZeroTrustClientService zeroTrustClientService
+        ZeroTrustClientService zeroTrustClientService, KeycloakService keycloakService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.hostGroupService =     hostGroupService;
@@ -113,6 +115,7 @@ public class UserApiController extends BaseController {
         this.ztatService = ztatService;
         this.agentService = agentService;
         this.zeroTrustClientService = zeroTrustClientService;
+        this.keycloakService = keycloakService;
     }
 
     @GetMapping("list")
@@ -171,13 +174,48 @@ public class UserApiController extends BaseController {
         ObjectNode node = JsonUtil.MAPPER.createObjectNode();
 
         try {
-            user.setPassword(userService.encodePassword( user.getPassword()));
-            // Save user using service
-            userService.addUscer(user);
-            node.put("status","User successfully added.");
+            // Store the original password before encoding
+            String originalPassword = user.getPassword();
+            
+            // Encode password for Sentrius database
+            user.setPassword(userService.encodePassword(user.getPassword()));
+            
+            // Save user in Sentrius
+            user = userService.addUscer(user);
+
+            // Create user in Keycloak with the original password
+            // Keycloak will hash the password itself
+            String[] nameParts = user.getName() != null ? user.getName().split(" ", 2) : new String[]{user.getUsername(), ""};
+            String firstName = nameParts[0];
+            String lastName = nameParts.length > 1 ? nameParts[1] : "";
+            
+            String keycloakUserId = keycloakService.createUser(
+                user.getUsername(), 
+                user.getEmailAddress(), 
+                firstName, 
+                lastName, 
+                null,  // No custom attributes initially
+                originalPassword,  // Use original password (not encoded)
+                false  // Not temporary - user can use this password
+            );
+            
+            if (keycloakUserId != null) {
+                // Update the user with the Keycloak ID if not already set
+                if (user.getUserId() == null || user.getUserId().isEmpty()) {
+                    user.setUserId(keycloakUserId);
+                    userService.save(user);
+                }
+                node.put("status", "User successfully added to Sentrius and Keycloak.");
+                log.info("User {} created in both Sentrius and Keycloak with ID {}", user.getUsername(), keycloakUserId);
+            } else {
+                node.put("status", "User added to Sentrius but failed to create in Keycloak. User may not be able to log in.");
+                log.warn("User {} created in Sentrius but failed to create in Keycloak", user.getUsername());
+            }
+            
             return ResponseEntity.ok(node);
         } catch (Exception e) {
-            node.put("status","Error adding user");
+            log.error("Error adding user", e);
+            node.put("status", "Error adding user: " + e.getMessage());
             return ResponseEntity.internalServerError().body(node);
         }
     }
@@ -231,6 +269,7 @@ public class UserApiController extends BaseController {
                 return "redirect:/sso/v1/users/list?message=" + MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR);
 
             }
+            keycloakService.deleteUser(usr.getUsername());
             userService.deleteUser(usr.getId());
         } else {
             Long id = Long.parseLong(cryptoService.decrypt(userId));
@@ -239,7 +278,10 @@ public class UserApiController extends BaseController {
                 return "redirect:/sso/v1/users/list?message=" +
                     MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR);
             }
+            var user = userService.getUserById(id);
+            keycloakService.deleteUser(user.getUsername());
             userService.deleteUser(id);
+
         }
         return "redirect:/sso/v1/users/list?message=" + MessagingUtil.getMessageId(MessagingUtil.USER_DELETE_SUCCESS);
     }

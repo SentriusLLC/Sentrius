@@ -79,7 +79,6 @@ public class UserController extends BaseController {
     @ModelAttribute("typeList")
     public List<UserTypeDTO> getUserTypeList() {
         var types = userService.getUserTypeList();
-        log.info("UserTypeList: {}", types);
         return types;
     }
 

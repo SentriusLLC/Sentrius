@@ -25,13 +25,17 @@ class AttributeManagementServiceTest {
     @Mock
     private AttributeAssignmentRepository assignmentRepository;
     
+    @Mock
+    private io.sentrius.sso.core.services.security.KeycloakService keycloakService;
+    
     private AttributeManagementService attributeManagementService;
     
     @BeforeEach
     void setUp() {
         attributeManagementService = new AttributeManagementService(
                 definitionRepository,
-                assignmentRepository
+                assignmentRepository,
+                keycloakService
         );
     }
     

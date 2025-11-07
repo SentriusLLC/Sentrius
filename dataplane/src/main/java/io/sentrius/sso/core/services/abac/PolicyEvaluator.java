@@ -41,15 +41,15 @@ public class PolicyEvaluator {
      */
     @Transactional(readOnly = true)
     public PolicyDecision evaluate(EvaluationContext context, String resourceId, String action) {
-        log.debug("Evaluating access for resource: {}, action: {}", resourceId, action);
+        log.info("Evaluating access for resource: {}, action: {}", resourceId, action);
 
         try {
             // Find applicable policies
             List<AccessPolicy> policies = findApplicablePolicies(resourceId, action);
             
             if (policies.isEmpty()) {
-                log.debug("No policies found for resource: {}", resourceId);
-                return PolicyDecision.defaultDeny("No applicable policies");
+                log.info("No policies found for resource: {}", resourceId);
+                return PolicyDecision.defaultAllow("No applicable policies");
             }
 
             // Evaluate policies in priority order
@@ -58,7 +58,7 @@ public class PolicyEvaluator {
             for (AccessPolicy policy : policies) {
                 PolicyDecision decision = evaluatePolicy(policy, context);
                 
-                log.debug("Policy {} evaluated: {}", policy.getPolicyName(), decision.getEffect());
+                log.info("Policy {} evaluated: {}", policy.getPolicyName(), decision.getEffect());
                 
                 // First explicit DENY wins (fail-fast)
                 if (decision.getEffect() == PolicyDecision.Effect.DENY) {
@@ -84,7 +84,7 @@ public class PolicyEvaluator {
      * Evaluate a specific policy against the context
      */
     private PolicyDecision evaluatePolicy(AccessPolicy policy, EvaluationContext context) {
-        log.debug("Evaluating policy: {}", policy.getPolicyName());
+        log.info("Evaluating policy: {}", policy.getPolicyName());
 
         try {
             // Get rules for this policy
@@ -124,7 +124,7 @@ public class PolicyEvaluator {
             // All rules must match
             for (PolicyRule rule : rules) {
                 if (!evaluateRule(rule, context)) {
-                    log.debug("Rule failed (AND mode): {}", rule.getDescription());
+                    log.info("Rule failed (AND mode): {}", rule.getDescription());
                     return false;
                 }
             }
@@ -133,7 +133,7 @@ public class PolicyEvaluator {
             // OR mode - any rule can match
             for (PolicyRule rule : rules) {
                 if (evaluateRule(rule, context)) {
-                    log.debug("Rule matched (OR mode): {}", rule.getDescription());
+                    log.info("Rule matched (OR mode): {}", rule.getDescription());
                     return true;
                 }
             }
@@ -165,7 +165,7 @@ public class PolicyEvaluator {
      * Find policies applicable to the resource and action
      */
     @Cacheable(value = "applicablePolicies", key = "#resourceId + '_' + #action")
-    private List<AccessPolicy> findApplicablePolicies(String resourceId, String action) {
+    public List<AccessPolicy> findApplicablePolicies(String resourceId, String action) {
         // Determine resource type from resource ID pattern
         AccessPolicy.ResourceType resourceType = determineResourceType(resourceId);
         
@@ -188,8 +188,12 @@ public class PolicyEvaluator {
         // Load subject attributes
         List<AttributeAssignment> subjectAttrs = assignmentRepository
                 .findCurrentlyValidAssignments(AttributeAssignment.TargetType.USER, subjectId);
-        
+
+        log.info("Loading {} subject attributes for subjectId: {}", subjectAttrs.size(), subjectId);
         for (AttributeAssignment assignment : subjectAttrs) {
+            log.info("Adding subject attribute: {}={}",
+                assignment.getAttributeDefinition().getAttributeName(),
+                assignment.getAttributeValue());
             context.addSubjectAttribute(
                 assignment.getAttributeDefinition().getAttributeName(),
                 assignment.getAttributeValue()

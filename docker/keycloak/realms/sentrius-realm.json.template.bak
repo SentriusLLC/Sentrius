@@ -48,21 +48,6 @@
             "id.token.claim": "true",
             "userinfo.token.claim": "true"
           }
-        },
-        {
-          "name": "attributes",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-attribute-mapper",
-          "consentRequired": false,
-          "config": {
-            "userinfo.token.claim": "true",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "attributes",
-            "jsonType.label": "String",
-            "user.attribute": "attributes",
-            "multivalued": "true"
-          }
         }
       ]
     },
@@ -97,73 +82,43 @@
             "jsonType.label": "String",
             "user.attribute": "userType"
           }
-        },
-        {
-          "name": "attributes",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-attribute-mapper",
-          "consentRequired": false,
-          "config": {
-            "userinfo.token.claim": "true",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "attributes",
-            "jsonType.label": "String",
-            "user.attribute": "attributes",
-            "multivalued": "true"
-          }
         }
       ]
     },
     {
-      "clientId": "sentrius-rdp-proxy",
-      "enabled": true,
-      "clientAuthenticatorType": "client-secret",
-      "secret": "${SENTRIUS_RDPPROXY_CLIENT_SECRET}",
-      "rootUrl": "${ROOT_URL}",
-      "baseUrl": "${ROOT_URL}",
-      "serviceAccountsEnabled": true,
-      "redirectUris": [
-        "${REDIRECT_URIS}/*"
-      ],
-      "protocol": "openid-connect",
-      "attributes": {
-        "access.token.claim": "true",
-        "id.token.claim": "true",
-        "userinfo.token.claim": "true"
-      },
-      "protocolMappers": [
-        {
-          "name": "userType",
+          "clientId": "sentrius-rdp-proxy",
+          "enabled": true,
+          "clientAuthenticatorType": "client-secret",
+          "secret": "${SENTRIUS_RDPPROXY_CLIENT_SECRET}",
+          "rootUrl": "${ROOT_URL}",
+          "baseUrl": "${ROOT_URL}",
+          "serviceAccountsEnabled": true,
+          "redirectUris": [
+            "${REDIRECT_URIS}/*"
+          ],
           "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-attribute-mapper",
-          "consentRequired": false,
-          "config": {
-            "userinfo.token.claim": "true",
-            "id.token.claim": "true",
+          "attributes": {
             "access.token.claim": "true",
-            "claim.name": "userType",
-            "jsonType.label": "String",
-            "user.attribute": "userType"
-          }
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          },
+          "protocolMappers": [
+            {
+              "name": "userType",
+              "protocol": "openid-connect",
+              "protocolMapper": "oidc-usermodel-attribute-mapper",
+              "consentRequired": false,
+              "config": {
+                "userinfo.token.claim": "true",
+                "id.token.claim": "true",
+                "access.token.claim": "true",
+                "claim.name": "userType",
+                "jsonType.label": "String",
+                "user.attribute": "userType"
+              }
+            }
+          ]
         },
-        {
-          "name": "attributes",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-attribute-mapper",
-          "consentRequired": false,
-          "config": {
-            "userinfo.token.claim": "true",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "attributes",
-            "jsonType.label": "String",
-            "user.attribute": "attributes",
-            "multivalued": "true"
-          }
-        }
-      ]
-    },
     {
       "clientId": "sentrius-launcher-service",
       "enabled": true,
@@ -171,6 +126,7 @@
       "secret": "${SENTRIUS_LAUNCHER_CLIENT_SECRET}",
       "rootUrl": "${ROOT_URL}",
       "baseUrl": "${ROOT_URL}",
+
       "redirectUris": [
         "${REDIRECT_URIS}/*"
       ],
@@ -194,21 +150,6 @@
             "claim.name": "userType",
             "jsonType.label": "String",
             "user.attribute": "userType"
-          }
-        },
-        {
-          "name": "attributes",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-attribute-mapper",
-          "consentRequired": false,
-          "config": {
-            "userinfo.token.claim": "true",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "attributes",
-            "jsonType.label": "String",
-            "user.attribute": "attributes",
-            "multivalued": "true"
           }
         }
       ]
@@ -276,21 +217,6 @@
             "access.token.claim": "true",
             "claim.name": "userType",
             "jsonType.label": "String"
-          }
-        },
-        {
-          "name": "attributes",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-attribute-mapper",
-          "consentRequired": false,
-          "config": {
-            "userinfo.token.claim": "true",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "attributes",
-            "jsonType.label": "String",
-            "user.attribute": "attributes",
-            "multivalued": "true"
           }
         }
       ],
@@ -379,21 +305,6 @@
             "claim.name": "userType",
             "jsonType.label": "String"
           }
-        },
-        {
-          "name": "attributes",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-attribute-mapper",
-          "consentRequired": false,
-          "config": {
-            "userinfo.token.claim": "true",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "attributes",
-            "jsonType.label": "String",
-            "user.attribute": "attributes",
-            "multivalued": "true"
-          }
         }
       ],
       "defaultClientScopes": [
@@ -430,30 +341,30 @@
       }
     ],
     "client": {
-      "sentrius-api": [
-        {
-          "name": "user",
-          "description": "Default user role for sentrius-api client"
-        }
-      ],
-      "sentrius-launcher-service": [
-        {
-          "name": "user",
-          "description": "Default user role for sentrius-launcher-service client"
-        }
-      ],
-      "java-agents": [
-        {
-          "name": "user",
-          "description": "Default user role for java-agents client"
-        }
-      ],
-      "ai-agent-assessor": [
-        {
-          "name": "user",
-          "description": "Default user role for ai-agent-assessor client"
-        }
-      ]
+        "sentrius-api": [
+            {
+            "name": "user",
+            "description": "Default user role for sentrius-api client"
+            }
+        ],
+        "sentrius-launcher-service": [
+            {
+            "name": "user",
+            "description": "Default user role for sentrius-launcher-service client"
+            }
+        ],
+        "java-agents": [
+            {
+            "name": "user",
+            "description": "Default user role for java-agents client"
+            }
+        ],
+        "ai-agent-assessor": [
+            {
+            "name": "user",
+            "description": "Default user role for ai-agent-assessor client"
+            }
+        ]
     }
   },
   "users": [
@@ -464,8 +375,8 @@
       "attributes": {
         "userType": "Full Access",
         "assignedGroups": [
-          "testGroup"
-        ]
+            "testGroup"
+            ]
       },
       "credentials": [
         {
@@ -657,7 +568,7 @@
         "subComponents": {},
         "config": {
           "kc.user.profile.config": [
-            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"userType\",\"displayName\":\"\",\"validations\":{},\"annotations\":{\"inputTypePlaceholder\":\"System Admin\"},\"permissions\":{\"view\":[],\"edit\":[\"admin\"]},\"multivalued\":false},{\"name\": \"attributes\", \"displayName\": \"ABAC Attributes\", \"multivalued\": true,\"permissions\": { \"view\": [\"admin\", \"user\"], \"edit\": [\"admin\"] } ,\"annotations\": { \"inputTypePlaceholder\": \"department=engineering\" } }],\"groups\":[{\"name\":\"user-metadata\",\"displayHeader\":\"User metadata\",\"displayDescription\":\"Attributes, which refer to user metadata\"}]}"
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"userType\",\"displayName\":\"\",\"validations\":{},\"annotations\":{\"inputTypePlaceholder\":\"System Admin\"},\"permissions\":{\"view\":[],\"edit\":[\"admin\"]},\"multivalued\":false}],\"groups\":[{\"name\":\"user-metadata\",\"displayHeader\":\"User metadata\",\"displayDescription\":\"Attributes, which refer to user metadata\"}]}"
           ]
         }
       }

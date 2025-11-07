@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 .catch((error) => {
                     $("#alertTop").hide();
                     $("#alertTopError").text("User Not Added").show().delay(3000).fadeOut();
-cd                });
+               });
         });
     }
 });

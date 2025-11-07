@@ -28,12 +28,15 @@ public class AttributeManagementService {
 
     private final AttributeDefinitionRepository definitionRepository;
     private final AttributeAssignmentRepository assignmentRepository;
+    private final io.sentrius.sso.core.services.security.KeycloakService keycloakService;
 
     public AttributeManagementService(
             AttributeDefinitionRepository definitionRepository,
-            AttributeAssignmentRepository assignmentRepository) {
+            AttributeAssignmentRepository assignmentRepository,
+            io.sentrius.sso.core.services.security.KeycloakService keycloakService) {
         this.definitionRepository = definitionRepository;
         this.assignmentRepository = assignmentRepository;
+        this.keycloakService = keycloakService;
     }
 
     /**
@@ -149,8 +152,8 @@ public class AttributeManagementService {
                     .isActive(true)
                     .priority(0)
                     .build();
-            log.info("Created new attribute assignment: {} = {} for {}:{}", 
-                    definition.getAttributeName(), value, targetType, targetId);
+            log.info("Created new attribute assignment: {} = {} for {}:{} from {}",
+                    definition.getAttributeName(), value, targetType, targetId, source);
             return assignmentRepository.save(assignment);
         }
     }
@@ -202,26 +205,92 @@ public class AttributeManagementService {
     @Transactional
     public void syncUserAttributesFromKeycloak(String userId, java.util.Map<String, String> keycloakAttributes) {
         log.info("Syncing {} attributes from Keycloak for user: {}", keycloakAttributes.size(), userId);
-        
-        for (java.util.Map.Entry<String, String> entry : keycloakAttributes.entrySet()) {
-            String attributeName = entry.getKey();
-            String attributeValue = entry.getValue();
+
+        String attributeString = keycloakAttributes.entrySet().stream()
+                .map(e -> e.getKey() + "=" + e.getValue())
+                .collect(Collectors.joining(", "));
+
+        String attributeName = "attributes";
+        String attributeValue = attributeString;
             
-            // Get or create attribute definition
-            AttributeDefinition definition = getOrCreateAttributeDefinition(
-                    attributeName,
+        // Get or create attribute definition
+        AttributeDefinition definition = getOrCreateAttributeDefinition(
+                attributeName,
+                AttributeDefinition.AttributeScope.SUBJECT,
+                AttributeDefinition.AttributeType.STRING);
+
+        // Mark definition as synced with Keycloak
+        if (!definition.getSyncedWithKeycloak()) {
+            definition.setSyncedWithKeycloak(true);
+            definitionRepository.save(definition);
+        }
+
+        // Assign the attribute
+        for(Map.Entry<String, String> entry : keycloakAttributes.entrySet()) {
+            String attrName = entry.getKey();
+            String attrValue = entry.getValue();
+
+            AttributeDefinition attrDef = getOrCreateAttributeDefinition(
+                    attrName,
                     AttributeDefinition.AttributeScope.SUBJECT,
                     AttributeDefinition.AttributeType.STRING);
-            
+
             // Mark definition as synced with Keycloak
-            if (!definition.getSyncedWithKeycloak()) {
-                definition.setSyncedWithKeycloak(true);
-                definitionRepository.save(definition);
+            if (!attrDef.getSyncedWithKeycloak()) {
+                attrDef.setSyncedWithKeycloak(true);
+                definitionRepository.save(attrDef);
             }
+
+            log.info("Assigning attribute from Keycloak: {} = {} for user: {}", attrName, attrValue, userId);
+            assignAttribute(attrDef, AttributeAssignment.TargetType.USER, userId,
+                    attrValue, AttributeAssignment.AssignmentSource.KEYCLOAK, true);
+        }
+        //assignAttribute(definition, AttributeAssignment.TargetType.USER, userId,
+          //      attributeValue, AttributeAssignment.AssignmentSource.KEYCLOAK, true);
+
+    }
+
+    /**
+     * Sync user attributes TO Keycloak from Sentrius
+     * This method pushes user attributes from Sentrius ABAC system to Keycloak
+     * 
+     * @param userId Keycloak user ID
+     * @param sentriusUserId Sentrius user ID  
+     */
+    @Transactional
+    public void syncUserAttributesToKeycloak(String userId, String sentriusUserId) {
+        log.info("Syncing attributes to Keycloak for user: {}", userId);
+        
+        // Get all active attributes for this user
+        List<AttributeAssignment> assignments = assignmentRepository
+                .findByTargetTypeAndTargetIdAndIsActiveTrue(
+                        AttributeAssignment.TargetType.USER, 
+                        sentriusUserId);
+        
+        if (assignments.isEmpty()) {
+            log.debug("No attributes to sync for user: {}", userId);
+            return;
+        }
+        
+        // Convert to Keycloak format (attribute -> List<value>)
+        Map<String, List<String>> keycloakAttributes = new HashMap<>();
+        for (AttributeAssignment assignment : assignments) {
+            AttributeDefinition definition = assignment.getAttributeDefinition();
             
-            // Assign the attribute
-            assignAttribute(definition, AttributeAssignment.TargetType.USER, userId, 
-                    attributeValue, AttributeAssignment.AssignmentSource.KEYCLOAK, true);
+            // Only sync attributes that are marked for Keycloak sync
+            if (definition.getSyncedWithKeycloak()) {
+                String attrName = definition.getAttributeName();
+                String attrValue = assignment.getAttributeValue();
+                
+                keycloakAttributes.computeIfAbsent(attrName, k -> new java.util.ArrayList<>())
+                        .add(attrValue);
+            }
+        }
+        
+        if (!keycloakAttributes.isEmpty()) {
+            // Update attributes in Keycloak
+            keycloakService.updateUserAttributes(userId, keycloakAttributes);
+            log.info("Synced {} attributes to Keycloak for user: {}", keycloakAttributes.size(), userId);
         }
     }
 

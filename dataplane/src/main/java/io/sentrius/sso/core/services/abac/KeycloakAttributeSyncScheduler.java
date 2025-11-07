@@ -1,6 +1,8 @@
 package io.sentrius.sso.core.services.abac;
 
+import io.sentrius.sso.core.services.security.KeycloakService;
 import lombok.extern.slf4j.Slf4j;
+import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -9,6 +11,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Scheduled task to sync user attributes from Keycloak to the ABAC system.
@@ -27,14 +32,22 @@ import java.time.format.DateTimeFormatter;
 public class KeycloakAttributeSyncScheduler {
 
     private final AttributeManagementService attributeManagementService;
+    private final KeycloakService keycloakService;
     private volatile String lastSyncTime = "Never";
     private volatile boolean syncEnabled;
+    private volatile int lastSyncUserCount = 0;
+    private volatile int lastSyncAttributeCount = 0;
 
     @Value("${sentrius.abac.keycloak-sync.enabled:false}")
     private boolean configuredEnabled;
 
-    public KeycloakAttributeSyncScheduler(AttributeManagementService attributeManagementService) {
+    @Value("${sentrius.abac.keycloak-sync.batch-size:100}")
+    private int batchSize;
+
+    public KeycloakAttributeSyncScheduler(AttributeManagementService attributeManagementService,
+                                         KeycloakService keycloakService) {
         this.attributeManagementService = attributeManagementService;
+        this.keycloakService = keycloakService;
         this.syncEnabled = true; // If bean is created, sync is enabled
     }
 
@@ -46,54 +59,81 @@ public class KeycloakAttributeSyncScheduler {
     public void syncUserAttributesFromKeycloak() {
         log.info("Keycloak attribute sync triggered (scheduled)");
         
-        // Implementation note: This method should:
-        // 1. Query Keycloak for all users (with pagination)
-        // 2. For each user, get their attributes
-        // 3. Call attributeManagementService.syncUserAttributesFromKeycloak(userId, attributes)
-        // 4. Track success/failure metrics
-        
-        // Example implementation when Keycloak API is fully integrated:
-        /*
         try {
             int syncedUsers = 0;
             int totalAttributes = 0;
             
-            // Get users from Keycloak (requires Keycloak admin client)
-            List<UserRepresentation> users = keycloakAdminClient.realm(realmName).users().list();
+            // Get users from Keycloak with pagination
+            int first = 0;
+            List<UserRepresentation> users;
             
-            for (UserRepresentation user : users) {
-                try {
-                    String userId = user.getId();
-                    Map<String, String> attributes = new HashMap<>();
-                    
-                    // Extract relevant attributes
-                    if (user.getAttributes() != null) {
-                        user.getAttributes().forEach((key, values) -> {
-                            if (!values.isEmpty() && shouldSyncAttribute(key)) {
-                                attributes.put(key, values.get(0));
-                            }
-                        });
+            do {
+                users = keycloakService.getUsers(first, batchSize);
+                log.debug("Processing batch of {} users starting at index {}", users.size(), first);
+                
+                for (UserRepresentation user : users) {
+                    try {
+                        String userId = user.getUsername();
+                        Map<String, String> attributes = new HashMap<>();
+                        
+                        // Extract relevant attributes
+                        if (user.getAttributes() != null) {
+                            user.getAttributes().forEach((key, values) -> {
+                                log.info("Found attribute {} for user {}", key, user.getUsername());
+                                if (!values.isEmpty() && shouldSyncAttribute(key)) {
+                                    extractAttributes(attributes, key, values);
+                                }
+                            });
+                        }
+                        
+                        if (!attributes.isEmpty()) {
+                            attributeManagementService.syncUserAttributesFromKeycloak(userId, attributes);
+                            syncedUsers++;
+                            totalAttributes += attributes.size();
+                        }
+                        
+                    } catch (Exception e) {
+                        log.warn("Failed to sync attributes for user {}: {}", user.getUsername(), e.getMessage());
                     }
-                    
-                    if (!attributes.isEmpty()) {
-                        attributeManagementService.syncUserAttributesFromKeycloak(userId, attributes);
-                        syncedUsers++;
-                        totalAttributes += attributes.size();
-                    }
-                    
-                } catch (Exception e) {
-                    log.warn("Failed to sync attributes for user: {}", e.getMessage());
                 }
-            }
+                
+                first += users.size();
+            } while (users.size() == batchSize); // Continue if we got a full batch
             
+            lastSyncUserCount = syncedUsers;
+            lastSyncAttributeCount = totalAttributes;
+            updateLastSyncTime();
             log.info("Keycloak sync completed: {} users, {} attributes", syncedUsers, totalAttributes);
             
         } catch (Exception e) {
             log.error("Keycloak attribute sync failed", e);
         }
-        */
-        
-        log.info("Keycloak attribute sync placeholder executed. Configure full implementation as needed.");
+    }
+
+    private void extractAttributes(Map<String, String> attributes, String key, List<String> values) {
+        values.forEach(value -> {
+            if (value.contains("=")) {
+                String[] parts = value.split("=", 2);
+                attributes.put(parts[0], parts[1]);
+            } else {
+                attributes.put(key, value);
+            }
+        });
+    }
+
+    /**
+     * Determine if an attribute should be synced based on its name.
+     * Filters out internal Keycloak attributes.
+     * 
+     * @param attributeName The attribute name to check
+     * @return true if the attribute should be synced
+     */
+    private boolean shouldSyncAttribute(String attributeName) {
+        // Don't sync internal Keycloak attributes
+        if (attributeName.equalsIgnoreCase("attributes")){
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -131,9 +171,37 @@ public class KeycloakAttributeSyncScheduler {
      */
     public void syncUserFromKeycloak(String userId) {
         log.info("Sync user {} from Keycloak triggered", userId);
-        // Placeholder - would call Keycloak API to get user attributes
-        // then call syncUserAttributes(userId, attributes)
-        log.warn("User-specific sync not yet implemented - requires Keycloak API integration");
+        
+        try {
+            UserRepresentation user = keycloakService.getUser(userId);
+            
+            if (user == null) {
+                log.warn("User {} not found in Keycloak", userId);
+                return;
+            }
+            
+            Map<String, String> attributes = new HashMap<>();
+            
+            // Extract relevant attributes
+            if (user.getAttributes() != null) {
+                user.getAttributes().forEach((key, values) -> {
+                    log.info("Found attribute {} for user {}", key, user.getUsername());
+                    if (!values.isEmpty() && shouldSyncAttribute(key)) {
+                        extractAttributes(attributes, key, values);
+                    }
+                });
+            }
+            
+            if (!attributes.isEmpty()) {
+                attributeManagementService.syncUserAttributesFromKeycloak(userId, attributes);
+                log.info("Successfully synced {} attributes for user {}", attributes.size(), userId);
+            } else {
+                log.info("No attributes to sync for user {}", userId);
+            }
+            
+        } catch (Exception e) {
+            log.error("Failed to sync user {} from Keycloak", userId, e);
+        }
     }
 
     /**
@@ -141,6 +209,17 @@ public class KeycloakAttributeSyncScheduler {
      */
     public String getLastSyncTime() {
         return lastSyncTime;
+    }
+
+    /**
+     * Get last sync statistics
+     */
+    public Map<String, Object> getLastSyncStats() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("lastSyncTime", lastSyncTime);
+        stats.put("syncedUsers", lastSyncUserCount);
+        stats.put("syncedAttributes", lastSyncAttributeCount);
+        return stats;
     }
 
     /**
