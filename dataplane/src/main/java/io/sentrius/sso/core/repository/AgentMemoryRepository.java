@@ -45,6 +45,9 @@ public interface AgentMemoryRepository extends JpaRepository<AgentMemory, Long> 
     @Query("SELECT m FROM AgentMemory m WHERE m.markings LIKE %:marking%")
     List<AgentMemory> findByMarkingsContaining(@Param("marking") String marking);
 
+    @Query("SELECT m FROM AgentMemory m WHERE m.agentId = :agentId AND m.markings LIKE %:marking% ORDER BY m.createdAt DESC")
+    List<AgentMemory> findByAgentIdAndMarkingsContaining(@Param("agentId") String agentId, @Param("marking") String marking);
+
     // === JPQL filterable query ===
 
     @Query("""

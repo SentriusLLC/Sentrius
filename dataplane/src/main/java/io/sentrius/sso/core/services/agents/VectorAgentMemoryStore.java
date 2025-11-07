@@ -370,4 +370,126 @@ public class VectorAgentMemoryStore {
         memory.setEmbedding(embedding);
         return agentMemoryRepository.save(memory);
     }
+
+    /**
+     * VectorMemoryStore: merge memory across generations with weighted decay.
+     * Retrieves memories from the current agent and its ancestors, applying decay based on generational distance.
+     *
+     * @param agentId The current agent ID
+     * @param queryText The search query
+     * @param requestingUserId The user requesting access
+     * @param maxGenerations The maximum number of generations to traverse (default 3)
+     * @param limit The maximum number of results to return
+     * @param threshold The similarity threshold
+     * @return List of memories composed across generations with weighted scores
+     */
+    public List<AgentMemory> getComposedMemory(String agentId, String queryText, String requestingUserId, 
+                                                int maxGenerations, int limit, double threshold) {
+        log.info("Getting composed memory for agent: {}, maxGenerations: {}", agentId, maxGenerations);
+
+        if (embeddingService == null || !embeddingService.isAvailable()) {
+            log.debug("No embedding service available - returning current agent memories only");
+            return findSimilarMemoriesForAgent(queryText, agentId, requestingUserId, limit, threshold);
+        }
+
+        try {
+            // Generate query embedding
+            float[] queryEmbedding = embeddingService.embed(queryText);
+            if (queryEmbedding == null) {
+                return findSimilarMemoriesForAgent(queryText, agentId, requestingUserId, limit, threshold);
+            }
+
+            String embeddingString = Arrays.toString(queryEmbedding);
+
+            // Retrieve memories from current agent
+            List<AgentMemory> currentMemories = agentMemoryRepository.findSimilarMemoriesForAgent(
+                    embeddingString, agentId, threshold, limit * 2);
+
+            // Retrieve inherited memories (from parent generations)
+            List<AgentMemory> inheritedMemories = agentMemoryRepository
+                    .findByAgentIdAndMarkingsContaining(agentId, "INHERITED");
+
+            // Combine and score all memories with generational decay
+            Map<Long, ScoredMemory> scoredMemories = new HashMap<>();
+
+            // Score current generation memories (no decay)
+            for (AgentMemory memory : currentMemories) {
+                if (!memory.isExpired()) {
+                    double similarity = memory.calculateCosineSimilarity(queryEmbedding);
+                    if (similarity >= threshold) {
+                        scoredMemories.put(memory.getId(), new ScoredMemory(memory, similarity, 1.0));
+                    }
+                }
+            }
+
+            // Score inherited memories with decay
+            for (AgentMemory memory : inheritedMemories) {
+                if (!memory.isExpired()) {
+                    double similarity = memory.calculateCosineSimilarity(queryEmbedding);
+                    if (similarity >= threshold) {
+                        // Extract decay factor from metadata
+                        double decayFactor = extractDecayFactor(memory);
+                        double weightedScore = similarity * decayFactor;
+                        
+                        // Only add if not already present or has higher score
+                        ScoredMemory existing = scoredMemories.get(memory.getId());
+                        if (existing == null || weightedScore > existing.weightedScore) {
+                            scoredMemories.put(memory.getId(), new ScoredMemory(memory, similarity, decayFactor));
+                        }
+                    }
+                }
+            }
+
+            // Sort by weighted score and return top results
+            return scoredMemories.values().stream()
+                    .sorted((a, b) -> Double.compare(b.getWeightedScore(), a.getWeightedScore()))
+                    .filter(sm -> accessControlService.canAccessMemory(sm.memory, requestingUserId, agentId, "READ"))
+                    .map(sm -> sm.memory)
+                    .limit(limit)
+                    .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            log.error("Error in composed memory retrieval", e);
+            return findSimilarMemoriesForAgent(queryText, agentId, requestingUserId, limit, threshold);
+        }
+    }
+
+    /**
+     * Extracts the decay factor from memory metadata.
+     */
+    private double extractDecayFactor(AgentMemory memory) {
+        try {
+            Map<String, Object> metadata = memory.getMetadataAsMap();
+            if (metadata.containsKey("decay_factor")) {
+                Object decayObj = metadata.get("decay_factor");
+                if (decayObj instanceof Number) {
+                    return ((Number) decayObj).doubleValue();
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Could not extract decay factor from memory {}, using default", memory.getId());
+        }
+        return 0.9; // Default decay factor
+    }
+
+    /**
+     * Helper class to track memories with their similarity scores and decay factors.
+     */
+    private static class ScoredMemory {
+        final AgentMemory memory;
+        final double similarityScore;
+        final double decayFactor;
+        final double weightedScore;
+
+        ScoredMemory(AgentMemory memory, double similarityScore, double decayFactor) {
+            this.memory = memory;
+            this.similarityScore = similarityScore;
+            this.decayFactor = decayFactor;
+            this.weightedScore = similarityScore * decayFactor;
+        }
+
+        double getWeightedScore() {
+            return weightedScore;
+        }
+    }
 }
