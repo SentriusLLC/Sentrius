@@ -42,6 +42,7 @@ import io.sentrius.sso.core.dto.agents.AgentContextDTO;
 import io.sentrius.sso.core.dto.agents.AgentContextRequestDTO;
 import io.sentrius.sso.core.dto.agents.AgentExecutionContextDTO;
 import io.sentrius.sso.core.dto.agents.AgentExecution;
+import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
 import io.sentrius.sso.core.dto.ztat.AtatRequest;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
 import io.sentrius.sso.core.dto.ztat.ZtatRequestDTO;
@@ -80,6 +81,10 @@ public class AgentVerbs extends VerbBase {
 
     final ObjectMapper mapper = new ObjectMapper(new YAMLFactory()); // Jackson ObjectMapper for YAML parsing
     private final AgentExecutionService agentExecutionService;
+    
+    // Field names to search when extracting query strings from nested JSON structures
+    private static final String[] QUERY_FIELD_NAMES = {"arg1", "field", "context", "query", "text", "value"};
+
 
     /**
      * Constructs an `AgentVerbs` instance with the required services and registry.
@@ -804,8 +809,9 @@ public class AgentVerbs extends VerbBase {
         return contextNode;
     }
 
-    @Verb(name = "get_agent_status", returnType = AgentExecutionContextDTO.class, description = "Queries the agent status. Can" +
-        " be Running, pending, NotFound, or Failed" ,
+    @Verb(name = "get_agent_status", returnType = AgentExecutionContextDTO.class, description = "Queries the agent " +
+        "status for other agents. Not to be used internally. Can" +
+        " be Running, pending, NotFound, or Failed." ,
         exampleJson = "{ \"agentName\": \"agentName\" }",
         requiresTokenManagement = true )
     public ObjectNode getAgentStatus(AgentExecution execution, AgentExecutionContextDTO agentIdentifier)
@@ -825,6 +831,8 @@ public class AgentVerbs extends VerbBase {
         return contextNode;
     }
 
+
+
     @Verb(name = "get_endpoints_like", returnType = AgentExecutionContextDTO.class, description = "Queries for endpoints in " +
         "the system that match the input text." ,
         returnName = "endpoints",
@@ -841,32 +849,93 @@ public class AgentVerbs extends VerbBase {
         var parsedQuery = queryInput.get("endpoints_like");
 
         if (null == parsedQuery) {
-            throw new IllegalArgumentException("Missing 'endpoints_like' argument");
+            throw new IllegalArgumentException("Missing 'endpoints_like' argument. Expected format: " +
+                "{ \"endpoints_like\": [\"query text 1\", \"query text 2\"] }");
         }
+        
         ObjectNode contextNode = JsonUtil.MAPPER.createObjectNode();
         ArrayNode endpoints = JsonUtil.MAPPER.createArrayNode();
-        for(JsonNode node : parsedQuery) {
-            if (!node.isTextual()) {
-                if (node.has("arg1")){
-                    node = node.get("arg1");
-                    if (!node.isTextual()) {
-                        throw new IllegalArgumentException("All items in 'endpoints_like' must be strings");
-                    }
+        
+        // Handle different input formats from the LLM
+        List<String> queryStrings = new ArrayList<>();
+        
+        if (parsedQuery.isArray()) {
+            // Expected format: ["text1", "text2"]
+            for (JsonNode node : parsedQuery) {
+                String queryText = extractQueryString(node);
+                if (queryText != null && !queryText.isEmpty()) {
+                    queryStrings.add(queryText);
                 }
             }
-            var endpointList = endpointSearcher.getEndpointsLike(execution, node.asText());
-            JsonNode finalNode = node;
-            endpointList.forEach(endpoint -> {
+        } else if (parsedQuery.isObject()) {
+            // Handle nested object format: {"arg1": {"field": "text"}} or {"arg1": "text"}
+            String queryText = extractQueryString(parsedQuery);
+            if (queryText != null && !queryText.isEmpty()) {
+                queryStrings.add(queryText);
+            }
+        } else if (parsedQuery.isTextual()) {
+            // Simple string format
+            queryStrings.add(parsedQuery.asText());
+        }
+        
+        if (queryStrings.isEmpty()) {
+            throw new IllegalArgumentException("Could not extract any valid query strings from 'endpoints_like'. " +
+                "Expected format: { \"endpoints_like\": [\"query text 1\", \"query text 2\"] }. " +
+                "Received: " + parsedQuery.toString());
+        }
+        
+        // Query endpoints for each search string
+        for (String queryText : queryStrings) {
+            log.info("Searching endpoints for: {}", queryText);
+            var endpointList = endpointSearcher.getEndpointsLike(execution, queryText);
+            for (EndpointDescriptor endpoint : endpointList) {
                 ObjectNode endpointNode = JsonUtil.MAPPER.createObjectNode();
-                endpointNode.put("name", finalNode.asText());
+                endpointNode.put("name", endpoint.getName());
+                endpointNode.put("description", endpoint.getDescription());
                 endpointNode.put("method", endpoint.getHttpMethod());
                 endpointNode.put("endpoint", endpoint.getPath());
+                endpointNode.put("searchQuery", queryText);
                 endpoints.add(endpointNode);
-            });
+            }
         }
+        
         contextNode.put("endpoints", endpoints);
 
         return contextNode;
+    }
+    
+    /**
+     * Recursively extracts a query string from a JsonNode, handling various nested structures.
+     * Tries common patterns like {"arg1": "text"}, {"field": "text"}, {"context": "text"}, etc.
+     */
+    private String extractQueryString(JsonNode node) {
+        if (node == null) {
+            return null;
+        }
+        
+        if (node.isTextual()) {
+            return node.asText();
+        }
+        
+        if (node.isObject()) {
+            // Try common field names that might contain the query
+            for (String fieldName : QUERY_FIELD_NAMES) {
+                if (node.has(fieldName)) {
+                    log.debug("Extracting query string from field: {}", fieldName);
+                    return extractQueryString(node.get(fieldName));
+                }
+            }
+            
+            // If no known fields, try the first field as fallback
+            var fields = node.fields();
+            if (fields.hasNext()) {
+                var entry = fields.next();
+                log.warn("No recognized query field found in object, using first field: {}", entry.getKey());
+                return extractQueryString(entry.getValue());
+            }
+        }
+        
+        return null;
     }
 
     @Verb(name = "call_endpoint", returnType = AgentExecutionContextDTO.class, description = "Executes an endpoint at the " +

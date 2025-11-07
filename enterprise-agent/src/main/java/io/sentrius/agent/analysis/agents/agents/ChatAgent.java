@@ -229,7 +229,7 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                 var responses = agentExecutionContext.getAgentDataList();
                                 var planResponse =
                                     responses.isEmpty() ? "" :
-                                        responses.get(responses.size() - 1).asText();
+                                        responses.get(responses.size() - 1).toString();
                                 nextResponse = chatVerbs.interpret_plan_response(
                                     agentExecution,
                                     agentExecutionContext,
@@ -276,11 +276,38 @@ public class ChatAgent extends BaseEnterpriseAgent {
                     }
                     allowedFailures = 20; // Reset allowed failures on successful heartbeat
                 } catch (ZtatException | Exception ex) {
+                    // Build a more informative error message for the LLM
+                    StringBuilder errorMsg = new StringBuilder();
+                    errorMsg.append("Error executing operation");
+                    
+                    if (response != null && response.getNextOperation() != null) {
+                        errorMsg.append(" '").append(response.getNextOperation()).append("'");
+                        
+                        // Add verb signature if available
+                        var verb = verbRegistry.getVerbs().get(response.getNextOperation());
+                        if (verb != null) {
+                            errorMsg.append(".\n\nExpected format for this operation:\n");
+                            errorMsg.append("- Operation name: ").append(verb.getName()).append("\n");
+                            if (verb.getArgName() != null && !verb.getArgName().isEmpty()) {
+                                errorMsg.append("- Argument name: ").append(verb.getArgName()).append("\n");
+                            }
+                            if (verb.getExampleJson() != null && !verb.getExampleJson().isEmpty()) {
+                                errorMsg.append("- Example format: ").append(verb.getExampleJson()).append("\n");
+                            }
+                            errorMsg.append("\nYour arguments were: ").append(
+                                response.getArguments() != null ? response.getArguments().toString() : "null"
+                            );
+                        }
+                    }
+                    
+                    errorMsg.append("\n\nError details: ").append(ex.getMessage());
+                    errorMsg.append("\n\nPlease adjust your arguments to match the expected format and try again OR " +
+                        "try a different verb if you don't have the correct arguments at all." +
+                        ".");
+                    
                     agentExecutionContext.addMessages(Message.builder().role("system").content(
-                        "You caused the following error. Please re-validate you chose the right operations or " +
-                            "endpoints for the context" + 
-                        ex.getMessage()).build());
-
+                        errorMsg.toString()
+                    ).build());
 
                     ex.printStackTrace();
                     if (allowedFailures-- <= 0) {
