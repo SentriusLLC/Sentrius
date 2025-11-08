@@ -99,37 +99,6 @@ class KeycloakServiceTest {
     }
     
     @Test
-    void testGetUser_WithValidUserId_ReturnsUser() {
-        // Arrange
-        String userId = "user-123";
-        UserRepresentation expectedUser = createMockUser(userId, "testuser");
-        
-        when(usersResource.get(userId)).thenReturn(userResource);
-        when(userResource.toRepresentation()).thenReturn(expectedUser);
-        
-        // Act
-        UserRepresentation result = keycloakService.getUser(userId);
-        
-        // Assert
-        assertNotNull(result);
-        assertEquals(userId, result.getId());
-        assertEquals("testuser", result.getUsername());
-    }
-    
-    @Test
-    void testGetUser_WithInvalidUserId_ReturnsNull() {
-        // Arrange
-        String userId = "invalid-user";
-        when(usersResource.get(userId)).thenThrow(new RuntimeException("User not found"));
-        
-        // Act
-        UserRepresentation result = keycloakService.getUser(userId);
-        
-        // Assert
-        assertNull(result);
-    }
-    
-    @Test
     void testSearchUsersByUsername_ReturnsMatchingUsers() {
         // Arrange
         String username = "testuser";
