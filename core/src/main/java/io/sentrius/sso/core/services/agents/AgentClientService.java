@@ -27,6 +27,7 @@ import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.provenance.ProvenanceEvent;
 import lombok.extern.slf4j.Slf4j;
+import org.aspectj.weaver.loadtime.Agent;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Service;
@@ -320,7 +321,8 @@ public class AgentClientService {
         String url = "/api/v1/agents/memory/store";
         try {
             log.info("Storing memory for agentId {}: {}", agentId, memory.getMemoryKey());
-            zeroTrustClientService.callPostOnApi(execution, url,memory,
+            List<AgentMemoryDTO> dto = List.of(memory);
+            zeroTrustClientService.callPostOnApi(execution, url,dto,
                 Maps.immutableEntry("agentId",List.of(agentId)) );
         } catch (ZtatException e) {
             log.error("Failed to store memory for key {}", e.getMessage());

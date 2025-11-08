@@ -34,6 +34,27 @@ public abstract class VerbBase {
         this.agentDatabaseContext = agentDatabaseContext;
     }
 
+    public AgentContextDTO getAgentContext(AgentExecution execution) throws IOException, ZtatException {
+        if (agentDatabaseContext != null && !agentDatabaseContext.equals("none")) {
+            return agentClientService.getAgentContext(execution,
+                agentDatabaseContext);
+        }else {
+
+            InputStream is = getStream(agentConfigFile);
+            if (is == null) {
+                throw new RuntimeException(agentConfigFile + " not found on classpath");
+            }
+
+            AgentConfig config = new ObjectMapper(new YAMLFactory()).readValue(is, AgentConfig.class);
+
+            return AgentContextDTO.builder()
+                .name(execution.getUser().getUsername())
+                .description(config.getDescription())
+                .context(config.getContext())
+                .build();
+        }
+    }
+
     public AgentConfig getAgentConfig(AgentExecution execution) throws IOException, ZtatException {
         AgentConfig config = null;
         if (agentDatabaseContext != null && !agentDatabaseContext.equals("none")) {

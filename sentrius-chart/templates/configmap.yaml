@@ -427,6 +427,7 @@ data:
             - "/api/v1/agent/bootstrap/launcher/status"
             - "/api/v1/capabilities/endpoints"
             - "/api/v1/agents/memory/search"
+            - "/api/v1/agents/memory/store"
       composed:
     ztat:
       provider: "ztat-service.internal"

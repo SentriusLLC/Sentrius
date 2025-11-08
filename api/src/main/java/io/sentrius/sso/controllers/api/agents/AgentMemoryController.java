@@ -63,7 +63,7 @@ public class AgentMemoryController extends BaseController {
     public ResponseEntity<List<AgentMemoryDTO>> storeMemories(
         @RequestParam(name = "agentId") String agentId,
         @RequestBody List<AgentMemoryDTO> memoryDTOs,
-        @RequestParam(defaultValue = "false") boolean generateEmbedding,
+        @RequestParam(defaultValue = "true") boolean generateEmbedding,
         HttpServletRequest request, HttpServletResponse response) {
 
 

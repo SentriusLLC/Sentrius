@@ -154,6 +154,8 @@ public class ChatAgent extends BaseEnterpriseAgent {
         AgentConfig config = null;
         try {
             config = chatVerbs.getAgentConfig(agentExecution);
+            var context = chatVerbs.getAgentContext(agentExecution);
+            agentExecutionContext.setAgentContext(context);
         } catch (IOException e) {
             throw new RuntimeException(e);
         } catch (ZtatException e) {
@@ -223,9 +225,6 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                 verbResponses.add(executionResponse);
                                 lastVerbResponse = executionResponse;
 
-
-//                                        chatAgent.getAgentExecution().addMessages(Message.builder().role("System")
-//                                        .content("System executed operation: " + response.getNextOperation()).build());
                                 var responses = agentExecutionContext.getAgentDataList();
                                 var planResponse =
                                     responses.isEmpty() ? "" :
@@ -250,6 +249,12 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                         JsonNode value = memoryMeta.has("value") ? 
                                             memoryMeta.get("value") : memoryMeta;
                                         
+                                        // Add userId to markings for privacy scoping
+                                        String userId = agentExecution.getUser().getUserId();
+                                        String enhancedMarkings = markings != null 
+                                            ? markings + ",USER:" + userId 
+                                            : "USER:" + userId;
+                                        
                                         agentClientService.storeMemory(agentExecution,
                                             agentExecutionContext.getAgentContext().getName(),
                                             io.sentrius.sso.core.dto.agents.AgentMemoryDTO.builder()
@@ -257,10 +262,14 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                                 .memoryKey(memoryEntry.getKey())
                                                 .memoryValue(value.toString())
                                                 .classification(classification)
-                                                .markings(markings != null ? markings.split(",") : null)
+                                                .markings(enhancedMarkings.split(","))
+                                                .conversationId(agentExecution.getCommunicationId())
                                                 .build());
-                                        log.info("Stored memory: {} with classification: {}", memoryEntry.getKey(), classification);
+                                        log.info("Stored memory: {} with classification: {} and markings: {}", 
+                                            memoryEntry.getKey(), classification, enhancedMarkings);
                                     }
+                                } else {
+                                    log.info("No persistent memory to store at this time.");
                                 }
 
 

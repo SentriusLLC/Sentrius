@@ -86,6 +86,10 @@ public class AgentExecutionContextDTO {
             // Add to data list with persistent flag
             longTermMemories.put(key, memoryMeta);
 
+            log.info("Added persistent memory meta for {}", key);
+
+        } else {
+            log.warn("AgentContext is null, cannot add to persistent memory");
         }
     }
 
@@ -121,10 +125,13 @@ public class AgentExecutionContextDTO {
     }
 
     public Map<String, JsonNode> flushPersistentMemory() {
-        var persistentItems = getPersistentMemoryItems();
+        // Deep copy each entry to avoid returning references to mutable JsonNodes
+        Map<String, JsonNode> copy = new HashMap<>();
+        for (Map.Entry<String, JsonNode> entry : getPersistentMemoryItems().entrySet()) {
+            copy.put(entry.getKey(), entry.getValue().deepCopy());
+        }
         longTermMemories.clear();
-        return persistentItems;
-
+        return copy;
 
     }
 

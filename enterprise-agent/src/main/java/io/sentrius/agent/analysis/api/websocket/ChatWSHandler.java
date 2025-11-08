@@ -140,6 +140,13 @@ public class ChatWSHandler extends TextWebSocketHandler {
 
                 if (sessionId != null && websocky.isPresent()) {
                     var websocketCommunication = websocky.get();
+                    if (null == websocketCommunication.getAgentExecutionContextDTO().getAgentContext()){
+                        log.info("Loading agent context for session ID: {} is null ? {}" , sessionId,
+                            agentExecutionService.getExecutionContextDTO( chatAgent.getAgentExecution().getExecutionId() ).getAgentContext()==null);
+                        websocketCommunication.getAgentExecutionContextDTO().setAgentContext(
+                            agentExecutionService.getExecutionContextDTO( chatAgent.getAgentExecution().getExecutionId() ).getAgentContext()
+                        );
+                    }
                     log.info("Received message from session ID: {}" , sessionId, websocketCommunication.getUniqueIdentifier());
                     // Handle the message (e.g., process or respond)
 
@@ -294,11 +301,27 @@ public class ChatWSHandler extends TextWebSocketHandler {
                             return;
                         } else if ("user-message".equals(json.get("type").asText())) {
                             Message userMessage = Message.builder().role("user").content(json.get("message").asText()).build();
+
+                            // Store user message for conversation history
+                            websocketCommunication.getAgentExecutionContextDTO().addToPersistentMemory(
+                                "user_message_" + System.currentTimeMillis(),
+                                json.get("message").asText(),
+                                "PRIVATE",
+                                new String[]{"CONVERSATION"}
+                            );
                             log.info("Received heartbeat from session {}", sessionId);
                             var response = chatVerbs.interpretUserData(chatAgent.getAgentExecution(),
                                 websocketCommunication.getAgentExecutionContextDTO(),
                                 websocketCommunication, userMessage);
                             log.info("Response: {}", response);
+                            
+                            // Store agent response for conversation history
+                            websocketCommunication.getAgentExecutionContextDTO().addToPersistentMemory(
+                                "agent_response_" + System.currentTimeMillis(),
+                                response.getResponseForUser(),
+                                "PRIVATE",
+                                new String[]{"CONVERSATION"}
+                            );
                             var newMessage = Session.ChatMessage.newBuilder()
                                 .setMessage(response.getResponseForUser()/*String.format("{\"type\":\"user-message\"," +
                                         "\"message\":\"%s\"}",
@@ -309,6 +332,12 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                 .setSessionId(websocketCommunication.getUniqueIdentifier())
                                 .setTimestamp(System.currentTimeMillis())
                                 .build();
+                            websocketCommunication.getAgentExecutionContextDTO().addToPersistentMemory(
+                                "agent_response_" + System.currentTimeMillis(),
+                                response.getResponseForUser(),
+                                "PRIVATE",
+                                new String[]{"CONVERSATION"}
+                            );
                             messageBytes = newMessage.toByteArray();
                             String base64Message = Base64.getEncoder().encodeToString(messageBytes);
                             session.sendMessage(new TextMessage(
@@ -351,6 +380,13 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                             planResponse
                                         );
 
+                                        websocketCommunication.getAgentExecutionContextDTO().addToPersistentMemory(
+                                            "agent_response_" + System.currentTimeMillis(),
+                                            nextResponse.getResponseForUser(),
+                                            "PRIVATE",
+                                            new String[]{"CONVERSATION"}
+                                        );
+
                                         websocky.get().getCommunicationResponses().add(nextResponse);
 
                                         websocketCommunication.getVerbResponses().add(executionResponse);
@@ -379,15 +415,21 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                         if (memory != null && !memory.isEmpty()) {
                                             for(var memoryEntry : memory.entrySet()){
                                                 JsonNode memoryMeta = memoryEntry.getValue();
-                                                
+
                                                 // Extract metadata from the memory node
-                                                String classification = memoryMeta.has("classification") ? 
+                                                String classification = memoryMeta.has("classification") ?
                                                     memoryMeta.get("classification").asText() : "PRIVATE";
-                                                String markings = memoryMeta.has("markings") ? 
+                                                String markings = memoryMeta.has("markings") ?
                                                     memoryMeta.get("markings").asText() : null;
-                                                JsonNode value = memoryMeta.has("value") ? 
+                                                JsonNode value = memoryMeta.has("value") ?
                                                     memoryMeta.get("value") : memoryMeta;
-                                                
+
+                                                // Add userId to markings for privacy scoping
+                                                String userId = chatAgent.getAgentExecution().getUser().getUserId();
+                                                String enhancedMarkings = markings != null
+                                                    ? markings + ",USER:" + userId
+                                                    : "USER:" + userId;
+
                                                 agentClientService.storeMemory(chatAgent.getAgentExecution(),
                                                     websocketCommunication.getAgentExecutionContextDTO().getAgentContext().getName(),
                                                     io.sentrius.sso.core.dto.agents.AgentMemoryDTO.builder()
@@ -395,10 +437,14 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                                         .memoryKey(memoryEntry.getKey())
                                                         .memoryValue(value.toString())
                                                         .classification(classification)
-                                                        .markings(markings != null ? markings.split(",") : null)
+                                                        .markings(enhancedMarkings.split(","))
+                                                        .conversationId(chatAgent.getAgentExecution().getCommunicationId())
                                                         .build());
-                                                log.info("Stored memory: {} with classification: {}", memoryEntry.getKey(), classification);
+                                                log.info("Stored memory: {} with classification: {} and markings: {}",
+                                                    memoryEntry.getKey(), classification, enhancedMarkings);
                                             }
+                                        } else {
+                                            log.info("No persistent memory to store 424.");
                                         }
 
                                     }while (nextResponse.getNextOperation() != null && !nextResponse.getNextOperation().isEmpty());
@@ -409,6 +455,42 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                 }
 
 
+                            }else {
+                                var memory = websocketCommunication.getAgentExecutionContextDTO().flushPersistentMemory();
+                                if (memory != null && !memory.isEmpty()) {
+                                    for(var memoryEntry : memory.entrySet()){
+                                        JsonNode memoryMeta = memoryEntry.getValue();
+
+                                        // Extract metadata from the memory node
+                                        String classification = memoryMeta.has("classification") ?
+                                            memoryMeta.get("classification").asText() : "PRIVATE";
+                                        String markings = memoryMeta.has("markings") ?
+                                            memoryMeta.get("markings").asText() : null;
+                                        JsonNode value = memoryMeta.has("value") ?
+                                            memoryMeta.get("value") : memoryMeta;
+
+                                        // Add userId to markings for privacy scoping
+                                        String userId = chatAgent.getAgentExecution().getUser().getUserId();
+                                        String enhancedMarkings = markings != null
+                                            ? markings + ",USER:" + userId
+                                            : "USER:" + userId;
+
+                                        agentClientService.storeMemory(chatAgent.getAgentExecution(),
+                                            websocketCommunication.getAgentExecutionContextDTO().getAgentContext().getName(),
+                                            io.sentrius.sso.core.dto.agents.AgentMemoryDTO.builder()
+                                                .agentName(websocketCommunication.getAgentExecutionContextDTO().getAgentContext().getName())
+                                                .memoryKey(memoryEntry.getKey())
+                                                .memoryValue(value.toString())
+                                                .classification(classification)
+                                                .markings(enhancedMarkings.split(","))
+                                                .conversationId(chatAgent.getAgentExecution().getCommunicationId())
+                                                .build());
+                                        log.info("Stored memory: {} with classification: {} and markings: {}",
+                                            memoryEntry.getKey(), classification, enhancedMarkings);
+                                    }
+                                } else {
+                                    log.info("No persistent memory to store 470.");
+                                }
                             }
                             return; // Ignore heartbeat messages
                         } else {

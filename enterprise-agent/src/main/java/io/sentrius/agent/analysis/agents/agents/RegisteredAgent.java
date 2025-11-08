@@ -171,6 +171,8 @@ public class RegisteredAgent  extends BaseEnterpriseAgent {
                                         agentExecutionContext.getAgentContext().getName(), dto);
                                     log.info("Stored memory: {} with classification: {}", memory.getKey(), classification);
                                 }
+                            } else {
+                                log.info("No persistent memory to store.");
                             }
 
                             log.info("Node: {}", node);
