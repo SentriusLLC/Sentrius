@@ -97,7 +97,7 @@ class KeycloakServiceTest {
         assertEquals(10, result.size());
         verify(usersResource).list(0, 10);
     }
-    
+
     @Test
     void testSearchUsersByUsername_ReturnsMatchingUsers() {
         // Arrange
