@@ -183,6 +183,7 @@ update_launcher=false
 update_agent_proxy=false
 update_ssh_proxy=false
 update_rdp_proxy=false
+update_github_mcp=false
 
 
 while [[ "$#" -gt 0 ]]; do
@@ -197,7 +198,8 @@ while [[ "$#" -gt 0 ]]; do
         --sentrius-agent-proxy) update_agent_proxy=true ;;
         --sentrius-ssh-proxy) update_ssh_proxy=true ;;
         --sentrius-rdp-proxy) update_rdp_proxy=true ;;
-        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_integrationproxy=true; update_launcher=true; update_agent_proxy=true; update_ssh_proxy=true; update_rdp_proxy=true; ;;
+        --github-mcp-server) update_github_mcp=true ;;
+        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_integrationproxy=true; update_launcher=true; update_agent_proxy=true; update_ssh_proxy=true; update_rdp_proxy=true; update_github_mcp=true; ;;
         --no-cache) NO_CACHE=true ;;
         --include-dev-certs) INCLUDE_DEV_CERTS=true ;;
         *) echo "Unknown flag: $1"; exit 1 ;;
@@ -330,4 +332,14 @@ if $update_rdp_proxy; then
     fi
     build_image "sentrius-rdp-proxy" "$RDPPROXY_VERSION" "${SCRIPT_DIR}/../../docker/rdp-proxy"
     rm docker/rdp-proxy/rdpproxy.jar
+fi
+
+if $update_github_mcp; then
+    if [[ "$ENV_TARGET" == "gcp" ]]; then
+        GITHUB_MCP_VERSION=$(increment_patch_version $GITHUB_MCP_VERSION)
+        update_env_var "GITHUB_MCP_VERSION" "$GITHUB_MCP_VERSION"
+    else
+        GITHUB_MCP_VERSION="latest"
+    fi
+    build_image "github-mcp-server" "$GITHUB_MCP_VERSION" "${SCRIPT_DIR}/../../docker/github-mcp-server"
 fi

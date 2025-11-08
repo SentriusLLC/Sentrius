@@ -10,7 +10,7 @@ sub-projects:
     core – Handles the core functionalities (e.g., SSH session management, zero trust policy enforcement).
     api – Provides a RESTful API layer to interface with the core module.
     dataplane – Offers dataplane functionality for secure data transfer and processing.
-    integration-proxy – A proxy service that integrates with large language models (LLMs) to enhance security and compliance in SSH sessions.
+    integration-proxy – A proxy service that integrates with large language models (LLMs) and external services (like GitHub, JIRA) to enhance security and compliance. Supports dynamic MCP (Model Context Protocol) server management for GitHub integrations.
     llm-dataplane – A data processing layer that leverages LLMs for advanced analysis and decision-making in SSH sessions.
     ops-scripts – Contains operational scripts for deployment and management tasks.
     ai-agent – Java-based intelligent agent framework for monitoring and controlling SSH sessions.
@@ -28,6 +28,7 @@ Table of Contents
     Running Sentrius
     Helm Chart Deployment
     Testing
+    Integrations
     Custom Agents
     Usage
     API Documentation
@@ -395,6 +396,50 @@ The charts support multiple deployment environments with different configuration
 ### Helm Testing
 
 For comprehensive testing documentation including CI/CD testing, local testing, and troubleshooting, see [docs/helm-testing.md](docs/helm-testing.md).
+
+## Integrations
+
+Sentrius supports external service integrations through the integration-proxy module, providing secure, zero-trust access to external APIs and services.
+
+### GitHub Integration
+
+The GitHub MCP (Model Context Protocol) integration enables secure access to GitHub repositories, issues, and pull requests through dynamically launched MCP server containers.
+
+**Features:**
+- Query GitHub issues and pull requests
+- Access repository information
+- Clone and interact with repositories
+- All operations use zero-trust security model
+
+**Setup:**
+
+1. **Store GitHub Token:**
+   Create an `IntegrationSecurityToken` with:
+   - `connectionType`: "github"
+   - `connectionInfo`: Your GitHub Personal Access Token
+
+2. **Launch MCP Server:**
+   ```bash
+   curl -X POST "http://integration-proxy:8080/api/v1/github/mcp/launch?tokenId=<TOKEN_ID>" \
+     -H "Authorization: Bearer <JWT_TOKEN>"
+   ```
+
+3. **Access via Service URL:**
+   The response includes a `serviceUrl` for accessing the GitHub MCP server within the cluster.
+
+For detailed documentation, see [integration-proxy/GITHUB_INTEGRATION.md](integration-proxy/GITHUB_INTEGRATION.md).
+
+### JIRA Integration
+
+The JIRA integration provides secure proxy access to JIRA APIs for ticket management and tracking.
+
+**Available Endpoints:**
+- `/api/v1/jira/rest/api/3/search` - Search for JIRA issues
+- `/api/v1/jira/rest/api/3/issue` - Get issue details
+- `/api/v1/jira/rest/api/3/issue/comment` - Manage issue comments
+- `/api/v1/jira/rest/api/3/issue/assignee` - Assign issues
+
+All JIRA requests are authenticated through Keycloak and validated against the user's permissions.
 
 ## Custom Agents
 

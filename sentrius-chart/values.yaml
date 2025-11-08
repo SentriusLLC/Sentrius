@@ -447,3 +447,25 @@ rdpproxy:
       limits:
         memory: "512Mi"
         cpu: "500m"
+
+# GitHub MCP Server configuration
+githubMcp:
+  enabled: false  # Set to true to enable GitHub MCP server
+  replicaCount: 1
+  image:
+    repository: github-mcp-server
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3000
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}

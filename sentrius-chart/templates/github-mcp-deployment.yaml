@@ -1,0 +1,78 @@
+{{- if .Values.githubMcp.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sentrius.fullname" . }}-github-mcp
+  labels:
+    {{- include "sentrius.labels" . | nindent 4 }}
+    app.kubernetes.io/component: github-mcp-server
+spec:
+  replicas: {{ .Values.githubMcp.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "sentrius.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: github-mcp-server
+  template:
+    metadata:
+      labels:
+        {{- include "sentrius.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: github-mcp-server
+    spec:
+      containers:
+      - name: github-mcp-server
+        image: "{{ .Values.githubMcp.image.repository }}:{{ .Values.githubMcp.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.githubMcp.image.pullPolicy }}
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        env:
+        - name: GITHUB_PERSONAL_ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "sentrius.fullname" . }}-github-mcp-secret
+              key: github-token
+              optional: true
+        resources:
+          {{- toYaml .Values.githubMcp.resources | nindent 10 }}
+        livenessProbe:
+          tcpSocket:
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      {{- with .Values.githubMcp.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.githubMcp.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.githubMcp.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sentrius.fullname" . }}-github-mcp
+  labels:
+    {{- include "sentrius.labels" . | nindent 4 }}
+    app.kubernetes.io/component: github-mcp-server
+spec:
+  type: {{ .Values.githubMcp.service.type }}
+  ports:
+  - port: {{ .Values.githubMcp.service.port }}
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "sentrius.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: github-mcp-server
+{{- end }}
