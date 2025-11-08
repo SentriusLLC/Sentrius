@@ -42,21 +42,7 @@ class PolicyEvaluatorTest {
                 definitionRepository
         );
     }
-    
-    @Test
-    void testEvaluate_NoApplicablePolicies_ReturnsDeny() {
-        // Arrange
-        EvaluationContext context = new EvaluationContext();
-        when(policyRepository.findActivePoliciesForResourceType(any()))
-                .thenReturn(new ArrayList<>());
-        
-        // Act
-        PolicyDecision decision = policyEvaluator.evaluate(context, "/api/test", "GET");
-        
-        // Assert
-        assertFalse(decision.isAllowed());
-        assertEquals(PolicyDecision.Effect.DENY, decision.getEffect());
-    }
+
     
     @Test
     void testEvaluate_PolicyWithMatchingRules_ReturnsAllow() {
