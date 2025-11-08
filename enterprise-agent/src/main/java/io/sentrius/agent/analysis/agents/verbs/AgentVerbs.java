@@ -1193,4 +1193,249 @@ public class AgentVerbs extends VerbBase {
                 .replaceAll("/{2,}", "/");             // normalize slashes
         }
     }
+
+    /**
+     * Lookup agent memories using text-based search with optional filters.
+     * Provides access to agent memory history for context in plan execution.
+     * 
+     * @param execution The agent execution context
+     * @param executionContextDTO The execution context with query parameters
+     * @return ObjectNode containing array of matched memories
+     * @throws ZtatException If there is an error during the operation
+     */
+    @Verb(
+        name = "lookup_agent_memory",
+        returnType = ObjectNode.class,
+        description = "Searches agent memories using text-based lookup with optional filters. " +
+            "Use this to recall information from previous conversations or sessions. " +
+            "For example, if a user told you their name in a previous session, use this verb to look it up. " +
+            "Returns memories that match the query text, filtered by agent ID and markings if provided. " +
+            "Always check memory before asking users to repeat information they may have already provided.",
+        requiresTokenManagement = true,
+        argName = "memory_query",
+        exampleJson = "{ \"query\": \"user name\", \"agentId\": \"my-agent\", \"markings\": \"PUBLIC\", \"limit\": 10 }"
+    )
+    public ObjectNode lookupAgentMemory(AgentExecution execution, AgentExecutionContextDTO executionContextDTO)
+        throws ZtatException, JsonProcessingException {
+        
+        log.info("Looking up agent memories");
+        
+        // Extract query parameters - handle Optional.of() that throws on null
+        String query = "";
+        String agentId = null;
+        String markings = "";
+        int limit = 10;
+        
+        try {
+            Optional<JsonNode> queryNode = executionContextDTO.getExecutionArgument("memory_query", "query");
+            query = queryNode.map(JsonNode::asText).orElse("");
+        } catch (NullPointerException e) {
+            // getExecutionArgument can throw NPE if value is null
+            log.debug("Query parameter not found or null");
+        }
+        
+        try {
+            Optional<JsonNode> agentIdNode = executionContextDTO.getExecutionArgument("memory_query", "agentId");
+            agentId = agentIdNode.map(JsonNode::asText).orElse(null);
+        } catch (NullPointerException e) {
+            log.debug("AgentId parameter not found or null");
+        }
+        
+        try {
+            Optional<JsonNode> markingsNode = executionContextDTO.getExecutionArgument("memory_query", "markings");
+            markings = markingsNode.map(JsonNode::asText).orElse("");
+        } catch (NullPointerException e) {
+            log.debug("Markings parameter not found or null");
+        }
+        
+        try {
+            Optional<JsonNode> limitNode = executionContextDTO.getExecutionArgument("memory_query", "limit");
+            limit = limitNode.map(JsonNode::asInt).orElse(10);
+        } catch (NullPointerException e) {
+            log.debug("Limit parameter not found or null, using default");
+        }
+        
+        if (query.isEmpty()) {
+            throw new IllegalArgumentException("Query parameter is required for memory lookup");
+        }
+        
+        log.info("Memory lookup - query: '{}', agentId: {}, markings: {}, limit: {}", 
+            query, agentId, markings, limit);
+        
+        // Call the memory API endpoint
+        List<Map.Entry<String, List<String>>> params = new ArrayList<>();
+        if (agentId != null && !agentId.isEmpty()) {
+            params.add(Maps.immutableEntry("agent", List.of(agentId)));
+        }
+        params.add(Maps.immutableEntry("content", List.of(query)));
+        params.add(Maps.immutableEntry("size", List.of(String.valueOf(limit))));
+        if (markings != null && !markings.isEmpty()) {
+            params.add(Maps.immutableEntry("markings", List.of(markings)));
+        }
+        
+        String response;
+        if (params.isEmpty()) {
+            response = zeroTrustClientService.callGetOnApi(execution, "/api/v1/agents/memory/search");
+        } else {
+            Map.Entry<String, List<String>> first = params.get(0);
+            Map.Entry<String, List<String>>[] rest = params.size() > 1
+                ? params.subList(1, params.size()).toArray(new Map.Entry[0])
+                : new Map.Entry[0];
+            response = zeroTrustClientService.callGetOnApi(execution, "/api/v1/agents/memory/search", first, rest);
+        }
+        
+        if (isHtml(response)) {
+            throw new RuntimeException("Received HTML response from memory search endpoint");
+        }
+        log.info("Memory search response: {}", response);
+        // Parse the response
+        JsonNode responseNode = JsonUtil.MAPPER.readTree(response);
+        
+        ObjectNode result = JsonUtil.MAPPER.createObjectNode();
+        result.put("query", query);
+        result.put("count", responseNode.path("totalElements").asInt(0));
+        
+        // Extract and format memories
+        ArrayNode memories = JsonUtil.MAPPER.createArrayNode();
+        JsonNode content = responseNode.path("content");
+        
+        if (content.isArray()) {
+            for (JsonNode memoryNode : content) {
+                ObjectNode memory = JsonUtil.MAPPER.createObjectNode();
+                memory.put("memoryKey", memoryNode.path("memoryKey").asText());
+                memory.put("memoryValue", memoryNode.path("memoryValue").asText());
+                memory.put("agentId", memoryNode.path("agentId").asText());
+                memory.put("classification", memoryNode.path("classification").asText());
+                memory.put("createdAt", memoryNode.path("createdAt").asText());
+                memories.add(memory);
+            }
+        }
+        
+        result.set("memories", memories);
+        
+        log.info("Found {} memories for query: '{}'", memories.size(), query);
+        
+        return result;
+    }
+
+    /**
+     * Search agent memories using semantic vector similarity.
+     * Provides advanced memory lookup using embeddings for semantic matching.
+     * 
+     * @param execution The agent execution context
+     * @param executionContextDTO The execution context with query parameters
+     * @return ObjectNode containing array of semantically similar memories
+     * @throws ZtatException If there is an error during the operation
+     */
+    @Verb(
+        name = "search_agent_memory_semantic",
+        returnType = ObjectNode.class,
+        description = "Searches agent memories using semantic vector similarity. " +
+            "Use this to find information related to concepts, even if the exact words don't match. " +
+            "For example, searching for 'user preferences' can find memories about 'settings', 'configuration', or 'favorites'. " +
+            "Useful when you need to recall context but aren't sure of the exact terms used. " +
+            "Always prefer this over lookup_agent_memory when searching for conceptual information across sessions.",
+        requiresTokenManagement = true,
+        argName = "semantic_query",
+        exampleJson = "{ \"query\": \"user personal information\", \"agentId\": \"my-agent\", \"limit\": 5, \"threshold\": 0.75 }"
+    )
+    public ObjectNode searchAgentMemorySemantic(AgentExecution execution, AgentExecutionContextDTO executionContextDTO)
+        throws ZtatException, JsonProcessingException {
+        
+        log.info("Semantic search for agent memories");
+        
+        // Extract query parameters - handle Optional.of() that throws on null
+        String query = "";
+        String agentId = null;
+        int limit = 10;
+        double threshold = 0.7;
+        
+        try {
+            Optional<JsonNode> queryNode = executionContextDTO.getExecutionArgument("semantic_query", "query");
+            query = queryNode.map(JsonNode::asText).orElse("");
+        } catch (NullPointerException e) {
+            log.debug("Query parameter not found or null");
+        }
+        
+        try {
+            Optional<JsonNode> agentIdNode = executionContextDTO.getExecutionArgument("semantic_query", "agentId");
+            agentId = agentIdNode.map(JsonNode::asText).orElse(null);
+        } catch (NullPointerException e) {
+            log.debug("AgentId parameter not found or null");
+        }
+        
+        try {
+            Optional<JsonNode> limitNode = executionContextDTO.getExecutionArgument("semantic_query", "limit");
+            limit = limitNode.map(JsonNode::asInt).orElse(10);
+        } catch (NullPointerException e) {
+            log.debug("Limit parameter not found or null, using default");
+        }
+        
+        try {
+            Optional<JsonNode> thresholdNode = executionContextDTO.getExecutionArgument("semantic_query", "threshold");
+            threshold = thresholdNode.map(JsonNode::asDouble).orElse(0.7);
+        } catch (NullPointerException e) {
+            log.debug("Threshold parameter not found or null, using default");
+        }
+        
+        if (query.isEmpty()) {
+            throw new IllegalArgumentException("Query parameter is required for semantic memory search");
+        }
+        
+        log.info("Semantic memory search - query: '{}', agentId: {}, limit: {}, threshold: {}", 
+            query, agentId, limit, threshold);
+        
+        // Build the API endpoint path
+        String endpoint = agentId != null && !agentId.isEmpty()
+            ? "/api/v1/agents/memory/search/semantic/" + agentId
+            : "/api/v1/agents/memory/search/semantic";
+        
+        // Build request body
+        ObjectNode requestBody = JsonUtil.MAPPER.createObjectNode();
+        requestBody.put("query", query);
+        requestBody.put("limit", limit);
+        requestBody.put("threshold", threshold);
+        
+        String response = zeroTrustClientService.callPostOnApi(
+            execution,
+            endpoint,
+            requestBody
+        );
+        
+        if (isHtml(response)) {
+            throw new RuntimeException("Received HTML response from semantic memory search endpoint");
+        }
+        
+        // Parse the response
+        JsonNode responseArray = JsonUtil.MAPPER.readTree(response);
+        
+        ObjectNode result = JsonUtil.MAPPER.createObjectNode();
+        result.put("query", query);
+        result.put("searchType", "semantic");
+        result.put("threshold", threshold);
+        result.put("count", responseArray.size());
+        
+        // Extract and format memories
+        ArrayNode memories = JsonUtil.MAPPER.createArrayNode();
+        
+        if (responseArray.isArray()) {
+            for (JsonNode memoryNode : responseArray) {
+                ObjectNode memory = JsonUtil.MAPPER.createObjectNode();
+                memory.put("memoryKey", memoryNode.path("memoryKey").asText());
+                memory.put("memoryValue", memoryNode.path("memoryValue").asText());
+                memory.put("agentId", memoryNode.path("agentId").asText());
+                memory.put("agentName", memoryNode.path("agentName").asText());
+                memory.put("classification", memoryNode.path("classification").asText());
+                memory.put("createdAt", memoryNode.path("createdAt").asText());
+                memory.put("hasEmbedding", memoryNode.path("hasEmbedding").asBoolean());
+                memories.add(memory);
+            }
+        }
+        
+        result.set("memories", memories);
+        
+        log.info("Found {} semantically similar memories for query: '{}'", memories.size(), query);
+        
+        return result;
+    }
 }

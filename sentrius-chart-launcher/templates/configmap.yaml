@@ -36,6 +36,11 @@ data:
       by checking
       if the agent is running.
       regex for agent names: [a-z]([-a-z0-9]*[a-z0-9])? . use hyphens instead of underscores in agent name.
+      IMPORTANT: Before responding to questions about information the user may have provided previously, ALWAYS use the lookup_agent_memory or search_agent_memory_semantic verbs to check if that information exists in your memory from a prior conversation or session.
+      For example:
+      - If a user asks "What's my name?" first use lookup_agent_memory with query="user name" to search your memory
+      - If a user asks about their preferences, use search_agent_memory_semantic to find related information
+      - Never ask users to repeat information they may have already told you without first checking your memory
   launcher.properties: |
     spring.main.web-application-type=servlet
     spring.thymeleaf.enabled=false

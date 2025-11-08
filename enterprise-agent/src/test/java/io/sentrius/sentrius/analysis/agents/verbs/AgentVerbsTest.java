@@ -286,4 +286,198 @@ class AgentVerbsTest {
         assertEquals(2, statusInfo.get("persistentMemorySize").asInt());
         assertTrue(statusInfo.has("persistentMemoryKeys"));
     }
+
+    @Test
+    void lookupAgentMemoryReturnsMatchingMemories() throws Exception, ZtatException {
+        // Given
+        String executionId = UUID.randomUUID().toString();
+        AgentExecution execution = AgentExecution.builder()
+            .executionId(executionId)
+            .build();
+
+        AgentExecutionContextDTO requestContext = AgentExecutionContextDTO.builder().build();
+        ObjectNode queryArgs = JsonUtil.MAPPER.createObjectNode();
+        ObjectNode memoryQuery = JsonUtil.MAPPER.createObjectNode();
+        memoryQuery.put("query", "endpoint configuration");
+        memoryQuery.put("agentId", "test-agent");
+        memoryQuery.put("limit", 5);
+        queryArgs.set("memory_query", memoryQuery);
+        requestContext.setExecutionArgs(queryArgs);
+
+        // Mock API response
+        String apiResponse = "{"
+            + "\"content\": ["
+            + "  {"
+            + "    \"memoryKey\": \"config_endpoint_1\","
+            + "    \"memoryValue\": \"{\\\"endpoint\\\": \\\"/api/v1/config\\\"}\","
+            + "    \"agentId\": \"test-agent\","
+            + "    \"classification\": \"PUBLIC\","
+            + "    \"createdAt\": \"2024-01-01T00:00:00Z\""
+            + "  },"
+            + "  {"
+            + "    \"memoryKey\": \"config_endpoint_2\","
+            + "    \"memoryValue\": \"{\\\"endpoint\\\": \\\"/api/v1/settings\\\"}\","
+            + "    \"agentId\": \"test-agent\","
+            + "    \"classification\": \"PRIVATE\","
+            + "    \"createdAt\": \"2024-01-02T00:00:00Z\""
+            + "  }"
+            + "],"
+            + "\"totalElements\": 2"
+            + "}";
+        
+        when(zeroTrustClientService.callGetOnApi(eq(execution), eq("/api/v1/agents/memory/search"), 
+            any(Map.Entry.class), any(Map.Entry[].class)))
+            .thenReturn(apiResponse);
+
+        // When
+        ObjectNode result = agentVerbs.lookupAgentMemory(execution, requestContext);
+
+        // Then
+        assertNotNull(result);
+        assertEquals("endpoint configuration", result.get("query").asText());
+        assertEquals(2, result.get("count").asInt());
+        assertTrue(result.has("memories"));
+        assertEquals(2, result.get("memories").size());
+        
+        assertEquals("config_endpoint_1", result.get("memories").get(0).get("memoryKey").asText());
+        assertEquals("test-agent", result.get("memories").get(0).get("agentId").asText());
+    }
+
+    @Test
+    void lookupAgentMemoryWithNoResults() throws Exception, ZtatException {
+        // Given
+        String executionId = UUID.randomUUID().toString();
+        AgentExecution execution = AgentExecution.builder()
+            .executionId(executionId)
+            .build();
+
+        AgentExecutionContextDTO requestContext = AgentExecutionContextDTO.builder().build();
+        ObjectNode queryArgs = JsonUtil.MAPPER.createObjectNode();
+        ObjectNode memoryQuery = JsonUtil.MAPPER.createObjectNode();
+        memoryQuery.put("query", "nonexistent memory");
+        queryArgs.set("memory_query", memoryQuery);
+        requestContext.setExecutionArgs(queryArgs);
+
+        // Mock empty API response
+        String apiResponse = "{"
+            + "\"content\": [],"
+            + "\"totalElements\": 0"
+            + "}";
+        
+        when(zeroTrustClientService.callGetOnApi(eq(execution), eq("/api/v1/agents/memory/search"), 
+            any(Map.Entry.class), any(Map.Entry[].class)))
+            .thenReturn(apiResponse);
+
+        // When
+        ObjectNode result = agentVerbs.lookupAgentMemory(execution, requestContext);
+
+        // Then
+        assertNotNull(result);
+        assertEquals("nonexistent memory", result.get("query").asText());
+        assertEquals(0, result.get("count").asInt());
+        assertTrue(result.has("memories"));
+        assertEquals(0, result.get("memories").size());
+    }
+
+    @Test
+    void searchAgentMemorySemanticReturnsResults() throws Exception, ZtatException {
+        // Given
+        String executionId = UUID.randomUUID().toString();
+        AgentExecution execution = AgentExecution.builder()
+            .executionId(executionId)
+            .build();
+
+        AgentExecutionContextDTO requestContext = AgentExecutionContextDTO.builder().build();
+        ObjectNode queryArgs = JsonUtil.MAPPER.createObjectNode();
+        ObjectNode semanticQuery = JsonUtil.MAPPER.createObjectNode();
+        semanticQuery.put("query", "user authentication flow");
+        semanticQuery.put("agentId", "auth-agent");
+        semanticQuery.put("limit", 5);
+        semanticQuery.put("threshold", 0.75);
+        queryArgs.set("semantic_query", semanticQuery);
+        requestContext.setExecutionArgs(queryArgs);
+
+        // Mock API response
+        String apiResponse = "["
+            + "  {"
+            + "    \"memoryKey\": \"login_flow\","
+            + "    \"memoryValue\": \"{\\\"flow\\\": \\\"OAuth2\\\"}\","
+            + "    \"agentId\": \"auth-agent\","
+            + "    \"agentName\": \"AuthAgent\","
+            + "    \"classification\": \"PUBLIC\","
+            + "    \"createdAt\": \"2024-01-01T00:00:00Z\","
+            + "    \"hasEmbedding\": true"
+            + "  },"
+            + "  {"
+            + "    \"memoryKey\": \"security_credentials\","
+            + "    \"memoryValue\": \"{\\\"type\\\": \\\"JWT\\\"}\","
+            + "    \"agentId\": \"auth-agent\","
+            + "    \"agentName\": \"AuthAgent\","
+            + "    \"classification\": \"PRIVATE\","
+            + "    \"createdAt\": \"2024-01-02T00:00:00Z\","
+            + "    \"hasEmbedding\": true"
+            + "  }"
+            + "]";
+        
+        when(zeroTrustClientService.callPostOnApi(eq(execution), eq("/api/v1/agents/memory/search/semantic/auth-agent"), any()))
+            .thenReturn(apiResponse);
+
+        // When
+        ObjectNode result = agentVerbs.searchAgentMemorySemantic(execution, requestContext);
+
+        // Then
+        assertNotNull(result);
+        assertEquals("user authentication flow", result.get("query").asText());
+        assertEquals("semantic", result.get("searchType").asText());
+        assertEquals(0.75, result.get("threshold").asDouble());
+        assertEquals(2, result.get("count").asInt());
+        assertTrue(result.has("memories"));
+        assertEquals(2, result.get("memories").size());
+        
+        assertEquals("login_flow", result.get("memories").get(0).get("memoryKey").asText());
+        assertEquals("auth-agent", result.get("memories").get(0).get("agentId").asText());
+        assertTrue(result.get("memories").get(0).get("hasEmbedding").asBoolean());
+    }
+
+    @Test
+    void searchAgentMemorySemanticWithoutAgentId() throws Exception, ZtatException {
+        // Given
+        String executionId = UUID.randomUUID().toString();
+        AgentExecution execution = AgentExecution.builder()
+            .executionId(executionId)
+            .build();
+
+        AgentExecutionContextDTO requestContext = AgentExecutionContextDTO.builder().build();
+        ObjectNode queryArgs = JsonUtil.MAPPER.createObjectNode();
+        ObjectNode semanticQuery = JsonUtil.MAPPER.createObjectNode();
+        semanticQuery.put("query", "configuration settings");
+        semanticQuery.put("limit", 10);
+        queryArgs.set("semantic_query", semanticQuery);
+        requestContext.setExecutionArgs(queryArgs);
+
+        // Mock API response
+        String apiResponse = "["
+            + "  {"
+            + "    \"memoryKey\": \"global_config\","
+            + "    \"memoryValue\": \"{\\\"setting\\\": \\\"value\\\"}\","
+            + "    \"agentId\": \"config-agent\","
+            + "    \"agentName\": \"ConfigAgent\","
+            + "    \"classification\": \"PUBLIC\","
+            + "    \"createdAt\": \"2024-01-01T00:00:00Z\","
+            + "    \"hasEmbedding\": true"
+            + "  }"
+            + "]";
+        
+        when(zeroTrustClientService.callPostOnApi(eq(execution), eq("/api/v1/agents/memory/search/semantic"), any()))
+            .thenReturn(apiResponse);
+
+        // When
+        ObjectNode result = agentVerbs.searchAgentMemorySemantic(execution, requestContext);
+
+        // Then
+        assertNotNull(result);
+        assertEquals("configuration settings", result.get("query").asText());
+        assertEquals(1, result.get("count").asInt());
+        assertEquals("global_config", result.get("memories").get(0).get("memoryKey").asText());
+    }
 }

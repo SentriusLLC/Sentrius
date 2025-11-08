@@ -85,15 +85,39 @@ public class EmbeddingService {
                 ,true,
                 payload);
 
+            log.info("Embedding response: {}", responseStr);
 
             var response = JsonUtil.MAPPER.readTree(responseStr);
 
             var vector = response.get("embedding");
-            float[] embedding = new float[vector.size()];
-            for (int i = 0; i < vector.size(); i++) {
-                embedding[i] = (float) vector.get(i).asDouble();
+            if (null != vector) {
+                float[] embedding = new float[vector.size()];
+                for (int i = 0; i < vector.size(); i++) {
+                    embedding[i] = (float) vector.get(i).asDouble();
+                }
+                return embedding;
+            }else{
+            List<float []> embeddings = new java.util.ArrayList<>();
+            var data = response.get("data");
+            if (data.isArray() && !data.isEmpty()) {
+
+                for (var dataResponse : data) {
+
+                    vector = dataResponse.get("embedding");
+                    float[] embedding = new float[vector.size()];
+                    for (int i = 0; i < vector.size(); i++) {
+                        embedding[i] = (float) vector.get(i).asDouble();
+                    }
+                    embeddings.add(embedding);
+                }
+                ;
+                return embeddings.get(0);
+
+                } else {
+                return null;
+                }
             }
-            return embedding;
+
 
         } catch (Exception e) {
             log.error("Error generating embedding for text: {}", text.substring(0, Math.min(100, text.length())), e);

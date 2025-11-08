@@ -49,7 +49,8 @@ data:
     spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.sentriusagent.oauth2.authorization_grant_type }}
     #spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
     #spring.security.oauth2.client.registration.keycloak.scope={{ .Values.sentriusagent.oauth2.scope }}
-    spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    spring.security.oauth2.resourceserve*r.jwt.issuer-uri={{ .Values.keycloakInternalDomain | default .Values
+    .keycloakDomain }}/realms/sentrius
     spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
     # OTEL settings
     otel.traces.exporter=otlp
@@ -425,6 +426,7 @@ data:
             - "/api/v1/agent/bootstrap/launcher/create"
             - "/api/v1/agent/bootstrap/launcher/status"
             - "/api/v1/capabilities/endpoints"
+            - "/api/v1/agents/memory/search"
       composed:
     ztat:
       provider: "ztat-service.internal"
