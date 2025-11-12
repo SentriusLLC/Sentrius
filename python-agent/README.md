@@ -199,6 +199,56 @@ AVAILABLE_AGENTS = {
 python main.py my-custom --task-data '{"operation": "process_data"}'
 ```
 
+## Built-in Agents
+
+### Coding Agent
+
+The Coding Agent automates code generation and PR submission via GitHub/JIRA integration. For detailed documentation, see [agents/coding/README.md](agents/coding/README.md).
+
+**Features:**
+- Accept coding tasks from JIRA or GitHub issues
+- Generate code using LLM integration
+- Create pull requests automatically
+- Update JIRA issues with PR links
+- Track all operations via provenance
+
+**Quick Start:**
+```bash
+# Handle a JIRA issue
+python main.py coding --task-data '{
+  "operation": "handle_jira_issue",
+  "issue_key": "PROJECT-123",
+  "repo": "owner/repository"
+}'
+
+# Handle a GitHub issue
+python main.py coding --task-data '{
+  "operation": "handle_github_issue",
+  "repo": "owner/repository",
+  "issue_number": 456
+}'
+```
+
+**Configuration:**
+```properties
+agent.coding.config=python-agent/coding.yaml
+agent.coding.enabled=true
+```
+
+Required environment variables:
+- `INTEGRATION_PROXY_URL`: URL of integration proxy service
+- `LLM_PROXY_URL`: URL of LLM proxy service
+- `GITHUB_TOKEN_ID`: ID of GitHub IntegrationSecurityToken
+
+### MCP Agent
+
+The MCP Agent provides Model Context Protocol integration with Sentrius zero trust security. See [mcp.yaml](mcp.yaml) for configuration.
+
+### Chat Helper Agent
+
+The Chat Helper Agent provides conversational assistance via OpenAI integration. See [chat-helper.yaml](chat-helper.yaml) for configuration.
+
+
 ## API Operations
 
 The Python agent supports all the same API operations as the Java agent:
