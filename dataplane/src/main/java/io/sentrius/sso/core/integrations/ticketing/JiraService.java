@@ -248,6 +248,67 @@ public class JiraService {
         }
     }
 
+    /**
+     * Retrieves full details of a specific JIRA ticket by its key.
+     * 
+     * @param ticketKey The JIRA ticket key (e.g., "PROJECT-123")
+     * @return TicketDTO containing all ticket details, or null if not found
+     * @throws JsonProcessingException if JSON parsing fails
+     */
+    public TicketDTO getTicketDetails(String ticketKey) throws JsonProcessingException {
+        String url = String.format("%s/rest/api/3/issue/%s", jiraBaseUrl, ticketKey);
+        log.info("Fetching ticket details for: {}", ticketKey);
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBasicAuth(username, apiToken);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+        
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, Map.class);
+            
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                Map<String, Object> issue = response.getBody();
+                String key = (String) issue.get("key");
+                Map<String, Object> fields = (Map<String, Object>) issue.get("fields");
+                
+                String summary = (String) fields.get("summary");
+                Object descriptionRaw = fields.get("description");
+                String description;
+
+                if (descriptionRaw instanceof String) {
+                    description = (String) descriptionRaw;
+                } else if (descriptionRaw != null) {
+                    // Handle ADF (Atlassian Document Format)
+                    description = extractTextFromADF(descriptionRaw);
+                    if (description.isEmpty()) {
+                        // Fallback to JSON string if extraction fails
+                        description = JsonUtil.MAPPER.writeValueAsString(descriptionRaw);
+                    }
+                } else {
+                    description = "";
+                }
+                
+                String status = (String) ((Map<String, Object>) fields.get("status")).get("name");
+
+                log.info("Successfully retrieved ticket: {}", key);
+                
+                return TicketDTO.builder()
+                    .id(key)
+                    .description(description)
+                    .summary(summary)
+                    .status(status)
+                    .type("jira")
+                    .build();
+            }
+        } catch (Exception e) {
+            log.error("Failed to retrieve ticket {}: {}", ticketKey, e.getMessage());
+        }
+        
+        return null;
+    }
+
     public List<String> getComments(String ticketKey) {
         List<String> comments = new ArrayList<>();
         try {

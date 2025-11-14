@@ -154,12 +154,20 @@ public class JiraProxyController extends BaseController {
             IntegrationSecurityToken jiraIntegration = jiraIntegrations.get(0);
             JiraService jiraService = new JiraService(new RestTemplate(), jiraIntegration);
 
-            boolean isActive = jiraService.isTicketActive(issueKey);
+            // Get full ticket details
+            TicketDTO ticket = jiraService.getTicketDetails(issueKey);
+            
+            if (ticket == null) {
+                span.setAttribute("issue.found", false);
+                return ResponseEntity.status(HttpStatus.SC_NOT_FOUND)
+                    .body("JIRA issue not found: " + issueKey);
+            }
             
             span.setAttribute("issue.key", issueKey);
-            span.setAttribute("issue.active", isActive);
+            span.setAttribute("issue.found", true);
+            span.setAttribute("issue.status", ticket.getStatus());
             
-            return ResponseEntity.ok(new IssueStatusResponse(issueKey, isActive ? "Active" : "Inactive"));
+            return ResponseEntity.ok(ticket);
             
         } finally {
             span.end();
