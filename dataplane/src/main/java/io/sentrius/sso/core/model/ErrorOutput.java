@@ -40,4 +40,13 @@ public class ErrorOutput {
 
     @Column(name = "log_tm", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private java.sql.Timestamp logTm;
+
+    @Column(name = "is_security_concern")
+    private Boolean isSecurityConcern;
+
+    @Column(name = "healing_status")
+    private String healingStatus;
+
+    @Column(name = "healing_session_id")
+    private Long healingSessionId;
 }

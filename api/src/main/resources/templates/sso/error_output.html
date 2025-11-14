@@ -12,6 +12,23 @@
         /*]]>*/
     </script>
     <title>[[${systemOptions.systemLogoName}]] - Error Logs</title>
+    <style>
+        .healing-status {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .healing-QUEUED { background: #ffc107; color: #000; }
+        .healing-IN_PROGRESS { background: #17a2b8; color: #fff; }
+        .healing-COMPLETED { background: #28a745; color: #fff; }
+        .healing-FAILED { background: #dc3545; color: #fff; }
+        .trigger-healing-btn {
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
 <div th:replace="fragments/topbar"></div>
@@ -38,12 +55,27 @@
                 -->
                 <div class="accordion-item">
                     <h2 class="accordion-header" th:id="'heading_' + ${output.id}">
-                            <button class="accordion-button" type="button" data-bs-toggle="collapse" th:data-bs-target="'#collapse_'+ ${output.id}" aria-expanded="true" th:aria-controls="'#collapse_'+ ${output.id}" th:text="'Error Log produced at ' + ${output.logTm}">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" th:data-bs-target="'#collapse_'+ ${output.id}" aria-expanded="true" th:aria-controls="'#collapse_'+ ${output.id}">
+                                <span th:text="'Error Log produced at ' + ${output.logTm}"></span>
+                                <span th:if="${output.healingStatus}" th:class="'healing-status healing-' + ${output.healingStatus}" th:text="${output.healingStatus}"></span>
                             </button>
                     </h2>
 
                     <div th:id="'collapse_' + ${output.id}" class="accordion-collapse" th:aria-labelledby="'heading_' + ${output.id}" data-parent="#accordion">
                         <div th:id="'collapse_output_' + ${output.id}" class="accordion-body output_body" style="white-space: pre-wrap" th:utext="${output.errorLogs}">Panel Body</div>
+                        <div class="accordion-body">
+                            <button type="button" class="btn btn-sm btn-primary trigger-healing-btn" 
+                                    th:attr="data-error-id=${output.id}"
+                                    onclick="triggerHealing(this.getAttribute('data-error-id'))"
+                                    th:if="${output.healingStatus == null || output.healingStatus == 'NONE'}">
+                                <i class="bi bi-wrench"></i> Trigger Self-Healing
+                            </button>
+                            <a th:if="${output.healingSessionId}" 
+                               th:href="@{/sso/v1/self-healing/sessions(sessionId=${output.healingSessionId})}"
+                               class="btn btn-sm btn-outline-info trigger-healing-btn">
+                                <i class="bi bi-eye"></i> View Healing Session
+                            </a>
+                        </div>
                     </div>
                 </div>
             </template>
@@ -56,6 +88,37 @@
             </form>
     </div>
 </div>
+
+<script>
+    function triggerHealing(errorId) {
+        if (!confirm('Trigger self-healing for this error?')) return;
+
+        fetch(`/api/v1/self-healing/trigger/${errorId}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + getAuthToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Self-healing initiated! Session ID: ' + data.sessionId);
+                location.reload();
+            } else {
+                alert('Failed to trigger self-healing: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error triggering self-healing:', error);
+            alert('Error triggering self-healing');
+        });
+    }
+
+    function getAuthToken() {
+        // This should retrieve the actual auth token from your session/storage
+        return sessionStorage.getItem('authToken') || '';
+    }
+</script>
 </body>
 
 </html>

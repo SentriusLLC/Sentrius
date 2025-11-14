@@ -50,6 +50,9 @@ Key Features
     REST API
     Manage your SSH configurations, enclaves, security rules, and sessions programmatically using a well-documented REST API.
 
+    Self-Healing System
+    Automatically detects, analyzes, and repairs system errors through intelligent coding agents. Configure patching policies (immediate, off-hours, or never) per pod/service, with built-in security analysis to prevent healing of security-sensitive errors without manual review. When configured, the system can automatically create GitHub pull requests with fixes.
+
 Custom SSH Server responds via Sentrius UI or terminals
 ![image](docs/images/ssh.png)
 
@@ -440,6 +443,148 @@ The JIRA integration provides secure proxy access to JIRA APIs for ticket manage
 - `/api/v1/jira/rest/api/3/issue/assignee` - Assign issues
 
 All JIRA requests are authenticated through Keycloak and validated against the user's permissions.
+
+## Self-Healing System
+
+Sentrius includes an intelligent self-healing system that automatically detects, analyzes, and repairs errors in your infrastructure.
+
+### Key Features
+
+- **Automatic Error Detection**: Continuously monitors the error output table and OpenTelemetry data for system errors
+- **Security Analysis**: Automatically analyzes errors to determine if they pose security concerns before attempting repairs
+- **Flexible Patching Policies**: Configure per-pod/service policies for when repairs should be applied:
+  - **Immediate**: Apply fixes as soon as errors are detected
+  - **Off-Hours**: Queue fixes to apply during configured maintenance windows (default: 10 PM - 6 AM)
+  - **Never**: Disable self-healing for critical services that require manual intervention
+- **Coding Agent Deployment**: Automatically launches isolated coding agent pods to analyze errors and generate fixes
+- **Docker Image Building**: Spins up Kubernetes Jobs using Kaniko to build and push Docker images with the fixes
+- **Complete Workflow Automation**: Coordinates agent launch, monitoring, image building, and optional GitHub PR creation
+- **Read-Only Agent Monitoring**: View real-time agent activity and healing progress through the UI (non-security errors only)
+- **GitHub Integration**: Optionally create pull requests with fixes when GitHub credentials are configured
+
+### Configuration
+
+Self-healing can be configured through the web UI or via API:
+
+#### Web UI Configuration
+
+1. Navigate to **Self-Healing Configuration** (`/sso/v1/self-healing/config`)
+2. Click **Add Pod Configuration** to create a new policy
+3. Set the pod name, type, and patching policy using the slider control
+4. Enable or disable self-healing for the pod
+
+#### API Configuration
+
+```bash
+# Create or update a self-healing configuration
+curl -X POST http://localhost:8080/api/v1/self-healing/config \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <TOKEN>" \
+  -d '{
+    "podName": "sentrius-api",
+    "podType": "api",
+    "patchingPolicy": "OFF_HOURS",
+    "enabled": true
+  }'
+
+# Get all configurations
+curl http://localhost:8080/api/v1/self-healing/config \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+#### Application Properties
+
+Self-healing configuration is managed through Helm values and automatically populated into the ConfigMap. Update `values.yaml`:
+
+```yaml
+selfHealing:
+  enabled: true
+  offHours:
+    start: 22  # 10 PM
+    end: 6     # 6 AM
+  codingAgent:
+    clientId: "coding-agents"
+    clientSecret: ""  # Set in secrets
+  agentLauncher:
+    url: "http://sentrius-agents-launcherservice:8080"
+  builder:
+    namespace: "dev"
+    image: "gcr.io/kaniko-project/executor:latest"
+    timeoutSeconds: 1800
+    autoBuild: true
+  docker:
+    registry: ""  # Leave empty for local registry
+  github:
+    enabled: false  # Auto-enabled if GitHub integration exists
+    apiUrl: "https://api.github.com"
+    owner: ""
+    repo: ""
+```
+
+**Important**: Self-healing requires GitHub integration to be configured in the integration tokens table. The system will automatically detect if a GitHub token exists and only proceed if configured. To add a GitHub integration token, navigate to the Integration Settings in the UI and add a token with `connectionType: "github"`.
+
+### Viewing Healing Sessions
+
+Monitor active and completed healing sessions:
+
+1. Navigate to **Self-Healing Sessions** (`/sso/v1/self-healing/sessions`)
+2. Filter by status: All, Active, or Completed
+3. View detailed information about each session including:
+   - Agent activity and logs
+   - Security analysis results
+   - Docker build status
+   - GitHub PR links (if created)
+   - Error details and resolution
+
+### How It Works
+
+The self-healing workflow consists of several automated steps:
+
+1. **Error Detection**: The system scans the error_output table every 5 minutes for new errors
+2. **Policy Check**: Determines if healing is enabled for the affected pod and checks the patching policy
+3. **Security Analysis**: Analyzes error logs for security-related keywords
+4. **Agent Launch**: If not a security concern, launches a coding agent pod to analyze and fix the error
+5. **Code Repair**: The coding agent examines the error, generates fixes, and commits changes
+6. **Docker Build**: A Kubernetes Job is created to build a new Docker image with the fixes using Kaniko
+7. **GitHub PR**: If configured, creates a pull request with the changes
+8. **Completion**: Updates the healing session with results and status
+
+The entire workflow is asynchronous and can handle multiple concurrent healing sessions.
+
+### Security Considerations
+
+The self-healing system includes built-in safety mechanisms:
+
+- **GitHub Integration Required**: Self-healing only proceeds if a GitHub integration token is configured in the system. This ensures all fixes can be tracked via pull requests.
+- **Security Analysis**: Errors containing security-related keywords (authentication, authorization, vulnerability, etc.) are flagged and require manual review before healing proceeds
+- **No Visibility Restriction**: Security-flagged errors are hidden from general users until cleared by administrators
+- **Audit Trail**: All healing attempts are logged and tracked in the `self_healing_session` table
+- **Isolated Execution**: Healing agents run in isolated Kubernetes pods with limited permissions
+
+### Manual Triggering
+
+You can manually trigger self-healing for specific errors (requires GitHub integration to be configured):
+
+1. Navigate to **Error Logs** (`/sso/v1/notifications/error/log/get`)
+2. Click **Trigger Self-Healing** on any error
+3. Monitor progress in the Self-Healing Sessions view
+
+Or via API:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/self-healing/trigger/{errorId} \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+**Note**: If GitHub integration is not configured, the trigger will fail with a message prompting you to add a GitHub integration token first.
+
+### Database Schema
+
+The self-healing system uses three main tables:
+
+- `self_healing_config`: Stores patching policies per pod/service
+- `self_healing_session`: Tracks each healing attempt and its status
+- `error_output`: Extended with healing status and security analysis fields
 
 ## Custom Agents
 

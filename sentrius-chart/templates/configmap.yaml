@@ -382,6 +382,22 @@ data:
     integrationproxy.externalUrl=http://sentrius-integrationproxy:8080/
     sentrius.integration.proxyUrl=http://sentrius-integrationproxy:8080/
     sentrius.abac.keycloak-sync.enabled=true
+    # Self-Healing configuration
+    self-healing.enabled={{ .Values.selfHealing.enabled }}
+    self-healing.off-hours.start={{ .Values.selfHealing.offHours.start }}
+    self-healing.off-hours.end={{ .Values.selfHealing.offHours.end }}
+    self-healing.agent-launcher.url={{ .Values.selfHealing.agentLauncher.url }}
+    self-healing.coding-agent.client-id={{ .Values.selfHealing.codingAgent.clientId }}
+    self-healing.coding-agent.client-secret={{ .Values.selfHealing.codingAgent.clientSecret }}
+    self-healing.auto-build-image={{ .Values.selfHealing.builder.autoBuild }}
+    self-healing.builder.namespace={{ .Values.selfHealing.builder.namespace }}
+    self-healing.builder.image={{ .Values.selfHealing.builder.image }}
+    self-healing.builder.timeout-seconds={{ .Values.selfHealing.builder.timeoutSeconds }}
+    self-healing.docker.registry={{ .Values.selfHealing.docker.registry }}
+    self-healing.github.enabled={{ .Values.selfHealing.github.enabled }}
+    self-healing.github.api-url={{ .Values.selfHealing.github.apiUrl }}
+    self-healing.github.owner={{ .Values.selfHealing.github.owner }}
+    self-healing.github.repo={{ .Values.selfHealing.github.repo }}
   default-policy.yaml: |
     ---
     version: "v0"

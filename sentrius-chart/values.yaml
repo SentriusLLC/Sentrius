@@ -448,6 +448,30 @@ rdpproxy:
         memory: "512Mi"
         cpu: "500m"
 
+# Self-Healing configuration
+selfHealing:
+  enabled: true
+  offHours:
+    start: 22  # 10 PM
+    end: 6     # 6 AM
+  codingAgent:
+    clientId: "coding-agents"
+    clientSecret: ""  # Set this in secrets
+  agentLauncher:
+    url: "http://sentrius-agents-launcherservice:8080"
+  builder:
+    namespace: "dev"
+    image: "gcr.io/kaniko-project/executor:latest"
+    timeoutSeconds: 1800
+    autoBuild: true
+  docker:
+    registry: ""  # Leave empty for local registry, or set to your registry URL
+  github:
+    enabled: false  # Will be auto-enabled if GitHub integration token exists
+    apiUrl: "https://api.github.com"
+    owner: ""
+    repo: ""
+
 # GitHub MCP Server configuration
 githubMcp:
   enabled: false  # Set to true to enable GitHub MCP server

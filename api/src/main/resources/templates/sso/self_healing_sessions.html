@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta th:replace="fragments/header">
+    <title>[[${systemOptions.systemLogoName}]] - Self-Healing Sessions</title>
+    <style>
+        .session-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            background: white;
+        }
+        .session-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-PENDING { background: #ffc107; color: #000; }
+        .status-ANALYZING { background: #17a2b8; color: #fff; }
+        .status-FIXING { background: #007bff; color: #fff; }
+        .status-COMPLETED { background: #28a745; color: #fff; }
+        .status-FAILED { background: #dc3545; color: #fff; }
+        
+        .security-warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .agent-activity {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+<div th:replace="fragments/topbar"></div>
+<div class="container">
+    <h2>Self-Healing Sessions</h2>
+    <p>Monitor active and completed self-healing sessions. Agents work to analyze and fix errors automatically.</p>
+    
+    <div class="mb-4">
+        <button type="button" class="btn btn-primary" onclick="refreshSessions()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+        <div class="btn-group ms-2" role="group">
+            <input type="radio" class="btn-check" name="statusFilter" id="filter-all" value="all" checked onchange="filterSessions()">
+            <label class="btn btn-outline-secondary" for="filter-all">All</label>
+            
+            <input type="radio" class="btn-check" name="statusFilter" id="filter-active" value="active" onchange="filterSessions()">
+            <label class="btn btn-outline-primary" for="filter-active">Active</label>
+            
+            <input type="radio" class="btn-check" name="statusFilter" id="filter-completed" value="completed" onchange="filterSessions()">
+            <label class="btn btn-outline-success" for="filter-completed">Completed</label>
+        </div>
+    </div>
+
+    <div id="sessions">
+        <!-- Sessions will be loaded here -->
+    </div>
+</div>
+
+<script>
+    let allSessions = [];
+    let refreshInterval;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadSessions();
+        // Auto-refresh every 10 seconds
+        refreshInterval = setInterval(loadSessions, 10000);
+    });
+
+    function loadSessions() {
+        fetch('/api/v1/self-healing/sessions', {
+            headers: {
+                'Authorization': 'Bearer ' + getAuthToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            allSessions = data.sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
+            filterSessions();
+        })
+        .catch(error => {
+            console.error('Error loading sessions:', error);
+        });
+    }
+
+    function filterSessions() {
+        const filter = document.querySelector('input[name="statusFilter"]:checked').value;
+        let filtered = allSessions;
+
+        if (filter === 'active') {
+            filtered = allSessions.filter(s => 
+                ['PENDING', 'ANALYZING', 'FIXING'].includes(s.status)
+            );
+        } else if (filter === 'completed') {
+            filtered = allSessions.filter(s => 
+                ['COMPLETED', 'FAILED'].includes(s.status)
+            );
+        }
+
+        renderSessions(filtered);
+    }
+
+    function renderSessions(sessions) {
+        const container = document.getElementById('sessions');
+        
+        if (sessions.length === 0) {
+            container.innerHTML = '<p class="text-muted">No sessions found.</p>';
+            return;
+        }
+
+        container.innerHTML = sessions.map(session => `
+            <div class="session-card">
+                <div class="session-header">
+                    <div>
+                        <h5>Session #${session.id} - ${session.podName || 'Unknown Pod'}</h5>
+                        <small class="text-muted">Started: ${formatDate(session.startedAt)}</small>
+                    </div>
+                    <span class="status-badge status-${session.status}">${session.status}</span>
+                </div>
+
+                ${session.isSecurityConcern ? `
+                    <div class="security-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Security Analysis Required</strong>
+                        <p class="mb-0 mt-2">${session.securityAnalysis || 'This error may have security implications and requires review before healing can proceed.'}</p>
+                    </div>
+                ` : ''}
+
+                ${session.agentId ? `
+                    <div class="mt-2">
+                        <strong>Agent ID:</strong> ${session.agentId}
+                    </div>
+                ` : ''}
+
+                ${session.healingActions ? `
+                    <div class="agent-activity">
+                        <strong>Healing Actions:</strong><br>
+                        ${session.healingActions.replace(/\n/g, '<br>')}
+                    </div>
+                ` : ''}
+
+                ${session.githubPrUrl ? `
+                    <div class="mt-2">
+                        <i class="bi bi-github"></i>
+                        <strong>GitHub PR:</strong> 
+                        <a href="${session.githubPrUrl}" target="_blank">${session.githubPrUrl}</a>
+                    </div>
+                ` : ''}
+
+                ${session.errorMessage ? `
+                    <div class="alert alert-danger mt-2">
+                        <strong>Error:</strong> ${session.errorMessage}
+                    </div>
+                ` : ''}
+
+                ${session.completedAt ? `
+                    <div class="mt-2">
+                        <small class="text-muted">Completed: ${formatDate(session.completedAt)}</small>
+                    </div>
+                ` : ''}
+
+                ${session.errorOutput ? `
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="viewErrorDetails(${session.errorOutput.id})">
+                            View Original Error
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
+        `).join('');
+    }
+
+    function refreshSessions() {
+        loadSessions();
+    }
+
+    function viewErrorDetails(errorId) {
+        window.location.href = `/sso/v1/notifications/error/log/get?errorId=${errorId}`;
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleString();
+    }
+
+    function getAuthToken() {
+        // This should retrieve the actual auth token from your session/storage
+        return sessionStorage.getItem('authToken') || '';
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+        }
+    });
+</script>
+</body>
+</html>
