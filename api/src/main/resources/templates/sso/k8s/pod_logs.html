@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta th:replace="~{fragments/header}" />
+    <title>[[${systemOptions.systemLogoName}]] - Pod Logs</title>
+
+    <!-- Styles -->
+    <style>
+        body { background-color: #121212; color: #eaeaea; }
+        .container { margin-top: 20px; }
+        .toast-header { font-size: 1.5rem; font-weight: bold; margin-bottom: 15px; }
+        .table-striped tbody tr:nth-of-type(odd) { background-color: #2b2b2b; }
+        .table-striped tbody tr:hover { background-color: #3a3a3a; }
+        .logs-container {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 600px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #00ff00;
+        }
+        .filter-container {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #2b2b2b;
+            border-radius: 5px;
+        }
+        .filter-container .form-control, .filter-container .form-select {
+            background-color: #1a1a1a;
+            color: #eaeaea;
+            border-color: #444;
+        }
+        .filter-container .form-control:focus, .filter-container .form-select:focus {
+            background-color: #1a1a1a;
+            color: #eaeaea;
+            border-color: #00ff00;
+        }
+        .pod-table-container {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        .log-line {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        .log-line.highlight {
+            background-color: #3a3a00;
+        }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .error-message {
+            color: #ff4444;
+            padding: 10px;
+            background: #2b0000;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div id="csrf-token" style="display: none;" th:text="${_csrf.token}"></div>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
+                <h2 class="toast-header">Pod Logs Viewer</h2>
+
+                <!-- Pod Selection -->
+                <div class="pod-table-container">
+                    <table id="pods-table" class="table table-striped">
+                        <thead>
+                        <tr>
+                            <th>Namespace</th>
+                            <th>Pod Name</th>
+                            <th>Phase</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="pods-table-body">
+                        <!-- Rows will be added here dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Log Filters -->
+                <div class="filter-container" id="filter-container" style="display: none;">
+                    <h5>Log Options for: <span id="selected-pod-name"></span></h5>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="container-select" class="form-label">Container</label>
+                            <select id="container-select" class="form-select">
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="tail-lines" class="form-label">Tail Lines</label>
+                            <input type="number" id="tail-lines" class="form-control" value="1000" min="100" max="10000" step="100">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="since-seconds" class="form-label">Since (seconds)</label>
+                            <input type="number" id="since-seconds" class="form-control" placeholder="Optional" min="1">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="search-text" class="form-label">Search/Filter</label>
+                            <input type="text" id="search-text" class="form-control" placeholder="Search logs...">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <button id="refresh-logs-btn" class="btn btn-primary w-100">Refresh Logs</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                <div id="error-message" class="error-message"></div>
+
+                <!-- Loading Spinner -->
+                <div id="loading-spinner" class="loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Loading logs...</p>
+                </div>
+
+                <!-- Logs Display -->
+                <div id="logs-container" class="logs-container" style="display: none;">
+                    <!-- Logs will be displayed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script>
+    let selectedPodNamespace = null;
+    let selectedPodName = null;
+    let allLogs = '';
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadPods();
+
+        // Refresh button click handler
+        document.getElementById('refresh-logs-btn').addEventListener('click', function() {
+            if (selectedPodName && selectedPodNamespace) {
+                loadPodLogs();
+            }
+        });
+
+        // Search text input handler
+        document.getElementById('search-text').addEventListener('input', function() {
+            filterLogs();
+        });
+    });
+
+    function loadPods() {
+        fetch('/api/v1/k8s/pods')
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('pods-table-body');
+                tbody.innerHTML = '';
+
+                data.forEach(pod => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${pod.namespace || 'N/A'}</td>
+                        <td>${pod.name || 'N/A'}</td>
+                        <td>${pod.phase || 'Unknown'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary view-logs-btn" 
+                                    data-namespace="${pod.namespace}" 
+                                    data-pod="${pod.name}">
+                                View Logs
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                // Attach event listeners
+                document.querySelectorAll('.view-logs-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        selectedPodNamespace = this.getAttribute('data-namespace');
+                        selectedPodName = this.getAttribute('data-pod');
+                        selectPod();
+                    });
+                });
+            })
+            .catch(err => {
+                console.error('Failed to load pods:', err);
+                showError('Failed to load pods: ' + err.message);
+            });
+    }
+
+    function selectPod() {
+        document.getElementById('selected-pod-name').textContent = 
+            `${selectedPodNamespace}/${selectedPodName}`;
+        document.getElementById('filter-container').style.display = 'block';
+        
+        // Load containers for the selected pod
+        loadContainers();
+        
+        // Load logs
+        loadPodLogs();
+    }
+
+    function loadContainers() {
+        const containerSelect = document.getElementById('container-select');
+        containerSelect.innerHTML = '<option value="">Loading...</option>';
+
+        fetch(`/api/v1/k8s/pods/${selectedPodNamespace}/${selectedPodName}/containers`)
+            .then(response => response.json())
+            .then(data => {
+                containerSelect.innerHTML = '';
+                
+                if (data.containers && data.containers.length > 0) {
+                    // Add "All Containers" option if there are multiple containers
+                    if (data.containers.length > 1) {
+                        const defaultOption = document.createElement('option');
+                        defaultOption.value = '';
+                        defaultOption.textContent = 'First/Default Container';
+                        containerSelect.appendChild(defaultOption);
+                    }
+                    
+                    data.containers.forEach(container => {
+                        const option = document.createElement('option');
+                        option.value = container;
+                        option.textContent = container;
+                        containerSelect.appendChild(option);
+                    });
+                } else {
+                    containerSelect.innerHTML = '<option value="">No containers found</option>';
+                }
+            })
+            .catch(err => {
+                console.error('Failed to load containers:', err);
+                containerSelect.innerHTML = '<option value="">Error loading containers</option>';
+            });
+    }
+
+    function loadPodLogs() {
+        const container = document.getElementById('container-select').value;
+        const tailLines = document.getElementById('tail-lines').value;
+        const sinceSeconds = document.getElementById('since-seconds').value;
+
+        let url = `/api/v1/k8s/pods/${selectedPodNamespace}/${selectedPodName}/logs?tailLines=${tailLines}`;
+        
+        if (container) {
+            url += `&container=${encodeURIComponent(container)}`;
+        }
+        
+        if (sinceSeconds) {
+            url += `&sinceSeconds=${sinceSeconds}`;
+        }
+
+        showLoading(true);
+        hideError();
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                
+                if (data.success) {
+                    allLogs = data.logs || '';
+                    filterLogs();
+                    document.getElementById('logs-container').style.display = 'block';
+                } else {
+                    showError(data.message || 'Failed to load logs');
+                }
+            })
+            .catch(err => {
+                showLoading(false);
+                console.error('Failed to load logs:', err);
+                showError('Failed to load logs: ' + err.message);
+            });
+    }
+
+    function filterLogs() {
+        const searchText = document.getElementById('search-text').value.toLowerCase();
+        const logsContainer = document.getElementById('logs-container');
+        
+        if (!allLogs) {
+            logsContainer.innerHTML = '<div style="color: #888;">No logs available</div>';
+            return;
+        }
+
+        const lines = allLogs.split('\n');
+        let displayHtml = '';
+
+        if (!searchText) {
+            // No filter, display all logs
+            displayHtml = escapeHtml(allLogs);
+        } else {
+            // Filter and highlight matching lines
+            lines.forEach(line => {
+                if (line.toLowerCase().includes(searchText)) {
+                    const escapedLine = escapeHtml(line);
+                    displayHtml += `<div class="log-line highlight">${escapedLine}</div>`;
+                }
+            });
+            
+            if (!displayHtml) {
+                displayHtml = '<div style="color: #888;">No logs match the search filter</div>';
+            }
+        }
+
+        logsContainer.innerHTML = displayHtml;
+        
+        // Scroll to bottom
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+    }
+
+    function showLoading(show) {
+        document.getElementById('loading-spinner').style.display = show ? 'block' : 'none';
+    }
+
+    function showError(message) {
+        const errorDiv = document.getElementById('error-message');
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+    }
+
+    function hideError() {
+        document.getElementById('error-message').style.display = 'none';
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+
+</body>
+</html>

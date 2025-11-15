@@ -96,6 +96,73 @@ public class KubernetesService {
     }
 
     /**
+     * Get logs for a specific pod
+     * @param namespace The namespace of the pod
+     * @param podName The name of the pod
+     * @param container Optional container name (null for first/only container)
+     * @param tailLines Number of lines to retrieve from the end (default 1000, max 10000)
+     * @param sinceSeconds Only return logs newer than this many seconds (optional)
+     * @return Pod logs as a string
+     */
+    public String getPodLogs(String namespace, String podName, String container, Integer tailLines, Integer sinceSeconds) {
+        try {
+            log.info("Fetching logs for pod {} in namespace {}, container: {}, tailLines: {}", 
+                     podName, namespace, container, tailLines);
+            
+            // Limit tail lines to prevent performance issues
+            int effectiveTailLines = tailLines != null ? Math.min(tailLines, 10000) : 1000;
+            
+            var logRequest = coreV1Api.readNamespacedPodLog(podName, namespace)
+                .tailLines(effectiveTailLines);
+            
+            if (container != null && !container.isEmpty()) {
+                logRequest = logRequest.container(container);
+            }
+            
+            if (sinceSeconds != null && sinceSeconds > 0) {
+                logRequest = logRequest.sinceSeconds(sinceSeconds);
+            }
+            
+            String logs = logRequest.execute();
+            
+            log.info("Successfully fetched {} characters of logs for pod {} in namespace {}", 
+                     logs != null ? logs.length() : 0, podName, namespace);
+            
+            return logs != null ? logs : "";
+            
+        } catch (ApiException e) {
+            log.error("Error fetching logs for pod {} in namespace {}: {}", podName, namespace, e.getMessage(), e);
+            throw new RuntimeException("Failed to fetch pod logs: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Get list of containers in a pod
+     * @param namespace The namespace of the pod
+     * @param podName The name of the pod
+     * @return List of container names
+     */
+    public List<String> getPodContainers(String namespace, String podName) {
+        try {
+            log.info("Fetching container list for pod {} in namespace {}", podName, namespace);
+            
+            V1Pod pod = coreV1Api.readNamespacedPod(podName, namespace).execute();
+            
+            if (pod.getSpec() != null && pod.getSpec().getContainers() != null) {
+                return pod.getSpec().getContainers().stream()
+                    .map(container -> container.getName())
+                    .collect(Collectors.toList());
+            }
+            
+            return new ArrayList<>();
+            
+        } catch (ApiException e) {
+            log.error("Error fetching containers for pod {} in namespace {}: {}", podName, namespace, e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
      * Convert V1Pod to PodInfo DTO
      */
     private PodInfo convertToPodInfo(V1Pod pod) {

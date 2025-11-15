@@ -83,4 +83,57 @@ public class K8sApiController extends BaseController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    /**
+     * Get logs for a specific pod
+     * Requires CAN_MANAGE_SYSTEMS permission
+     */
+    @GetMapping("/pods/{namespace}/{podName}/logs")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<Map<String, Object>> getPodLogs(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            @PathVariable String namespace,
+            @PathVariable String podName,
+            @RequestParam(required = false) String container,
+            @RequestParam(required = false, defaultValue = "1000") Integer tailLines,
+            @RequestParam(required = false) Integer sinceSeconds) {
+        
+        var user = getOperatingUser(request, response);
+        log.info("User {} requesting logs for pod {} in namespace {}", 
+                 user.getUsername(), podName, namespace);
+        
+        try {
+            Map<String, Object> result = k8sClientService.getPodLogs(namespace, podName, container, tailLines, sinceSeconds);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting logs for pod {} in namespace {}", podName, namespace, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get list of containers in a pod
+     * Requires CAN_MANAGE_SYSTEMS permission
+     */
+    @GetMapping("/pods/{namespace}/{podName}/containers")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<Map<String, Object>> getPodContainers(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            @PathVariable String namespace,
+            @PathVariable String podName) {
+        
+        var user = getOperatingUser(request, response);
+        log.info("User {} requesting containers for pod {} in namespace {}", 
+                 user.getUsername(), podName, namespace);
+        
+        try {
+            Map<String, Object> result = k8sClientService.getPodContainers(namespace, podName);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting containers for pod {} in namespace {}", podName, namespace, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }

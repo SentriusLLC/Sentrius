@@ -96,4 +96,85 @@ public class K8sClientService {
             throw new RuntimeException("Failed to restart pod", e);
         }
     }
+
+    /**
+     * Get logs for a specific pod through integration-proxy
+     */
+    public Map<String, Object> getPodLogs(String namespace, String podName, String container, Integer tailLines, Integer sinceSeconds) {
+        String keycloakJwt = keycloakService.getKeycloakToken();
+        
+        StringBuilder urlBuilder = new StringBuilder(systemOptions.getIntegrationProxyUrl());
+        urlBuilder.append(String.format("api/v1/k8s/pods/%s/%s/logs?", namespace, podName));
+        
+        if (tailLines != null) {
+            urlBuilder.append("tailLines=").append(tailLines).append("&");
+        }
+        if (container != null && !container.isEmpty()) {
+            urlBuilder.append("container=").append(container).append("&");
+        }
+        if (sinceSeconds != null) {
+            urlBuilder.append("sinceSeconds=").append(sinceSeconds).append("&");
+        }
+        
+        String url = urlBuilder.toString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(keycloakJwt);
+
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                requestEntity,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                return response.getBody();
+            } else {
+                log.error("Failed to get pod logs: {}", response.getStatusCode());
+                throw new RuntimeException("Failed to get pod logs: " + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            log.error("Error getting logs for pod {} in namespace {}", podName, namespace, e);
+            throw new RuntimeException("Failed to get pod logs", e);
+        }
+    }
+
+    /**
+     * Get list of containers in a pod through integration-proxy
+     */
+    public Map<String, Object> getPodContainers(String namespace, String podName) {
+        String keycloakJwt = keycloakService.getKeycloakToken();
+        String url = systemOptions.getIntegrationProxyUrl() + 
+                     String.format("api/v1/k8s/pods/%s/%s/containers", namespace, podName);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(keycloakJwt);
+
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                requestEntity,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                return response.getBody();
+            } else {
+                log.error("Failed to get pod containers: {}", response.getStatusCode());
+                throw new RuntimeException("Failed to get pod containers: " + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            log.error("Error getting containers for pod {} in namespace {}", podName, namespace, e);
+            throw new RuntimeException("Failed to get pod containers", e);
+        }
+    }
 }

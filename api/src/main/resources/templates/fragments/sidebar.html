@@ -82,10 +82,24 @@
                     <i class="fas fa-chart-line"></i> <span class="ms-1 d-none d-sm-inline">Telemetry</span>
                 </a>
             </li>
-            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
-                <a href="/sso/v1/automation/suggestions/list" class="nav-link px-0 align-middle">
-                    <i class="fas fa-magic"></i> <span class="ms-1 d-none d-sm-inline">Automation Suggestions</span>
+            <!-- System Management Submenu -->
+            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}" class="nav-item">
+                <a href="#systemSubmenu" data-bs-toggle="collapse" class="nav-link px-0 align-middle">
+                    <i class="fas fa-tools"></i> <span class="ms-1 d-none d-sm-inline">System Management</span>
+                    <i class="fas fa-caret-down ms-1"></i>
                 </a>
+                <ul class="collapse nav flex-column ms-3" id="systemSubmenu" data-bs-parent="#menu">
+                    <li>
+                        <a href="/sso/v1/automation/suggestions/list" class="nav-link px-0 align-middle">
+                            <i class="fas fa-magic"></i> <span class="ms-1 d-none d-sm-inline">Automation Suggestions</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/sso/v1/k8s/pods/logs" class="nav-link px-0 align-middle">
+                            <i class="fas fa-file-alt"></i> <span class="ms-1 d-none d-sm-inline">Pod Logs</span>
+                        </a>
+                    </li>
+                </ul>
             </li>
         </ul>
         <hr>

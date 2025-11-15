@@ -73,4 +73,63 @@ public class K8sController {
         
         return success ? ResponseEntity.ok(response) : ResponseEntity.internalServerError().body(response);
     }
+
+    /**
+     * Get logs for a specific pod
+     */
+    @GetMapping("/pods/{namespace}/{podName}/logs")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<Map<String, Object>> getPodLogs(
+            @PathVariable String namespace,
+            @PathVariable String podName,
+            @RequestParam(required = false) String container,
+            @RequestParam(required = false, defaultValue = "1000") Integer tailLines,
+            @RequestParam(required = false) Integer sinceSeconds) {
+        log.info("Logs requested for pod {} in namespace {}, container: {}", podName, namespace, container);
+        
+        try {
+            String logs = kubernetesService.getPodLogs(namespace, podName, container, tailLines, sinceSeconds);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("logs", logs);
+            response.put("podName", podName);
+            response.put("namespace", namespace);
+            response.put("container", container);
+            response.put("tailLines", tailLines);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error fetching logs for pod {} in namespace {}", podName, namespace, e);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to fetch logs: " + e.getMessage());
+            response.put("podName", podName);
+            response.put("namespace", namespace);
+            
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * Get list of containers in a pod
+     */
+    @GetMapping("/pods/{namespace}/{podName}/containers")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<Map<String, Object>> getPodContainers(
+            @PathVariable String namespace,
+            @PathVariable String podName) {
+        log.info("Container list requested for pod {} in namespace {}", podName, namespace);
+        
+        List<String> containers = kubernetesService.getPodContainers(namespace, podName);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("containers", containers);
+        response.put("podName", podName);
+        response.put("namespace", namespace);
+        
+        return ResponseEntity.ok(response);
+    }
 }
