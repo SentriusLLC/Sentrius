@@ -21,5 +21,5 @@ public class PodInfo {
     private String phase;
     private String image;
     private List<String> images;
-    private OffsetDateTime creationTimestamp;
+    private String creationTimestamp;
 }

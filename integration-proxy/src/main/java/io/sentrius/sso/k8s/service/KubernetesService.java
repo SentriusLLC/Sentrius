@@ -44,8 +44,8 @@ public class KubernetesService {
         // List pods from production namespace (tenant)
         allPods.addAll(listPodsInNamespace(tenant));
         
-        // List pods from dev namespace (tenant-dev)
-        allPods.addAll(listPodsInNamespace(tenant + "-dev"));
+        // List pods from dev namespace (tenant-agents)
+        allPods.addAll(listPodsInNamespace(tenant + "-agents"));
         
         return allPods;
     }
@@ -104,7 +104,11 @@ public class KubernetesService {
         if (pod.getMetadata() != null) {
             info.setName(pod.getMetadata().getName());
             info.setNamespace(pod.getMetadata().getNamespace());
-            info.setCreationTimestamp(pod.getMetadata().getCreationTimestamp());
+            if (pod.getMetadata().getCreationTimestamp() != null) {
+                info.setCreationTimestamp(pod.getMetadata().getCreationTimestamp().toString());
+            } else {
+                info.setCreationTimestamp("unknown");
+            }
         }
         
         if (pod.getStatus() != null) {

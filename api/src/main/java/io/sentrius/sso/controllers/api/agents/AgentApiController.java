@@ -6,6 +6,7 @@ import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -857,6 +858,60 @@ public class AgentApiController extends BaseController {
         return ResponseEntity.ok(dto);
     }
 
+    @GetMapping("/stats")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
+    public ResponseEntity<?> getAgentStats(HttpServletRequest request, HttpServletResponse response) throws ZtatException {
+        try {
+            var operatingUser = getOperatingUser(request, response);
+            if (null == operatingUser) {
+                log.warn("No operating user found");
+                return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("No operating user found");
+            }
+            
+            log.info("Received agent stats request from user: {}", operatingUser.getUsername());
+            var agents = agentService.getAllAgents(true);
+            
+            // Count agents by type and status
+            Map<String, Long> stats = new HashMap<>();
+            long runningCount = 0;
+            long pendingCount = 0;
+            long failedCount = 0;
+            
+            for (AgentDTO agent : agents) {
+                try {
+                    if (agent.getAgentName() != null && !agent.getAgentName().isEmpty()) {
+                        String podStatus = agentClientService.getAgentPodStatus(
+                            appConfig.getSentriusLauncherService(), 
+                            agent.getAgentName()
+                        );
+                        
+                        if (podStatus != null) {
+                            if (podStatus.equalsIgnoreCase("running")) {
+                                runningCount++;
+                            } else if (podStatus.equalsIgnoreCase("pending")) {
+                                pendingCount++;
+                            } else {
+                                failedCount++;
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {
+                    // Skip agents that fail to query
+                }
+            }
+            
+            stats.put("Running", runningCount);
+            stats.put("Pending", pendingCount);
+            stats.put("Stopped", failedCount);
+            
+            return ResponseEntity.ok(stats);
+            
+        } catch (Exception e) {
+            log.error("Error getting agent statistics", e);
+            return ResponseEntity.status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to get agent statistics"));
+        }
+    }
 
 
 }

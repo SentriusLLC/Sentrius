@@ -1,34 +1,117 @@
 <div class="modal fade" id="agentFormModal" tabindex="-1" aria-labelledby="agentFormModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form id="agentForm" method="POST" th:object="${agent}">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="agentFormModalLabel">Add Agent</h5>
+                    <h5 class="modal-title" id="agentFormModalLabel">Launch Agent or Service</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- User fields -->
+                    <!-- Service Type Selection -->
                     <div class="mb-3">
-                        <label for="agentName" class="form-label">Agent Name</label>
-                        <input type="text" class="form-control" th:field="*{agentName}" id="agentName"
-                               placeholder="Enter the agent name" required>
+                        <label class="form-label">Service Type</label>
+                        <div class="btn-group w-100" role="group" aria-label="Service Type">
+                            <input type="radio" class="btn-check" name="serviceType" id="serviceTypeAgent" value="agent" checked autocomplete="off">
+                            <label class="btn btn-outline-primary" for="serviceTypeAgent">
+                                <i class="fas fa-robot"></i> Agent
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="serviceType" id="serviceTypeCodingMCP" value="coding-mcp" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="serviceTypeCodingMCP">
+                                <i class="fas fa-code"></i> Coding MCP
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="serviceType" id="serviceTypeGitHubMCP" value="github-mcp" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="serviceTypeGitHubMCP">
+                                <i class="fab fa-github"></i> GitHub MCP
+                            </label>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="agentCallback" class="form-label">Agent Name</label>
-                        <input type="text" class="form-control" th:field="*{agentCallbackUrl}" id="agentCallbackUrl"
-                               placeholder="Enter the agent callback URL" required>
+
+                    <!-- Agent Configuration -->
+                    <div id="agentConfig" class="service-config">
+                        <h6 class="mb-3">Agent Configuration</h6>
+                        <div class="mb-3">
+                            <label for="agentName" class="form-label">Agent Name</label>
+                            <input type="text" class="form-control" th:field="*{agentName}" id="agentName"
+                                   placeholder="Enter the agent name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="agentCallbackUrl" class="form-label">Agent Callback URL</label>
+                            <input type="text" class="form-control" th:field="*{agentCallbackUrl}" id="agentCallbackUrl"
+                                   placeholder="Enter the agent callback URL" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="agentType" class="form-label">Agent Type</label>
+                            <select name="agentType" class="form-select" th:field="*{agentType}" id="agentType">
+                                <option th:each="u: ${agentTypeList}" th:value="${u}"
+                                        th:text="${u}"></option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="agentEnabled" class="form-label">Status</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="agentEnabled" checked>
+                                <label class="form-check-label" for="agentEnabled">
+                                    Enabled
+                                </label>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="agentType" class="form-label">Access Type</label>
-                        <select name="agentType" class="form-select" th:field="*{agentType}" id="agentType">
-                            <option th:each="u: ${agentTypeList}" th:value="${u}"
-                                    th:text="${u}"></option>
-                        </select>
+
+                    <!-- Coding MCP Configuration -->
+                    <div id="codingMCPConfig" class="service-config" style="display: none;">
+                        <h6 class="mb-3">Coding MCP Server Configuration</h6>
+                        <div class="mb-3">
+                            <label for="codingInstanceId" class="form-label">Instance ID</label>
+                            <input type="text" class="form-control" id="codingInstanceId"
+                                   placeholder="Enter instance ID (e.g., 'default', 'dev-1')" value="default">
+                            <small class="form-text text-muted">Unique identifier for this MCP server instance</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="codingGitHubTokenId" class="form-label">GitHub Token ID (Optional)</label>
+                            <input type="text" class="form-control" id="codingGitHubTokenId"
+                                   placeholder="Enter GitHub token ID if needed">
+                            <small class="form-text text-muted">Required only if the coding agent needs GitHub access</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Features</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="codingEnableAutoFix" checked>
+                                <label class="form-check-label" for="codingEnableAutoFix">
+                                    Enable Auto-Fix
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GitHub MCP Configuration -->
+                    <div id="githubMCPConfig" class="service-config" style="display: none;">
+                        <h6 class="mb-3">GitHub MCP Server Configuration</h6>
+                        <div class="mb-3">
+                            <label for="githubTokenId" class="form-label">GitHub Token ID</label>
+                            <select class="form-select" id="githubTokenId">
+                                <option value="">Select GitHub token...</option>
+                                <!-- Options will be populated dynamically -->
+                            </select>
+                            <small class="form-text text-muted">Select a GitHub integration token</small>
+                        </div>
+                        <div class="mb-3">
+                            <a href="/sso/v1/integrations/github" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                <i class="fas fa-plus"></i> Add New GitHub Token
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3" id="launchInfo" style="display: none;">
+                        <i class="fas fa-info-circle"></i> <span id="launchInfoText"></span>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Save changes</button>
+                    <button type="button" class="btn btn-primary" id="launchServiceBtn">
+                        <i class="fas fa-rocket"></i> Launch Service
+                    </button>
                 </div>
 
             </form>
@@ -36,3 +119,167 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const serviceTypeRadios = document.querySelectorAll('input[name="serviceType"]');
+    const agentConfig = document.getElementById('agentConfig');
+    const codingMCPConfig = document.getElementById('codingMCPConfig');
+    const githubMCPConfig = document.getElementById('githubMCPConfig');
+    const launchBtn = document.getElementById('launchServiceBtn');
+    
+    serviceTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            agentConfig.style.display = 'none';
+            codingMCPConfig.style.display = 'none';
+            githubMCPConfig.style.display = 'none';
+            
+            if (this.value === 'agent') {
+                agentConfig.style.display = 'block';
+            } else if (this.value === 'coding-mcp') {
+                codingMCPConfig.style.display = 'block';
+            } else if (this.value === 'github-mcp') {
+                githubMCPConfig.style.display = 'block';
+                loadGitHubTokens();
+            }
+        });
+    });
+    
+    launchBtn.addEventListener('click', function() {
+        const selectedType = document.querySelector('input[name="serviceType"]:checked').value;
+        
+        if (selectedType === 'agent') {
+            // Submit the original agent form
+            document.getElementById('agentForm').submit();
+        } else if (selectedType === 'coding-mcp') {
+            launchCodingMCP();
+        } else if (selectedType === 'github-mcp') {
+            launchGitHubMCP();
+        }
+    });
+    
+    function loadGitHubTokens() {
+        const select = document.getElementById('githubTokenId');
+        select.innerHTML = '<option value="">Loading tokens...</option>';
+        
+        fetch('/api/v1/integrations/github/list')
+            .then(response => response.json())
+            .then(tokens => {
+                if (tokens && tokens.length > 0) {
+                    select.innerHTML = '<option value="">Select GitHub token...</option>';
+                    tokens.forEach(token => {
+                        const option = document.createElement('option');
+                        option.value = token.id;
+                        option.textContent = token.name || `Token ${token.id}`;
+                        select.appendChild(option);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">No tokens available - Please add one</option>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading GitHub tokens:', error);
+                select.innerHTML = '<option value="">Error loading tokens</option>';
+            });
+    }
+    
+    function launchCodingMCP() {
+        const instanceId = document.getElementById('codingInstanceId').value;
+        const githubTokenId = document.getElementById('codingGitHubTokenId').value;
+        
+        if (!instanceId) {
+            alert('Please enter an instance ID');
+            return;
+        }
+        
+        const launchInfo = document.getElementById('launchInfo');
+        const launchInfoText = document.getElementById('launchInfoText');
+        launchInfo.style.display = 'block';
+        launchInfoText.textContent = 'Launching Coding MCP server...';
+        
+        const params = new URLSearchParams({ instanceId });
+        if (githubTokenId) {
+            params.append('githubTokenId', githubTokenId);
+        }
+        
+        const csrfToken = document.getElementById('csrf-token') ? document.getElementById('csrf-token').value : '';
+        
+        fetch(`/api/v1/coding/mcp/launch?${params}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                launchInfoText.textContent = 'Coding MCP server launched successfully!';
+                setTimeout(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('agentFormModal')).hide();
+                    if (typeof loadMCPServers === 'function') loadMCPServers();
+                }, 2000);
+            } else {
+                launchInfoText.textContent = 'Error: ' + data.message;
+            }
+        })
+        .catch(error => {
+            launchInfoText.textContent = 'Error launching server: ' + error;
+        });
+    }
+    
+    function launchGitHubMCP() {
+        const tokenId = document.getElementById('githubTokenId').value;
+        
+        if (!tokenId) {
+            alert('Please select a GitHub token');
+            return;
+        }
+        
+        const launchInfo = document.getElementById('launchInfo');
+        const launchInfoText = document.getElementById('launchInfoText');
+        launchInfo.style.display = 'block';
+        launchInfoText.textContent = 'Launching GitHub MCP server...';
+        
+        const csrfToken = document.getElementById('csrf-token') ? document.getElementById('csrf-token').value : '';
+        
+        fetch(`/api/v1/github/mcp/launch?tokenId=${encodeURIComponent(tokenId)}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                launchInfoText.textContent = 'GitHub MCP server launched successfully!';
+                setTimeout(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('agentFormModal')).hide();
+                    if (typeof loadMCPServers === 'function') loadMCPServers();
+                }, 2000);
+            } else {
+                launchInfoText.textContent = 'Error: ' + data.message;
+            }
+        })
+        .catch(error => {
+            launchInfoText.textContent = 'Error launching server: ' + error;
+        });
+    }
+    
+    function getAuthToken() {
+        return sessionStorage.getItem('authToken') || '';
+    }
+});
+</script>
+
+<style>
+.service-config {
+    padding: 15px;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    margin-top: 15px;
+}
+
+.dark .service-config {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+</style>

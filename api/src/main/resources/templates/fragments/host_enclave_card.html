@@ -1,36 +1,61 @@
 <div id="host-enclaves" style="display: none;">
-    <a href="/sso/v1/enclaves/list">
-        <table style="width: 100%; border-collapse: collapse; text-align: center; margin: 10px 0;">
-            <!-- Row for Image and Title -->
-            <tr>
-                <td style="border: none; padding: 10px; background-color: #FFFFFF;">
-                    <img src="/images/hosts_medium.png" style="width: 60px; height: auto;">
-                </td>
-                <td style="border: none; padding: 10px;">
-                    <a href="/sso/v1/enclaves/list"
-                       style="font-weight: bold; font-size: 1.2em; color: #FFFFFF; text-decoration: none;">Host
-                        Enclaves</a>
-                </td>
-            </tr>
-            <!-- Row for Stats -->
-            <tr>
-                <td colspan="2" style="border-top: 1px solid #ccc; padding: 10px; background-color: #f9f9f9;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tr>
-                            <td style="padding: 5px;">Create Enclave:</td>
-                            <td style="padding: 5px; font-weight: bold;"><a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#hostFormModal">Add Host Details</a></td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 5px;">Online Systems:</td>
-                            <td style="padding: 5px; font-weight: bold;">18</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 5px;">Offline Systems:</td>
-                            <td style="padding: 5px; font-weight: bold;">7</td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
-    </a>
+    <div style="width: 100%;">
+        <div style="border: 1px solid #ccc; border-radius: 8px; overflow: hidden; background-color: #2d2d2d;">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%); padding: 15px; border-bottom: 1px solid #404040;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <img src="/images/hosts_medium.png" style="width: 50px; height: auto;">
+                    <h4 style="margin: 0; color: #FFFFFF; font-size: 1.3em;">Host Enclaves</h4>
+                </div>
+            </div>
+
+            <!-- Content Sections -->
+            <div style="padding: 15px;">
+                <!-- Agents Section -->
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h5 style="margin: 0; color: #FFFFFF; font-size: 1.1em;">
+                            <i class="fas fa-robot" style="margin-right: 8px; color: #8884d8;"></i>Agents
+                        </h5>
+                        <span id="agent-count-badge" class="badge bg-primary">0</span>
+                    </div>
+                    <div id="agent-list" style="max-height: 150px; overflow-y: auto; background-color: #1a1a1a; padding: 10px; border-radius: 4px;">
+                        <p style="color: #888; margin: 0; text-align: center;">Loading agents...</p>
+                    </div>
+                </div>
+
+                <!-- NPEs Section -->
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h5 style="margin: 0; color: #FFFFFF; font-size: 1.1em;">
+                            <i class="fas fa-network-wired" style="margin-right: 8px; color: #82ca9d;"></i>NPEs
+                        </h5>
+                        <span id="npe-count-badge" class="badge bg-success">0</span>
+                    </div>
+                    <div id="npe-list" style="max-height: 100px; overflow-y: auto; background-color: #1a1a1a; padding: 10px; border-radius: 4px;">
+                        <p style="color: #888; margin: 0; text-align: center;">No NPEs available</p>
+                    </div>
+                </div>
+
+                <!-- MCP Servers Section -->
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h5 style="margin: 0; color: #FFFFFF; font-size: 1.1em;">
+                            <i class="fas fa-server" style="margin-right: 8px; color: #ffc658;"></i>MCP Servers
+                        </h5>
+                        <span id="mcp-count-badge" class="badge bg-warning">0</span>
+                    </div>
+                    <div id="mcp-list" style="max-height: 150px; overflow-y: auto; background-color: #1a1a1a; padding: 10px; border-radius: 4px;">
+                        <p style="color: #888; margin: 0; text-align: center;">Loading MCP servers...</p>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+                    <a href="/sso/v1/enclaves/list" class="btn btn-sm btn-outline-primary">View All Enclaves</a>
+                    <a href="#" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#hostFormModal">Add Host</a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

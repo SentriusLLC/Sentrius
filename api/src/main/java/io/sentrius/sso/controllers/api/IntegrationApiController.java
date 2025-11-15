@@ -21,6 +21,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -135,6 +136,19 @@ public class IntegrationApiController extends BaseController {
         integrationService.deleteById(Long.parseLong(id));
 
         return ResponseEntity.ok("OK");
+    }
+
+    @GetMapping("/github/list")
+    @Endpoint(description = "List all GitHub integration tokens")
+    public ResponseEntity<?> listGitHubIntegrations(HttpServletRequest request,
+                                                    HttpServletResponse response) {
+        try {
+            var tokens = integrationService.findByConnectionType("github");
+            return ResponseEntity.ok(tokens);
+        } catch (Exception e) {
+            log.error("Error listing GitHub integrations", e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to list GitHub integrations"));
+        }
     }
 
 }

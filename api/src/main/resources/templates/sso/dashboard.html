@@ -45,61 +45,68 @@
 
              */
         });
-        document.addEventListener("DOMContentLoaded", function () {
+        document.addEventListener("DOMContentLoaded", async function () {
+            const ctx = document.getElementById("agentDeploymentsChart").getContext("2d");
 
-            const ctx = document.getElementById("mostUsedCommandsChart").getContext("2d");
+            try {
+                // Fetch agent deployment statistics
+                const response = await fetch("/api/v1/agent/stats");
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const stats = await response.json();
 
-            // Sample data for the chart
-            const data = [
-                { command: "ls", count: 50 },
-                { command: "cd", count: 40 },
-                { command: "sudo", count: 30 },
-                { command: "cat", count: 20 },
-                { command: "vim", count: 10 },
-            ];
+                // Extract labels and values for the chart
+                const labels = Object.keys(stats);
+                const values = Object.values(stats);
 
-            // Extract labels and values for the chart
-            const labels = data.map((item) => item.command);
-            const values = data.map((item) => item.count);
-
-            new Chart(ctx, {
-                type: "bar",
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: "Usage Count",
-                            data: values,
-                            backgroundColor: "#8884d8",
-                            borderRadius: 4,
-                        },
-                    ],
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            display: false,
-                        },
-                    },
-                    scales: {
-                        x: {
-                            ticks: {
-                                font: {
-                                    size: 12,
-                                },
+                new Chart(ctx, {
+                    type: "doughnut",
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: "Agent Count",
+                                data: values,
+                                backgroundColor: ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#8dd1e1"],
+                                borderRadius: 4,
                             },
-                        },
-                        y: {
-                            ticks: {
-                                font: {
-                                    size: 12,
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: "bottom",
+                                labels: {
+                                    font: {
+                                        size: 12,
+                                    },
                                 },
                             },
                         },
                     },
-                },
-            });
+                });
+            } catch (error) {
+                console.error("Failed to fetch agent deployment stats:", error);
+                // Fallback to empty chart if API fails
+                new Chart(ctx, {
+                    type: "doughnut",
+                    data: {
+                        labels: ["No Data"],
+                        datasets: [{
+                            data: [1],
+                            backgroundColor: ["#cccccc"]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
         });
         document.addEventListener('DOMContentLoaded', () => {
             const toggleBtn = document.getElementById('agent-toggle-btn');
@@ -681,16 +688,16 @@
                         </div>
                     </div>
                     <hr class="my-4">
-                    <h3>Host Stats</h3>
+                    <h3>Quick View</h3>
                     <div id="suggestion-section" class="d-flex flex-column gap-4">
                         <!-- First Row -->
                         <div class="d-flex justify-content-between gap-4 flex-wrap">
                             <div class="card small-card">
                                 <div class="card-header">
-                                    <h5 class="card-title">Most Used Commands</h5>
+                                    <h5 class="card-title">Agent Deployments</h5>
                                 </div>
                                 <div class="card-content">
-                                    <canvas id="mostUsedCommandsChart"></canvas>
+                                    <canvas id="agentDeploymentsChart"></canvas>
                                 </div>
                             </div>
                             <div class="card small-card">
@@ -753,6 +760,7 @@
 <script type="module" th:src="@{/js/add_agent.js}" defer></script>
 <script type="module" th:src="@{/js/add_group.js}" defer></script>
 <script type="module" th:src="@{/js/dashboard-agents.js}" defer></script>
+<script type="module" th:src="@{/js/enclave-data.js}" defer></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {

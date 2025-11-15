@@ -14,6 +14,7 @@ spec:
       labels:
         app: integrationproxy
     spec:
+      serviceAccountName: {{ .Release.Name }}-integrationproxy
       initContainers:
         - name: wait-for-postgres
           image: busybox
