@@ -68,6 +68,16 @@ public class GuacamoleTunnelWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         log.info("WebSocket connection established from: {}", session.getRemoteAddress());
         
+        // Check if system is in lockdown mode
+        if (systemOptions.getLockdownEnabled()) {
+            log.warn("RDP access denied: system is in lockdown mode");
+            String errorMsg = "RDP access is disabled by system lockdown";
+            String errorInstruction = "5.error," + errorMsg.length() + "." + errorMsg + ",1.0;";
+            session.sendMessage(new TextMessage(errorInstruction));
+            session.close();
+            return;
+        }
+        
         // Extract JWT token from query parameters
         String jwtToken = getTokenFromSession(session);
         if (jwtToken == null) {

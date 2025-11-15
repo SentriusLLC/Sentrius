@@ -104,6 +104,13 @@ public class OpenAIProxyController extends BaseController {
                                   HttpServletRequest request, HttpServletResponse response,
                                   @RequestBody String rawBody) throws JsonProcessingException, HttpException {
 
+        // Check if system is in lockdown mode
+        if (systemOptions.getLockdownEnabled()) {
+            log.warn("Integration proxy access denied: system is in lockdown mode");
+            return ResponseEntity.status(HttpStatus.SC_FORBIDDEN)
+                .body("{\"error\": \"Integration proxy access is disabled by system lockdown\"}");
+        }
+
         String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
 
 
@@ -247,6 +254,13 @@ public class OpenAIProxyController extends BaseController {
                                   HttpServletRequest request, HttpServletResponse response,
                                   @RequestBody String rawBody) throws JsonProcessingException, HttpException {
 
+        // Check if system is in lockdown mode
+        if (systemOptions.getLockdownEnabled()) {
+            log.warn("Integration proxy access denied: system is in lockdown mode");
+            return ResponseEntity.status(HttpStatus.SC_FORBIDDEN)
+                .body("{\"error\": \"Integration proxy access is disabled by system lockdown\"}");
+        }
+
         String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
 
 
@@ -338,6 +352,13 @@ public class OpenAIProxyController extends BaseController {
                                           @RequestHeader("X-Communication-Id") String communicationId,
                                           HttpServletRequest request, HttpServletResponse response,
                                           @RequestBody String rawBody) throws JsonProcessingException, HttpException {
+
+        // Check if system is in lockdown mode
+        if (systemOptions.getLockdownEnabled()) {
+            log.warn("Integration proxy access denied: system is in lockdown mode");
+            return ResponseEntity.status(HttpStatus.SC_FORBIDDEN)
+                .body("{\"error\": \"Integration proxy access is disabled by system lockdown\"}");
+        }
 
         String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
 

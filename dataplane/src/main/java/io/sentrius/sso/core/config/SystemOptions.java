@@ -316,4 +316,21 @@ public class SystemOptions {
 
     return fields;
   }
+
+  /**
+   * Custom getter for lockdownEnabled that fetches the current value from the database
+   * instead of using the cached field value. This ensures all services see the latest
+   * lockdown state without requiring a restart.
+   * 
+   * @return the current lockdown enabled state from the database
+   */
+  public Boolean getLockdownEnabled() {
+    if (dynamicPropertiesService == null) {
+      // During initialization, dynamicPropertiesService might not be injected yet
+      return lockdownEnabled;
+    }
+    String value = dynamicPropertiesService.getProperty("lockdownEnabled", 
+        lockdownEnabled != null ? lockdownEnabled.toString() : "false");
+    return Boolean.parseBoolean(value);
+  }
 }
