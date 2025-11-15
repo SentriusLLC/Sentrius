@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Trust Score Details</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #121212; color: #eaeaea; }
+        .container-fluid { margin-top: 20px; }
+        .card { background-color: #1e1e1e; border: 1px solid #444; margin-bottom: 20px; }
+        .card-header { background-color: #2c2c2c; font-weight: 600; }
+        .chart-container { position: relative; height: 400px; padding: 20px; }
+        .sidebar { min-height: 100vh; position: sticky; top: 0; }
+        .metric-card { text-align: center; padding: 15px; }
+        .metric-value { font-size: 2rem; font-weight: bold; }
+        .metric-label { font-size: 0.9rem; color: #888; text-transform: uppercase; }
+        .score-badge { font-size: 2rem; font-weight: bold; padding: 15px 30px; border-radius: 10px; }
+        .score-success { background-color: #28a745; color: white; }
+        .score-marginal { background-color: #ffc107; color: #212529; }
+        .score-failure { background-color: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        
+        <div class="col py-3">
+            <div class="container-fluid">
+                <div class="mb-3">
+                    <a href="/sso/trust-scores" class="btn btn-secondary btn-sm">← Back to Trust Scores</a>
+                </div>
+                
+                <h1 class="mb-4">Trust Score Details</h1>
+                <h3 class="text-muted mb-4" id="agentName">Loading...</h3>
+                
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Current Trust Score</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="metric-card">
+                                            <div id="currentScoreBadge" class="score-badge score-marginal">-</div>
+                                            <div class="metric-label mt-2">Overall Score</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-9">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="metric-card">
+                                                    <div class="metric-value" id="identityScore">-</div>
+                                                    <div class="metric-label">Identity</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="metric-card">
+                                                    <div class="metric-value" id="provenanceScore">-</div>
+                                                    <div class="metric-label">Provenance</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="metric-card">
+                                                    <div class="metric-value" id="runtimeScore">-</div>
+                                                    <div class="metric-label">Runtime</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="metric-card">
+                                                    <div class="metric-value" id="behaviorScore">-</div>
+                                                    <div class="metric-label">Behavior</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-4">
+                                                <small class="text-muted">Prior Runs:</small>
+                                                <strong id="priorRuns">-</strong>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <small class="text-muted">Incidents:</small>
+                                                <strong id="incidentCount">-</strong>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <small class="text-muted">Enclave Verified:</small>
+                                                <strong id="enclaveVerified">-</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Trust Score History</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="trustScoreChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Score Component Breakdown</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="componentChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Evaluation Notes</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="evaluationNotes" class="text-muted">Loading...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+const agentId = /*[[${agentId}]]*/ '';
+
+let trustScoreChart = null;
+let componentChart = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadAgentTrustScore();
+    
+    // Refresh every 30 seconds
+    setInterval(loadAgentTrustScore, 30000);
+});
+
+async function loadAgentTrustScore() {
+    try {
+        const [latestResponse, historyResponse] = await Promise.all([
+            fetch(`/sso/api/v1/trust-scores/agent/${encodeURIComponent(agentId)}/latest`),
+            fetch(`/sso/api/v1/trust-scores/agent/${encodeURIComponent(agentId)}`)
+        ]);
+        
+        if (!latestResponse.ok) {
+            throw new Error('Failed to fetch latest trust score');
+        }
+        
+        const latestScore = await latestResponse.json();
+        const history = historyResponse.ok ? await historyResponse.json() : [];
+        
+        displayCurrentScore(latestScore);
+        displayHistory(history);
+    } catch (error) {
+        console.error('Error loading agent trust score:', error);
+        document.getElementById('currentScoreBadge').textContent = 'Error';
+        document.getElementById('evaluationNotes').innerHTML = '<p class="text-danger">Error loading trust score data</p>';
+    }
+}
+
+function displayCurrentScore(score) {
+    document.getElementById('agentName').textContent = score.agentName || agentId;
+    
+    const badge = document.getElementById('currentScoreBadge');
+    badge.textContent = score.trustScore;
+    badge.className = 'score-badge ' + getScoreClass(score.evaluationResult);
+    
+    document.getElementById('identityScore').textContent = Math.round(score.identityScore || 0);
+    document.getElementById('provenanceScore').textContent = Math.round(score.provenanceScore || 0);
+    document.getElementById('runtimeScore').textContent = Math.round(score.runtimeScore || 0);
+    document.getElementById('behaviorScore').textContent = Math.round(score.behaviorScore || 0);
+    
+    document.getElementById('priorRuns').textContent = score.priorRuns || 0;
+    document.getElementById('incidentCount').textContent = score.incidentCount || 0;
+    document.getElementById('enclaveVerified').textContent = score.enclaveVerified ? 'Yes' : 'No';
+    
+    document.getElementById('evaluationNotes').textContent = score.evaluationNotes || 'No evaluation notes available';
+}
+
+function displayHistory(history) {
+    if (history.length === 0) {
+        return;
+    }
+    
+    history.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    
+    const last30 = history.slice(-30);
+    
+    const labels = last30.map(s => new Date(s.timestamp).toLocaleString());
+    const trustScores = last30.map(s => s.trustScore);
+    const identityScores = last30.map(s => s.identityScore || 0);
+    const provenanceScores = last30.map(s => s.provenanceScore || 0);
+    const runtimeScores = last30.map(s => s.runtimeScore || 0);
+    const behaviorScores = last30.map(s => s.behaviorScore || 0);
+    
+    if (trustScoreChart) {
+        trustScoreChart.destroy();
+    }
+    
+    const ctx1 = document.getElementById('trustScoreChart').getContext('2d');
+    trustScoreChart = new Chart(ctx1, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Trust Score',
+                data: trustScores,
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: '#eaeaea' }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: { color: '#eaeaea' },
+                    grid: { color: '#444' }
+                },
+                x: {
+                    ticks: { 
+                        color: '#eaeaea',
+                        maxRotation: 45,
+                        minRotation: 45
+                    },
+                    grid: { color: '#444' }
+                }
+            }
+        }
+    });
+    
+    if (componentChart) {
+        componentChart.destroy();
+    }
+    
+    const ctx2 = document.getElementById('componentChart').getContext('2d');
+    componentChart = new Chart(ctx2, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Identity',
+                    data: identityScores,
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4
+                },
+                {
+                    label: 'Provenance',
+                    data: provenanceScores,
+                    borderColor: '#17a2b8',
+                    backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                    tension: 0.4
+                },
+                {
+                    label: 'Runtime',
+                    data: runtimeScores,
+                    borderColor: '#ffc107',
+                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                    tension: 0.4
+                },
+                {
+                    label: 'Behavior',
+                    data: behaviorScores,
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: '#eaeaea' }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: { color: '#eaeaea' },
+                    grid: { color: '#444' }
+                },
+                x: {
+                    ticks: { 
+                        color: '#eaeaea',
+                        maxRotation: 45,
+                        minRotation: 45
+                    },
+                    grid: { color: '#444' }
+                }
+            }
+        }
+    });
+}
+
+function getScoreClass(result) {
+    switch(result) {
+        case 'SUCCESS': return 'score-success';
+        case 'MARGINAL': return 'score-marginal';
+        case 'FAILURE': return 'score-failure';
+        default: return 'score-marginal';
+    }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Trust Scores</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #121212; color: #eaeaea; }
+        .container-fluid { margin-top: 20px; }
+        .card { background-color: #1e1e1e; border: 1px solid #444; margin-bottom: 20px; }
+        .card-header { background-color: #2c2c2c; font-weight: 600; }
+        .agent-card { cursor: pointer; transition: transform 0.2s; }
+        .agent-card:hover { transform: translateY(-5px); box-shadow: 0 4px 12px rgba(0,123,255,0.3); }
+        .score-badge { font-size: 1.5rem; font-weight: bold; padding: 10px 20px; border-radius: 8px; }
+        .score-success { background-color: #28a745; color: white; }
+        .score-marginal { background-color: #ffc107; color: #212529; }
+        .score-failure { background-color: #dc3545; color: white; }
+        .chart-container { position: relative; height: 300px; }
+        .sidebar { min-height: 100vh; position: sticky; top: 0; }
+        .metric-card { text-align: center; padding: 15px; }
+        .metric-value { font-size: 2rem; font-weight: bold; }
+        .metric-label { font-size: 0.9rem; color: #888; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        
+        <div class="col py-3">
+            <div class="container-fluid">
+                <h1 class="mb-4">Trust Scores - Agents & Users</h1>
+                
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Trust Score Overview</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row" id="overviewMetrics">
+                                    <div class="col-md-3">
+                                        <div class="metric-card">
+                                            <div class="metric-value" id="totalAgents">-</div>
+                                            <div class="metric-label">Total Agents</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="metric-card">
+                                            <div class="metric-value text-success" id="successfulAgents">-</div>
+                                            <div class="metric-label">High Trust</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="metric-card">
+                                            <div class="metric-value text-warning" id="marginalAgents">-</div>
+                                            <div class="metric-label">Marginal Trust</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="metric-card">
+                                            <div class="metric-value text-danger" id="failedAgents">-</div>
+                                            <div class="metric-label">Low Trust</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Trust Scores - Agents & Users (Last 24 Hours)</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="agentsList" class="row">
+                                    <div class="col-12 text-center">
+                                        <div class="spinner-border" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadTrustScores();
+    
+    // Refresh every 30 seconds
+    setInterval(loadTrustScores, 30000);
+});
+
+async function loadTrustScores() {
+    try {
+        const response = await fetch('/sso/api/v1/trust-scores/agents');
+        if (!response.ok) throw new Error('Failed to fetch agents');
+        
+        const agentIds = await response.json();
+        
+        if (agentIds.length === 0) {
+            document.getElementById('agentsList').innerHTML = 
+                '<div class="col-12 text-center"><p class="text-muted">No agents with trust scores found</p></div>';
+            return;
+        }
+        
+        const scoresPromises = agentIds.map(agentId => 
+            fetch(`/sso/api/v1/trust-scores/agent/${encodeURIComponent(agentId)}/latest`)
+                .then(r => r.ok ? r.json() : null)
+        );
+        
+        const scores = await Promise.all(scoresPromises);
+        const validScores = scores.filter(s => s !== null);
+        
+        displayAgents(validScores);
+        updateOverviewMetrics(validScores);
+    } catch (error) {
+        console.error('Error loading trust scores:', error);
+        document.getElementById('agentsList').innerHTML = 
+            '<div class="col-12 text-center"><p class="text-danger">Error loading trust scores</p></div>';
+    }
+}
+
+function displayAgents(scores) {
+    const container = document.getElementById('agentsList');
+    if (scores.length === 0) {
+        container.innerHTML = '<div class="col-12 text-center"><p class="text-muted">No trust scores available</p></div>';
+        return;
+    }
+    
+    scores.sort((a, b) => b.trustScore - a.trustScore);
+    
+    const html = scores.map(score => {
+        const scoreClass = getScoreClass(score.evaluationResult);
+        const scoreLabel = getScoreLabel(score.evaluationResult);
+        
+        return `
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card agent-card" onclick="viewAgentDetails('${score.agentId}')">
+                    <div class="card-body">
+                        <h5 class="card-title">${score.agentName || score.agentId}</h5>
+                        <div class="mb-3">
+                            <span class="score-badge ${scoreClass}">${score.trustScore}</span>
+                            <span class="ms-2 text-muted">${scoreLabel}</span>
+                        </div>
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <small class="text-muted">Identity</small>
+                                <div>${Math.round(score.identityScore || 0)}</div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Behavior</small>
+                                <div>${Math.round(score.behaviorScore || 0)}</div>
+                            </div>
+                        </div>
+                        <div class="row text-center mt-2">
+                            <div class="col-6">
+                                <small class="text-muted">Runtime</small>
+                                <div>${Math.round(score.runtimeScore || 0)}</div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Provenance</small>
+                                <div>${Math.round(score.provenanceScore || 0)}</div>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">Last evaluated: ${formatTimestamp(score.timestamp)}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = html;
+}
+
+function updateOverviewMetrics(scores) {
+    const total = scores.length;
+    const success = scores.filter(s => s.evaluationResult === 'SUCCESS').length;
+    const marginal = scores.filter(s => s.evaluationResult === 'MARGINAL').length;
+    const failure = scores.filter(s => s.evaluationResult === 'FAILURE').length;
+    
+    document.getElementById('totalAgents').textContent = total;
+    document.getElementById('successfulAgents').textContent = success;
+    document.getElementById('marginalAgents').textContent = marginal;
+    document.getElementById('failedAgents').textContent = failure;
+}
+
+function getScoreClass(result) {
+    switch(result) {
+        case 'SUCCESS': return 'score-success';
+        case 'MARGINAL': return 'score-marginal';
+        case 'FAILURE': return 'score-failure';
+        default: return 'score-marginal';
+    }
+}
+
+function getScoreLabel(result) {
+    switch(result) {
+        case 'SUCCESS': return 'Trusted';
+        case 'MARGINAL': return 'Marginal';
+        case 'FAILURE': return 'Low Trust';
+        default: return 'Unknown';
+    }
+}
+
+function formatTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 60) return `${diffMins} minutes ago`;
+    if (diffMins < 1440) return `${Math.floor(diffMins / 60)} hours ago`;
+    return date.toLocaleString();
+}
+
+function viewAgentDetails(agentId) {
+    window.location.href = `/sso/trust-scores/agent/${encodeURIComponent(agentId)}`;
+}
+</script>
+</body>
+</html>

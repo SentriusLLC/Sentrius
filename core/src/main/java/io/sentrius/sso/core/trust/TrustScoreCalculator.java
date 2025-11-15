@@ -2,7 +2,7 @@ package io.sentrius.sso.core.trust;
 
 import java.util.Map;
 
-class TrustScoreCalculator {
+public class TrustScoreCalculator {
     public int calculate(AgentContext ctx, ATPLPolicy policy) {
         Map<String, Double> weights = policy.getTrustScore().getWeightings();
         double score = 0.0;
