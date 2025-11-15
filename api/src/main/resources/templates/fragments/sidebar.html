@@ -8,93 +8,113 @@
             </a></span>
         </a>
         <ul class="nav nav-pills flex-column mb-sm-auto mb-0 align-items-center align-items-sm-start" id="menu">
+            <!-- Dashboard - Always visible at top -->
             <li class="nav-item">
                 <a href="/sso/v1/dashboard" class="nav-link align-middle px-0">
                     <i class="fas fa-home"></i> <span class="ms-1 d-none d-sm-inline">Dashboard</span>
                 </a>
             </li>
-            <!--
-            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_SYSTEMS')}">
-                <a href="/sso/v1/enclaves/hosts/list" class="nav-link px-0 align-middle">
-                    <i class="fas fa-server"></i> <span class="ms-1 d-none d-sm-inline">SSH Servers</span>
-                </a>
-            </li>-->
-            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
-                <a href="/sso/v1/system/settings" class="nav-link px-0 align-middle">
-                    <i class="fas fa-cog"></i> <span class="ms-1 d-none d-sm-inline">Settings</span>
-                </a>
-            </li>
-            <li>
-                <a href="/sso/v1/zerotrust/rules/list" class="nav-link px-0 align-middle">
-                    <i class="fas fa-shield-alt"></i> <span class="ms-1 d-none d-sm-inline">Zero Trust Rules</span>
-                </a>
-            </li>
-            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_SYSTEMS')}">
-                <a href="/sso/v1/enclaves/hosts/list" class="nav-link px-0 align-middle">
-                    <i class="fas fa-network-wired"></i> <span class="ms-1 d-none d-sm-inline">Host Enclaves</span>
-                </a>
-            </li>
-            <li >
+            
+            <!-- Notifications - Always visible -->
+            <li class="nav-item">
                 <a href="/sso/v1/notifications" class="nav-link px-0 align-middle">
-                    <i class="fa-regular fa-bell"></i> <span class="ms-1 d-none d-sm-inline">System
-                    Notifications</span>
+                    <i class="fa-regular fa-bell"></i> <span class="ms-1 d-none d-sm-inline">Notifications</span>
                 </a>
             </li>
-            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
-                <a href="/sso/v1/integrations" class="nav-link px-0 align-middle">
-                    <i class="fa-solid fa-ticket"></i> <span class="ms-1 d-none d-sm-inline">System Integrations</span>
+            
+            <!-- Infrastructure Section -->
+            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_SYSTEMS')}" class="nav-item mt-2">
+                <a href="#infrastructureSubmenu" data-bs-toggle="collapse" class="nav-link px-0 align-middle">
+                    <i class="fas fa-network-wired"></i> <span class="ms-1 d-none d-sm-inline">Infrastructure</span>
+                    <i class="fas fa-caret-down ms-1 d-none d-sm-inline"></i>
                 </a>
-            </li>
-            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_USERS')}">
-                <a href="/sso/v1/users/list" class="nav-link px-0 align-middle">
-                    <i class="fa-solid fa-user"></i> <span class="ms-1 d-none d-sm-inline">Manage Agent/Users</span>
-                </a>
-            </li>
-            <!--
-            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
-                <a href="/sso/v1/agent/list" class="nav-link px-0 align-middle">
-                    <i class="fas fa-robot"></i> <span class="ms-1 d-none d-sm-inline">Agents</span>
-                </a>
-            </li>
-            -->
-            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
-                <a href="/sso/v1/agent/memory/search" class="nav-link px-0 align-middle">
-                    <i class="fas fa-search"></i> <span class="ms-1 d-none d-sm-inline">Agent Memory</span>
-                </a>
-            </li>
-            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
-                <a href="/sso/v1/atpl/" class="nav-link px-0 align-middle">
-                    <i class="fas fa-shield-alt"></i> <span class="ms-1 d-none d-sm-inline">Trust Policies</span>
-                </a>
-            </li>
-            <li>
-                <a href="/sso/trust-scores" class="nav-link px-0 align-middle">
-                    <i class="fas fa-chart-bar"></i> <span class="ms-1 d-none d-sm-inline">Trust Scores</span>
-                </a>
-            </li>
-            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
-                <a href="/sso/v1/attributes/manage" class="nav-link px-0 align-middle">
-                    <i class="fas fa-tags"></i> <span class="ms-1 d-none d-sm-inline">Attributes (ABAC)</span>
-                </a>
-            </li>
-            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
-                <a href="/sso/v1/telemetry" class="nav-link px-0 align-middle">
-                    <i class="fas fa-chart-line"></i> <span class="ms-1 d-none d-sm-inline">Telemetry</span>
-                </a>
-            </li>
-            <!-- System Management Submenu -->
-            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}" class="nav-item">
-                <a href="#systemSubmenu" data-bs-toggle="collapse" class="nav-link px-0 align-middle">
-                    <i class="fas fa-tools"></i> <span class="ms-1 d-none d-sm-inline">System Management</span>
-                    <i class="fas fa-caret-down ms-1"></i>
-                </a>
-                <ul class="collapse nav flex-column ms-3" id="systemSubmenu" data-bs-parent="#menu">
+                <ul class="collapse nav flex-column ms-3" id="infrastructureSubmenu" data-bs-parent="#menu">
                     <li>
-                        <a href="/sso/v1/automation/suggestions/list" class="nav-link px-0 align-middle">
-                            <i class="fas fa-magic"></i> <span class="ms-1 d-none d-sm-inline">Automation Suggestions</span>
+                        <a href="/sso/v1/enclaves/hosts/list" class="nav-link px-0 align-middle">
+                            <i class="fas fa-server"></i> <span class="ms-1 d-none d-sm-inline">Host Enclaves</span>
+                        </a>
+                    </li>
+                    <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
+                        <a href="/sso/v1/integrations" class="nav-link px-0 align-middle">
+                            <i class="fa-solid fa-ticket"></i> <span class="ms-1 d-none d-sm-inline">Integrations</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+            
+            <!-- Security & Access Section -->
+            <li class="nav-item mt-2">
+                <a href="#securitySubmenu" data-bs-toggle="collapse" class="nav-link px-0 align-middle">
+                    <i class="fas fa-shield-alt"></i> <span class="ms-1 d-none d-sm-inline">Security & Access</span>
+                    <i class="fas fa-caret-down ms-1 d-none d-sm-inline"></i>
+                </a>
+                <ul class="collapse nav flex-column ms-3" id="securitySubmenu" data-bs-parent="#menu">
+                    <li>
+                        <a href="/sso/v1/zerotrust/rules/list" class="nav-link px-0 align-middle">
+                            <i class="fas fa-shield-alt"></i> <span class="ms-1 d-none d-sm-inline">Zero Trust Rules</span>
+                        </a>
+                    </li>
+                    <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
+                        <a href="/sso/v1/atpl/" class="nav-link px-0 align-middle">
+                            <i class="fas fa-lock"></i> <span class="ms-1 d-none d-sm-inline">Trust Policies</span>
                         </a>
                     </li>
                     <li>
+                        <a href="/sso/trust-scores" class="nav-link px-0 align-middle">
+                            <i class="fas fa-chart-bar"></i> <span class="ms-1 d-none d-sm-inline">Trust Scores</span>
+                        </a>
+                    </li>
+                    <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
+                        <a href="/sso/v1/attributes/manage" class="nav-link px-0 align-middle">
+                            <i class="fas fa-tags"></i> <span class="ms-1 d-none d-sm-inline">Attributes (ABAC)</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+            
+            <!-- AI & Agents Section -->
+            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_USERS') || #sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}" class="nav-item mt-2">
+                <a href="#aiSubmenu" data-bs-toggle="collapse" class="nav-link px-0 align-middle">
+                    <i class="fas fa-robot"></i> <span class="ms-1 d-none d-sm-inline">AI & Agents</span>
+                    <i class="fas fa-caret-down ms-1 d-none d-sm-inline"></i>
+                </a>
+                <ul class="collapse nav flex-column ms-3" id="aiSubmenu" data-bs-parent="#menu">
+                    <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_USERS')}">
+                        <a href="/sso/v1/users/list" class="nav-link px-0 align-middle">
+                            <i class="fa-solid fa-user"></i> <span class="ms-1 d-none d-sm-inline">Manage Users</span>
+                        </a>
+                    </li>
+                    <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
+                        <a href="/sso/v1/agent/memory/search" class="nav-link px-0 align-middle">
+                            <i class="fas fa-search"></i> <span class="ms-1 d-none d-sm-inline">Agent Memory</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+            
+            <!-- System Section -->
+            <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS') || #sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}" class="nav-item mt-2">
+                <a href="#systemSubmenu" data-bs-toggle="collapse" class="nav-link px-0 align-middle">
+                    <i class="fas fa-cog"></i> <span class="ms-1 d-none d-sm-inline">System</span>
+                    <i class="fas fa-caret-down ms-1 d-none d-sm-inline"></i>
+                </a>
+                <ul class="collapse nav flex-column ms-3" id="systemSubmenu" data-bs-parent="#menu">
+                    <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
+                        <a href="/sso/v1/system/settings" class="nav-link px-0 align-middle">
+                            <i class="fas fa-sliders-h"></i> <span class="ms-1 d-none d-sm-inline">Settings</span>
+                        </a>
+                    </li>
+                    <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
+                        <a href="/sso/v1/telemetry" class="nav-link px-0 align-middle">
+                            <i class="fas fa-chart-line"></i> <span class="ms-1 d-none d-sm-inline">Telemetry</span>
+                        </a>
+                    </li>
+                    <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
+                        <a href="/sso/v1/automation/suggestions/list" class="nav-link px-0 align-middle">
+                            <i class="fas fa-magic"></i> <span class="ms-1 d-none d-sm-inline">Automation</span>
+                        </a>
+                    </li>
+                    <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}">
                         <a href="/sso/v1/k8s/pods/logs" class="nav-link px-0 align-middle">
                             <i class="fas fa-file-alt"></i> <span class="ms-1 d-none d-sm-inline">Pod Logs</span>
                         </a>

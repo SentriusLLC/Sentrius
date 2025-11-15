@@ -706,6 +706,70 @@ table.dataTable.display tbody tr.odd > .sorting_1, table.dataTable.order-column.
     color: #f8f9fa; /* Light text color for contrast */
 }
 
+/* Enhanced Sidebar Submenu Styles */
+#menu .nav-item {
+    width: 100%;
+}
+
+#menu .nav-item.mt-2 {
+    margin-top: 0.75rem !important;
+}
+
+/* Top-level menu items with collapsible submenus */
+#menu > .nav-item > a[data-bs-toggle="collapse"] {
+    padding: 0.6rem 0.5rem;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+#menu > .nav-item > a[data-bs-toggle="collapse"]:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Submenu container */
+#menu .collapse.nav {
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
+    padding-left: 0.5rem;
+    border-left: 2px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Submenu items */
+#menu .collapse.nav .nav-link {
+    padding: 0.5rem 0.5rem;
+    font-size: 0.9rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+#menu .collapse.nav .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    padding-left: 0.75rem;
+}
+
+/* Caret icon rotation for expanded/collapsed state */
+#menu a[data-bs-toggle="collapse"] .fa-caret-down {
+    transition: transform 0.2s ease;
+}
+
+#menu a[data-bs-toggle="collapse"][aria-expanded="true"] .fa-caret-down {
+    transform: rotate(180deg);
+}
+
+/* Spacing between icon and text */
+#menu .nav-link i {
+    width: 1.2rem;
+    text-align: center;
+}
+
+/* Reduce visual clutter on small screens */
+@media (max-width: 576px) {
+    #menu .nav-item.mt-2 {
+        margin-top: 0.5rem !important;
+    }
+}
+
 
 .overlay {
     position: fixed;
