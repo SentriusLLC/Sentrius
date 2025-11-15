@@ -62,6 +62,9 @@ public abstract class IntegrationServerManager {
                 ))
                 .restartPolicy("Always")
             );
+        
+        // Explicitly set overhead to null to avoid Kubernetes RuntimeClass errors
+        pod.getSpec().setOverhead(null);
 
         V1Pod createdPod = coreV1Api.createNamespacedPod(namespace, pod).execute();
         
