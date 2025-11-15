@@ -131,20 +131,20 @@ Based on the calculated score:
 ### API Endpoints
 
 ```
-GET /sso/api/v1/trust-scores/agent/{agentId}
+GET /api/v1/trust-scores/agent/{agentId}
   - Get full trust score history for an agent
   - Optional query params: start, end (ISO 8601 timestamps)
 
-GET /sso/api/v1/trust-scores/agent/{agentId}/latest
+GET /api/v1/trust-scores/agent/{agentId}/latest
   - Get the most recent trust score for an agent
 
-GET /sso/api/v1/trust-scores/agent/{agentId}/average?days=7
+GET /api/v1/trust-scores/agent/{agentId}/average?days=7
   - Get average trust score over specified days
 
-GET /sso/api/v1/trust-scores/recent?hours=24
+GET /api/v1/trust-scores/recent?hours=24
   - Get all recent trust scores across all agents
 
-GET /sso/api/v1/trust-scores/agents
+GET /api/v1/trust-scores/agents
   - Get list of all agents with trust score data
 ```
 

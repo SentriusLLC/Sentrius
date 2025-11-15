@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function loadTrustScores() {
     try {
-        const response = await fetch('/sso/api/v1/trust-scores/agents');
+        const response = await fetch('/api/v1/trust-scores/agents');
         if (!response.ok) throw new Error('Failed to fetch agents');
         
         const agentIds = await response.json();
@@ -114,7 +114,7 @@ async function loadTrustScores() {
         }
         
         const scoresPromises = agentIds.map(agentId => 
-            fetch(`/sso/api/v1/trust-scores/agent/${encodeURIComponent(agentId)}/latest`)
+            fetch(`/api/v1/trust-scores/agent/${encodeURIComponent(agentId)}/latest`)
                 .then(r => r.ok ? r.json() : null)
         );
         

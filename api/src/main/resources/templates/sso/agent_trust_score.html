@@ -159,8 +159,8 @@ document.addEventListener('DOMContentLoaded', function() {
 async function loadAgentTrustScore() {
     try {
         const [latestResponse, historyResponse] = await Promise.all([
-            fetch(`/sso/api/v1/trust-scores/agent/${encodeURIComponent(agentId)}/latest`),
-            fetch(`/sso/api/v1/trust-scores/agent/${encodeURIComponent(agentId)}`)
+            fetch(`/api/v1/trust-scores/agent/${encodeURIComponent(agentId)}/latest`),
+            fetch(`/api/v1/trust-scores/agent/${encodeURIComponent(agentId)}`)
         ]);
         
         if (!latestResponse.ok) {
