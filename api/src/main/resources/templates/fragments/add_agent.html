@@ -12,17 +12,17 @@
                         <label class="form-label">Service Type</label>
                         <div class="btn-group w-100" role="group" aria-label="Service Type">
                             <input type="radio" class="btn-check" name="serviceType" id="serviceTypeAgent" value="agent" checked autocomplete="off">
-                            <label class="btn btn-outline-primary" for="serviceTypeAgent">
+                            <label class="btn btn-outline-primary" for="serviceTypeAgent" title="Traditional agent with custom callback URL">
                                 <i class="fas fa-robot"></i> Agent
                             </label>
                             
                             <input type="radio" class="btn-check" name="serviceType" id="serviceTypeCodingMCP" value="coding-mcp" autocomplete="off">
-                            <label class="btn btn-outline-primary" for="serviceTypeCodingMCP">
+                            <label class="btn btn-outline-primary" for="serviceTypeCodingMCP" title="AI-powered code generation and automated PR submission">
                                 <i class="fas fa-code"></i> Coding MCP
                             </label>
                             
                             <input type="radio" class="btn-check" name="serviceType" id="serviceTypeGitHubMCP" value="github-mcp" autocomplete="off">
-                            <label class="btn btn-outline-primary" for="serviceTypeGitHubMCP">
+                            <label class="btn btn-outline-primary" for="serviceTypeGitHubMCP" title="GitHub repository access and automation through MCP">
                                 <i class="fab fa-github"></i> GitHub MCP
                             </label>
                         </div>
@@ -62,39 +62,43 @@
                     <!-- Coding MCP Configuration -->
                     <div id="codingMCPConfig" class="service-config" style="display: none;">
                         <h6 class="mb-3">Coding MCP Server Configuration</h6>
+                        <div class="alert alert-info" role="alert">
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Coding MCP Server:</strong> Provides AI-powered code generation and automated PR submission for GitHub repositories using LLM integration.
+                        </div>
                         <div class="mb-3">
-                            <label for="codingInstanceId" class="form-label">Instance ID</label>
+                            <label for="codingInstanceId" class="form-label">Instance ID <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="codingInstanceId"
-                                   placeholder="Enter instance ID (e.g., 'default', 'dev-1')" value="default">
-                            <small class="form-text text-muted">Unique identifier for this MCP server instance</small>
+                                   placeholder="Enter instance ID (e.g., 'default', 'project-1')" value="default" required>
+                            <small class="form-text text-muted">Unique identifier for this coding agent instance. Use 'default' for a single instance or custom names for multiple instances.</small>
                         </div>
                         <div class="mb-3">
-                            <label for="codingGitHubTokenId" class="form-label">GitHub Token ID (Optional)</label>
-                            <input type="text" class="form-control" id="codingGitHubTokenId"
-                                   placeholder="Enter GitHub token ID if needed">
-                            <small class="form-text text-muted">Required only if the coding agent needs GitHub access</small>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Features</label>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="codingEnableAutoFix" checked>
-                                <label class="form-check-label" for="codingEnableAutoFix">
-                                    Enable Auto-Fix
-                                </label>
-                            </div>
+                            <label for="codingGitHubTokenId" class="form-label">GitHub Integration Token <span class="text-danger">*</span></label>
+                            <select class="form-select" id="codingGitHubTokenId" required>
+                                <option value="">Select GitHub token...</option>
+                                <!-- Options will be populated dynamically -->
+                            </select>
+                            <small class="form-text text-muted">
+                                Required for GitHub operations (creating branches, commits, and pull requests). 
+                                <a href="/sso/v1/integrations/github" target="_blank">Add a new GitHub token</a> if none are available.
+                            </small>
                         </div>
                     </div>
 
                     <!-- GitHub MCP Configuration -->
                     <div id="githubMCPConfig" class="service-config" style="display: none;">
                         <h6 class="mb-3">GitHub MCP Server Configuration</h6>
+                        <div class="alert alert-info" role="alert">
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>GitHub MCP Server:</strong> Provides access to GitHub repositories, issues, and pull requests through the Model Context Protocol. Required for GitHub-based automations and integrations.
+                        </div>
                         <div class="mb-3">
-                            <label for="githubTokenId" class="form-label">GitHub Token ID</label>
-                            <select class="form-select" id="githubTokenId">
+                            <label for="githubTokenId" class="form-label">GitHub Integration Token <span class="text-danger">*</span></label>
+                            <select class="form-select" id="githubTokenId" required>
                                 <option value="">Select GitHub token...</option>
                                 <!-- Options will be populated dynamically -->
                             </select>
-                            <small class="form-text text-muted">Select a GitHub integration token</small>
+                            <small class="form-text text-muted">Select the GitHub token this MCP server will use for repository operations.</small>
                         </div>
                         <div class="mb-3">
                             <a href="/sso/v1/integrations/github" class="btn btn-sm btn-outline-secondary" target="_blank">
@@ -138,6 +142,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 agentConfig.style.display = 'block';
             } else if (this.value === 'coding-mcp') {
                 codingMCPConfig.style.display = 'block';
+                loadGitHubTokensForCoding();
             } else if (this.value === 'github-mcp') {
                 githubMCPConfig.style.display = 'block';
                 loadGitHubTokens();
@@ -183,24 +188,54 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
     
+    function loadGitHubTokensForCoding() {
+        const select = document.getElementById('codingGitHubTokenId');
+        select.innerHTML = '<option value="">Loading tokens...</option>';
+        
+        fetch('/api/v1/integrations/github/list')
+            .then(response => response.json())
+            .then(tokens => {
+                if (tokens && tokens.length > 0) {
+                    select.innerHTML = '<option value="">Select GitHub token...</option>';
+                    tokens.forEach(token => {
+                        const option = document.createElement('option');
+                        option.value = token.id;
+                        option.textContent = token.name || `Token ${token.id}`;
+                        select.appendChild(option);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">No tokens available - Please add one</option>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading GitHub tokens for coding:', error);
+                select.innerHTML = '<option value="">Error loading tokens</option>';
+            });
+    }
+    
     function launchCodingMCP() {
         const instanceId = document.getElementById('codingInstanceId').value;
         const githubTokenId = document.getElementById('codingGitHubTokenId').value;
         
-        if (!instanceId) {
+        if (!instanceId || instanceId.trim() === '') {
             alert('Please enter an instance ID');
+            return;
+        }
+        
+        if (!githubTokenId || githubTokenId.trim() === '') {
+            alert('Please select a GitHub token. GitHub integration is required for coding agents to create branches, commits, and pull requests.');
             return;
         }
         
         const launchInfo = document.getElementById('launchInfo');
         const launchInfoText = document.getElementById('launchInfoText');
         launchInfo.style.display = 'block';
-        launchInfoText.textContent = 'Launching Coding MCP server...';
+        launchInfoText.textContent = 'Launching Coding MCP server with GitHub integration...';
         
-        const params = new URLSearchParams({ instanceId });
-        if (githubTokenId) {
-            params.append('githubTokenId', githubTokenId);
-        }
+        const params = new URLSearchParams({ 
+            instanceId: instanceId,
+            githubTokenId: githubTokenId
+        });
         
         const csrfToken = document.getElementById('csrf-token') ? document.getElementById('csrf-token').value : '';
         
@@ -213,13 +248,13 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                launchInfoText.textContent = 'Coding MCP server launched successfully!';
+                launchInfoText.textContent = 'Coding MCP server launched successfully! You can now communicate with the coding agent.';
                 setTimeout(() => {
                     bootstrap.Modal.getInstance(document.getElementById('agentFormModal')).hide();
                     if (typeof loadMCPServers === 'function') loadMCPServers();
                 }, 2000);
             } else {
-                launchInfoText.textContent = 'Error: ' + data.message;
+                launchInfoText.textContent = 'Error: ' + (data.message || 'Unknown error occurred');
             }
         })
         .catch(error => {
@@ -230,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function launchGitHubMCP() {
         const tokenId = document.getElementById('githubTokenId').value;
         
-        if (!tokenId) {
+        if (!tokenId || tokenId.trim() === '') {
             alert('Please select a GitHub token');
             return;
         }
@@ -257,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (typeof loadMCPServers === 'function') loadMCPServers();
                 }, 2000);
             } else {
-                launchInfoText.textContent = 'Error: ' + data.message;
+                launchInfoText.textContent = 'Error: ' + (data.message || 'Unknown error occurred');
             }
         })
         .catch(error => {
