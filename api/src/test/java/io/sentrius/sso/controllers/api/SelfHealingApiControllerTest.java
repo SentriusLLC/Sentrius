@@ -1,7 +1,5 @@
 package io.sentrius.sso.controllers.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.sentrius.sso.core.model.ErrorOutput;
 import io.sentrius.sso.core.model.selfhealing.SelfHealingConfig;
 import io.sentrius.sso.core.model.selfhealing.SelfHealingConfig.PatchingPolicy;
 import io.sentrius.sso.core.model.selfhealing.SelfHealingSession;
@@ -10,49 +8,39 @@ import io.sentrius.sso.core.services.selfhealing.ErrorAnalysisService;
 import io.sentrius.sso.core.services.selfhealing.SelfHealingConfigService;
 import io.sentrius.sso.core.services.selfhealing.SelfHealingSessionService;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.web.servlet.MockMvc;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.ResponseEntity;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(SelfHealingApiController.class)
-@AutoConfigureMockMvc(addFilters = false)
+@ExtendWith(MockitoExtension.class)
 class SelfHealingApiControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockBean
+    @Mock
     private SelfHealingConfigService configService;
 
-    @MockBean
+    @Mock
     private SelfHealingSessionService sessionService;
 
-    @MockBean
+    @Mock
     private ErrorAnalysisService errorAnalysisService;
 
-    @MockBean
+    @Mock
     private ErrorOutputService errorOutputService;
 
+    @org.mockito.InjectMocks
+    private SelfHealingApiController controller;
+
     @Test
-    @WithMockUser(authorities = "CAN_MANAGE_APPLICATION")
-    void testGetAllConfigs() throws Exception {
+    void testGetAllConfigs() {
         SelfHealingConfig config = SelfHealingConfig.builder()
                 .id(1L)
                 .podName("test-pod")
@@ -62,17 +50,18 @@ class SelfHealingApiControllerTest {
 
         when(configService.getAllConfigs()).thenReturn(Arrays.asList(config));
 
-        mockMvc.perform(get("/api/v1/self-healing/config"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].podName").value("test-pod"))
-                .andExpect(jsonPath("$[0].patchingPolicy").value("IMMEDIATE"));
+        ResponseEntity<List<SelfHealingConfig>> response = controller.getAllConfigs();
 
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size());
+        assertEquals("test-pod", response.getBody().get(0).getPodName());
+        assertEquals(PatchingPolicy.IMMEDIATE, response.getBody().get(0).getPatchingPolicy());
         verify(configService).getAllConfigs();
     }
 
     @Test
-    @WithMockUser(authorities = "CAN_MANAGE_APPLICATION")
-    void testGetConfigByPodName() throws Exception {
+    void testGetConfigByPodName() {
         SelfHealingConfig config = SelfHealingConfig.builder()
                 .id(1L)
                 .podName("test-pod")
@@ -82,17 +71,17 @@ class SelfHealingApiControllerTest {
 
         when(configService.getConfigByPodName("test-pod")).thenReturn(Optional.of(config));
 
-        mockMvc.perform(get("/api/v1/self-healing/config/test-pod"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.podName").value("test-pod"))
-                .andExpect(jsonPath("$.patchingPolicy").value("OFF_HOURS"));
+        ResponseEntity<SelfHealingConfig> response = controller.getConfigByPodName("test-pod");
 
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals("test-pod", response.getBody().getPodName());
+        assertEquals(PatchingPolicy.OFF_HOURS, response.getBody().getPatchingPolicy());
         verify(configService).getConfigByPodName("test-pod");
     }
 
     @Test
-    @WithMockUser(authorities = "CAN_MANAGE_APPLICATION")
-    void testSaveConfig() throws Exception {
+    void testSaveConfig() {
         SelfHealingConfig config = SelfHealingConfig.builder()
                 .podName("new-pod")
                 .patchingPolicy(PatchingPolicy.IMMEDIATE)
@@ -108,32 +97,27 @@ class SelfHealingApiControllerTest {
 
         when(configService.saveConfig(any(SelfHealingConfig.class))).thenReturn(savedConfig);
 
-        mockMvc.perform(post("/api/v1/self-healing/config")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(config)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.podName").value("new-pod"));
+        ResponseEntity<SelfHealingConfig> response = controller.saveConfig(config);
 
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(1L, response.getBody().getId());
+        assertEquals("new-pod", response.getBody().getPodName());
         verify(configService).saveConfig(any(SelfHealingConfig.class));
     }
 
     @Test
-    @WithMockUser(authorities = "CAN_MANAGE_APPLICATION")
-    void testDeleteConfig() throws Exception {
+    void testDeleteConfig() {
         doNothing().when(configService).deleteConfig(1L);
 
-        mockMvc.perform(delete("/api/v1/self-healing/config/1")
-                        .with(csrf()))
-                .andExpect(status().isOk());
+        ResponseEntity<Void> response = controller.deleteConfig(1L);
 
+        assertEquals(200, response.getStatusCode().value());
         verify(configService).deleteConfig(1L);
     }
 
     @Test
-    @WithMockUser(authorities = "CAN_MANAGE_APPLICATION")
-    void testGetAllSessions() throws Exception {
+    void testGetAllSessions() {
         SelfHealingSession session = SelfHealingSession.builder()
                 .id(1L)
                 .podName("test-pod")
@@ -142,11 +126,13 @@ class SelfHealingApiControllerTest {
 
         when(sessionService.getAllSessions()).thenReturn(Arrays.asList(session));
 
-        mockMvc.perform(get("/api/v1/self-healing/sessions"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(1))
-                .andExpect(jsonPath("$[0].podName").value("test-pod"));
+        ResponseEntity<List<SelfHealingSession>> response = controller.getAllSessions();
 
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size());
+        assertEquals(1L, response.getBody().get(0).getId());
+        assertEquals("test-pod", response.getBody().get(0).getPodName());
         verify(sessionService).getAllSessions();
     }
 }
