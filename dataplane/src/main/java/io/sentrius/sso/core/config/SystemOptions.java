@@ -154,6 +154,10 @@ public class SystemOptions {
     @Updatable(description = "RDP Proxy domain.")
     public String rdpProxyDomain = "https://rdpproxy-dev.local";
 
+    @Updatable(description = "Integration Proxy URL for K8s and other integration operations.")
+    @Builder.Default
+    public String integrationProxyUrl = "http://sentrius-integrationproxy:8080/";
+
 
 
     // the default path may be sufficient
