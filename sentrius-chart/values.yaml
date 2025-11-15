@@ -492,4 +492,33 @@ githubMcp:
       cpu: "500m"
   nodeSelector: {}
   tolerations: []
+
+# Prompt Advisor configuration
+promptAdvisor:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: sentrius-prompt-advisor
+    tag: latest
+    pullPolicy: IfNotPresent
+  tokenRefresher:
+    repository: sentrius-prompt-advisor-token-refresher
+    tag: latest
+  tokenRefreshInterval: "300"  # 5 minutes in seconds
+  clientSecret: ""  # To be set via environment variable or auto-generated
+  llmModel: "gpt-4"
+  llmEnabled: "true"
+  weights:
+    purpose: "15"
+    safety: "30"
+    compliance: "25"
+    provenance: "15"
+    autonomy: "15"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
   affinity: {}

@@ -66,6 +66,18 @@ build_image() {
     local name=$1
     local version=$2
     local context_dir=$3
+    local dockerfile_flag=""
+    local skip_dev_certs=false
+    
+    # Check for optional -f flag for custom Dockerfile
+    if [[ "$4" == "-f" ]]; then
+        dockerfile_flag="-f $5"
+    fi
+    
+    # Check for --skip-dev-certs flag
+    if [[ "$4" == "--skip-dev-certs" ]] || [[ "$6" == "--skip-dev-certs" ]]; then
+        skip_dev_certs=true
+    fi
 
     # For local builds, always use 'latest' tag
     if [[ "$ENV_TARGET" == "local" ]]; then
@@ -73,17 +85,21 @@ build_image() {
     fi
 
     echo "Building $name:$version..."
-    prepare_docker_context "$context_dir"
+    
+    # Only prepare docker context if not skipping dev-certs
+    if ! $skip_dev_certs; then
+        prepare_docker_context "$context_dir"
+    fi
 
     BUILD_ARGS=()
-    if $INCLUDE_DEV_CERTS; then
+    if $INCLUDE_DEV_CERTS && ! $skip_dev_certs; then
         BUILD_ARGS+=(--build-arg INCLUDE_DEV_CERTS=true)
     fi
 
     if $NO_CACHE; then
-        docker build --no-cache "${BUILD_ARGS[@]}" -t "$name:$version" "$context_dir"
+        docker build --no-cache "${BUILD_ARGS[@]}" $dockerfile_flag -t "$name:$version" "$context_dir"
     else
-        docker build "${BUILD_ARGS[@]}" -t "$name:$version" "$context_dir"
+        docker build "${BUILD_ARGS[@]}" $dockerfile_flag -t "$name:$version" "$context_dir"
     fi
 
     # Sync image into Minikube if running multi-node
@@ -94,7 +110,9 @@ build_image() {
 
     if [ $? -ne 0 ]; then
         echo "❌ Failed to build $name"
-        cleanup_docker_context "$context_dir"
+        if ! $skip_dev_certs; then
+            cleanup_docker_context "$context_dir"
+        fi
         exit 1
     fi
 
@@ -107,7 +125,9 @@ build_image() {
         echo "✅ Built locally: $name:$version"
     fi
 
-    cleanup_docker_context "$context_dir"
+    if ! $skip_dev_certs; then
+        cleanup_docker_context "$context_dir"
+    fi
 }
 
 build_keycloak_image() {
@@ -136,6 +156,7 @@ build_keycloak_image() {
           --build-arg JAVA_AGENTS_CLIENT_SECRET="$JAVA_AGENTS_CLIENT_SECRET" \
           --build-arg AI_AGENT_ASSESSOR_CLIENT_SECRET="$AI_AGENT_ASSESSOR_CLIENT_SECRET" \
           --build-arg SENTRIUS_RDPPROXY_CLIENT_SECRET="$SENTRIUS_RDPPROXY_CLIENT_SECRET" \
+          --build-arg PROMPT_ADVISOR_CLIENT_SECRET="$PROMPT_ADVISOR_CLIENT_SECRET" \
           "$context_dir"
     else
         docker build "${BUILD_ARGS[@]}" -t "$name:$version" \
@@ -145,6 +166,7 @@ build_keycloak_image() {
           --build-arg JAVA_AGENTS_CLIENT_SECRET="$JAVA_AGENTS_CLIENT_SECRET" \
           --build-arg AI_AGENT_ASSESSOR_CLIENT_SECRET="$AI_AGENT_ASSESSOR_CLIENT_SECRET" \
           --build-arg SENTRIUS_RDPPROXY_CLIENT_SECRET="$SENTRIUS_RDPPROXY_CLIENT_SECRET" \
+          --build-arg PROMPT_ADVISOR_CLIENT_SECRET="$PROMPT_ADVISOR_CLIENT_SECRET" \
           "$context_dir"
     fi
 
@@ -184,6 +206,7 @@ update_agent_proxy=false
 update_ssh_proxy=false
 update_rdp_proxy=false
 update_github_mcp=false
+update_prompt_advisor=false
 
 
 while [[ "$#" -gt 0 ]]; do
@@ -199,7 +222,8 @@ while [[ "$#" -gt 0 ]]; do
         --sentrius-ssh-proxy) update_ssh_proxy=true ;;
         --sentrius-rdp-proxy) update_rdp_proxy=true ;;
         --github-mcp-server) update_github_mcp=true ;;
-        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_integrationproxy=true; update_launcher=true; update_agent_proxy=true; update_ssh_proxy=true; update_rdp_proxy=true; update_github_mcp=true; ;;
+        --prompt-advisor) update_prompt_advisor=true ;;
+        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_integrationproxy=true; update_launcher=true; update_agent_proxy=true; update_ssh_proxy=true; update_rdp_proxy=true; update_github_mcp=true; update_prompt_advisor=true; ;;
         --no-cache) NO_CACHE=true ;;
         --include-dev-certs) INCLUDE_DEV_CERTS=true ;;
         *) echo "Unknown flag: $1"; exit 1 ;;
@@ -342,4 +366,24 @@ if $update_github_mcp; then
         GITHUB_MCP_VERSION="latest"
     fi
     build_image "github-mcp-server" "$GITHUB_MCP_VERSION" "${SCRIPT_DIR}/../../docker/github-mcp-server"
+fi
+
+if $update_prompt_advisor; then
+    if [[ "$ENV_TARGET" == "gcp" ]]; then
+        PROMPT_ADVISOR_VERSION=$(increment_patch_version $PROMPT_ADVISOR_VERSION)
+        update_env_var "PROMPT_ADVISOR_VERSION" "$PROMPT_ADVISOR_VERSION"
+    else
+        PROMPT_ADVISOR_VERSION="latest"
+    fi
+    build_image "sentrius-prompt-advisor" "$PROMPT_ADVISOR_VERSION" "${SCRIPT_DIR}/../../" -f Dockerfile-prompt-advisor --skip-dev-certs
+fi
+
+if $update_prompt_advisor_token_refresher; then
+    if [[ "$ENV_TARGET" == "gcp" ]]; then
+        PROMPT_ADVISOR_TOKEN_REFRESHER_VERSION=$(increment_patch_version $PROMPT_ADVISOR_TOKEN_REFRESHER_VERSION)
+        update_env_var "PROMPT_ADVISOR_TOKEN_REFRESHER_VERSION" "$PROMPT_ADVISOR_TOKEN_REFRESHER_VERSION"
+    else
+        PROMPT_ADVISOR_TOKEN_REFRESHER_VERSION="latest"
+    fi
+    build_image "sentrius-prompt-advisor-token-refresher" "$PROMPT_ADVISOR_TOKEN_REFRESHER_VERSION" "${SCRIPT_DIR}/../../docker/prompt-advisor-token-refresher" --skip-dev-certs
 fi

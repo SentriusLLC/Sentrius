@@ -2,6 +2,7 @@ package io.sentrius.sso.controllers.api;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -34,6 +35,7 @@ import io.sentrius.sso.genai.model.endpoints.EmbeddingApiRequest;
 import io.sentrius.sso.genai.model.endpoints.RawConversationRequest;
 import io.sentrius.sso.genai.spring.ai.AgentCommunicationMemoryStore;
 import io.sentrius.sso.integrations.exceptions.HttpException;
+import io.sentrius.sso.promptadvisor.service.PromptAdvisorService;
 import io.sentrius.sso.provenance.ProvenanceEvent;
 import io.sentrius.sso.provenance.kafka.ProvenanceKafkaProducer;
 import io.sentrius.sso.security.ApiKey;
@@ -64,6 +66,7 @@ public class OpenAIProxyController extends BaseController {
     private final ApplicationEnvironmentConfig applicationConfig;
     final AgentCommunicationMemoryStore agentCommunicationMemoryStore;
     final ProvenanceKafkaProducer provenanceKafkaProducer;
+    final PromptAdvisorService promptAdvisorService;
 
     Tracer tracer = GlobalOpenTelemetry.getTracer("io.sentrius.sso");
 
@@ -73,7 +76,8 @@ public class OpenAIProxyController extends BaseController {
         SessionTrackingService sessionTrackingService, KeycloakService keycloakService,
         ATPLPolicyService atplPolicyService, ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService,
         IntegrationSecurityTokenService integrationSecurityTokenService, AgentService agentService,
-        ApplicationEnvironmentConfig applicationConfig, ProvenanceKafkaProducer provenanceKafkaProducer
+        ApplicationEnvironmentConfig applicationConfig, ProvenanceKafkaProducer provenanceKafkaProducer,
+        PromptAdvisorService promptAdvisorService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.cryptoService = cryptoService;
@@ -87,6 +91,7 @@ public class OpenAIProxyController extends BaseController {
         this.applicationConfig = applicationConfig;
         agentCommunicationMemoryStore = new AgentCommunicationMemoryStore(agentService);
         this.provenanceKafkaProducer = provenanceKafkaProducer;
+        this.promptAdvisorService = promptAdvisorService;
     }
 
     @PostMapping("/completions")
@@ -95,6 +100,7 @@ public class OpenAIProxyController extends BaseController {
     //@LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<?> chat(@RequestHeader("Authorization") String token,
                                   @RequestHeader("X-Communication-Id") String communicationId,
+                                  @RequestHeader(value = "X-Refine-Prompt", required = false, defaultValue = "false") String refinePromptHeader,
                                   HttpServletRequest request, HttpServletResponse response,
                                   @RequestBody String rawBody) throws JsonProcessingException, HttpException {
 
@@ -149,6 +155,24 @@ public class OpenAIProxyController extends BaseController {
 
         log.info("Chat request: {}", rawBody);
         LLMRequest chatRequest = JsonUtil.MAPPER.readValue(rawBody, LLMRequest.class);
+
+        // Apply prompt refinement if requested and enabled
+        boolean refinePrompt = Boolean.parseBoolean(refinePromptHeader);
+        if (refinePrompt && systemOptions.getEnablePromptAdvisor() && chatRequest.getMessages() != null && !chatRequest.getMessages().isEmpty()) {
+            log.info("Refining prompt for user: {}", operatingUser.getUsername());
+            var lastMessage = chatRequest.getMessages().get(chatRequest.getMessages().size() - 1);
+            String originalPrompt = lastMessage.getContentAsString();
+            
+            var context = new HashMap<String, Object>();
+            context.put("user", operatingUser.getUsername());
+            context.put("communication_id", communicationId);
+            
+            String refinedPrompt = promptAdvisorService.refinePrompt(originalPrompt, context);
+            if (refinedPrompt != null && !refinedPrompt.equals(originalPrompt)) {
+                log.info("Prompt refined from '{}' to '{}'", originalPrompt, refinedPrompt);
+                lastMessage.setContent(refinedPrompt);
+            }
+        }
 
 
         var comm = agentService.saveCommunication(communicationId,

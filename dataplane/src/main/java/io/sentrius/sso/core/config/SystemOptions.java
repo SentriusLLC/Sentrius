@@ -134,6 +134,18 @@ public class SystemOptions {
   @Updatable(description = "Dimension size for vector embeddings")
   @Builder.Default public Integer vectorDimension = 1536;
 
+  @Updatable(description = "Enables prompt advisor service for prompt validation and refinement")
+  @Builder.Default public Boolean enablePromptAdvisor = false;
+
+  @Updatable(description = "Minimum score threshold for prompt advisor (0-100)")
+  @Builder.Default public Integer promptAdvisorThreshold = 70;
+
+  @Updatable(description = "Maximum refinement iterations for prompt advisor")
+  @Builder.Default public Integer promptAdvisorMaxIterations = 3;
+
+  @Updatable(description = "Prompt advisor service endpoint URL")
+  @Builder.Default public String promptAdvisorEndpoint = "http://sentrius-prompt-advisor/validate_prompt";
+
   public Boolean lockdownEnabled = false;
 
   @Updatable(description = "AI risk score before user sessions are halted. Changes won't apply to currently running " +

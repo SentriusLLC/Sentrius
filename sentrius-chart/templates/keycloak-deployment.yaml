@@ -121,3 +121,8 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-oauth2-secrets
                   key: rdpproxy-client-secret
+            - name: PROMPT_ADVISOR_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: prompt-advisor-client-secret
