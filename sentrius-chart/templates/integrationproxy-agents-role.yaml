@@ -1,0 +1,21 @@
+{{- /* 
+This Role grants the integration-proxy service account permissions to access pods and services
+in the ${TENANT}-agents namespace. This is required because the integration-proxy service
+(running in the ${TENANT} namespace) needs to list and monitor pods in both namespaces.
+
+The corresponding RoleBinding (integrationproxy-agents-rolebinding.yaml) binds the 
+service account from ${TENANT} namespace to this Role in ${TENANT}-agents namespace,
+enabling cross-namespace access.
+*/ -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Release.Name }}-integrationproxy-agents-role
+  namespace: {{ .Values.tenant }}-agents
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]

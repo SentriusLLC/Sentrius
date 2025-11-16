@@ -1,0 +1,22 @@
+{{- /* 
+This RoleBinding grants the integration-proxy service account (from ${TENANT} namespace)
+access to the Role in the ${TENANT}-agents namespace. This enables cross-namespace access
+so the integration-proxy can list pods and services in both the main tenant namespace and
+the agents namespace.
+
+Note: The subjects.namespace field is required for cross-namespace RoleBindings to
+explicitly specify which namespace contains the ServiceAccount being granted permissions.
+*/ -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-integrationproxy-agents-binding
+  namespace: {{ .Values.tenant }}-agents
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-integrationproxy
+    namespace: {{ .Values.tenant }}
+roleRef:
+  kind: Role
+  name: {{ .Release.Name }}-integrationproxy-agents-role
+  apiGroup: rbac.authorization.k8s.io
