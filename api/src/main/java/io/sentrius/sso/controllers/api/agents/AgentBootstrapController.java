@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.collect.Maps;
@@ -24,6 +25,7 @@ import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.agents.AgentClientService;
+import io.sentrius.sso.core.services.agents.AgentLaunchService;
 import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.services.auditing.AuditService;
@@ -61,6 +63,7 @@ public class AgentBootstrapController extends BaseController {
     private final ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
     final AppConfig appConfig;
     private final AgentClientService agentClientService;
+    private final AgentLaunchService agentLaunchService;
 
 
     public AgentBootstrapController(
@@ -72,7 +75,8 @@ public class AgentBootstrapController extends BaseController {
         ATPLPolicyService atplPolicyService,
         ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService, AgentService agentService,
         ZeroTrustClientService zeroTrustClientService, AppConfig appConfig,
-        AgentClientService agentClientService
+        AgentClientService agentClientService,
+        AgentLaunchService agentLaunchService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
@@ -86,6 +90,7 @@ public class AgentBootstrapController extends BaseController {
         this.zeroTrustClientService = zeroTrustClientService;
         this.appConfig = appConfig;
         this.agentClientService = agentClientService;
+        this.agentLaunchService = agentLaunchService;
     }
 
 
@@ -219,6 +224,34 @@ public class AgentBootstrapController extends BaseController {
         var operatingUser = getOperatingUser(request, response );
         zeroTrustClientService.callAuthenticatedPostOnApi(appConfig.getSentriusLauncherService(),  "agent/launcher/create",
             registrationDTO);
+        
+        // Record the agent launch if agentContextId is provided
+        if (registrationDTO.getAgentContextId() != null && !registrationDTO.getAgentContextId().isEmpty()) {
+            try {
+                UUID contextId = UUID.fromString(registrationDTO.getAgentContextId());
+                String launchedBy = operatingUser != null ? operatingUser.getUserId() : "system";
+                String parameters = "agentType=" + registrationDTO.getAgentType() + 
+                                   ",policyId=" + registrationDTO.getAgentPolicyId();
+                
+                UUID launchId = agentLaunchService.recordLaunch(
+                    registrationDTO.getAgentName(), 
+                    contextId, 
+                    launchedBy, 
+                    parameters
+                );
+                
+                log.info("Recorded agent launch: launchId={}, contextId={}, agentName={}", 
+                    launchId, contextId, registrationDTO.getAgentName());
+            } catch (IllegalArgumentException e) {
+                log.error("Invalid agentContextId: {}", registrationDTO.getAgentContextId(), e);
+                // Don't fail the launch, just log the error
+            } catch (Exception e) {
+                log.error("Failed to record agent launch", e);
+                // Don't fail the launch, just log the error
+            }
+        } else {
+            log.info("No agentContextId provided, skipping launch record for {}", registrationDTO.getAgentName());
+        }
 
         // bootstrap with a default policy
         return ResponseEntity.ok("{\"status\": \"success\"}");

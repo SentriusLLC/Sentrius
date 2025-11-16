@@ -40,6 +40,7 @@ import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.AgentContextService;
 import io.sentrius.sso.core.services.agents.AgentService;
+import io.sentrius.sso.core.services.agents.GenerationManager;
 import io.sentrius.sso.core.services.auditing.AuditService;
 import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.security.KeycloakService;
@@ -55,6 +56,7 @@ import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -87,6 +89,7 @@ public class AgentApiController extends BaseController {
     final AgentContextService agentContextService;
     final AgentClientService agentClientService;
     final AppConfig appConfig;
+    final GenerationManager generationManager;
 
     public AgentApiController(
         UserService userService,
@@ -98,7 +101,8 @@ public class AgentApiController extends BaseController {
         ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService, AgentService agentService,
         ProvenanceKafkaProducer provenanceKafkaProducer, ZeroTrustRequestService ztatRequestService,
         AgentContextService agentContextService, AgentClientService agentClientService, 
-         AppConfig appConfig
+         AppConfig appConfig,
+        @Autowired(required = false) GenerationManager generationManager
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
@@ -114,6 +118,7 @@ public class AgentApiController extends BaseController {
         this.agentContextService = agentContextService;
         this.agentClientService = agentClientService;
         this.appConfig = appConfig;
+        this.generationManager = generationManager;
     }
 
     public SessionLog createSession(@RequestParam String username, @RequestParam String ipAddress) {
@@ -895,6 +900,66 @@ public class AgentApiController extends BaseController {
             .build();
         log.info("Created new agent context: {}", dto);
         return ResponseEntity.ok(dto);
+    }
+
+    @PostMapping("/context/{contextId}/generation")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<?> createNextGeneration(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        @PathVariable("contextId") String contextId) {
+        
+        if (generationManager == null) {
+            log.error("GenerationManager not available");
+            return ResponseEntity.status(HttpStatus.SC_SERVICE_UNAVAILABLE)
+                .body(Map.of("error", "Generation management not available"));
+        }
+        
+        try {
+            var operatingUser = getOperatingUser(request, response);
+            if (operatingUser == null) {
+                log.warn("No operating user found");
+                return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED)
+                    .body(Map.of("error", "Unauthorized"));
+            }
+            
+            UUID parentId = UUID.fromString(contextId);
+            var childContext = generationManager.createNextGeneration(parentId, operatingUser.getUserId());
+            
+            long inheritedCount = agentContextService.getInheritedMemoryCount(childContext.getId());
+            
+            var dto = AgentContextDTO.builder()
+                .contextId(childContext.getId())
+                .name(childContext.getName())
+                .description(childContext.getDescription())
+                .context(childContext.getContext())
+                .createdAt(childContext.getCreatedAt())
+                .updatedAt(childContext.getUpdatedAt())
+                .generation(childContext.getGeneration())
+                .parentId(childContext.getParentId())
+                .memoryNamespace(childContext.getMemoryNamespace())
+                .trustScore(childContext.getTrustScore())
+                .policyId(childContext.getPolicyId())
+                .inheritedMemoryCount(inheritedCount)
+                .build();
+            
+            log.info("Created next generation agent: gen={}, parent={}, child={}", 
+                childContext.getGeneration(), parentId, childContext.getId());
+            return ResponseEntity.ok(dto);
+            
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid parent context ID: {}", contextId, e);
+            return ResponseEntity.status(HttpStatus.SC_NOT_FOUND)
+                .body(Map.of("error", "Parent agent context not found: " + contextId));
+        } catch (IllegalStateException e) {
+            log.error("Failed to create next generation: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.SC_FORBIDDEN)
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Unexpected error creating next generation", e);
+            return ResponseEntity.status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to create next generation: " + e.getMessage()));
+        }
     }
 
     @GetMapping("/stats")

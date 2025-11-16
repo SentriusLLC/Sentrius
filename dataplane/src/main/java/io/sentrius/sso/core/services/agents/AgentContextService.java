@@ -45,16 +45,48 @@ public class AgentContextService {
         List<AgentContext> lineage = new ArrayList<>();
         AgentContext current = contextRepo.findById(agentId).orElse(null);
         
-        while (current != null) {
-            lineage.add(0, current);
-            if (current.getParentId() != null) {
-                current = contextRepo.findById(current.getParentId()).orElse(null);
+        if (current == null) {
+            return lineage;
+        }
+        
+        // First, traverse up to find the root ancestor
+        AgentContext root = current;
+        List<AgentContext> ancestors = new ArrayList<>();
+        while (root.getParentId() != null) {
+            AgentContext parent = contextRepo.findById(root.getParentId()).orElse(null);
+            if (parent != null) {
+                ancestors.add(0, parent);
+                root = parent;
             } else {
-                current = null;
+                break;
             }
         }
         
+        // Add all ancestors to lineage
+        lineage.addAll(ancestors);
+        
+        // Add the current agent if not already in lineage
+        if (!lineage.contains(current)) {
+            lineage.add(current);
+        }
+        
+        // Now traverse down from current to find all descendants recursively
+        addDescendants(current, lineage);
+        
         return lineage;
+    }
+    
+    /**
+     * Recursively adds all descendants of the given agent to the lineage list.
+     */
+    private void addDescendants(AgentContext parent, List<AgentContext> lineage) {
+        List<AgentContext> children = contextRepo.findByParentId(parent.getId());
+        for (AgentContext child : children) {
+            if (!lineage.contains(child)) {
+                lineage.add(child);
+                addDescendants(child, lineage);
+            }
+        }
     }
 
     public List<AgentContext> getLineageByName(String agentName) {
