@@ -331,6 +331,61 @@
                 $("#systemBanner").show();
             [/]
 
+            // Auto-expand sidebar submenu based on current URL
+            (function() {
+                const currentPath = window.location.pathname;
+                
+                // Define URL patterns for each submenu
+                const submenuPatterns = {
+                    'infrastructureSubmenu': ['/sso/v1/enclaves/', '/sso/v1/integrations'],
+                    'securitySubmenu': ['/sso/v1/zerotrust/', '/sso/v1/atpl/', '/sso/trust-scores', '/sso/v1/attributes/'],
+                    'aiSubmenu': ['/sso/v1/users/', '/sso/v1/agent/'],
+                    'systemSubmenu': ['/sso/v1/system/', '/sso/v1/telemetry', '/sso/v1/automation/', '/sso/v1/k8s/']
+                };
+                
+                // Find which submenu should be expanded
+                for (const [submenuId, patterns] of Object.entries(submenuPatterns)) {
+                    for (const pattern of patterns) {
+                        if (currentPath.startsWith(pattern)) {
+                            // Use Bootstrap's Collapse API to show the submenu
+                            const submenuElement = document.getElementById(submenuId);
+                            if (submenuElement) {
+                                // Add 'show' class to expand the submenu
+                                submenuElement.classList.add('show');
+                                
+                                // Find and highlight the active menu item within this submenu
+                                const links = submenuElement.querySelectorAll('a.nav-link');
+                                let bestMatch = null;
+                                let bestMatchLength = 0;
+                                
+                                // Find the most specific (longest) matching link
+                                links.forEach(function(link) {
+                                    const href = link.getAttribute('href');
+                                    if (href && currentPath.startsWith(href) && href.length > bestMatchLength) {
+                                        bestMatch = link;
+                                        bestMatchLength = href.length;
+                                    }
+                                });
+                                
+                                // Apply active class to the best match only
+                                if (bestMatch) {
+                                    bestMatch.classList.add('active');
+                                }
+                            }
+                            return; // Exit once we find a match
+                        }
+                    }
+                }
+                
+                // Also highlight top-level menu items (Dashboard, Notifications)
+                $('#menu > li > a.nav-link').each(function() {
+                    const href = $(this).attr('href');
+                    if (href && currentPath === href) {
+                        $(this).addClass('active');
+                    }
+                });
+            })();
+
         });
 
         /*]]>*/
