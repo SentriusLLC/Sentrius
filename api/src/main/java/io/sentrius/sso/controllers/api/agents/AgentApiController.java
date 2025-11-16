@@ -828,6 +828,8 @@ public class AgentApiController extends BaseController {
         HttpServletResponse response,
         @PathVariable("contextId") String contextId){
         var databaseContext = agentContextService.getContextOrThrow(UUID.fromString(contextId));
+        long inheritedCount = agentContextService.getInheritedMemoryCount(databaseContext.getId());
+        
         return ResponseEntity.ok(AgentContextDTO.builder()
             .contextId(databaseContext.getId())
             .name(databaseContext.getName())
@@ -835,7 +837,44 @@ public class AgentApiController extends BaseController {
             .context(databaseContext.getContext())
             .createdAt(databaseContext.getCreatedAt())
             .updatedAt(databaseContext.getUpdatedAt())
+            .generation(databaseContext.getGeneration())
+            .parentId(databaseContext.getParentId())
+            .memoryNamespace(databaseContext.getMemoryNamespace())
+            .trustScore(databaseContext.getTrustScore())
+            .policyId(databaseContext.getPolicyId())
+            .inheritedMemoryCount(inheritedCount)
             .build());
+    }
+
+    @GetMapping("/context/{contextId}/lineage")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<List<AgentContextDTO>> getContextLineage(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        @PathVariable("contextId") String contextId){
+        var lineage = agentContextService.getLineage(UUID.fromString(contextId));
+        
+        List<AgentContextDTO> lineageDTOs = lineage.stream()
+            .map(context -> {
+                long inheritedCount = agentContextService.getInheritedMemoryCount(context.getId());
+                return AgentContextDTO.builder()
+                    .contextId(context.getId())
+                    .name(context.getName())
+                    .description(context.getDescription())
+                    .context(context.getContext())
+                    .createdAt(context.getCreatedAt())
+                    .updatedAt(context.getUpdatedAt())
+                    .generation(context.getGeneration())
+                    .parentId(context.getParentId())
+                    .memoryNamespace(context.getMemoryNamespace())
+                    .trustScore(context.getTrustScore())
+                    .policyId(context.getPolicyId())
+                    .inheritedMemoryCount(inheritedCount)
+                    .build();
+            })
+            .collect(java.util.stream.Collectors.toList());
+        
+        return ResponseEntity.ok(lineageDTOs);
     }
 
     @PostMapping("/context")

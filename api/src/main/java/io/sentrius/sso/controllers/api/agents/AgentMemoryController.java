@@ -613,4 +613,33 @@ public class AgentMemoryController extends BaseController {
         }
     }
 
+    @GetMapping("/{agentId}/inherited")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<List<AgentMemoryDTO>> getInheritedMemories(
+        @PathVariable String agentId,
+        HttpServletRequest request, HttpServletResponse response) {
+        
+        log.debug("Getting inherited memories for agent: {}", agentId);
+        
+        try {
+            var operatingUser = getOperatingUser(request, response);
+            String userId = operatingUser.getUserId();
+
+            List<AgentMemory> inheritedMemories = memoryStore.findMemoriesByMarkings("INHERITED", userId)
+                .stream()
+                .filter(m -> m.getAgentId().equals(agentId))
+                .collect(Collectors.toList());
+            
+            List<AgentMemoryDTO> responseDTOs = inheritedMemories.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(responseDTOs);
+            
+        } catch (Exception e) {
+            log.error("Error getting inherited memories for agent: {}", agentId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
 }

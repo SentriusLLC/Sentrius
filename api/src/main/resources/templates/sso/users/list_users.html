@@ -65,6 +65,34 @@
             columns: [
                 { data: 'name' },
                 { data: 'username' },
+                {
+                    data: 'generation',
+                    render: function(data, type, row) {
+                        const generation = data || 1;
+                        const hasParent = row.parentId ? '<i class="bi bi-arrow-down-short" title="Has parent"></i>' : '';
+                        return `<span class="badge bg-secondary">Gen ${generation}</span> ${hasParent}`;
+                    }
+                },
+                {
+                    data: 'trustScore',
+                    render: function(data, type, row) {
+                        if (!data) return '<span class="text-muted">N/A</span>';
+                        const score = data.toFixed(2);
+                        let colorClass = 'text-success';
+                        if (data < 0.5) {
+                            colorClass = 'text-danger';
+                        } else if (data < 0.8) {
+                            colorClass = 'text-warning';
+                        }
+                        return `<span class="${colorClass}">${score}</span>`;
+                    }
+                },
+                {
+                    data: 'inheritedMemoryCount',
+                    render: function(data, type, row) {
+                        return data || 0;
+                    }
+                },
                 { data: 'lastSeen' },
             {
                     data: 'userId',
@@ -74,6 +102,7 @@
                         if (cmu){
                             actions = `<button class="btn btn-success create-generation-btn" data-agent-id="${myId}" data-agent-name="${row.username}">Create Generation</button> &nbsp; | &nbsp;`;
                             actions += `<button class="btn btn-primary ping-btn" data-agent-id="${myId}">Ping</button> &nbsp; | &nbsp;`;
+                            actions += `<button class="btn btn-info view-lineage-btn" data-agent-id="${myId}" data-agent-name="${row.username}">Lineage</button> &nbsp; | &nbsp;`;
                             actions += `<button class="btn btn-secondary view-policy-btn" data-agent-id="${myId}">View
                                 Policy</button> &nbsp; | &nbsp;`;
                             actions += `<button class="btn btn-primary edit-policy-btn" data-agent-id="${myId}">Edit Policy</button> &nbsp; | &nbsp;`;
@@ -198,6 +227,54 @@
         $(document).on('click', '.audit-agent-btn', function () {
             const agentId = encodeURIComponent($(this).data('agent-id'));
             window.open(`/sso/v1/agent/connections?agentId=${agentId}`, '_blank');
+        });
+
+        // View Lineage
+        $(document).on('click', '.view-lineage-btn', function () {
+            const agentId = $(this).data('agent-id');
+            const agentName = $(this).data('agent-name');
+            $('#lineageContent').html('Loading...');
+            const modal = new bootstrap.Modal($('#lineageModal'));
+            modal.show();
+
+            fetch(`/sso/v1/agent/context/${agentName}/lineage`)
+                .then(response => response.json())
+                .then(lineage => {
+                    let html = '<div class="lineage-tree">';
+                    lineage.forEach((gen, idx) => {
+                        const isLast = idx === lineage.length - 1;
+                        html += `
+                            <div class="lineage-entry mb-3 p-3" style="border-left: 3px solid ${isLast ? '#007bff' : '#6c757d'}; background: ${isLast ? '#1a1a2e' : '#16213e'};">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <span class="badge ${isLast ? 'bg-primary' : 'bg-secondary'}">Generation ${gen.generation}</span>
+                                            ${gen.name}
+                                        </h6>
+                                        <small class="text-muted">${gen.description || 'No description'}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <div><small>Trust: <span class="badge ${gen.trustScore >= 0.8 ? 'bg-success' : gen.trustScore >= 0.5 ? 'bg-warning' : 'bg-danger'}">${gen.trustScore ? gen.trustScore.toFixed(2) : 'N/A'}</span></small></div>
+                                        <div><small>Inherited: ${gen.inheritedMemoryCount || 0} memories</small></div>
+                                        <div><small class="text-muted">Created: ${new Date(gen.createdAt).toLocaleString()}</small></div>
+                                    </div>
+                                </div>
+                            </div>
+                            ${idx < lineage.length - 1 ? '<div style="text-align: center; color: #6c757d;">↓</div>' : ''}
+                        `;
+                    });
+                    html += '</div>';
+                    $('#lineageContent').html(html);
+                })
+                .catch(err => {
+                    console.error('Failed to fetch lineage:', err);
+                    $('#lineageContent').html(`
+                        <div class="alert alert-warning">
+                            <p>Could not load lineage information.</p>
+                            <p>This agent may not have generational lineage data.</p>
+                        </div>
+                    `);
+                });
         });
 
         // Edit Policy
@@ -478,6 +555,9 @@
         <tr>
             <th>Name</th>
             <th>Username</th>
+            <th>Generation</th>
+            <th>Trust Score</th>
+            <th>Inherited Memories</th>
             <th>Last Seen</th>
             <th>Actions</th>
         </tr>
@@ -542,6 +622,24 @@
                 <button type="button" class="btn btn-success" id="launchGenerationBtn">
                     <i class="fas fa-rocket"></i> Launch Agent
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lineage Viewer Modal -->
+<div class="modal fade" id="lineageModal" tabindex="-1" aria-labelledby="lineageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="lineageModalLabel">Agent Lineage</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="lineageContent">Loading...</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

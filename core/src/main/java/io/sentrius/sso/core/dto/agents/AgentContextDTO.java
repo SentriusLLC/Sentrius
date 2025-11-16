@@ -25,5 +25,12 @@ public class AgentContextDTO {
     private Instant createdAt = Instant.now();
     @Builder.Default
     private Instant updatedAt =  Instant.now();
+    
+    private Integer generation;
+    private UUID parentId;
+    private String memoryNamespace;
+    private Double trustScore;
+    private String policyId;
+    private Long inheritedMemoryCount;
 }
 
