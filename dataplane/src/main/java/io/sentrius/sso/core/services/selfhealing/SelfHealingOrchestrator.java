@@ -56,13 +56,9 @@ public class SelfHealingOrchestrator {
     /**
      * Check if GitHub integration is available
      * Self-healing requires GitHub integration to submit PRs
+     * GitHub integration is considered available if integration tokens exist in the database
      */
     private boolean isGitHubIntegrationAvailable() {
-        if (!githubConfigured) {
-            log.debug("GitHub integration is disabled in configuration");
-            return false;
-        }
-
         if (integrationTokenService == null) {
             log.warn("IntegrationSecurityTokenService not available");
             return false;
