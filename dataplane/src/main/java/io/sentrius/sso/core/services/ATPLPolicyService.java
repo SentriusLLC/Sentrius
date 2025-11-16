@@ -94,6 +94,7 @@ public class ATPLPolicyService {
             }));
     }
 
+    @Transactional(readOnly = true)
     public Optional<ATPLPolicy> getPolicy(User operatingUser) {
         List<AgentPolicyAssignment> assignments = agentPolicyAssignmentRepository.findByUserUsernameOrderByAssignedAtDesc(operatingUser.getUsername());
 
@@ -176,6 +177,7 @@ public class ATPLPolicyService {
             .orElse(null);
     }
 
+    @Transactional(readOnly = true)
     public Optional<String> getPolicyYaml(User operatingUser) {
         List<AgentPolicyAssignment> assignments = agentPolicyAssignmentRepository.findByUserUsernameOrderByAssignedAtDesc(operatingUser.getUsername());
 
