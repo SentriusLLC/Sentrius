@@ -331,9 +331,10 @@
                 $("#systemBanner").show();
             [/]
 
-            // Auto-expand sidebar submenu based on current URL
+            // Stateful sidebar with localStorage persistence
             (function() {
                 const currentPath = window.location.pathname;
+                const SIDEBAR_STATE_KEY = 'sidebarState';
                 
                 // Define URL patterns for each submenu
                 const submenuPatterns = {
@@ -343,16 +344,61 @@
                     'systemSubmenu': ['/sso/v1/system/', '/sso/v1/telemetry', '/sso/v1/automation/', '/sso/v1/k8s/']
                 };
                 
-                // Find which submenu should be expanded
+                // Load sidebar state from localStorage
+                function loadSidebarState() {
+                    try {
+                        const savedState = localStorage.getItem(SIDEBAR_STATE_KEY);
+                        return savedState ? JSON.parse(savedState) : {};
+                    } catch (e) {
+                        console.error('Error loading sidebar state:', e);
+                        return {};
+                    }
+                }
+                
+                // Save sidebar state to localStorage
+                function saveSidebarState(submenuId, isExpanded) {
+                    try {
+                        const state = loadSidebarState();
+                        state[submenuId] = isExpanded;
+                        localStorage.setItem(SIDEBAR_STATE_KEY, JSON.stringify(state));
+                    } catch (e) {
+                        console.error('Error saving sidebar state:', e);
+                    }
+                }
+                
+                // Get saved state or default to expanded
+                const savedState = loadSidebarState();
+                
+                // Initialize all submenus based on saved state (default to expanded)
+                for (const submenuId of Object.keys(submenuPatterns)) {
+                    const submenuElement = document.getElementById(submenuId);
+                    if (submenuElement) {
+                        // Default to expanded (true) if no saved state exists
+                        const shouldExpand = savedState[submenuId] !== false;
+                        
+                        if (shouldExpand) {
+                            submenuElement.classList.add('show');
+                        } else {
+                            submenuElement.classList.remove('show');
+                        }
+                        
+                        // Add event listeners to save state when user expands/collapses
+                        submenuElement.addEventListener('shown.bs.collapse', function() {
+                            saveSidebarState(submenuId, true);
+                        });
+                        
+                        submenuElement.addEventListener('hidden.bs.collapse', function() {
+                            saveSidebarState(submenuId, false);
+                        });
+                    }
+                }
+                
+                // Highlight active menu items based on current URL
                 for (const [submenuId, patterns] of Object.entries(submenuPatterns)) {
                     for (const pattern of patterns) {
                         if (currentPath.startsWith(pattern)) {
-                            // Use Bootstrap's Collapse API to show the submenu
                             const submenuElement = document.getElementById(submenuId);
                             if (submenuElement) {
-                                // Add 'show' class to expand the submenu
-                                submenuElement.classList.add('show');
-                                
                                 // Find and highlight the active menu item within this submenu
                                 const links = submenuElement.querySelectorAll('a.nav-link');
                                 let bestMatch = null;
@@ -372,7 +418,7 @@
                                     bestMatch.classList.add('active');
                                 }
                             }
-                            return; // Exit once we find a match
+                            break;
                         }
                     }
                 }
