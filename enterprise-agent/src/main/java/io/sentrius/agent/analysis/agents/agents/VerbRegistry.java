@@ -55,7 +55,6 @@ public class VerbRegistry {
 
     private static final String [] AGENT_MARKINGS = new String[] {"SENTRIUS_INTERNAL"};
 
-    private final AgentEndpointDiscoveryService agentEndpointDiscoveryService;
 
     private List<EndpointDescriptor> endpoints = new ArrayList<>();
 
@@ -166,6 +165,7 @@ public class VerbRegistry {
 
             log.info("Executing verb: {}", verb);
             var returnType = agentVerb.getReturnType();
+            var returnName = agentVerb.getReturnName();
             if (null != priorResponse ) {
                 log.info("Interpreting prior response for verb: {}", verb);
                log.info("Interpreting prior response: {}", priorResponse.getReturnType());
@@ -197,8 +197,10 @@ public class VerbRegistry {
                 }
 
 
+
                 return VerbResponse.builder()
                     .returnType(returnType)
+                    .returnName(returnName)
                     .build();
 
             } catch (InvocationTargetException e) {

@@ -12,4 +12,5 @@ import lombok.Getter;
 public class VerbResponse {
     private List<Message> messages;
     private Class<?> returnType;
+    private String returnName;
 }

@@ -229,12 +229,27 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                 var planResponse =
                                     responses.isEmpty() ? "" :
                                         responses.get(responses.size() - 1).toString();
+                                if (planResponse.isEmpty()) {
+                                    var respName =
+                                        agentExecutionContext.getAgentShortTermMemory().get( executionResponse.getReturnName() );
+                                    if (respName != null) {
+                                        planResponse = respName.toString();
+                                    }
+                                }
+                                log.info("Plan response: {} from {}", planResponse, responses);
                                 nextResponse = chatVerbs.interpret_plan_response(
                                     agentExecution,
                                     agentExecutionContext,
                                     verbRegistry.getVerbs().get(response.getNextOperation()),
                                     planResponse
                                 );
+                                agentExecutionContext.addToPersistentMemory(
+                                    "agent_response_" + System.currentTimeMillis(),
+                                    nextResponse.getResponseForUser(),
+                                    "PRIVATE",
+                                    new String[]{"CONVERSATION"}
+                                );
+
 
                                 var memory = agentExecutionContext.flushPersistentMemory();
                                 if (memory != null && !memory.isEmpty()) {

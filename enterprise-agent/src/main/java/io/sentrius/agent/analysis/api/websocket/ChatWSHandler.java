@@ -373,6 +373,14 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                         var planResponse =
                                             responses.isEmpty() ? "" :
                                                 responses.get( responses.size() -1 ).asText();
+                                        if (planResponse.isEmpty()) {
+                                            var respName =
+                                                websocketCommunication.getAgentExecutionContextDTO().getAgentShortTermMemory().get( executionResponse.getReturnName() );
+                                            if (respName != null) {
+                                                planResponse = respName.toString();
+                                            }
+                                        }
+                                        log.info("Plan response: {} from {}", planResponse, responses);
                                         nextResponse = chatVerbs.interpret_plan_response(
                                             chatAgent.getAgentExecution(),
                                             websocketCommunication.getAgentExecutionContextDTO(),

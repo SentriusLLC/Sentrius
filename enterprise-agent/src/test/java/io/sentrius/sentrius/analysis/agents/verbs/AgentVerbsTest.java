@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
 import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
@@ -19,6 +20,7 @@ import io.sentrius.agent.services.EndpointSearcher;
 import io.sentrius.sso.core.dto.agents.AgentContextDTO;
 import io.sentrius.sso.core.dto.agents.AgentExecution;
 import io.sentrius.sso.core.dto.agents.AgentExecutionContextDTO;
+import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.AgentExecutionService;
@@ -479,5 +481,141 @@ class AgentVerbsTest {
         assertEquals("configuration settings", result.get("query").asText());
         assertEquals(1, result.get("count").asInt());
         assertEquals("global_config", result.get("memories").get(0).get("memoryKey").asText());
+    }
+
+    @Test
+    void getEndpointsLikeHandlesNestedArrayFormat() throws Exception, ZtatException {
+        // Given - This is the problematic format from the error log
+        String executionId = UUID.randomUUID().toString();
+        AgentExecution execution = AgentExecution.builder()
+            .executionId(executionId)
+            .build();
+
+        AgentExecutionContextDTO requestContext = AgentExecutionContextDTO.builder().build();
+        ObjectNode queryArgs = JsonUtil.MAPPER.createObjectNode();
+        
+        // Simulate VerbRegistry wrapping: {"endpoints_like": {"endpoints_like": ["github issues", "mcp server"]}}
+        ObjectNode nestedObject = JsonUtil.MAPPER.createObjectNode();
+        ArrayNode searchArray = JsonUtil.MAPPER.createArrayNode();
+        searchArray.add("github issues");
+        searchArray.add("mcp server");
+        nestedObject.set("endpoints_like", searchArray);
+        queryArgs.set("endpoints_like", nestedObject);
+        
+        requestContext.setExecutionArgs(queryArgs);
+
+        // Mock endpoint searcher to return results
+        List<EndpointDescriptor> mockEndpoints = new ArrayList<>();
+        mockEndpoints.add(EndpointDescriptor.builder()
+            .name("list_issues")
+            .description("List GitHub issues")
+            .httpMethod("GET")
+            .path("/api/github/issues")
+            .build());
+        
+        when(endpointSearcher.getEndpointsLike(eq(execution), eq("github issues")))
+            .thenReturn(mockEndpoints);
+        when(endpointSearcher.getEndpointsLike(eq(execution), eq("mcp server")))
+            .thenReturn(new ArrayList<>());
+
+        // When
+        ObjectNode result = agentVerbs.getEndpointsLike(execution, requestContext);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.has("endpoints"));
+        assertEquals(1, result.get("endpoints").size());
+        assertEquals("list_issues", result.get("endpoints").get(0).get("name").asText());
+        assertEquals("github issues", result.get("endpoints").get(0).get("searchQuery").asText());
+    }
+
+    @Test
+    void getEndpointsLikeHandlesSimpleArrayFormat() throws Exception, ZtatException {
+        // Given
+        String executionId = UUID.randomUUID().toString();
+        AgentExecution execution = AgentExecution.builder()
+            .executionId(executionId)
+            .build();
+
+        AgentExecutionContextDTO requestContext = AgentExecutionContextDTO.builder().build();
+        ObjectNode queryArgs = JsonUtil.MAPPER.createObjectNode();
+        
+        // Simple array format: {"endpoints_like": ["list users", "delete users"]}
+        ArrayNode searchArray = JsonUtil.MAPPER.createArrayNode();
+        searchArray.add("list users");
+        searchArray.add("delete users");
+        queryArgs.set("endpoints_like", searchArray);
+        
+        requestContext.setExecutionArgs(queryArgs);
+
+        // Mock endpoint searcher
+        List<EndpointDescriptor> listEndpoints = new ArrayList<>();
+        listEndpoints.add(EndpointDescriptor.builder()
+            .name("list_users")
+            .description("List all users")
+            .httpMethod("GET")
+            .path("/api/users")
+            .build());
+        
+        List<EndpointDescriptor> deleteEndpoints = new ArrayList<>();
+        deleteEndpoints.add(EndpointDescriptor.builder()
+            .name("delete_user")
+            .description("Delete a user")
+            .httpMethod("DELETE")
+            .path("/api/users/{id}")
+            .build());
+        
+        when(endpointSearcher.getEndpointsLike(eq(execution), eq("list users")))
+            .thenReturn(listEndpoints);
+        when(endpointSearcher.getEndpointsLike(eq(execution), eq("delete users")))
+            .thenReturn(deleteEndpoints);
+
+        // When
+        ObjectNode result = agentVerbs.getEndpointsLike(execution, requestContext);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.has("endpoints"));
+        assertEquals(2, result.get("endpoints").size());
+        assertEquals("list_users", result.get("endpoints").get(0).get("name").asText());
+        assertEquals("delete_user", result.get("endpoints").get(1).get("name").asText());
+    }
+
+    @Test
+    void getEndpointsLikeHandlesStringFormat() throws Exception, ZtatException {
+        // Given
+        String executionId = UUID.randomUUID().toString();
+        AgentExecution execution = AgentExecution.builder()
+            .executionId(executionId)
+            .build();
+
+        AgentExecutionContextDTO requestContext = AgentExecutionContextDTO.builder().build();
+        ObjectNode queryArgs = JsonUtil.MAPPER.createObjectNode();
+        
+        // String format: {"endpoints_like": "authentication"}
+        queryArgs.put("endpoints_like", "authentication");
+        
+        requestContext.setExecutionArgs(queryArgs);
+
+        // Mock endpoint searcher
+        List<EndpointDescriptor> authEndpoints = new ArrayList<>();
+        authEndpoints.add(EndpointDescriptor.builder()
+            .name("login")
+            .description("User login endpoint")
+            .httpMethod("POST")
+            .path("/api/auth/login")
+            .build());
+        
+        when(endpointSearcher.getEndpointsLike(eq(execution), eq("authentication")))
+            .thenReturn(authEndpoints);
+
+        // When
+        ObjectNode result = agentVerbs.getEndpointsLike(execution, requestContext);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.has("endpoints"));
+        assertEquals(1, result.get("endpoints").size());
+        assertEquals("login", result.get("endpoints").get(0).get("name").asText());
     }
 }

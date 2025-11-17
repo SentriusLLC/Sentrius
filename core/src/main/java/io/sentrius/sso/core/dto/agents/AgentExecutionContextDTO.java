@@ -51,6 +51,7 @@ public class AgentExecutionContextDTO {
     }
 
     public void addToMemory(String key, JsonNode value) {
+        log.info("Adding to memory key: {}", key);
         putStructuredToMemory(key, value);
     }
 

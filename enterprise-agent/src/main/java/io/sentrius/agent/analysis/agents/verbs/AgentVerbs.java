@@ -986,10 +986,32 @@ public class AgentVerbs extends VerbBase {
                 }
             }
         } else if (parsedQuery.isObject()) {
-            // Handle nested object format: {"arg1": {"field": "text"}} or {"arg1": "text"}
-            String queryText = extractQueryString(parsedQuery);
-            if (queryText != null && !queryText.isEmpty()) {
-                queryStrings.add(queryText);
+            // Handle nested object format: {"endpoints_like": ["text1", "text2"]} or {"arg1": "text"}
+            // First check if this object contains an array (common when VerbRegistry wraps arguments)
+            Iterator<Map.Entry<String, JsonNode>> fields = parsedQuery.fields();
+            boolean foundArray = false;
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> entry = fields.next();
+                JsonNode value = entry.getValue();
+                if (value.isArray()) {
+                    // Extract strings from the array
+                    for (JsonNode arrayElement : value) {
+                        String queryText = extractQueryString(arrayElement);
+                        if (queryText != null && !queryText.isEmpty()) {
+                            queryStrings.add(queryText);
+                        }
+                    }
+                    foundArray = true;
+                    break;
+                }
+            }
+            
+            // If no array found, try to extract a single string
+            if (!foundArray) {
+                String queryText = extractQueryString(parsedQuery);
+                if (queryText != null && !queryText.isEmpty()) {
+                    queryStrings.add(queryText);
+                }
             }
         } else if (parsedQuery.isTextual()) {
             // Simple string format
