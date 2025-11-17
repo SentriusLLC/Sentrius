@@ -56,7 +56,7 @@ public class CodingVerbService extends VerbBase {
         name = "handleJiraIssueWithCode",
         description = "Generate code and create a PR for a JIRA issue. Returns the PR URL if successful.",
         returnType = String.class,
-        isAiCallable = true,
+        isAiCallable = false,
         paramDescriptions = {
             "JIRA issue key (e.g., PROJECT-123)",
             "GitHub repository (format: owner/repo)",
@@ -101,7 +101,7 @@ public class CodingVerbService extends VerbBase {
         name = "handleGitHubIssueWithCode",
         description = "Generate code and create a PR for a GitHub issue. Returns the PR URL if successful.",
         returnType = String.class,
-        isAiCallable = true,
+        isAiCallable = false,
         paramDescriptions = {
             "GitHub repository (format: owner/repo)",
             "GitHub issue number",
@@ -147,7 +147,7 @@ public class CodingVerbService extends VerbBase {
         name = "createPullRequest",
         description = "Create a pull request with specified code changes. Returns the PR URL if successful.",
         returnType = String.class,
-        isAiCallable = true,
+        isAiCallable = false,
         paramDescriptions = {
             "GitHub repository (format: owner/repo)",
             "Pull request title",
@@ -194,7 +194,7 @@ public class CodingVerbService extends VerbBase {
         name = "isCodingAgentAvailable",
         description = "Check if the coding agent is configured and available for automated code generation",
         returnType = Boolean.class,
-        isAiCallable = true,
+        isAiCallable = false,
         paramDescriptions = {}
     )
     public Boolean isCodingAgentAvailable() {

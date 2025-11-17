@@ -50,7 +50,7 @@ public class JiraVerbs {
         description = "Search for JIRA tickets using JQL or simple text query. Requires 'query' parameter in context.",
         returnType = List.class,
         returnName = "tickets",
-        isAiCallable = true,
+        isAiCallable = false,
         requiresTokenManagement = true,
         paramDescriptions = {"query: JQL query string or simple text search"}
     )
@@ -97,7 +97,7 @@ public class JiraVerbs {
         description = "Get details of a specific JIRA ticket. Requires 'issueKey' parameter in context.",
         returnType = TicketDTO.class,
         returnName = "ticket",
-        isAiCallable = true,
+        isAiCallable = false,
         requiresTokenManagement = true,
         paramDescriptions = {"issueKey: JIRA ticket key (e.g., PROJ-123)"}
     )
@@ -141,7 +141,7 @@ public class JiraVerbs {
         description = "Add a comment to a JIRA ticket. Requires 'issueKey' and 'comment' parameters in context.",
         returnType = Boolean.class,
         returnName = "success",
-        isAiCallable = true,
+        isAiCallable = false,
         requiresTokenManagement = true,
         paramDescriptions = {
             "issueKey: JIRA ticket key (e.g., PROJ-123)",
@@ -187,7 +187,7 @@ public class JiraVerbs {
         description = "Check if JIRA integration is configured and available",
         returnType = Boolean.class,
         returnName = "available",
-        isAiCallable = true,
+        isAiCallable = false,
         requiresTokenManagement = true
     )
     public Boolean isJiraAvailable(TokenDTO token, AgentExecutionContextDTO contextDTO) throws ZtatException {
@@ -218,7 +218,7 @@ public class JiraVerbs {
                      "Requires 'issueKey' and 'hostSystemId' parameters in context.",
         returnType = ObjectNode.class,
         returnName = "result",
-        isAiCallable = true,
+        isAiCallable = false,
         requiresTokenManagement = true,
         paramDescriptions = {
             "issueKey: JIRA ticket key (e.g., PROJ-123)",

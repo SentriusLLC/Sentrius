@@ -41,7 +41,7 @@ public class JiraVerbService {
         name = "searchForTickets",
         description = "Search for JIRA tickets using a query string. Can use JQL or simple text search.",
         returnType = List.class,
-        isAiCallable = true,
+        isAiCallable = false,
         paramDescriptions = {"Search query string (JQL or simple text)"}
     )
     public List<TicketDTO> searchForTickets(String query) {
@@ -68,7 +68,7 @@ public class JiraVerbService {
         name = "assignTicket",
         description = "Assign a JIRA ticket to a user",
         returnType = Boolean.class,
-        isAiCallable = true,
+        isAiCallable = false,
         paramDescriptions = {"JIRA ticket key (e.g., PROJ-123)", "User to assign the ticket to"}
     )
     public Boolean assignTicket(String ticketKey, User user) {
@@ -96,7 +96,7 @@ public class JiraVerbService {
         name = "updateTicket",
         description = "Add a comment to a JIRA ticket",
         returnType = Boolean.class,
-        isAiCallable = true,
+        isAiCallable = false,
         paramDescriptions = {"JIRA ticket key (e.g., PROJ-123)", "User adding the comment", "Comment message"}
     )
     public Boolean updateTicket(String ticketKey, User user, String message) {
@@ -121,7 +121,7 @@ public class JiraVerbService {
         name = "isJiraAvailable",
         description = "Check if JIRA integration is configured and available",
         returnType = Boolean.class,
-        isAiCallable = true,
+        isAiCallable = false,
         paramDescriptions = {}
     )
     public Boolean isJiraAvailable() {
