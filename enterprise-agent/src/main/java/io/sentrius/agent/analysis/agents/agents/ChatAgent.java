@@ -215,6 +215,48 @@ public class ChatAgent extends BaseEnterpriseAgent {
 
                         var arguments = response.getArguments();
                         if (null != response) {
+                            // Handle memory lookup if specified
+                            if (response.getMemoryLookup() != null && !response.getMemoryLookup().isEmpty()) {
+                                log.info("Memory lookup requested: {}", response.getMemoryLookup());
+                                try {
+                                    // Set up memory lookup arguments
+                                    Map<String, Object> memoryArgs = new HashMap<>();
+                                    memoryArgs.put("query", response.getMemoryLookup());
+                                    
+                                    // Execute memory lookup
+                                    var memoryResponse = verbRegistry.execute(
+                                        agentExecution,
+                                        agentExecutionContext,
+                                        lastVerbResponse,
+                                        "lookupAgentMemory",
+                                        memoryArgs
+                                    );
+                                    
+                                    // Add memory results to context for LLM
+                                    if (memoryResponse != null && memoryResponse.getReturnName() != null) {
+                                        var memoryResult = agentExecutionContext.getAgentShortTermMemory()
+                                            .get(memoryResponse.getReturnName());
+                                        if (memoryResult != null) {
+                                            agentExecutionContext.addMessages(
+                                                Message.builder()
+                                                    .role("system")
+                                                    .content("Memory lookup results: " + memoryResult.toString())
+                                                    .build()
+                                            );
+                                            log.info("Memory lookup completed, results added to context");
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    log.warn("Memory lookup failed: {}", e.getMessage());
+                                    agentExecutionContext.addMessages(
+                                        Message.builder()
+                                            .role("system")
+                                            .content("Memory lookup failed: " + e.getMessage())
+                                            .build()
+                                    );
+                                }
+                            }
+                            
                             if (response.getNextOperation() != null && !response.getNextOperation().isEmpty()) {
                                 var executionResponse = verbRegistry.execute(
                                     agentExecution,

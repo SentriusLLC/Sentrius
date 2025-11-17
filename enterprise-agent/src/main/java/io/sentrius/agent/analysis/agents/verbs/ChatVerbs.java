@@ -104,7 +104,13 @@ public class ChatVerbs extends VerbBase{
                 ". Please summarize prior terminal " +
                 "sessions, using " +
                 "terminal output if needed " +
-                "for clarity of the next LLM request and for the user. Ensure your all future responses meets this " +
+                "for clarity of the next LLM request and for the user. " +
+                "IMPORTANT: Use the 'memoryLookup' field to search for information that is NOT in the current context. " +
+                "For example, if the user mentions something from a previous conversation that is not in the recent messages, " +
+                "populate memoryLookup with a query string to retrieve that information. " +
+                "Leave memoryLookup empty if the information is already available in the context or not needed. " +
+                "The memory lookup will be executed BEFORE the nextOperation. " +
+                "Ensure your all future responses meets this " +
                 "json format (LLMResponse format): " + terminalResponse).build());
             messages.add(Message.builder().role("user").content(userMessage.getContentAsString()).build());
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
@@ -222,7 +228,13 @@ public class ChatVerbs extends VerbBase{
                 "." +
                 ". " +
                 ". Please summarize messaging, using  " +
-                "for clarity of the next LLM request and for the user. Ensure your all future responses meets this " +
+                "for clarity of the next LLM request and for the user. " +
+                "IMPORTANT: Use the 'memoryLookup' field to search for information that is NOT in the current context. " +
+                "For example, if you need information from previous sessions that is not in recent messages, " +
+                "populate memoryLookup with a query string to retrieve that information. " +
+                "Leave memoryLookup empty if the information is already available in the context or not needed. " +
+                "The memory lookup will be executed BEFORE the nextOperation. " +
+                "Ensure your all future responses meets this " +
                 "json format (LLMResponse format): " + terminalResponse).build());
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);

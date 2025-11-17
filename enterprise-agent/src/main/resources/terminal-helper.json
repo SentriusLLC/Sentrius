@@ -1,6 +1,7 @@
 {
   "previousOperation": "<previousOperation>",
   "nextOperation": "<nextOperation>",
+  "memoryLookup": "<Query string to lookup in memory before nextOperation. Only populate this if the information you need is NOT already in the current context. Leave empty if the information is already available in context or if no memory lookup is needed>",
   "arguments": {
     "argumentname": "<argumentvalue for nextOperation>",
     "argumentname2": "<argumentvalue>"

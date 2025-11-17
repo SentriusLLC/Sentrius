@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 public class LLMResponse {
     String previousOperation;
     String nextOperation;
+    String memoryLookup;
     String summaryForLLM;
     String responseForUser;
     @Builder.Default
