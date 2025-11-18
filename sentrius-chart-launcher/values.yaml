@@ -227,14 +227,17 @@ ingress:
     proxyBufferSize: "8k"
     proxyBuffersNumber: "4"
     clientBodyBufferSize: "8k"
-    proxyReadTimeout: "3600"  # Keep high for websockets
-    proxySendTimeout: "3600"  # Keep high for websockets
+    proxyReadTimeout: "3600"  # Keep high for websockets and long-running requests
+    proxySendTimeout: "3600"  # Keep high for websockets and long-running requests
     proxyConnectTimeout: "60"
     upstreamKeepaliveConnections: "32"
     upstreamKeepaliveTimeout: "60"
     upstreamKeepaliveRequests: "100"
     proxyBodySize: "10m"
-    limitConnections: "10"
+    limitConnections: "50"  # Increased to support concurrent UI requests
+    # Upstream health check settings to prevent premature backend marking as down
+    upstreamMaxFails: "5"  # Allow 5 failures before marking backend as down
+    upstreamFailTimeout: "30s"  # Time window for counting failures
   annotations:
     gke:  # GKE-specific annotations
       networking.gke.io/managed-certificates: wildcard-cert
@@ -263,7 +266,7 @@ ingress:
       # Request size limits
       nginx.ingress.kubernetes.io/proxy-body-size: "10m"
       # Connection limit per IP to prevent resource exhaustion
-      nginx.ingress.kubernetes.io/limit-connections: "10"
+      nginx.ingress.kubernetes.io/limit-connections: "50"
 
 
 

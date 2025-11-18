@@ -28,6 +28,9 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: "{{ .Values.ingress.nginx.proxyBodySize }}"
     # Connection limit per IP to prevent resource exhaustion
     nginx.ingress.kubernetes.io/limit-connections: "{{ .Values.ingress.nginx.limitConnections }}"
+    # Upstream health check settings to prevent premature backend marking as unavailable
+    nginx.ingress.kubernetes.io/upstream-max-fails: "{{ .Values.ingress.nginx.upstreamMaxFails }}"
+    nginx.ingress.kubernetes.io/upstream-fail-timeout: "{{ .Values.ingress.nginx.upstreamFailTimeout }}"
 spec:
   {{- if .Values.ingress.class }}
   ingressClassName: {{ .Values.ingress.class }}
