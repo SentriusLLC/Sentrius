@@ -12,6 +12,22 @@ metadata:
     {{- end }}
     nginx.ingress.kubernetes.io/ssl-redirect: "{{ .Values.certificates.enabled }}"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "{{ .Values.certificates.enabled }}"
+    # Buffer size configurations to prevent memory bloat
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "{{ .Values.ingress.nginx.proxyBufferSize }}"
+    nginx.ingress.kubernetes.io/proxy-buffers-number: "{{ .Values.ingress.nginx.proxyBuffersNumber }}"
+    nginx.ingress.kubernetes.io/client-body-buffer-size: "{{ .Values.ingress.nginx.clientBodyBufferSize }}"
+    # Connection and timeout settings to prevent resource exhaustion
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "{{ .Values.ingress.nginx.proxyReadTimeout }}"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "{{ .Values.ingress.nginx.proxySendTimeout }}"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "{{ .Values.ingress.nginx.proxyConnectTimeout }}"
+    # Keepalive settings to manage connections efficiently
+    nginx.ingress.kubernetes.io/upstream-keepalive-connections: "{{ .Values.ingress.nginx.upstreamKeepaliveConnections }}"
+    nginx.ingress.kubernetes.io/upstream-keepalive-timeout: "{{ .Values.ingress.nginx.upstreamKeepaliveTimeout }}"
+    nginx.ingress.kubernetes.io/upstream-keepalive-requests: "{{ .Values.ingress.nginx.upstreamKeepaliveRequests }}"
+    # Request size limits
+    nginx.ingress.kubernetes.io/proxy-body-size: "{{ .Values.ingress.nginx.proxyBodySize }}"
+    # Connection limit per IP to prevent resource exhaustion
+    nginx.ingress.kubernetes.io/limit-connections: "{{ .Values.ingress.nginx.limitConnections }}"
 spec:
   {{- if .Values.ingress.class }}
   ingressClassName: {{ .Values.ingress.class }}

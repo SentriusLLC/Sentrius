@@ -222,6 +222,19 @@ ingress:
   enabled: true
   class: "nginx"  # Default for local; override for GKE/AWS (uses spec.ingressClassName)
   tlsEnabled: true  # Enable TLS when supported
+  # Nginx resource management settings to prevent memory leaks
+  nginx:
+    proxyBufferSize: "8k"
+    proxyBuffersNumber: "4"
+    clientBodyBufferSize: "8k"
+    proxyReadTimeout: "3600"  # Keep high for websockets
+    proxySendTimeout: "3600"  # Keep high for websockets
+    proxyConnectTimeout: "60"
+    upstreamKeepaliveConnections: "32"
+    upstreamKeepaliveTimeout: "60"
+    upstreamKeepaliveRequests: "100"
+    proxyBodySize: "10m"
+    limitConnections: "10"
   annotations:
     gke:  # GKE-specific annotations
       networking.gke.io/managed-certificates: wildcard-cert
@@ -235,8 +248,22 @@ ingress:
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
       nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
       nginx.ingress.kubernetes.io/enable-websocket: "true"
+      # Buffer size configurations to prevent memory bloat
+      nginx.ingress.kubernetes.io/proxy-buffer-size: "8k"
+      nginx.ingress.kubernetes.io/proxy-buffers-number: "4"
+      nginx.ingress.kubernetes.io/client-body-buffer-size: "8k"
+      # Connection and timeout settings (high for websockets)
       nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
       nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+      # Keepalive settings to manage connections efficiently
+      nginx.ingress.kubernetes.io/upstream-keepalive-connections: "32"
+      nginx.ingress.kubernetes.io/upstream-keepalive-timeout: "60"
+      nginx.ingress.kubernetes.io/upstream-keepalive-requests: "100"
+      # Request size limits
+      nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+      # Connection limit per IP to prevent resource exhaustion
+      nginx.ingress.kubernetes.io/limit-connections: "10"
 
 
 

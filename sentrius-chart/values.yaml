@@ -279,6 +279,19 @@ ingress:
   tlsEnabled: true  # Enable TLS when supported
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: HTTP
+  # Nginx resource management settings to prevent memory leaks
+  nginx:
+    proxyBufferSize: "8k"
+    proxyBuffersNumber: "4"
+    clientBodyBufferSize: "8k"
+    proxyReadTimeout: "60"
+    proxySendTimeout: "60"
+    proxyConnectTimeout: "60"
+    upstreamKeepaliveConnections: "32"
+    upstreamKeepaliveTimeout: "60"
+    upstreamKeepaliveRequests: "100"
+    proxyBodySize: "10m"
+    limitConnections: "10"
   # Environment-specific annotation sets (use via --set-file or values override)
   annotationSets:
     gke:  # GKE-specific annotations
