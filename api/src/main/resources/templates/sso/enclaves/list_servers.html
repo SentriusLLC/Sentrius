@@ -187,21 +187,6 @@
             <!-- Data will be dynamically loaded here -->
             </tbody>
         </table>
-        <h3>Deployed Pods</h3>
-        <table id="k8s-pods-table" class="display" style="width:100%">
-            <thead>
-            <tr>
-                <th>Pod Name</th>
-                <th>Namespace</th>
-                <th>Docker Image</th>
-                <th>Status</th>
-                <th>Operations</th>
-            </tr>
-            </thead>
-            <tbody>
-            <!-- Data will be dynamically loaded here -->
-            </tbody>
-        </table>
     </div>
     <div id="textarea" style="display: none;"></div>
 </div>
@@ -685,66 +670,7 @@
 
             ]
         });
-
-        // Initialize K8s pods table
-        let canManageSystems = [[${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_SYSTEMS')}]];
-        $('#k8s-pods-table').DataTable({
-            ajax: {
-                url: '/api/v1/k8s/pods',
-                dataSrc: ''
-            },
-            columns: [
-                { data: 'name' },
-                { data: 'namespace' },
-                { data: 'image' },
-                { data: 'phase' },
-                {
-                    data: null,
-                    render: function(data, type, row) {
-                        let ret = '';
-                        if (canManageSystems) {
-                            ret += `<button class="btn btn-warning" onclick="restartPod('${row.namespace}', '${row.name}')">Restart Pod</button>`;
-                        }
-                        return ret;
-                    }
-                }
-            ]
-        });
     });
-
-    function restartPod(namespace, podName) {
-        if (!confirm(`Are you sure you want to restart pod ${podName} in namespace ${namespace}?`)) {
-            return;
-        }
-
-        var csrf = /*[[${_csrf.token}]]*/ "";
-        const apiUrl = `/api/v1/k8s/pods/${namespace}/${podName}/restart`;
-
-        fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrf
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            } else {
-                throw new Error('Failed to restart pod');
-            }
-        })
-        .then(data => {
-            $("#alertTopError").hide();
-            $("#alertTop").text(data.message || "Pod restart initiated").show().delay(3000).fadeOut();
-            $('#k8s-pods-table').DataTable().ajax.reload();
-        })
-        .catch(error => {
-            console.log(error);
-            $("#alertTop").hide();
-            $("#alertTopError").text("Failed to restart pod: " + error.message).show().delay(5000).fadeOut();
-        });
-    }
 
 </script>
 </body>

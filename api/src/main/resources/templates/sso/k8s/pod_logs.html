@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta th:replace="~{fragments/header}" />
-    <title>[[${systemOptions.systemLogoName}]] - Pod Logs</title>
+    <title>[[${systemOptions.systemLogoName}]] - Pods</title>
 
     <!-- Styles -->
     <style>
@@ -64,6 +64,20 @@
             margin: 10px 0;
             display: none;
         }
+        #pod-search {
+            background-color: #1a1a1a;
+            color: #eaeaea;
+            border-color: #444;
+        }
+        #pod-search:focus {
+            background-color: #1a1a1a;
+            color: #eaeaea;
+            border-color: #00ff00;
+            box-shadow: 0 0 0 0.25rem rgba(0, 255, 0, 0.25);
+        }
+        #pod-search::placeholder {
+            color: #888;
+        }
     </style>
 </head>
 <body>
@@ -75,7 +89,12 @@
             <div class="main-content">
                 <div th:replace="~{fragments/alerts}"></div>
 
-                <h2 class="toast-header">Pod Logs Viewer</h2>
+                <h2 class="toast-header">Pods</h2>
+
+                <!-- Search Bar -->
+                <div class="mb-3">
+                    <input type="text" id="pod-search" class="form-control" placeholder="Search pods by name, namespace, or image...">
+                </div>
 
                 <!-- Pod Selection -->
                 <div class="pod-table-container">
@@ -84,6 +103,7 @@
                         <tr>
                             <th>Namespace</th>
                             <th>Pod Name</th>
+                            <th>Docker Image</th>
                             <th>Phase</th>
                             <th>Actions</th>
                         </tr>
@@ -148,6 +168,7 @@
     let selectedPodNamespace = null;
     let selectedPodName = null;
     let allLogs = '';
+    let allPods = []; // Store all pods for filtering
 
     document.addEventListener('DOMContentLoaded', function () {
         loadPods();
@@ -163,45 +184,90 @@
         document.getElementById('search-text').addEventListener('input', function() {
             filterLogs();
         });
+
+        // Pod search handler
+        document.getElementById('pod-search').addEventListener('input', function() {
+            filterPods();
+        });
     });
 
     function loadPods() {
         fetch('/api/v1/k8s/pods')
             .then(response => response.json())
             .then(data => {
-                const tbody = document.getElementById('pods-table-body');
-                tbody.innerHTML = '';
-
-                data.forEach(pod => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${pod.namespace || 'N/A'}</td>
-                        <td>${pod.name || 'N/A'}</td>
-                        <td>${pod.phase || 'Unknown'}</td>
-                        <td>
-                            <button class="btn btn-sm btn-primary view-logs-btn" 
-                                    data-namespace="${pod.namespace}" 
-                                    data-pod="${pod.name}">
-                                View Logs
-                            </button>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
-
-                // Attach event listeners
-                document.querySelectorAll('.view-logs-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        selectedPodNamespace = this.getAttribute('data-namespace');
-                        selectedPodName = this.getAttribute('data-pod');
-                        selectPod();
-                    });
-                });
+                allPods = data; // Store all pods for filtering
+                displayPods(allPods);
             })
             .catch(err => {
                 console.error('Failed to load pods:', err);
                 showError('Failed to load pods: ' + err.message);
             });
+    }
+
+    function displayPods(pods) {
+        const tbody = document.getElementById('pods-table-body');
+        tbody.innerHTML = '';
+
+        pods.forEach(pod => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${pod.namespace || 'N/A'}</td>
+                <td>${pod.name || 'N/A'}</td>
+                <td>${pod.image || 'N/A'}</td>
+                <td>${pod.phase || 'Unknown'}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary view-logs-btn" 
+                            data-namespace="${pod.namespace}" 
+                            data-pod="${pod.name}">
+                        View Logs
+                    </button>
+                    <button class="btn btn-sm btn-warning ms-2 restart-pod-btn" 
+                            data-namespace="${pod.namespace}" 
+                            data-pod="${pod.name}">
+                        Restart
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        // Attach event listeners
+        document.querySelectorAll('.view-logs-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                selectedPodNamespace = this.getAttribute('data-namespace');
+                selectedPodName = this.getAttribute('data-pod');
+                selectPod();
+            });
+        });
+        
+        document.querySelectorAll('.restart-pod-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const namespace = this.getAttribute('data-namespace');
+                const podName = this.getAttribute('data-pod');
+                restartPod(namespace, podName);
+            });
+        });
+    }
+
+    function filterPods() {
+        const searchTerm = document.getElementById('pod-search').value.toLowerCase();
+        
+        if (!searchTerm) {
+            displayPods(allPods);
+            return;
+        }
+
+        const filteredPods = allPods.filter(pod => {
+            const namespace = (pod.namespace || '').toLowerCase();
+            const name = (pod.name || '').toLowerCase();
+            const image = (pod.image || '').toLowerCase();
+            
+            return namespace.includes(searchTerm) || 
+                   name.includes(searchTerm) || 
+                   image.includes(searchTerm);
+        });
+
+        displayPods(filteredPods);
     }
 
     function selectPod() {
@@ -341,6 +407,44 @@
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    function restartPod(namespace, podName) {
+        if (!confirm(`Are you sure you want to restart pod ${podName} in namespace ${namespace}?`)) {
+            return;
+        }
+        
+        const csrfToken = document.getElementById('csrf-token').textContent;
+        
+        showLoading(true);
+        hideError();
+        
+        fetch(`/api/v1/k8s/pods/${namespace}/${podName}/restart`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            showLoading(false);
+            
+            if (data.success) {
+                alert(`Pod ${podName} restart initiated successfully`);
+                // Refresh the pod list after restart
+                setTimeout(() => {
+                    loadPods();
+                }, 2000); // Wait 2 seconds before refreshing
+            } else {
+                showError(data.message || 'Failed to restart pod');
+            }
+        })
+        .catch(err => {
+            showLoading(false);
+            console.error('Failed to restart pod:', err);
+            showError('Failed to restart pod: ' + err.message);
+        });
     }
 </script>
 
