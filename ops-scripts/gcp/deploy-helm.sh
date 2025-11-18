@@ -92,6 +92,36 @@ if [[ $? -ne 0 ]]; then
     kubectl create namespace ${TENANT}-agents || { echo "Failed to create namespace ${TENANT}-agents"; exit 1; }
 fi
 
+# Wait for admission webhooks to be ready (prevents validation failures during deployment)
+echo "🔍 Checking for admission webhooks..."
+
+# Check for ingress controller webhook
+if kubectl get validatingwebhookconfigurations 2>/dev/null | grep -q "ingress"; then
+    echo "⏳ Waiting for ingress admission webhook to be ready..."
+    for i in {1..30}; do
+        if kubectl get validatingwebhookconfigurations 2>/dev/null | grep -q "ingress.*admission"; then
+            echo "✅ Ingress admission webhook is configured"
+            sleep 2  # Brief pause to ensure webhook is fully operational
+            break
+        fi
+        echo "Waiting for ingress webhook configuration... ($i/30)"
+        sleep 2
+    done
+fi
+
+# Check for cert-manager webhook (if TLS is enabled)
+if [[ "$CERTIFICATES_ENABLED" == "true" ]]; then
+    if kubectl get validatingwebhookconfigurations cert-manager-webhook >/dev/null 2>&1; then
+        echo "⏳ Waiting for cert-manager webhook to be fully operational..."
+        # Wait for cert-manager webhook pods to be ready
+        if kubectl get pods -n cert-manager -l app.kubernetes.io/name=webhook >/dev/null 2>&1; then
+            kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=webhook -n cert-manager --timeout=60s 2>/dev/null || echo "⚠️ cert-manager webhook may not be fully ready"
+        fi
+        echo "✅ cert-manager webhook check complete"
+        sleep 2  # Brief pause to ensure webhook is fully operational
+    fi
+fi
+
 # Generate Keycloak DB password if not set and secret doesn't exist
 if [[ -z "$KEYCLOAK_DB_PASSWORD" ]]; then
     echo "🔎 Checking if keycloak secret already exists..."

@@ -275,24 +275,20 @@ keycloak:
 
 ingress:
   enabled: true
-  class: "nginx"  # Default for local; override for GKE/AWS
+  class: "nginx"  # Default for local; override for GKE/AWS (uses spec.ingressClassName)
   tlsEnabled: true  # Enable TLS when supported
   annotations:
-    kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/backend-protocol: HTTP
   # Environment-specific annotation sets (use via --set-file or values override)
   annotationSets:
     gke:  # GKE-specific annotations
-      kubernetes.io/ingress.class: gce
       networking.gke.io/managed-certificates: wildcard-cert
       kubernetes.io/ingress.allow-http: "false"
       ingress.kubernetes.io/force-ssl-redirect: "true"
     aws:  # AWS-specific annotations for ALB
-      kubernetes.io/ingress.class: alb
       alb.ingress.kubernetes.io/scheme: internet-facing
       alb.ingress.kubernetes.io/ssl-redirect: "443"
     local:  # Local environment annotations (e.g., Minikube)
-      kubernetes.io/ingress.class: nginx
       nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
       nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
 
@@ -349,8 +345,7 @@ jaeger:
   ingress:
     enabled: true
     host: jaeger.{{ .Values.subdomain }}
-    annotations:
-      kubernetes.io/ingress.class: nginx
+    annotations: {}
 
   resources:
     limits:

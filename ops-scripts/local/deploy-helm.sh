@@ -128,6 +128,18 @@ if ! kubectl get deployment cert-manager -n cert-manager >/dev/null 2>&1 || \
         echo "Waiting for cert-manager to be ready..."
         kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=cert-manager -n cert-manager --timeout=300s
         kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=webhook -n cert-manager --timeout=300s
+        
+        echo "⏳ Waiting for cert-manager webhook to be fully operational..."
+        for i in {1..30}; do
+          if kubectl get validatingwebhookconfigurations cert-manager-webhook >/dev/null 2>&1; then
+            echo "✅ cert-manager webhook is configured"
+            # Give webhook a bit more time to be fully operational
+            sleep 5
+            break
+          fi
+          echo "Waiting for cert-manager webhook configuration... ($i/30)"
+          sleep 2
+        done
     else
         echo "ERROR: cert-manager is not fully installed in your cluster."
         echo "You can install it manually or rerun this script with --install-cert-manager --tls"
@@ -140,6 +152,23 @@ fi
 if ! kubectl get pods -n ingress-nginx 2>/dev/null | grep -q ingress-nginx-controller; then
     echo "🔧 Enabling ingress controller in Minikube..."
     minikube addons enable ingress
+    
+    echo "⏳ Waiting for ingress controller to be ready..."
+    kubectl wait --namespace ingress-nginx \
+      --for=condition=ready pod \
+      --selector=app.kubernetes.io/component=controller \
+      --timeout=300s 2>/dev/null || echo "⚠️ Ingress controller may not be fully ready yet"
+    
+    # Wait for webhook to be ready
+    echo "⏳ Waiting for ingress admission webhook to be ready..."
+    for i in {1..30}; do
+      if kubectl get validatingwebhookconfigurations ingress-nginx-admission >/dev/null 2>&1; then
+        echo "✅ Ingress admission webhook is configured"
+        break
+      fi
+      echo "Waiting for webhook configuration... ($i/30)"
+      sleep 2
+    done
 else
     echo "✅ Ingress controller already enabled."
 fi

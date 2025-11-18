@@ -5,10 +5,17 @@ metadata:
   name: managed-cert-ingress-{{ .Values.tenant }}
   namespace: {{ .Values.tenant }}
   annotations:
-    {{- toYaml .Values.ingress.annotationSets.local | nindent 4 }}
+    {{- range $key, $value := .Values.ingress.annotationSets.local }}
+    {{- if ne $key "kubernetes.io/ingress.class" }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+    {{- end }}
     nginx.ingress.kubernetes.io/ssl-redirect: "{{ .Values.certificates.enabled }}"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "{{ .Values.certificates.enabled }}"
 spec:
+  {{- if .Values.ingress.class }}
+  ingressClassName: {{ .Values.ingress.class }}
+  {{- end }}
   {{- if .Values.ingress.tlsEnabled }}
   tls:
     - hosts:
