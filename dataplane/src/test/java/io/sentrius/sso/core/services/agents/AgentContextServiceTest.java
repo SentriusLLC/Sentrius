@@ -195,6 +195,67 @@ class AgentContextServiceTest {
         assertTrue(lineage.isEmpty());
     }
 
+    @Test
+    void testGetInheritedMemoryCount_ByUUID_ReturnsCorrectCount() {
+        // Setup
+        UUID agentId = UUID.randomUUID();
+        String agentName = "test-agent";
+        AgentContext agent = createAgent(agentId, agentName, 1, null);
+        
+        when(contextRepo.findById(agentId)).thenReturn(Optional.of(agent));
+        when(memoryRepo.countByAgentIdAndMarkingsContaining(agentName, "INHERITED")).thenReturn(5L);
+
+        // Execute
+        long count = service.getInheritedMemoryCount(agentId);
+
+        // Verify
+        assertEquals(5L, count);
+        verify(memoryRepo).countByAgentIdAndMarkingsContaining(agentName, "INHERITED");
+    }
+
+    @Test
+    void testGetInheritedMemoryCount_ByUUID_ContextNotFound_ReturnsZero() {
+        // Setup
+        UUID agentId = UUID.randomUUID();
+        when(contextRepo.findById(agentId)).thenReturn(Optional.empty());
+
+        // Execute
+        long count = service.getInheritedMemoryCount(agentId);
+
+        // Verify
+        assertEquals(0L, count);
+        verify(memoryRepo, never()).countByAgentIdAndMarkingsContaining(any(), any());
+    }
+
+    @Test
+    void testGetInheritedMemoryCount_ByName_ReturnsCorrectCount() {
+        // Setup
+        String agentName = "test-agent";
+        when(memoryRepo.countByAgentIdAndMarkingsContaining(agentName, "INHERITED")).thenReturn(3L);
+
+        // Execute
+        long count = service.getInheritedMemoryCount(agentName);
+
+        // Verify
+        assertEquals(3L, count);
+        verify(memoryRepo).countByAgentIdAndMarkingsContaining(agentName, "INHERITED");
+        verify(contextRepo, never()).findById(any());
+    }
+
+    @Test
+    void testGetInheritedMemoryCount_ByName_NoInheritedMemories_ReturnsZero() {
+        // Setup
+        String agentName = "test-agent-no-memories";
+        when(memoryRepo.countByAgentIdAndMarkingsContaining(agentName, "INHERITED")).thenReturn(0L);
+
+        // Execute
+        long count = service.getInheritedMemoryCount(agentName);
+
+        // Verify
+        assertEquals(0L, count);
+        verify(memoryRepo).countByAgentIdAndMarkingsContaining(agentName, "INHERITED");
+    }
+
     // Helper method
     private AgentContext createAgent(UUID id, String name, int generation, UUID parentId) {
         AgentContext agent = new AgentContext();

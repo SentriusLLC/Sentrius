@@ -161,6 +161,18 @@ public class AgentContextService {
         // Use agent name as agentId for memory queries (consistent with how memories are stored)
         return memoryRepo.countByAgentIdAndMarkingsContaining(context.getName(), "INHERITED");
     }
+
+    /**
+     * Get inherited memory count by agent name directly.
+     * This is more efficient when the agent name is already available (e.g., from projections).
+     * 
+     * @param agentName the name of the agent
+     * @return count of inherited memories
+     */
+    public long getInheritedMemoryCount(String agentName) {
+        // Use agent name as agentId for memory queries (consistent with how memories are stored)
+        return memoryRepo.countByAgentIdAndMarkingsContaining(agentName, "INHERITED");
+    }
     
     /**
      * Gets or creates an agent context for the given agent name.
