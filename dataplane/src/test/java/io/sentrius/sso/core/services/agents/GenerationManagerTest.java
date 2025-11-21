@@ -1,5 +1,6 @@
 package io.sentrius.sso.core.services.agents;
 
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.agents.AgentContext;
 import io.sentrius.sso.core.repository.AgentContextRepository;
 import io.sentrius.sso.core.services.abac.EvaluationContext;
@@ -40,6 +41,8 @@ class GenerationManagerTest {
 
     private GenerationManager generationManager;
 
+    private SystemOptions systemOptions = new SystemOptions();
+
     @BeforeEach
     void setUp() {
         generationManager = new GenerationManager(
@@ -47,7 +50,8 @@ class GenerationManagerTest {
                 learningService,
                 policyEvaluator,
                 provenanceLogger,
-                vectorMemoryStore
+                vectorMemoryStore,
+            systemOptions
         );
     }
 
@@ -109,7 +113,7 @@ class GenerationManagerTest {
         String userId = "test-user";
 
         AgentContext parent = createTestAgent("test-agent", 1, parentId);
-        parent.setTrustScore(0.7); // Below minimum of 0.8
+        parent.setTrustScore(0.5); // Below minimum of 0.6
 
         when(agentContextRepository.findById(parentId)).thenReturn(Optional.of(parent));
 
@@ -190,7 +194,14 @@ class GenerationManagerTest {
                         .effect(PolicyDecision.Effect.ALLOW)
                         .reason("Policy allows generation creation")
                         .build());
-        when(agentContextRepository.save(any(AgentContext.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(agentContextRepository.save(any(AgentContext.class))).thenAnswer(invocation -> {
+            AgentContext arg = invocation.getArgument(0);
+            // Set ID if not already set (simulating database auto-generation)
+            if (arg.getId() == null) {
+                arg.setId(UUID.randomUUID());
+            }
+            return arg;
+        });
         doNothing().when(learningService).bootstrapFromParent(any(), any(), anyDouble());
         doNothing().when(provenanceLogger).log(any());
 
@@ -223,7 +234,14 @@ class GenerationManagerTest {
                         .effect(PolicyDecision.Effect.ALLOW)
                         .reason("Policy allows generation creation")
                         .build());
-        when(agentContextRepository.save(any(AgentContext.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(agentContextRepository.save(any(AgentContext.class))).thenAnswer(invocation -> {
+            AgentContext arg = invocation.getArgument(0);
+            // Set ID if not already set (simulating database auto-generation)
+            if (arg.getId() == null) {
+                arg.setId(UUID.randomUUID());
+            }
+            return arg;
+        });
         doNothing().when(learningService).bootstrapFromParent(any(), any(), anyDouble());
         doNothing().when(provenanceLogger).log(any());
 

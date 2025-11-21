@@ -157,6 +157,12 @@ public class SystemOptions {
 
   @Updatable(description = "This is the number of commands to evaluate for AI monitoring.")
   public Integer commandsToEvaluate = 5;
+
+  @Updatable(description = "Minimum trust score nto create a new generation.")
+  public Double minTrustScoreForGeneration = 0.6;
+
+  @Updatable(description = "Default trust score.")
+  public Double defaultTrustScore = 0.8;
   /**
    * Purely for testing mode
    */

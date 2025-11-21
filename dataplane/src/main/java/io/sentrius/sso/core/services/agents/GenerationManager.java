@@ -1,5 +1,6 @@
 package io.sentrius.sso.core.services.agents;
 
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.agents.AgentContext;
 import io.sentrius.sso.core.repository.AgentContextRepository;
 import io.sentrius.sso.core.services.abac.EvaluationContext;
@@ -33,24 +34,25 @@ public class GenerationManager {
     private final PolicyEvaluator policyEvaluator;
     private final ProvenanceLogger provenanceLogger;
     private final VectorAgentMemoryStore vectorMemoryStore;
+    private final SystemOptions options;
 
     // Trust and memory decay constants
     private static final double TRUST_DECAY_FACTOR = 0.95;
     private static final double MEMORY_RELEVANCE_DECAY = 0.9;
-    private static final double MIN_TRUST_SCORE_FOR_GENERATION = 0.8;
-    private static final double DEFAULT_TRUST_SCORE = 0.5;
 
     public GenerationManager(
-            AgentContextRepository agentContextRepository,
-            LearningService learningService,
-            PolicyEvaluator policyEvaluator,
-            @Autowired(required = false) ProvenanceLogger provenanceLogger,
-            VectorAgentMemoryStore vectorMemoryStore) {
+        AgentContextRepository agentContextRepository,
+        LearningService learningService,
+        PolicyEvaluator policyEvaluator,
+        @Autowired(required = false) ProvenanceLogger provenanceLogger,
+        VectorAgentMemoryStore vectorMemoryStore, SystemOptions options
+    ) {
         this.agentContextRepository = agentContextRepository;
         this.learningService = learningService;
         this.policyEvaluator = policyEvaluator;
         this.provenanceLogger = provenanceLogger;
         this.vectorMemoryStore = vectorMemoryStore;
+        this.options = options;
     }
 
     /**
@@ -101,10 +103,10 @@ public class GenerationManager {
         log.debug("Validating GENERATION_CREATE policy for parent: {}", parent.getId());
 
         // Check minimum trust score
-        if (parent.getTrustScore() < MIN_TRUST_SCORE_FOR_GENERATION) {
+        if (parent.getTrustScore() < options.getMinTrustScoreForGeneration()) {
             String message = String.format(
                     "Parent trust score %.2f is below minimum %.2f required for generation",
-                    parent.getTrustScore(), MIN_TRUST_SCORE_FOR_GENERATION);
+                    parent.getTrustScore(), options.getMinTrustScoreForGeneration());
             log.warn(message);
             throw new IllegalStateException(message);
         }
@@ -132,7 +134,7 @@ public class GenerationManager {
      */
     private AgentContext createChildAgent(AgentContext parent) {
         AgentContext child = new AgentContext();
-        child.setId(UUID.randomUUID());
+        // Don't set ID manually - let JPA @GeneratedValue handle it
         child.setName(parent.getName());
         child.setDescription("Generation " + (parent.getGeneration() + 1) + " of " + parent.getName());
         child.setContext(parent.getContext()); // Copy context configuration
@@ -151,7 +153,7 @@ public class GenerationManager {
      */
     private double calculateDecayedTrustScore(Double parentTrustScore) {
         if (parentTrustScore == null) {
-            return DEFAULT_TRUST_SCORE;
+            return options.getDefaultTrustScore();
         }
         double decayed = parentTrustScore * TRUST_DECAY_FACTOR;
         // Ensure trust score stays within bounds [0.0, 1.0]
@@ -194,6 +196,6 @@ public class GenerationManager {
      * Gets the minimum trust score required for generation creation.
      */
     public double getMinTrustScoreForGeneration() {
-        return MIN_TRUST_SCORE_FOR_GENERATION;
+        return options.getMinTrustScoreForGeneration();
     }
 }

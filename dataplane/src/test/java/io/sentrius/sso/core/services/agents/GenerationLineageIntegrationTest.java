@@ -1,5 +1,6 @@
 package io.sentrius.sso.core.services.agents;
 
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.agents.AgentContext;
 import io.sentrius.sso.core.model.agents.AgentMemory;
 import io.sentrius.sso.core.repository.AgentContextRepository;
@@ -54,6 +55,8 @@ class GenerationLineageIntegrationTest {
     private GenerationManager generationManager;
     private LearningService learningService;
 
+    private SystemOptions systemOptions = new SystemOptions();
+
     @BeforeEach
     void setUp() {
         learningService = new LearningService(
@@ -69,7 +72,8 @@ class GenerationLineageIntegrationTest {
                 learningService,
                 policyEvaluator,
                 provenanceLogger,
-                vectorMemoryStore
+                vectorMemoryStore,
+                systemOptions
         );
     }
 
@@ -291,7 +295,7 @@ class GenerationLineageIntegrationTest {
         verify(agentMemoryRepository).save(argThat(memory -> 
                 memory.hasMarking("INHERITED") && 
                 memory.getMemoryKey().startsWith("inherited/") &&
-                memory.getAgentId().equals(result.getId().toString())
+                memory.getAgentId().equals(result.getName())
         ));
     }
 

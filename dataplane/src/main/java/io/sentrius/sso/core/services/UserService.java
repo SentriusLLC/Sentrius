@@ -27,6 +27,12 @@ import io.sentrius.sso.core.services.security.JwtUtil;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.utils.ByteUtils;
 import io.sentrius.sso.core.utils.UIMessaging;
+import io.sentrius.sso.core.repository.AgentContextRepository;
+import io.sentrius.sso.core.repository.AgentMemoryRepository;
+import io.sentrius.sso.core.repository.AgentLaunchRepository;
+import io.sentrius.sso.core.model.agents.AgentContext;
+import io.sentrius.sso.core.model.agents.AgentLaunch;
+import io.sentrius.sso.core.services.agents.AgentContextService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
@@ -64,6 +70,10 @@ public class UserService {
     private final UserTypeRepository userTypeRepository;
     private final CryptoService cryptoService;
     private final KeycloakService keycloakService;
+    private final AgentContextRepository agentContextRepository;
+    private final AgentMemoryRepository agentMemoryRepository;
+    private final AgentContextService agentContextService;
+    private final AgentLaunchRepository agentLaunchRepository;
 
     @Autowired(required = false)
     private AttributeManagementService attributeManagementService;
@@ -278,6 +288,79 @@ public class UserService {
                 log.info("get all users {}, {}", userDTO.getUserId(), userDTO.getIdentityType());
                 if (userDTO.getIdentityType().equalsIgnoreCase("NON_PERSON_ENTITY")) {
                     userDTO.setUserId(cryptoService.encrypt(userDTO.getUserId()));
+                    
+                    // Enrich with agent context data for NPEs
+                    try {
+                        AgentContext context = null;
+                        
+                        // First, try to find the specific context via launch record
+                        // Try exact match first
+                        Optional<AgentLaunch> launchOpt = agentLaunchRepository.findLatestByAgentId(userDTO.getUsername());
+                        
+                        // If no exact match and username has service-account- prefix, try without it
+                        if (!launchOpt.isPresent() && userDTO.getUsername().startsWith("service-account-")) {
+                            String shortName = userDTO.getUsername().substring("service-account-".length());
+                            // Try stripping random suffix (everything after last dash followed by UUID-like string)
+                            // Example: "my-agent-g2-lac6dy-255846f3-ba6f-4416-bd32-02dd8e00c20e" -> try "my-agent-g2"
+                            if (shortName.contains("-")) {
+                                String[] parts = shortName.split("-");
+                                // Try progressively shorter names
+                                for (int i = parts.length - 1; i > 0; i--) {
+                                    String candidate = String.join("-", java.util.Arrays.copyOf(parts, i));
+                                    launchOpt = agentLaunchRepository.findLatestByAgentId(candidate);
+                                    if (launchOpt.isPresent()) {
+                                        log.debug("Found launch record for {} using candidate name: {}", userDTO.getUsername(), candidate);
+                                        // Update the launch record with the actual username for future lookups
+                                        AgentLaunch launch = launchOpt.get();
+                                        launch.setAgentId(userDTO.getUsername());
+                                        agentLaunchRepository.save(launch);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (launchOpt.isPresent()) {
+                            context = launchOpt.get().getContext();
+                            log.debug("Found context via launch record for {}: contextId={}", userDTO.getUsername(), context.getId());
+                        }
+                        
+                        // Fallback: if no launch record, look for first generation context by name
+                        // This ensures original agents show their own gen 1 context, not the latest child
+                        if (context == null) {
+                            Optional<AgentContext> firstGenOpt = agentContextRepository.findFirstGenerationByName(userDTO.getUsername());
+                            if (firstGenOpt.isPresent()) {
+                                context = firstGenOpt.get();
+                                log.debug("Found first generation context for {}: contextId={}, generation={}", 
+                                    userDTO.getUsername(), context.getId(), context.getGeneration());
+                            } else {
+                                // Only create if no context exists at all
+                                context = agentContextService.getOrCreateContext(userDTO.getUsername());
+                                log.debug("Created new context for {}: contextId={}", userDTO.getUsername(), context.getId());
+                            }
+                        }
+                        
+                        userDTO.setContextId(context.getId());
+                        userDTO.setGeneration(context.getGeneration());
+                        userDTO.setParentId(context.getParentId());
+                        userDTO.setMemoryNamespace(context.getMemoryNamespace());
+                        userDTO.setTrustScore(context.getTrustScore());
+                        userDTO.setPolicyId(context.getPolicyId());
+                        
+                        // Get inherited memory count
+                        long inheritedCount = agentMemoryRepository.countByAgentIdAndMarkingsContaining(
+                            userDTO.getUsername(), "INHERITED");
+                        userDTO.setInheritedMemoryCount(inheritedCount);
+                        
+                        log.debug("Enriched NPE {} with context ID: {}, generation: {}", 
+                            userDTO.getUsername(), context.getId(), context.getGeneration());
+                    } catch (Exception e) {
+                        log.error("Failed to load agent context for NPE: {}", userDTO.getUsername(), e);
+                        // Set default values on error
+                        userDTO.setGeneration(1);
+                        userDTO.setTrustScore(0.5);
+                        userDTO.setInheritedMemoryCount(0L);
+                    }
                 } else {
                     userDTO.setUserId(cryptoService.encrypt(userDTO.getId().toString()));
                 }

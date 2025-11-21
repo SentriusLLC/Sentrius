@@ -91,7 +91,8 @@ public class AgentContextService {
 
     public List<AgentContext> getLineageByName(String agentName) {
         log.info("Getting lineage for agent by name: {}", agentName);
-        AgentContext context = contextRepo.findByName(agentName).orElse(null);
+        // Use findLatestByName to handle cases where multiple generations exist with same name
+        AgentContext context = contextRepo.findLatestByName(agentName).orElse(null);
         if (context == null) {
             return new ArrayList<>();
         }
@@ -99,7 +100,36 @@ public class AgentContextService {
     }
 
     public long getInheritedMemoryCount(UUID agentId) {
-        String agentIdStr = agentId.toString();
-        return memoryRepo.countByAgentIdAndMarkingsContaining(agentIdStr, "INHERITED");
+        // Get agent name from context
+        AgentContext context = contextRepo.findById(agentId).orElse(null);
+        if (context == null) {
+            log.warn("Agent context not found for ID: {}", agentId);
+            return 0;
+        }
+        // Use agent name as agentId for memory queries (consistent with how memories are stored)
+        return memoryRepo.countByAgentIdAndMarkingsContaining(context.getName(), "INHERITED");
+    }
+    
+    /**
+     * Gets or creates an agent context for the given agent name.
+     * This ensures every agent has a context for generation purposes.
+     * Returns the latest generation if multiple contexts exist for the same name.
+     */
+    @Transactional
+    public AgentContext getOrCreateContext(String agentName) {
+        log.debug("Getting or creating agent context for: {}", agentName);
+        // Use findLatestByName to get the most recent generation
+        return contextRepo.findLatestByName(agentName)
+            .orElseGet(() -> {
+                log.info("Creating default agent context for: {}", agentName);
+                AgentContext context = new AgentContext();
+                context.setName(agentName);
+                context.setDescription("Auto-created context for agent: " + agentName);
+                context.setContext(""); // Empty context, can be populated later
+                context.setGeneration(1);
+                context.setTrustScore(0.5);
+                context.setMemoryNamespace("agents/" + agentName + "_v1");
+                return contextRepo.save(context);
+            });
     }
 }

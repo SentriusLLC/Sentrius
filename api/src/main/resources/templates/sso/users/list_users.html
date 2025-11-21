@@ -100,7 +100,7 @@
                         var myId = encodeURIComponent(data);
                         var actions = "";
                         if (cmu){
-                            actions = `<button class="btn btn-success create-generation-btn" data-agent-id="${myId}" data-agent-name="${row.username}">Create Generation</button> &nbsp; | &nbsp;`;
+                            actions = `<button class="btn btn-success create-generation-btn" data-agent-id="${myId}" data-agent-name="${row.username}" data-context-id="${row.contextId || ''}">Create Generation</button> &nbsp; | &nbsp;`;
                             actions += `<button class="btn btn-primary ping-btn" data-agent-id="${myId}">Ping</button> &nbsp; | &nbsp;`;
                             actions += `<button class="btn btn-info view-lineage-btn" data-agent-id="${myId}" data-agent-name="${row.username}">Lineage</button> &nbsp; | &nbsp;`;
                             actions += `<button class="btn btn-secondary view-policy-btn" data-agent-id="${myId}">View
@@ -316,6 +316,7 @@
         $(document).on('click', '.create-generation-btn', function () {
             const agentId = encodeURIComponent($(this).data('agent-id'));
             const agentName = $(this).data('agent-name');
+            const contextId = $(this).data('context-id');
             
             // Fetch both policy and agent info in parallel
             Promise.all([
@@ -337,6 +338,7 @@
                     $('#launchGenerationBtn').data('original-agent-id', agentId);
                     $('#launchGenerationBtn').data('original-agent-name', agentName);
                     $('#launchGenerationBtn').data('original-agent-type', agentInfo.agentType || 'chat');
+                    $('#launchGenerationBtn').data('parent-context-id', contextId);
                     
                     // Generate a new policy_id for this generation
                     // Use crypto.randomUUID() if available, otherwise fallback to a simpler approach
@@ -369,6 +371,7 @@
             const customPolicy = $('#generationPolicyEditor').val();
             const parentAgentName = $(this).data('original-agent-name');
             const parentAgentType = $(this).data('original-agent-type') || 'chat';
+            const parentContextId = $(this).data('parent-context-id');
             const launchBtn = $(this);
             
             // Helper function to reset button state
@@ -387,56 +390,24 @@
                 return;
             }
             
-            // Show loading state
-            launchBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Launching...');
-            
-            // Parse the policy to extract the policyId
-            let policyId;
-            try {
-                const yamlLines = customPolicy.split('\n');
-                for (let line of yamlLines) {
-                    const trimmedLine = line.trim();
-                    // Skip comments and empty lines
-                    if (!trimmedLine || trimmedLine.startsWith('#')) continue;
-                    
-                    if (trimmedLine.startsWith('policy_id:')) {
-                        // Split only on the first colon to handle values with colons
-                        const colonIndex = line.indexOf(':');
-                        if (colonIndex !== -1) {
-                            policyId = line.substring(colonIndex + 1).trim().replace(/['"]/g, '');
-                        }
-                        break;
-                    }
-                }
-            } catch (e) {
-                console.error('Failed to parse policy', e);
-            }
-            
-            // Validate that we found a policy ID
-            if (!policyId) {
-                alert('Could not extract policy_id from the policy. Please ensure the policy contains a valid policy_id field.');
+            if (!parentContextId) {
+                alert('Parent agent context not found. Cannot create generation.');
                 resetButton();
                 return;
             }
             
-            // Launch the agent with inherited type from parent
-            const formJson = {
-                agentName: agentName,
-                agentType: parentAgentType, // Inherited from parent agent
-                agentPolicyId: policyId,
-                clientId: '', // Will be generated
-                agentCallbackUrl: '' // Will be set by the agent
-            };
+            // Show loading state
+            launchBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Creating Generation...');
             
-            console.log(`Launching generation with type '${parentAgentType}' inherited from parent '${parentAgentName}'`);
+            // Step 1: Create the generation using the generation endpoint
+            console.log(`Creating generation from parent context: ${parentContextId}`);
             
-            fetch('/api/v1/agent/bootstrap/launcher/create', {
+            fetch(`/api/v1/agent/context/${parentContextId}/generation`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken
-                },
-                body: JSON.stringify(formJson)
+                }
             })
             .then(response => {
                 if (!response.ok) {
@@ -444,8 +415,75 @@
                 }
                 return response.json();
             })
+            .then(generationData => {
+                console.log('Generation created:', generationData);
+                
+                // Step 2: Parse the policy to extract the policyId
+                let policyId;
+                try {
+                    const yamlLines = customPolicy.split('\n');
+                    for (let line of yamlLines) {
+                        const trimmedLine = line.trim();
+                        // Skip comments and empty lines
+                        if (!trimmedLine || trimmedLine.startsWith('#')) continue;
+                        
+                        if (trimmedLine.startsWith('policy_id:')) {
+                            // Split only on the first colon to handle values with colons
+                            const colonIndex = line.indexOf(':');
+                            if (colonIndex !== -1) {
+                                policyId = line.substring(colonIndex + 1).trim().replace(/['"]/g, '');
+                            }
+                            break;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to parse policy', e);
+                }
+                
+                // Validate that we found a policy ID
+                if (!policyId) {
+                    alert('Could not extract policy_id from the policy. Generation created but agent not launched.');
+                    bootstrap.Modal.getInstance($('#generationModal')[0]).hide();
+                    resetButton();
+                    setTimeout(() => {
+                        $('#npe-table').DataTable().ajax.reload();
+                    }, 1000);
+                    return;
+                }
+                
+                // Step 3: Launch the agent pod with the new generation info
+                launchBtn.html('<i class="fas fa-spinner fa-spin"></i> Launching Pod...');
+                
+                const formJson = {
+                    agentName: agentName,
+                    agentType: parentAgentType,
+                    agentPolicyId: policyId,
+                    agentContextId: generationData.contextId,
+                    clientId: '',
+                    agentCallbackUrl: ''
+                };
+                
+                console.log(`Launching agent pod with generation data:`, formJson);
+                
+                return fetch('/api/v1/agent/bootstrap/launcher/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify(formJson)
+                });
+            })
+            .then(response => {
+                if (!response) return; // No launch if policy parsing failed
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(data => {
-                alert(`Agent generation '${agentName}' launched successfully with type '${parentAgentType}'! It may take a few moments to appear in the list.`);
+                if (!data) return; // No data if policy parsing failed
+                alert(`Agent generation '${agentName}' created and launched successfully! Generation: ${data.generation || 'N/A'}, Inherited: ${data.inheritedMemoryCount || 0} memories. It may take a few moments to appear in the list.`);
                 bootstrap.Modal.getInstance($('#generationModal')[0]).hide();
                 resetButton();
                 // Refresh the table after a delay
@@ -455,8 +493,8 @@
             })
             .catch(err => {
                 const errorMsg = err.message || 'An unknown error occurred';
-                alert(`Failed to launch agent generation: ${errorMsg}. Please check the console for more details.`);
-                console.error('Launch error:', err);
+                alert(`Failed to create/launch agent generation: ${errorMsg}. Please check the console for more details.`);
+                console.error('Generation creation error:', err);
                 resetButton();
             });
         });

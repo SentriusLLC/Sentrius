@@ -334,7 +334,7 @@ class LearningServiceTest {
         AgentMemory inheritedMemory = memoryCaptor.getValue();
         assertTrue(inheritedMemory.hasMarking("INHERITED"));
         assertTrue(inheritedMemory.getMemoryKey().startsWith("inherited/"));
-        assertEquals(child.getId().toString(), inheritedMemory.getAgentId());
+        assertEquals(child.getName(), inheritedMemory.getAgentId());
     }
 
     // Helper methods

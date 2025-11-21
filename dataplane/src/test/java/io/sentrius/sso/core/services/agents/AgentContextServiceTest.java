@@ -174,7 +174,7 @@ class AgentContextServiceTest {
         AgentContext gen1 = createAgent(gen1Id, "test-agent", 1, null);
         AgentContext gen2 = createAgent(gen2Id, "test-agent", 2, gen1Id);
 
-        when(contextRepo.findByName("test-agent")).thenReturn(Optional.of(gen1));
+        when(contextRepo.findLatestByName("test-agent")).thenReturn(Optional.of(gen1));
         when(contextRepo.findById(gen1Id)).thenReturn(Optional.of(gen1));
         when(contextRepo.findByParentId(gen1Id)).thenReturn(List.of(gen2));
         when(contextRepo.findByParentId(gen2Id)).thenReturn(Collections.emptyList());
@@ -188,7 +188,7 @@ class AgentContextServiceTest {
 
     @Test
     void testGetLineageByName_NonExistentName_ReturnsEmptyList() {
-        when(contextRepo.findByName("non-existent")).thenReturn(Optional.empty());
+        when(contextRepo.findLatestByName("non-existent")).thenReturn(Optional.empty());
 
         List<AgentContext> lineage = service.getLineageByName("non-existent");
 

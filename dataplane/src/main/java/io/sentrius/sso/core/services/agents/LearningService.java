@@ -316,7 +316,7 @@ public class LearningService {
 
     private AgentMemory cloneMemoryForChild(AgentMemory parentMemory, AgentContext child, double decayFactor) {
         AgentMemory childMemory = new AgentMemory();
-        childMemory.setAgentId(child.getId().toString());
+        childMemory.setAgentId(child.getName());
         childMemory.setAgentName(child.getName());
         childMemory.setMemoryKey("inherited/" + parentMemory.getMemoryKey());
         childMemory.setMemoryValue(parentMemory.getMemoryValue());

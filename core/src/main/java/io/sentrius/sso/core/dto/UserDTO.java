@@ -4,6 +4,7 @@ import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @Getter
@@ -33,4 +34,13 @@ public class UserDTO {
     public List<HostGroupDTO> hostGroups = new ArrayList<>();
 
     private String atlpDefinition;
+    
+    // Agent-specific fields for non-person entities
+    private UUID contextId;
+    private Integer generation;
+    private UUID parentId;
+    private String memoryNamespace;
+    private Double trustScore;
+    private String policyId;
+    private Long inheritedMemoryCount;
 }
