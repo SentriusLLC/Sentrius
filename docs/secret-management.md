@@ -60,7 +60,7 @@ The Keycloak Docker container now supports dynamic realm configuration with auto
    - `SENTRIUS_API_CLIENT_SECRET` - Secret for sentrius-api client
    - `SENTRIUS_LAUNCHER_CLIENT_SECRET` - Secret for sentrius-launcher-service client
    - `JAVA_AGENTS_CLIENT_SECRET` - Secret for java-agents client
-   - `AI_AGENT_ASSESSOR_CLIENT_SECRET` - Secret for ai-agent-assessor client
+   - `MONITORING_AGENT_CLIENT_SECRET` - Secret for ai-agent-assessor client
    - `SENTRIUS_RDPPROXY_CLIENT_SECRET` - Secret for rdp proxy client
 3. **Helm Integration**: The Helm chart automatically generates these secrets and passes them to the Keycloak container
 4. **Fallback Generation**: If no secrets are provided, the container generates secure random defaults

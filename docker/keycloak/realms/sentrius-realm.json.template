@@ -316,7 +316,7 @@
       }
     },
     {
-      "clientId": "ai-agent-assessor",
+      "clientId": "monitoring-agent",
       "name": "",
       "description": "",
       "rootUrl": "${ROOT_URL}",
@@ -325,7 +325,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "${AI_AGENT_ASSESSOR_CLIENT_SECRET}",
+      "secret": "${MONITORING_AGENT_CLIENT_SECRET}",
       "redirectUris": [
         "${REDIRECT_URIS}/*"
       ],
@@ -530,10 +530,10 @@
           "description": "Default user role for java-agents client"
         }
       ],
-      "ai-agent-assessor": [
+      "monitoring-agent": [
         {
           "name": "user",
-          "description": "Default user role for ai-agent-assessor client"
+          "description": "Default user role for monitoring-agent client"
         }
       ]
     }

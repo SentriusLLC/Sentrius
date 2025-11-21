@@ -35,7 +35,11 @@ npes:
     authorizationType:
       userTypeName: agentType
     atlpDefinition: behavior-risk-openai
-
+  - username: service-account-monitoring-agent
+    name: monitoring agents
+    authorizationType:
+      userTypeName: agentType
+    atlpDefinition: behavior-risk-openai
 rules:
   - displayName: deleteRule
     ruleClass: io.sentrius.sso.automation.auditing.rules.DeletePrevention

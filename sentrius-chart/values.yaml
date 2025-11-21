@@ -132,16 +132,16 @@ sentriusagent:
     azure:
       service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
-sentriusaiagent:
+monitoringagent:
   service:
     type: NodePort
-    nodePort: 30085
+    nodePort: 30086
   image:
-    repository: sentrius-ai-agent
+    repository: sentrius-monitoring-agent
     pullPolicy: IfNotPresent
   port: 8080
   oauth2:
-    client_id: ai-agent-assessor
+    client_id: monitoring-agent
     authorization_grant_type: authorization_code
     redirect-uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     scope: openid,profile,email

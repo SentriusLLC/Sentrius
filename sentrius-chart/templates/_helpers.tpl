@@ -22,8 +22,8 @@ app.kubernetes.io/name: sentrius-agent
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end -}}
-{{- define "sentriusaiagent.labels" -}}
-app.kubernetes.io/name: sentrius-ai-agent
+{{- define "monitoring-agent.labels" -}}
+app.kubernetes.io/name: sentrius-monitoring-agent
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end -}}

@@ -111,11 +111,11 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-oauth2-secrets
                   key: java-agents-client-secret
-            - name: AI_AGENT_ASSESSOR_CLIENT_SECRET
+            - name: MONITORING_AGENT_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-oauth2-secrets
-                  key: ai-agent-assessor-client-secret
+                  key: monitoring-agent-client-secret
             - name: SENTRIUS_RDPPROXY_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:

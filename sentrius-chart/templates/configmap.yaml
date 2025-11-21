@@ -172,7 +172,7 @@ data:
     keycloak.base-url={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}
     agent.api.url={{ .Values.sentriusDomain }}
     # Keycloak configuration
-    spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.sentriusaiagent.oauth2.client_id }}
+    spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.monitoringagent.oauth2.client_id }}
     spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
     spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.sentriusagent.oauth2.authorization_grant_type }}
     spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
@@ -292,6 +292,70 @@ data:
     spring.kafka.properties.metadata.max.age.ms=10000
     spring.kafka.properties.retry.backoff.ms=1000
     agents.automation-suggestion.enabled=true
+  monitoring-agent-application.properties: |
+    keystore.file=sso.jceks
+    keystore.password=${KEYSTORE_PASSWORD}
+    keystore.alias=KEYBOX-ENCRYPTION_KEY
+    keystore.algorithm=AES
+    spring.main.web-application-type=servlet
+    spring.thymeleaf.enabled=true
+    spring.freemarker.enabled=false
+    #flyway configuration
+    spring.flyway.enabled=false
+    spring.flyway.baseline-on-migrate=true
+    ## PostgreSQL database
+    spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
+    spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
+    spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+    spring.datasource.driver-class-name=org.postgresql.Driver
+    # Connection pool settings
+    spring.datasource.hikari.maximum-pool-size=10
+    spring.datasource.hikari.minimum-idle=5
+    spring.datasource.hikari.idle-timeout=30000
+    spring.datasource.hikari.max-lifetime=1800000
+    # Hibernate settings
+    spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+    ## Logging
+    logging.level.org.springframework.web=INFO
+    logging.level.org.springframework.security=INFO
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    # Keycloak Configuration
+    keycloak.realm=sentrius
+    keycloak.base-url={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}
+    spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.monitoringagent.oauth2.client_id }}
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.monitoringagent.oauth2.authorization_grant_type }}
+    spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
+    spring.security.oauth2.client.registration.keycloak.scope={{ .Values.monitoringagent.oauth2.scope }}
+    spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
+    # Monitoring Agent Configuration
+    agents.monitoring.enabled=true
+    agents.monitoring.name=monitoring-agent
+    agents.monitoring.check-interval=60000
+    agents.monitoring.auto-discover-endpoints=true
+    # OpenTelemetry Configuration
+    otel.traces.exporter=otlp
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.backend.url=http://sentrius-jaeger:16686
+    otel.service.name=monitoring-agent
+    # Health and Actuator
+    management.endpoints.web.exposure.include=health,metrics
+    management.endpoint.health.show-details=always
+    # Agent API Configuration
+    agent.api.url={{ .Values.sentriusDomain }}
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
   api-application.properties: |
     org.springframework.context.ApplicationListener=your.package.DbEnvPrinter
     keystore.file=sso.jceks

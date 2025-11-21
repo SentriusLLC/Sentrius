@@ -19,6 +19,7 @@
     <module>analytics</module>
     <module>enterprise-agent</module>
     <module>agent-launcher</module>
+    <module>monitoring</module>
     <module>ssh-proxy</module>
     <module>rdp-proxy</module>
   </modules>

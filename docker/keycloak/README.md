@@ -9,7 +9,7 @@ The Keycloak container now supports dynamic secret injection through environment
 - **SENTRIUS_API_CLIENT_SECRET** - Secret for sentrius-api client
 - **SENTRIUS_LAUNCHER_CLIENT_SECRET** - Secret for sentrius-launcher-service client  
 - **JAVA_AGENTS_CLIENT_SECRET** - Secret for java-agents client
-- **AI_AGENT_ASSESSOR_CLIENT_SECRET** - Secret for ai-agent-assessor client
+- **MONITORING_AGENT_CLIENT_SECRET** - Secret for ai-agent-assessor client
 
 ## How It Works
 

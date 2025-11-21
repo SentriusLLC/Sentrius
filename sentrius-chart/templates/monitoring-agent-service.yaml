@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}-sentriusaiagent
+  name: {{ .Release.Name }}-monitoring-agent
   namespace: {{ .Values.tenant }}
   annotations:
     {{- if eq .Values.environment "gke" }}
@@ -16,13 +16,13 @@ metadata:
     {{- end }}
     {{- end }}
 spec:
-  type: {{ .Values.sentriusaiagent.service.type }}
+  type: {{ .Values.monitoringagent.service.type }}
   ports:
     - name: http
-      port: {{ .Values.sentriusaiagent.port }}
-      targetPort: {{ .Values.sentriusaiagent.port }} # Port used inside the container
-      {{- if eq .Values.sentriusaiagent.service.type "NodePort" }}
-      nodePort: {{ .Values.sentriusaiagent.nodePort | default 30085 }}
+      port: {{ .Values.monitoringagent.port }}
+      targetPort: {{ .Values.monitoringagent.port }} # Port used inside the container
+      {{- if eq .Values.monitoringagent.service.type "NodePort" }}
+      nodePort: {{ .Values.monitoringagent.nodePort | default 30086 }}
       {{- end }}
   selector:
-    app: sentriusaiagent
+    app: monitoring-agent

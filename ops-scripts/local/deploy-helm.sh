@@ -11,7 +11,7 @@ SENTRIUS_VERSION="${SENTRIUS_VERSION:-latest}"
 SENTRIUS_SSH_VERSION="${SENTRIUS_SSH_VERSION:-latest}"
 SENTRIUS_KEYCLOAK_VERSION="${SENTRIUS_KEYCLOAK_VERSION:-latest}"
 SENTRIUS_AGENT_VERSION="${SENTRIUS_AGENT_VERSION:-latest}"
-SENTRIUS_AI_AGENT_VERSION="${SENTRIUS_AI_AGENT_VERSION:-latest}"
+MONTORING_AGENT_VERSION="${MONTORING_AGENT_VERSION:-latest}"
 LLMPROXY_VERSION="${LLMPROXY_VERSION:-latest}"
 LAUNCHER_VERSION="${LAUNCHER_VERSION:-latest}"
 AGENTPROXY_VERSION="${AGENTPROXY_VERSION:-latest}"
@@ -291,7 +291,7 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set keycloak.realm.clients.sentriusApi.client_secret="${SENTRIUS_API_CLIENT_SECRET}" \
     --set keycloak.realm.clients.sentriusLauncher.client_secret="${SENTRIUS_LAUNCHER_CLIENT_SECRET}" \
     --set keycloak.realm.clients.javaAgents.client_secret="${JAVA_AGENTS_CLIENT_SECRET}" \
-    --set keycloak.realm.clients.aiAgentAssessor.client_secret="${AI_AGENT_ASSESSOR_CLIENT_SECRET}" \
+    --set keycloak.realm.clients.aiAgentAssessor.client_secret="${MONITORING_AGENT_CLIENT_SECRET}" \
     --set keycloak.realm.clients.agentProxy.client_secret="${SENTRIUS_APROXY_CLIENT_SECRET}" \
     --set sentrius.image.pullPolicy="Never" \
     --set keycloak.image.pullPolicy="Never" \
@@ -300,7 +300,7 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set sentrius.image.tag=${SENTRIUS_VERSION} \
     --set ssh.image.tag=${SENTRIUS_SSH_VERSION} \
     --set keycloak.image.tag=${SENTRIUS_KEYCLOAK_VERSION} \
-    --set sentriusaiagent.image.tag=${SENTRIUS_AI_AGENT_VERSION} \
+    --set monitoringagent.image.tag=${MONTORING_AGENT_VERSION} \
     --set launcherservice.image.pullPolicy="Never" \
     --set launcherservice.image.tag=${LAUNCHER_VERSION} \
     --set sshproxy.image.tag=${SSHPROXY_VERSION} \
@@ -341,6 +341,7 @@ helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${T
     --set sentrius.image.tag=${SENTRIUS_VERSION} \
     --set ssh.image.tag=${SENTRIUS_SSH_VERSION} \
     --set keycloak.image.tag=${SENTRIUS_KEYCLOAK_VERSION} \
+    --set sentriusaiagent.image.tag=${SENTRIUS_AI_AGENT_VERSION} \
     --set sentriusaiagent.image.tag=${SENTRIUS_AI_AGENT_VERSION} \
     --set launcherservice.image.pullPolicy="Never" \
     --set launcherservice.image.tag=${LAUNCHER_VERSION} \

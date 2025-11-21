@@ -188,7 +188,7 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set keycloak.realm.clients.sentriusApi.client_secret="${SENTRIUS_API_CLIENT_SECRET}" \
     --set keycloak.realm.clients.sentriusLauncher.client_secret="${SENTRIUS_LAUNCHER_CLIENT_SECRET}" \
     --set keycloak.realm.clients.javaAgents.client_secret="${JAVA_AGENTS_CLIENT_SECRET}" \
-    --set keycloak.realm.clients.aiAgentAssessor.client_secret="${AI_AGENT_ASSESSOR_CLIENT_SECRET}" \
+    --set keycloak.realm.clients.aiAgentAssessor.client_secret="${MONITORING_AGENT_CLIENT_SECRET}" \
     --set keycloak.realm.clients.agentProxy.client_secret="${SENTRIUS_APROXY_CLIENT_SECRET}" \
     --set keycloak.image.repository="${GCP_REGISTRY}/sentrius-keycloak" \
     --set keycloak.image.pullPolicy="IfNotPresent" \
