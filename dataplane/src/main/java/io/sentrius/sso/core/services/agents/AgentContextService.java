@@ -2,8 +2,10 @@ package io.sentrius.sso.core.services.agents;
 
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import io.sentrius.sso.core.dto.agents.AgentContextLineageProjection;
 import io.sentrius.sso.core.dto.agents.AgentContextRequestDTO;
 import io.sentrius.sso.core.model.agents.AgentContext;
 import io.sentrius.sso.core.repository.AgentContextRepository;
@@ -38,6 +40,11 @@ public class AgentContextService {
     public AgentContext getContextOrThrow(UUID id) {
         return contextRepo.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Agent context not found: " + id));
+    }
+
+    public AgentContext getContextOrThrow(String name) {
+        return contextRepo.findByName(name)
+            .orElseThrow(() -> new IllegalArgumentException("Agent context not found: " + name));
     }
 
     public List<AgentContext> getLineage(UUID agentId) {
@@ -99,6 +106,51 @@ public class AgentContextService {
         return getLineage(context.getId());
     }
 
+
+    public List<AgentContextLineageProjection> getLineageProjectionByName(String agentName) {
+        log.info("Getting LOB-safe lineage for agent: {}", agentName);
+
+        // 1. Get latest generation (top of lineage)
+        var latest = contextRepo.findLatestProjectionByName(agentName).orElse(null);
+        if (latest == null) {
+            return Collections.emptyList();
+        }
+
+        // 2. Traverse UP to root
+        List<AgentContextLineageProjection> lineage = new ArrayList<>();
+        AgentContextLineageProjection current = latest;
+
+        while (current.getParentId() != null) {
+            var parent = contextRepo.findProjectionById(current.getParentId()).orElse(null);
+            if (parent == null) break;
+            lineage.add(0, parent); // prepend
+            current = parent;
+        }
+
+        // 3. Add latest (if not already added)
+        lineage.add(latest);
+
+        // 4. Traverse DOWN recursively
+        addProjectionDescendants(latest, lineage);
+
+        return lineage;
+    }
+
+    private void addProjectionDescendants(AgentContextLineageProjection parent,
+                                          List<AgentContextLineageProjection> lineage) {
+
+        List<AgentContextLineageProjection> children =
+            contextRepo.findProjectionByParentId(parent.getId());
+
+        for (var child : children) {
+            if (!lineage.contains(child)) {
+                lineage.add(child);
+                addProjectionDescendants(child, lineage); // recursion
+            }
+        }
+    }
+
+
     public long getInheritedMemoryCount(UUID agentId) {
         // Get agent name from context
         AgentContext context = contextRepo.findById(agentId).orElse(null);
@@ -131,5 +183,13 @@ public class AgentContextService {
                 context.setMemoryNamespace("agents/" + agentName + "_v1");
                 return contextRepo.save(context);
             });
+    }
+
+    public void updateAgentNameByGenerationId(UUID generationId, String username) {
+        log.info("Updating agent name for generation ID: {} to {}", generationId, username);
+        AgentContext context = contextRepo.findById(generationId)
+            .orElseThrow(() -> new IllegalArgumentException("Agent context not found: " + generationId));
+        context.setName(username);
+        contextRepo.save(context);
     }
 }

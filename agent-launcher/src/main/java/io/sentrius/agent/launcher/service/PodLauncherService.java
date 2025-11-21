@@ -161,7 +161,7 @@ public class PodLauncherService {
 
     public V1Pod launchAgentPod(AgentRegistrationDTO agent) throws Exception {
         var myAgentRegistry = "";
-        if (agentRegistry != null ) {
+        if (agentRegistry != null) {
             if ("local".equalsIgnoreCase(agentRegistry)) {
                 myAgentRegistry = "";
             } else if (!agentRegistry.endsWith("/")) {

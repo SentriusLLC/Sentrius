@@ -7,7 +7,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Maps;
 import io.sentrius.sso.core.dto.AgentCommunicationDTO;
 import io.sentrius.sso.core.dto.AgentHeartbeatDTO;
@@ -27,7 +26,6 @@ import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.provenance.ProvenanceEvent;
 import lombok.extern.slf4j.Slf4j;
-import org.aspectj.weaver.loadtime.Agent;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Service;
@@ -196,12 +194,15 @@ public class AgentClientService {
         return JsonUtil.MAPPER.readValue(acommResponse, AgentCommunicationDTO.class);
     }
 
-    public AgentRegistrationDTO bootstrap(String clientId, String name, String publicKey, String keyType)
+    public AgentRegistrationDTO bootstrap(String clientId, String name, String publicKey, String keyType,
+                                          String contextId
+    )
         throws ZtatException, JsonProcessingException {
         String ask = "/agent/bootstrap/register";
 
         AgentRegistrationDTO registration = AgentRegistrationDTO.builder()
             .agentName(name)
+            .agentContextId(contextId)
             .clientId(clientId)
             .agentCallbackUrl(getCallbackUrl())
             .agentPublicKey(publicKey)

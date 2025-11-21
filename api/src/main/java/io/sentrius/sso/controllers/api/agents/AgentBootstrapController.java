@@ -25,6 +25,7 @@ import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.agents.AgentClientService;
+import io.sentrius.sso.core.services.agents.AgentContextService;
 import io.sentrius.sso.core.services.agents.AgentLaunchService;
 import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
@@ -64,6 +65,7 @@ public class AgentBootstrapController extends BaseController {
     final AppConfig appConfig;
     private final AgentClientService agentClientService;
     private final AgentLaunchService agentLaunchService;
+    private final AgentContextService agentContextService;
 
 
     public AgentBootstrapController(
@@ -76,7 +78,7 @@ public class AgentBootstrapController extends BaseController {
         ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService, AgentService agentService,
         ZeroTrustClientService zeroTrustClientService, AppConfig appConfig,
         AgentClientService agentClientService,
-        AgentLaunchService agentLaunchService
+        AgentLaunchService agentLaunchService, AgentContextService agentContextService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
@@ -91,6 +93,7 @@ public class AgentBootstrapController extends BaseController {
         this.appConfig = appConfig;
         this.agentClientService = agentClientService;
         this.agentLaunchService = agentLaunchService;
+        this.agentContextService = agentContextService;
     }
 
 
@@ -137,6 +140,23 @@ public class AgentBootstrapController extends BaseController {
                     user = userService.save(user);
 
                     log.info("Created user: {}", user.getUsername());
+
+
+                    if (registrationDTO.getAgentContextId() != null && !registrationDTO.getAgentContextId().isEmpty()) {
+                        try {
+                            UUID contextId = UUID.fromString(registrationDTO.getAgentContextId());
+                            agentContextService.updateAgentNameByGenerationId(contextId, user.getUsername());
+                            log.info("Updated agent context {} to username {}", contextId, user.getUsername());
+                        } catch (IllegalArgumentException e) {
+                            log.error("Invalid agentContextId: {}", registrationDTO.getAgentContextId(), e);
+                            // Don't fail the registration, just log the error
+                        } catch (Exception e) {
+                            log.error("Failed to update agent context name", e);
+                            // Don't fail the registration, just log the error
+                        }
+                    } else {
+                        log.info("No agentContextId provided, skipping context update for {}", user.getUsername());
+                    }
 
                     var policyId =  atplPolicyService.getCachedPolicy( registrationDTO.getClientId() );
                     Optional<ATPLPolicyEntity> policyEntity = Optional.empty();

@@ -834,7 +834,7 @@ public class AgentApiController extends BaseController {
         @PathVariable("contextId") String contextId){
         var databaseContext = agentContextService.getContextOrThrow(UUID.fromString(contextId));
         long inheritedCount = agentContextService.getInheritedMemoryCount(databaseContext.getId());
-        
+
         return ResponseEntity.ok(AgentContextDTO.builder()
             .contextId(databaseContext.getId())
             .name(databaseContext.getName())
@@ -851,13 +851,19 @@ public class AgentApiController extends BaseController {
             .build());
     }
 
-    @GetMapping("/context/{contextId}/lineage")
+    @GetMapping("/context/lineage")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<List<AgentContextDTO>> getContextLineage(
         HttpServletRequest request,
         HttpServletResponse response,
-        @PathVariable("contextId") String contextId){
-        var lineage = agentContextService.getLineage(UUID.fromString(contextId));
+        @RequestParam(name="agentId") String agentId) throws GeneralSecurityException {
+
+        var aid = URLDecoder.decode(agentId, StandardCharsets.UTF_8);
+        log.info("Received policy request from agent: {} {} ",aid, agentId);
+        var agent = cryptoService.decrypt(aid);
+        var operatingUser = userService.getUserByUserid(agent);
+
+        var lineage = agentContextService.getLineageProjectionByName(operatingUser.getUsername());
         
         List<AgentContextDTO> lineageDTOs = lineage.stream()
             .map(context -> {
@@ -866,7 +872,7 @@ public class AgentApiController extends BaseController {
                     .contextId(context.getId())
                     .name(context.getName())
                     .description(context.getDescription())
-                    .context(context.getContext())
+                    //.context(context.getContext())
                     .createdAt(context.getCreatedAt())
                     .updatedAt(context.getUpdatedAt())
                     .generation(context.getGeneration())
@@ -943,7 +949,7 @@ public class AgentApiController extends BaseController {
                 .inheritedMemoryCount(inheritedCount)
                 .build();
             
-            log.info("Created next generation agent: gen={}, parent={}, child={}", 
+            log.info("Created next generation agent: gen={}, parent={}, child={}",
                 childContext.getGeneration(), parentId, childContext.getId());
             return ResponseEntity.ok(dto);
             

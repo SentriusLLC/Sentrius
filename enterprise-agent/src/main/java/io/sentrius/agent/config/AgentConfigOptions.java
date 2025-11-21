@@ -23,4 +23,39 @@ public class AgentConfigOptions {
     private String clientId;
     private String type;
     private List<String> endpoints;
+
+    private Ai ai;
+
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class Ai {
+        private Policy policy;
+        private Context context;
+
+        @Getter
+        @Setter
+        @AllArgsConstructor
+        @NoArgsConstructor
+        public static class Policy {
+            private String id;
+        }
+
+        @Getter
+        @Setter
+        @AllArgsConstructor
+        @NoArgsConstructor
+        public static class Context {
+            private Db db;
+
+            @Getter
+            @Setter
+            @AllArgsConstructor
+            @NoArgsConstructor
+            public static class Db {
+                private String id;
+            }
+        }
+    }
 }

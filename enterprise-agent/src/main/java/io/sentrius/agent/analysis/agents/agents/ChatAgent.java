@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -86,10 +87,15 @@ public class ChatAgent extends BaseEnterpriseAgent {
 
         try {
             var agentName = agentConfigOptions.getNamePrefix() + "-" + UUID.randomUUID().toString();
+            var contextId = Optional.ofNullable(agentConfigOptions.getAi())
+                .map(AgentConfigOptions.Ai::getContext)
+                .map(AgentConfigOptions.Ai.Context::getDb)
+                .map(AgentConfigOptions.Ai.Context.Db::getId)
+                .orElse(null);
             var base64PublicKey = agentKeyService.getBase64PublicKey(keyPair.getPublic());
             var agentRegistrationDTO = agentClientService.bootstrap(agentConfigOptions.getClientId(), agentName,
                 base64PublicKey
-                , keyPair.getPublic().getAlgorithm());
+                , keyPair.getPublic().getAlgorithm(), contextId);
 
             var encryptedSecret = agentRegistrationDTO.getClientSecret();
             var decryptedSecret = agentKeyService.

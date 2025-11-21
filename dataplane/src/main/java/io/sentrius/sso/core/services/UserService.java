@@ -298,6 +298,7 @@ public class UserService {
                         Optional<AgentLaunch> launchOpt = agentLaunchRepository.findLatestByAgentId(userDTO.getUsername());
                         
                         // If no exact match and username has service-account- prefix, try without it
+                        /*
                         if (!launchOpt.isPresent() && userDTO.getUsername().startsWith("service-account-")) {
                             String shortName = userDTO.getUsername().substring("service-account-".length());
                             // Try stripping random suffix (everything after last dash followed by UUID-like string)
@@ -318,7 +319,7 @@ public class UserService {
                                     }
                                 }
                             }
-                        }
+                        }*/
                         
                         if (launchOpt.isPresent()) {
                             context = launchOpt.get().getContext();

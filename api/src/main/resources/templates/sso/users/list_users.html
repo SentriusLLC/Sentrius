@@ -231,13 +231,13 @@
 
         // View Lineage
         $(document).on('click', '.view-lineage-btn', function () {
-            const agentId = $(this).data('agent-id');
+            const agentId = encodeURIComponent($(this).data('agent-id'));
             const agentName = $(this).data('agent-name');
             $('#lineageContent').html('Loading...');
             const modal = new bootstrap.Modal($('#lineageModal'));
             modal.show();
 
-            fetch(`/sso/v1/agent/context/${agentName}/lineage`)
+            fetch(`/api/v1/agent/context/lineage?agentId=${agentId}`)
                 .then(response => response.json())
                 .then(lineage => {
                     let html = '<div class="lineage-tree">';
