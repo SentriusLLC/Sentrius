@@ -193,8 +193,8 @@ public class LearningService {
         List<AgentMemory> parentMemories = agentMemoryRepository
                 .findByAgentIdOrderByCreatedAtDesc(parent.getName())
                 .stream()
-                .filter(m -> m.hasMarking("SEMANTIC") || m.hasMarking("IMPORTANT"))
-                .limit(50) // Limit to most recent 50 important memories
+                //.filter(m -> m.hasMarking("SEMANTIC") || m.hasMarking("IMPORTANT"))
+                .limit(500) // Limit to most recent 500 important memories
                 .collect(Collectors.toList());
 
         log.info("Found {} memories to inherit from parent", parentMemories.size());
@@ -325,6 +325,9 @@ public class LearningService {
         childMemory.setAccessLevel(parentMemory.getAccessLevel());
         childMemory.setCreatorUserId(parentMemory.getCreatorUserId());
         childMemory.setCreatorUserType(parentMemory.getCreatorUserType());
+        
+        // Set conversationId to child's memoryNamespace for generation-specific tracking
+        childMemory.setConversationId(child.getMemoryNamespace());
         
         // Apply decay to markings by adding INHERITED marker
         String[] parentMarkings = parentMemory.getMarkingsArray();

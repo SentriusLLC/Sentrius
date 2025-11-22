@@ -158,8 +158,9 @@ public class AgentContextService {
             log.warn("Agent context not found for ID: {}", agentId);
             return 0;
         }
-        // Use agent name as agentId for memory queries (consistent with how memories are stored)
-        return memoryRepo.countByAgentIdAndMarkingsContaining(context.getName(), "INHERITED");
+        // Use agent name as agentId and memoryNamespace as conversationId for generation-specific counting
+        return memoryRepo.countByAgentIdAndMarkingsContainingAndConversationId(
+                context.getName(), "INHERITED", context.getMemoryNamespace());
     }
 
     /**
@@ -167,11 +168,32 @@ public class AgentContextService {
      * This is more efficient when the agent name is already available (e.g., from projections).
      * 
      * @param agentName the name of the agent
-     * @return count of inherited memories
+     * @return count of inherited memories for the latest generation
      */
     public long getInheritedMemoryCount(String agentName) {
-        // Use agent name as agentId for memory queries (consistent with how memories are stored)
-        return memoryRepo.countByAgentIdAndMarkingsContaining(agentName, "INHERITED");
+        // Get the agent context to retrieve the memoryNamespace
+        AgentContext context = contextRepo.findLatestByName(agentName).orElse(null);
+        if (context == null) {
+            log.warn("Agent context not found for name: {}", agentName);
+            return 0;
+        }
+        // Use agent name as agentId and memoryNamespace as conversationId for generation-specific counting
+        return memoryRepo.countByAgentIdAndMarkingsContainingAndConversationId(
+                agentName, "INHERITED", context.getMemoryNamespace());
+    }
+    
+    /**
+     * Get inherited memory count by agent name and memory namespace.
+     * This provides precise counting for a specific generation.
+     * 
+     * @param agentName the name of the agent
+     * @param memoryNamespace the memory namespace for the specific generation
+     * @return count of inherited memories for that specific generation
+     */
+    public long getInheritedMemoryCount(String agentName, String memoryNamespace) {
+        // Use agent name as agentId and memoryNamespace as conversationId for generation-specific counting
+        return memoryRepo.countByAgentIdAndMarkingsContainingAndConversationId(
+                agentName, "INHERITED", memoryNamespace);
     }
     
     /**

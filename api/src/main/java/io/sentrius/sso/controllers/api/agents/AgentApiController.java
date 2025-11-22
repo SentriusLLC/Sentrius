@@ -833,7 +833,7 @@ public class AgentApiController extends BaseController {
         HttpServletResponse response,
         @PathVariable("contextId") String contextId){
         var databaseContext = agentContextService.getContextOrThrow(UUID.fromString(contextId));
-        long inheritedCount = agentContextService.getInheritedMemoryCount(databaseContext.getName());
+        long inheritedCount = agentContextService.getInheritedMemoryCount(databaseContext.getName(), databaseContext.getMemoryNamespace());
 
         return ResponseEntity.ok(AgentContextDTO.builder()
             .contextId(databaseContext.getId())
@@ -867,7 +867,7 @@ public class AgentApiController extends BaseController {
         
         List<AgentContextDTO> lineageDTOs = lineage.stream()
             .map(context -> {
-                long inheritedCount = agentContextService.getInheritedMemoryCount(context.getName());
+                long inheritedCount = agentContextService.getInheritedMemoryCount(context.getName(), context.getMemoryNamespace());
                 return AgentContextDTO.builder()
                     .contextId(context.getId())
                     .name(context.getName())
@@ -932,7 +932,7 @@ public class AgentApiController extends BaseController {
             UUID parentId = UUID.fromString(contextId);
             var childContext = generationManager.createNextGeneration(parentId, operatingUser.getUserId());
             
-            long inheritedCount = agentContextService.getInheritedMemoryCount(childContext.getName());
+            long inheritedCount = agentContextService.getInheritedMemoryCount(childContext.getName(), childContext.getMemoryNamespace());
             
             var dto = AgentContextDTO.builder()
                 .contextId(childContext.getId())

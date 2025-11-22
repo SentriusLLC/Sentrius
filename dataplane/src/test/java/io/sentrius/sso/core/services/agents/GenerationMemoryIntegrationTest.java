@@ -162,16 +162,21 @@ class GenerationMemoryIntegrationTest {
         assertEquals(agentName, inheritedMemory.getAgentName());
         assertTrue(inheritedMemory.getMemoryKey().startsWith("inherited/"));
         assertTrue(inheritedMemory.hasMarking("INHERITED"));
+        // NEW: Verify conversationId is set to child's memoryNamespace
+        assertEquals("agents/test-agent_v2", inheritedMemory.getConversationId(),
+                "Inherited memory conversationId should be set to child's memoryNamespace for generation-specific tracking");
 
-        // Step 7: Verify inherited memory count query works
-        when(agentMemoryRepository.countByAgentIdAndMarkingsContaining(agentName, "INHERITED"))
+        // Step 7: Verify inherited memory count query works with memoryNamespace
+        when(agentMemoryRepository.countByAgentIdAndMarkingsContainingAndConversationId(
+                agentName, "INHERITED", "agents/test-agent_v2"))
                 .thenReturn(1L);
 
         long count = agentContextService.getInheritedMemoryCount(childId);
-        assertEquals(1L, count, "Should be able to query inherited memories by agent name");
+        assertEquals(1L, count, "Should be able to query inherited memories by agent name and namespace");
 
-        // Verify the query used the child's NAME, not UUID
-        verify(agentMemoryRepository).countByAgentIdAndMarkingsContaining(eq(agentName), eq("INHERITED"));
+        // Verify the query used the child's NAME and memoryNamespace
+        verify(agentMemoryRepository).countByAgentIdAndMarkingsContainingAndConversationId(
+                eq(agentName), eq("INHERITED"), eq("agents/test-agent_v2"));
     }
 
     /**

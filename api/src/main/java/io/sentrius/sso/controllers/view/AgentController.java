@@ -91,7 +91,7 @@ public class AgentController extends BaseController {
         
         List<AgentContextDTO> lineageDTOs = lineage.stream()
             .map(context -> {
-                long inheritedCount = agentContextService.getInheritedMemoryCount(context.getName());
+                long inheritedCount = agentContextService.getInheritedMemoryCount(context.getName(), context.getMemoryNamespace());
                 return AgentContextDTO.builder()
                     .contextId(context.getId())
                     .name(context.getName())

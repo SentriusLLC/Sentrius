@@ -200,17 +200,19 @@ class AgentContextServiceTest {
         // Setup
         UUID agentId = UUID.randomUUID();
         String agentName = "test-agent";
+        String memoryNamespace = "agents/test-agent_v1";
         AgentContext agent = createAgent(agentId, agentName, 1, null);
+        agent.setMemoryNamespace(memoryNamespace);
         
         when(contextRepo.findById(agentId)).thenReturn(Optional.of(agent));
-        when(memoryRepo.countByAgentIdAndMarkingsContaining(agentName, "INHERITED")).thenReturn(5L);
+        when(memoryRepo.countByAgentIdAndMarkingsContainingAndConversationId(agentName, "INHERITED", memoryNamespace)).thenReturn(5L);
 
         // Execute
         long count = service.getInheritedMemoryCount(agentId);
 
         // Verify
         assertEquals(5L, count);
-        verify(memoryRepo).countByAgentIdAndMarkingsContaining(agentName, "INHERITED");
+        verify(memoryRepo).countByAgentIdAndMarkingsContainingAndConversationId(agentName, "INHERITED", memoryNamespace);
     }
 
     @Test
@@ -224,36 +226,47 @@ class AgentContextServiceTest {
 
         // Verify
         assertEquals(0L, count);
-        verify(memoryRepo, never()).countByAgentIdAndMarkingsContaining(any(), any());
+        verify(memoryRepo, never()).countByAgentIdAndMarkingsContainingAndConversationId(any(), any(), any());
     }
 
     @Test
     void testGetInheritedMemoryCount_ByName_ReturnsCorrectCount() {
         // Setup
         String agentName = "test-agent";
-        when(memoryRepo.countByAgentIdAndMarkingsContaining(agentName, "INHERITED")).thenReturn(3L);
+        String memoryNamespace = "agents/test-agent_v1";
+        UUID agentId = UUID.randomUUID();
+        AgentContext agent = createAgent(agentId, agentName, 1, null);
+        agent.setMemoryNamespace(memoryNamespace);
+        
+        when(contextRepo.findLatestByName(agentName)).thenReturn(Optional.of(agent));
+        when(memoryRepo.countByAgentIdAndMarkingsContainingAndConversationId(agentName, "INHERITED", memoryNamespace)).thenReturn(3L);
 
         // Execute
         long count = service.getInheritedMemoryCount(agentName);
 
         // Verify
         assertEquals(3L, count);
-        verify(memoryRepo).countByAgentIdAndMarkingsContaining(agentName, "INHERITED");
-        verify(contextRepo, never()).findById(any());
+        verify(memoryRepo).countByAgentIdAndMarkingsContainingAndConversationId(agentName, "INHERITED", memoryNamespace);
     }
 
     @Test
     void testGetInheritedMemoryCount_ByName_NoInheritedMemories_ReturnsZero() {
         // Setup
         String agentName = "test-agent-no-memories";
-        when(memoryRepo.countByAgentIdAndMarkingsContaining(agentName, "INHERITED")).thenReturn(0L);
+        String memoryNamespace = "agents/test-agent-no-memories_v1";
+        UUID agentId = UUID.randomUUID();
+        AgentContext agent = createAgent(agentId, agentName, 1, null);
+        agent.setMemoryNamespace(memoryNamespace);
+        
+        when(contextRepo.findLatestByName(agentName)).thenReturn(Optional.of(agent));
+        when(memoryRepo.countByAgentIdAndMarkingsContainingAndConversationId(agentName, "INHERITED", memoryNamespace)).thenReturn(0L);
 
         // Execute
         long count = service.getInheritedMemoryCount(agentName);
 
         // Verify
         assertEquals(0L, count);
-        verify(memoryRepo).countByAgentIdAndMarkingsContaining(agentName, "INHERITED");
+        verify(memoryRepo).countByAgentIdAndMarkingsContainingAndConversationId(agentName, "INHERITED", memoryNamespace);
     }
 
     // Helper method
