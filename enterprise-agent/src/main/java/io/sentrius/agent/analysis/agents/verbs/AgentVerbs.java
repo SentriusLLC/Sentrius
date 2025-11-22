@@ -1242,43 +1242,62 @@ public class AgentVerbs extends VerbBase {
         
         log.info("Looking up agent memories");
         
-        // Extract query parameters - handle Optional.of() that throws on null
+        // Extract query parameters
         String query = "";
         String agentId = null;
         String markings = "";
         int limit = 10;
         
-        try {
-            Optional<JsonNode> queryNode = executionContextDTO.getExecutionArgument("memory_query", "query");
-            query = queryNode.map(JsonNode::asText).orElse("");
-        } catch (NullPointerException e) {
-            // getExecutionArgument can throw NPE if value is null
-            log.debug("Query parameter not found or null");
-        }
+        Optional<JsonNode> queryNode = executionContextDTO.getExecutionArgument("memory_query", "query");
+        query = queryNode
+            .filter(node -> !node.isNull())  // Filter out null JsonNodes
+            .map(JsonNode::asText)
+            .filter(s -> s != null && !s.isBlank() && !"null".equals(s))
+            .orElse("");
+        log.debug("Query parameter extracted: '{}'", query);
         
-        try {
-            Optional<JsonNode> agentIdNode = executionContextDTO.getExecutionArgument("memory_query", "agentId");
-            agentId = agentIdNode.map(JsonNode::asText).orElse(null);
-        } catch (NullPointerException e) {
-            log.debug("AgentId parameter not found or null");
-        }
+        Optional<JsonNode> agentIdNode = executionContextDTO.getExecutionArgument("memory_query", "agentId");
+        agentId = agentIdNode
+            .filter(node -> !node.isNull())
+            .map(JsonNode::asText)
+            .filter(s -> s != null && !s.isBlank() && !"null".equals(s))
+            .orElse(null);
+        log.debug("AgentId parameter extracted: {}", agentId);
         
-        try {
-            Optional<JsonNode> markingsNode = executionContextDTO.getExecutionArgument("memory_query", "markings");
-            markings = markingsNode.map(JsonNode::asText).orElse("");
-        } catch (NullPointerException e) {
-            log.debug("Markings parameter not found or null");
-        }
+        Optional<JsonNode> markingsNode = executionContextDTO.getExecutionArgument("memory_query", "markings");
+        markings = markingsNode
+            .filter(node -> !node.isNull())
+            .map(JsonNode::asText)
+            .filter(s -> s != null && !s.isBlank() && !"null".equals(s))
+            .orElse("");
+        log.debug("Markings parameter extracted: '{}'", markings);
         
-        try {
-            Optional<JsonNode> limitNode = executionContextDTO.getExecutionArgument("memory_query", "limit");
-            limit = limitNode.map(JsonNode::asInt).orElse(10);
-        } catch (NullPointerException e) {
-            log.debug("Limit parameter not found or null, using default");
+        Optional<JsonNode> limitNode = executionContextDTO.getExecutionArgument("memory_query", "limit");
+        limit = limitNode.map(JsonNode::asInt).orElse(10);
+        log.debug("Limit parameter extracted: {}", limit);
+        
+        // If query is still empty, try to infer from recent conversation messages
+        if (query.isEmpty()) {
+            log.debug("Query parameter not provided, attempting to infer from recent messages");
+            List<Message> messages = executionContextDTO.getMessages();
+            if (messages != null && !messages.isEmpty()) {
+                // Get the most recent user message (check last 3 messages)
+                int lowerBound = Math.max(0, messages.size() - 3);
+                for (int i = messages.size() - 1; i >= lowerBound; i--) {
+                    Message msg = messages.get(i);
+                    String contentStr = msg.getContentAsString();
+                    if ("user".equals(msg.getRole()) && contentStr != null && !contentStr.isBlank()) {
+                        query = contentStr;
+                        log.info("Inferred query from recent user message: '{}'", query);
+                        break;
+                    }
+                }
+            }
         }
         
         if (query.isEmpty()) {
-            throw new IllegalArgumentException("Query parameter is required for memory lookup");
+            log.error("Query parameter is required for memory lookup but was not provided and could not be inferred");
+            throw new IllegalArgumentException("Query parameter is required for memory lookup. Please provide a search query.");
         }
         
         log.info("Memory lookup - query: '{}', agentId: {}, markings: {}, limit: {}", 

@@ -382,6 +382,92 @@ class AgentVerbsTest {
     }
 
     @Test
+    void lookupAgentMemoryInfersQueryFromMessages() throws Exception, ZtatException {
+        // Given - This tests the scenario from the bug where query is not in execution args
+        String executionId = UUID.randomUUID().toString();
+        AgentExecution execution = AgentExecution.builder()
+            .executionId(executionId)
+            .build();
+
+        AgentExecutionContextDTO requestContext = AgentExecutionContextDTO.builder().build();
+        
+        // Add messages to context - simulating conversation history
+        requestContext.addMessages(Message.builder()
+            .role("user")
+            .content("do you remember my name?")
+            .build());
+        requestContext.addMessages(Message.builder()
+            .role("assistant")
+            .content("Let me check if I have your name stored from our previous conversations.")
+            .build());
+        
+        // Set up execution args with empty memory_query object (this was causing the bug)
+        ObjectNode queryArgs = JsonUtil.MAPPER.createObjectNode();
+        ObjectNode memoryQuery = JsonUtil.MAPPER.createObjectNode();
+        // Intentionally not setting query field to test resilience
+        queryArgs.set("memory_query", memoryQuery);
+        requestContext.setExecutionArgs(queryArgs);
+
+        // Mock API response
+        String apiResponse = "{"
+            + "\"content\": ["
+            + "  {"
+            + "    \"memoryKey\": \"user_name\","
+            + "    \"memoryValue\": \"John\","
+            + "    \"agentId\": \"chat-agent\","
+            + "    \"classification\": \"PRIVATE\","
+            + "    \"createdAt\": \"2024-01-01T00:00:00Z\""
+            + "  }"
+            + "],"
+            + "\"totalElements\": 1"
+            + "}";
+        
+        when(zeroTrustClientService.callGetOnApi(eq(execution), eq("/api/v1/agents/memory/search"), 
+            any(Map.Entry.class), any(Map.Entry[].class)))
+            .thenReturn(apiResponse);
+
+        // When
+        ObjectNode result = agentVerbs.lookupAgentMemory(execution, requestContext);
+
+        // Then
+        assertNotNull(result);
+        assertEquals("do you remember my name?", result.get("query").asText());
+        assertEquals(1, result.get("count").asInt());
+        assertTrue(result.has("memories"));
+        assertEquals(1, result.get("memories").size());
+        assertEquals("user_name", result.get("memories").get(0).get("memoryKey").asText());
+    }
+
+    @Test
+    void lookupAgentMemoryHandlesNullQueryGracefully() throws Exception, ZtatException {
+        // Given
+        String executionId = UUID.randomUUID().toString();
+        AgentExecution execution = AgentExecution.builder()
+            .executionId(executionId)
+            .build();
+
+        AgentExecutionContextDTO requestContext = AgentExecutionContextDTO.builder().build();
+        
+        // Set up execution args with null query - testing null handling
+        ObjectNode queryArgs = JsonUtil.MAPPER.createObjectNode();
+        ObjectNode memoryQuery = JsonUtil.MAPPER.createObjectNode();
+        memoryQuery.putNull("query");
+        queryArgs.set("memory_query", memoryQuery);
+        requestContext.setExecutionArgs(queryArgs);
+        
+        // No messages to infer from either
+
+        // When/Then - should throw meaningful exception
+        try {
+            agentVerbs.lookupAgentMemory(execution, requestContext);
+            assertTrue(false, "Expected IllegalArgumentException to be thrown");
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().contains("Query parameter is required"));
+            assertTrue(e.getMessage().contains("Please provide a search query"));
+        }
+    }
+
+    @Test
     void searchAgentMemorySemanticReturnsResults() throws Exception, ZtatException {
         // Given
         String executionId = UUID.randomUUID().toString();

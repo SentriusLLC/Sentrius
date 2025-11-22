@@ -234,7 +234,7 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                         agentExecution,
                                         agentExecutionContext,
                                         lastVerbResponse,
-                                        "lookupAgentMemory",
+                                        "lookup_agent_memory",
                                         memoryArgs
                                     );
                                     

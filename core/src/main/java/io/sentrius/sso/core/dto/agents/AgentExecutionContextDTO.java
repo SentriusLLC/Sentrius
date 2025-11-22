@@ -173,16 +173,23 @@ public class AgentExecutionContextDTO {
         log.info("Getting execution argument for methodArgumentName: {}, name: {}", methodArgumentName, name);
         if (executionArgs != null && executionArgs.has(methodArgumentName)) {
             log.info("Found execution argument for methodArgumentName: {}", executionArgs.get(methodArgumentName));
-            if (executionArgs.get(methodArgumentName).has(methodArgumentName)) {
-                return Optional.of(executionArgs.get(methodArgumentName).get(methodArgumentName).get(name));
+            JsonNode argNode = executionArgs.get(methodArgumentName);
+            if (argNode != null && argNode.has(methodArgumentName)) {
+                JsonNode nestedNode = argNode.get(methodArgumentName).get(name);
+                return nestedNode != null ? Optional.of(nestedNode) : Optional.empty();
             }
-            return Optional.of(executionArgs.get(methodArgumentName).get(name));
+            JsonNode valueNode = argNode != null ? argNode.get(name) : null;
+            return valueNode != null ? Optional.of(valueNode) : Optional.empty();
         }
 
         if (agentShortTermMemory != null && agentShortTermMemory.containsKey(methodArgumentName)) {
 
             log.info("Found execution argument for methodArgumentName: {}", agentShortTermMemory.get(methodArgumentName));
-            return Optional.of(agentShortTermMemory.get(methodArgumentName).get(name));
+            JsonNode memoryNode = agentShortTermMemory.get(methodArgumentName);
+            if (memoryNode != null) {
+                JsonNode valueNode = memoryNode.get(name);
+                return valueNode != null ? Optional.of(valueNode) : Optional.empty();
+            }
         } else {
             log.info("Execution argument '{}' not found in executionArgs or shortTermMemory {}", methodArgumentName,
                 agentShortTermMemory);

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -314,6 +315,47 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                 websocketCommunication.getAgentExecutionContextDTO(),
                                 websocketCommunication, userMessage);
                             log.info("Response: {}", response);
+                            if (response.getMemoryLookup() != null && !response.getMemoryLookup().isEmpty()) {
+                                log.info("Memory lookup requested: {}", response.getMemoryLookup());
+                                try {
+                                    // Set up memory lookup arguments
+                                    Map<String, Object> memoryArgs = new HashMap<>();
+                                    memoryArgs.put("query", response.getMemoryLookup());
+
+                                    // Execute memory lookup
+                                    var memoryResponse = verbRegistry.execute(
+                                        chatAgent.getAgentExecution(),
+                                        websocketCommunication.getAgentExecutionContextDTO(),
+                                        null,
+                                        "lookup_agent_memory",
+                                        memoryArgs
+                                    );
+
+                                    // Add memory results to context for LLM
+                                    if (memoryResponse != null && memoryResponse.getReturnName() != null) {
+                                        var memoryResult = websocketCommunication.getAgentExecutionContextDTO().getAgentShortTermMemory()
+                                            .get(memoryResponse.getReturnName());
+                                        if (memoryResult != null) {
+                                            websocketCommunication.getAgentExecutionContextDTO().addMessages(
+                                                Message.builder()
+                                                    .role("system")
+                                                    .content("Memory lookup results: " + memoryResult.toString())
+                                                    .build()
+                                            );
+                                            log.info("Memory lookup completed, results added to context");
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    log.warn("Memory lookup failed: {}", e.getMessage());
+                                    websocketCommunication.getAgentExecutionContextDTO().addMessages(
+                                        Message.builder()
+                                            .role("system")
+                                            .content("Memory lookup failed: " + e.getMessage())
+                                            .build()
+                                    );
+                                }
+                            }
+
                             
                             // Store agent response for conversation history
                             websocketCommunication.getAgentExecutionContextDTO().addToPersistentMemory(
@@ -370,6 +412,8 @@ public class ChatWSHandler extends TextWebSocketHandler {
 //                                        chatAgent.getAgentExecution().addMessages(Message.builder().role("System")
 //                                        .content("System executed operation: " + response.getNextOperation()).build());
                                         var responses = websocketCommunication.getAgentExecutionContextDTO().getAgentDataList();
+
+
                                         var planResponse =
                                             responses.isEmpty() ? "" :
                                                 responses.get( responses.size() -1 ).asText();
@@ -387,6 +431,47 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                             verbRegistry.getVerbs().get(response.getNextOperation()),
                                             planResponse
                                         );
+
+                                        if (nextResponse.getMemoryLookup() != null && !nextResponse.getMemoryLookup().isEmpty()) {
+                                            log.info("Memory lookup requested: {}", nextResponse.getMemoryLookup());
+                                            try {
+                                                // Set up memory lookup arguments
+                                                Map<String, Object> memoryArgs = new HashMap<>();
+                                                memoryArgs.put("query", nextResponse.getMemoryLookup());
+
+                                                // Execute memory lookup
+                                                var memoryResponse = verbRegistry.execute(
+                                                    chatAgent.getAgentExecution(),
+                                                    websocketCommunication.getAgentExecutionContextDTO(),
+                                                    null,
+                                                    "lookup_agent_memory",
+                                                    memoryArgs
+                                                );
+
+                                                // Add memory results to context for LLM
+                                                if (memoryResponse != null && memoryResponse.getReturnName() != null) {
+                                                    var memoryResult = websocketCommunication.getAgentExecutionContextDTO().getAgentShortTermMemory()
+                                                        .get(memoryResponse.getReturnName());
+                                                    if (memoryResult != null) {
+                                                        websocketCommunication.getAgentExecutionContextDTO().addMessages(
+                                                            Message.builder()
+                                                                .role("system")
+                                                                .content("Memory lookup results: " + memoryResult.toString())
+                                                                .build()
+                                                        );
+                                                        log.info("Memory lookup completed, results added to context");
+                                                    }
+                                                }
+                                            } catch (Exception e) {
+                                                log.warn("Memory lookup failed: {}", e.getMessage());
+                                                websocketCommunication.getAgentExecutionContextDTO().addMessages(
+                                                    Message.builder()
+                                                        .role("system")
+                                                        .content("Memory lookup failed: " + e.getMessage())
+                                                        .build()
+                                                );
+                                            }
+                                        }
 
                                         websocketCommunication.getAgentExecutionContextDTO().addToPersistentMemory(
                                             "agent_response_" + System.currentTimeMillis(),
