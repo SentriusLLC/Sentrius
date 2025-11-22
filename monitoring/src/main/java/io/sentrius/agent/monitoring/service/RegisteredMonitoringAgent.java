@@ -1,5 +1,6 @@
 package io.sentrius.agent.monitoring.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import io.sentrius.agent.monitoring.model.MonitoringConfig;
 import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.dto.agents.AgentExecution;
@@ -185,6 +186,9 @@ public class RegisteredMonitoringAgent implements ApplicationListener<Applicatio
                 }
             } catch (ZtatException e) {
                 log.warn("ZTAT exception during auto-discovery: {}", e.getMessage());
+                log.info("Proceeding with default monitoring configuration only");
+            } catch (JsonProcessingException e) {
+                log.warn("Could not parse endpoint response (may have received HTML instead of JSON): {}", e.getMessage());
                 log.info("Proceeding with default monitoring configuration only");
             } catch (Exception e) {
                 log.warn("Could not auto-discover endpoints: {}", e.getMessage());

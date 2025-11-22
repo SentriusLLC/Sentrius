@@ -221,6 +221,7 @@ public class AgentClientService {
         String url = "/api/v1/capabilities/endpoints";
         Object response = zeroTrustClientService.callGetOnApi(token, url);
         if (response instanceof String str) {
+            validateNotHtml(str, url);
             return JsonUtil.MAPPER.readValue(str, new TypeReference<List<EndpointDescriptor>>() {});
         } else if (response instanceof List<?> list) {
             // Already deserialized
@@ -235,6 +236,7 @@ public class AgentClientService {
         String url = "/api/v1/capabilities/verbs";
         Object response = zeroTrustClientService.callGetOnApi(token, url);
         if (response instanceof String str) {
+            validateNotHtml(str, url);
             return JsonUtil.MAPPER.readValue(str, new TypeReference<List<EndpointDescriptor>>() {});
         } else if (response instanceof List<?> list) {
             // Already deserialized
@@ -243,6 +245,22 @@ public class AgentClientService {
                 .toList();
         }
         return List.of();
+    }
+
+    /**
+     * Validates that the response is not HTML content.
+     * @param response the response string to validate
+     * @param url the URL that was called (for logging)
+     * @throws JsonProcessingException if the response appears to be HTML
+     */
+    private void validateNotHtml(String response, String url) throws JsonProcessingException {
+        if (response != null && response.trim().startsWith("<")) {
+            String preview = response.substring(0, Math.min(100, response.length()));
+            log.warn("Received HTML response instead of JSON from {}: {}", url, preview);
+            // JsonProcessingException is abstract, so we use a minimal concrete implementation
+            throw new com.fasterxml.jackson.core.JsonParseException(null, 
+                "Received HTML response instead of JSON from " + url + ". Preview: " + preview);
+        }
     }
 
     public String getAgentPodStatus(String launcherService, String agentId) throws ZtatException {

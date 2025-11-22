@@ -28,6 +28,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.util.UriUtils;
@@ -572,6 +573,7 @@ public class ZeroTrustClientService {
         String keycloakJwt = getKeycloakToken();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
         headers.setBearerAuth(keycloakJwt);
         headers.set("X-Ztat-Token", token.getZtatToken());
         log.info("Communication ID: {}", token.getCommunicationId());
@@ -586,13 +588,15 @@ public class ZeroTrustClientService {
         }
         String url =  endpoint + apiEndpoint;
         try{
-            ResponseEntity<T> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, (Class<T>) Object.class);
+            // Use String.class to avoid HttpMessageConverter issues with non-JSON responses
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, String.class);
 
             if (response.getStatusCode() == HttpStatus.OK || response.getStatusCode() == HttpStatus.CREATED) {
-                return response.getBody(); // This is the ZTAT (JWT or opaque token)
+                // Return the body as-is (String), caller will deserialize if needed
+                return (T) response.getBody();
             } else if (response.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
                 // we need to get
-                String resp = response.getBody().toString();
+                String resp = response.getBody();
                 throw new ZtatException(resp, apiEndpoint);
 
             } else {
@@ -608,6 +612,10 @@ public class ZeroTrustClientService {
                 log.info("Error: {}", e.getResponseBodyAsString());
             }
             throw new RuntimeException(e.getResponseBodyAsString());
+        } catch (RestClientException e) {
+            // Catch RestClientException for message conversion errors, network issues, etc.
+            log.error("REST client error calling API endpoint {}: {}", apiEndpoint, e.getMessage());
+            throw new RuntimeException("Error calling API endpoint: " + e.getMessage(), e);
         }
     }
 
