@@ -331,34 +331,70 @@ public class AgentService {
     }
 
     public List<AgentDTO> getAvailableAgents() {
-        return getAllAgents(true, callbackUrls.keySet().stream().toList(), true);
+        // Get agents with recent heartbeats (within last 5 minutes)
+        LocalDateTime fiveMinutesAgo = LocalDateTime.now().minusMinutes(5);
+        List<AgentHeartbeat> recentAgents = repository.findByLastHeartbeatAfter(fiveMinutesAgo);
+        
+        // Get user IDs from agents with recent heartbeats
+        List<String> recentAgentUserIds = recentAgents.stream()
+            .map(heartbeat -> {
+                var user = userService.getUserByUsername(heartbeat.getAgentName());
+                return user != null ? user.getUserId() : null;
+            })
+            .filter(userId -> userId != null)
+            .collect(Collectors.toList());
+        
+        log.info("Found {} agents with recent heartbeats", recentAgentUserIds.size());
+        
+        // Return all agents with recent heartbeats (regardless of callback URL)
+        return getAllAgents(true, recentAgentUserIds, true);
     }
 
     @Scheduled(fixedDelay = 60000) // Runs every 60 seconds
     @Async
     public void pingAndRemoveUnavailableAgents() {
+        // Remove heartbeats that haven't been updated in the last 10 minutes
+        LocalDateTime tenMinutesAgo = LocalDateTime.now().minusMinutes(10);
         List<AgentHeartbeat> allAgents = repository.findAll();
+        
         for (AgentHeartbeat heartbeat : allAgents) {
             String agentId = heartbeat.getAgentId();
+            
+            // Check if heartbeat is stale (no update in last 10 minutes)
+            if (heartbeat.getLastHeartbeat().isBefore(tenMinutesAgo)) {
+                log.info("Removing stale heartbeat for agent {}: last heartbeat was at {}", 
+                    agentId, heartbeat.getLastHeartbeat());
+                repository.delete(heartbeat);
+                
+                // Try to remove the Keycloak client if user exists
+                try {
+                    User user = userService.getUserByUsername(heartbeat.getAgentName());
+                    if (user != null) {
+                        keycloakService.removeAgentClient(agentId);
+                    }
+                } catch (Exception e) {
+                    log.debug("Could not remove Keycloak client for {}: {}", agentId, e.getMessage());
+                }
+                continue;
+            }
+            
+            // For agents with recent heartbeats, try to ping if they have a URL
             try {
-                User user = userService.getUserByUsername(agentId);
+                User user = userService.getUserByUsername(heartbeat.getAgentName());
                 if (user == null) {
-                    // Remove agent if user not found
-                    repository.delete(heartbeat);
+                    log.debug("User not found for agent {}, but heartbeat is recent - keeping", agentId);
                     continue;
                 }
-                log.info("Ping user {}: {}", user.getUserId(), heartbeat);
-                ping(user).join(); // This will update the pingCache
-                Optional<AgentStatus> status = getPing(user);
-                if (status.isEmpty()) {
-                    // Remove agent if not available
-                    repository.delete(heartbeat);
-                    keycloakService.removeAgentClient(agentId);
-                    log.info("Removed unavailable agent: {}", agentId);
+                
+                // Only ping if agent has a URL - don't fail if ping doesn't work
+                if (heartbeat.getAgentUrl() != null && !heartbeat.getAgentUrl().isEmpty()) {
+                    log.debug("Attempting to ping agent {}: {}", user.getUserId(), heartbeat.getAgentUrl());
+                    ping(user).join(); // This will update the pingCache
                 }
             } catch (Exception e) {
-                repository.delete(heartbeat);
-                log.info("Removed agent due to exception: {}", agentId, e);
+                // Don't delete on ping failure - heartbeat is still recent
+                log.debug("Ping failed for agent {} but keeping heartbeat (last update: {}): {}", 
+                    agentId, heartbeat.getLastHeartbeat(), e.getMessage());
             }
         }
     }

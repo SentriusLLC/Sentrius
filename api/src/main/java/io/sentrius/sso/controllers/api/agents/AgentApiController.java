@@ -318,16 +318,29 @@ public class AgentApiController extends BaseController {
                         log.info("Agent {} has no name, removing from list", agent.getAgentId());
                         return false;
                     }
-                    String podResponse =
-                        agentClientService.getAgentPodStatus(appConfig.getSentriusLauncherService(), agent.getAgentName());
-                    if (podResponse != null && (podResponse.equalsIgnoreCase("running") || podResponse.equalsIgnoreCase("pending"))){
-                        return true;
-                    } else {
-                        log.info("Agent {} is not running or pending, removing from list. Status is {}",
-                            agent.getAgentName(), podResponse);
+                    
+                    // Try to get pod status, but don't fail if agent is not a pod
+                    try {
+                        String podResponse =
+                            agentClientService.getAgentPodStatus(appConfig.getSentriusLauncherService(), agent.getAgentName());
+                        if (podResponse != null && (podResponse.equalsIgnoreCase("running") || podResponse.equalsIgnoreCase("pending"))){
+                            log.info("Agent {} is running as pod with status: {}", agent.getAgentName(), podResponse);
+                            return true;
+                        } else {
+                            log.debug("Agent {} pod status is: {}", agent.getAgentName(), podResponse);
+                        }
+                    } catch (ZtatException e) {
+                        log.debug("Agent {} is not a pod-based agent, checking heartbeat", agent.getAgentName());
                     }
-                } catch (ZtatException ignored) {
-
+                    
+                    // Include agents with recent heartbeats (non-pod agents like monitoring agent)
+                    if (agent.getLastHeartbeat() != null) {
+                        log.info("Agent {} has recent heartbeat, including in list", agent.getAgentName());
+                        return true;
+                    }
+                    
+                } catch (RuntimeException e) {
+                    log.warn("Unexpected error checking agent {}: {}", agent.getAgentName(), e.getMessage(), e);
                 }
             return false;
             }
