@@ -1233,7 +1233,8 @@ public class AgentVerbs extends VerbBase {
             "instead.",
         requiresTokenManagement = true,
         argName = "memory_query",
-        exampleJson = "{ \"query\": \"user name\", \"agentId\": \"my-agent\", \"markings\": \"PUBLIC\", \"limit\": 10 }"
+        exampleJson = "{ \"query\": \"user name\", \"agentId\": \"my-agent\", \"markings\": \"PUBLIC\", \"limit\": 10 }",
+        skipMemoryStorage = true
     )
     public ObjectNode lookupAgentMemory(AgentExecution execution, AgentExecutionContextDTO executionContextDTO)
         throws ZtatException, JsonProcessingException {
@@ -1376,7 +1377,8 @@ public class AgentVerbs extends VerbBase {
             "Always prefer this over lookup_agent_memory when searching for conceptual information across sessions.",
         requiresTokenManagement = true,
         argName = "semantic_query",
-        exampleJson = "{ \"query\": \"user personal information\", \"agentId\": \"my-agent\", \"limit\": 5, \"threshold\": 0.75 }"
+        exampleJson = "{ \"query\": \"user personal information\", \"agentId\": \"my-agent\", \"limit\": 5, \"threshold\": 0.75 }",
+        skipMemoryStorage = true
     )
     public ObjectNode searchAgentMemorySemantic(AgentExecution execution, AgentExecutionContextDTO executionContextDTO)
         throws ZtatException, JsonProcessingException {

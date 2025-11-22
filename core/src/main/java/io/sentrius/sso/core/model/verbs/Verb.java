@@ -22,4 +22,8 @@ public @interface Verb {
 
     // New field for example input
     String exampleJson() default "";
+    
+    // if set to true, this verb's results will NOT be automatically stored in memory
+    // Useful for verbs like lookup_memory that retrieve existing data rather than generating new data
+    boolean skipMemoryStorage() default false;
 }

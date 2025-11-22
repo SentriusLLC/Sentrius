@@ -25,4 +25,6 @@ public class AgentVerb {
     private String exampleJson = "";
     @Builder.Default
     private String argName = "arg1";
+    @Builder.Default
+    private boolean skipMemoryStorage = false;
 }

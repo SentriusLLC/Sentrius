@@ -58,6 +58,38 @@ public class VerbRegistry {
 
     private List<EndpointDescriptor> endpoints = new ArrayList<>();
 
+    /**
+     * Handles memory storage for verb execution results.
+     * If skipMemoryStorage is false, stores in both persistent and short-term memory.
+     * If skipMemoryStorage is true, only stores in short-term memory for immediate use.
+     * 
+     * @param agentVerb The verb being executed
+     * @param verbName The name of the verb
+     * @param execNode The execution result as JsonNode
+     * @param contextDTO The execution context
+     */
+    private void handleMemoryStorage(AgentVerb agentVerb, String verbName, JsonNode execNode, 
+                                     AgentExecutionContextDTO contextDTO) {
+        if (!agentVerb.isSkipMemoryStorage()) {
+            // Store in both persistent and short-term memory
+            if (null != agentVerb.getReturnName() && !agentVerb.getReturnName().isEmpty()) {
+                contextDTO.addToMemory(agentVerb.getReturnName(), execNode);
+                contextDTO.addToPersistentMemory(agentVerb.getReturnName(), execNode, "PRIVATE", AGENT_MARKINGS);
+            } else {
+                contextDTO.addToPersistentMemory(verbName, execNode, "PRIVATE", AGENT_MARKINGS);
+                contextDTO.addToMemory(verbName, execNode);
+            }
+        } else {
+            log.info("Skipping persistent memory storage for verb: {} (skipMemoryStorage=true)", verbName);
+            // Still add to short-term memory for immediate use in the current execution
+            if (null != agentVerb.getReturnName() && !agentVerb.getReturnName().isEmpty()) {
+                contextDTO.addToMemory(agentVerb.getReturnName(), execNode);
+            } else {
+                contextDTO.addToMemory(verbName, execNode);
+            }
+        }
+    }
+
     public void scanEndpoints(AgentExecution execution) throws ZtatException, JsonProcessingException {
         synchronized (this) {
             endpointRegistry.loadEndpoints(execution);
@@ -108,6 +140,7 @@ public class VerbRegistry {
                                         .exampleJson(annotation.exampleJson())
                                         .requiresTokenManagement(annotation.requiresTokenManagement())
                                         .returnType(annotation.returnType())
+                                        .skipMemoryStorage(annotation.skipMemoryStorage())
                                         .build();
                                     verbs.put(name, verb);
                                     instances.put(name, instance);
@@ -187,16 +220,9 @@ public class VerbRegistry {
 
                 JsonNode execNode = JsonUtil.MAPPER.valueToTree(exec);
                 log.info("Interpreting output for AgentExecutionContextDTO: {}", execNode);
-                // add the output - store all verb operations in memory with PRIVATE classification
-                if (null != thisVerb.getReturnName() && !thisVerb.getReturnName().isEmpty()) {
-                    contextDTO.addToMemory(thisVerb.getReturnName(), execNode);
-                    contextDTO.addToPersistentMemory(thisVerb.getReturnName(), execNode, "PRIVATE", AGENT_MARKINGS);
-                } else {
-                    contextDTO.addToPersistentMemory(verb, execNode, "PRIVATE", AGENT_MARKINGS);
-                    contextDTO.addToMemory(verb, execNode);
-                }
-
-
+                
+                // Handle memory storage based on verb configuration
+                handleMemoryStorage(thisVerb, verb, execNode, contextDTO);
 
                 return VerbResponse.builder()
                     .returnType(returnType)
@@ -228,14 +254,9 @@ public class VerbRegistry {
                             method.invoke(instance, agentExecution, contextDTO) :
                             method.invoke(instance, contextDTO);
                         JsonNode execNode = JsonUtil.MAPPER.valueToTree(exec);
-                        // add the output - store all verb operations in memory with PRIVATE classification after retry
-                        if (null != thisVerb.getReturnName() && !thisVerb.getReturnName().isEmpty()) {
-                            contextDTO.addToPersistentMemory(thisVerb.getReturnName(), execNode, "PRIVATE", AGENT_MARKINGS);
-                            contextDTO.addToMemory(thisVerb.getReturnName(), execNode);
-                        } else {
-                            contextDTO.addToPersistentMemory(verb, execNode, "PRIVATE", AGENT_MARKINGS);
-                            contextDTO.addToMemory(verb, execNode);
-                        }
+                        
+                        // Handle memory storage based on verb configuration (retry path)
+                        handleMemoryStorage(thisVerb, verb, execNode, contextDTO);
 
                         return VerbResponse.builder()
                             .returnType(returnType)
