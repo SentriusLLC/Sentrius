@@ -31,6 +31,9 @@ class VectorAgentMemoryStoreTest {
     @Mock
     private MemoryAccessControlService accessControlService;
 
+    @Mock
+    private MemoryQueryExpansionService queryExpansionService;
+
     private VectorAgentMemoryStore vectorMemoryStore;
 
     @BeforeEach
@@ -39,7 +42,8 @@ class VectorAgentMemoryStoreTest {
                 persistentMemoryStore,
                 agentMemoryRepository,
                 embeddingService,
-                accessControlService
+                accessControlService,
+                queryExpansionService
         );
     }
 

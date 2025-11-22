@@ -427,9 +427,11 @@ public class AgentMemoryController extends BaseController {
         String searchTerm = (String) searchRequest.get("searchTerm");
         String markingsFilter = (String) searchRequest.get("markings");
         Integer limit = (Integer) searchRequest.getOrDefault("limit", 10);
-        Double threshold = (Double) searchRequest.getOrDefault("threshold", 0.7);
+        // Default to 0 to let the service determine optimal threshold
+        Double threshold = (Double) searchRequest.getOrDefault("threshold", 0.0);
         
-        log.debug("Hybrid search - term: {}, markings: {}, limit: {}", searchTerm, markingsFilter, limit);
+        log.debug("Hybrid search - term: {}, markings: {}, limit: {}, threshold: {}", 
+                  searchTerm, markingsFilter, limit, threshold);
         
         try {
             var operatingUser = getOperatingUser(request,response);
@@ -592,8 +594,9 @@ public class AgentMemoryController extends BaseController {
             log.info("Searching agent memory with authorizations - authorizations): '{}'", authorizations);
             AccessEvaluator evaluator = authorizations.isEmpty() ? null :  AccessEvaluator.of(authorizations);
 
+            // Pass 0 as threshold to let the service determine the optimal threshold based on query
             List<AgentMemory> results = vectorMemoryStore.hybridSearch(evaluator,
-                content, markings, operatingUser.getUserId(), 10, 0.75);
+                content, markings, operatingUser.getUserId(), 10, 0);
 
             Page<AgentMemoryDTO> responseDTOs = results.stream()
                 .map(this::convertToDTO).collect(Collectors.collectingAndThen(

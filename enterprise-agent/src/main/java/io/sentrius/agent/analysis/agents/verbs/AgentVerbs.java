@@ -1227,12 +1227,10 @@ public class AgentVerbs extends VerbBase {
      */
     @Verb(
         name = "lookup_agent_memory",
+        returnName = "memories",
         returnType = ObjectNode.class,
-        description = "Searches agent memories using text-based lookup with optional filters. " +
-            "Use this to recall information from previous conversations or sessions. " +
-            "For example, if a user told you their name in a previous session, use this verb to look it up. " +
-            "Returns memories that match the query text, filtered by agent ID and markings if provided. " +
-            "Always check memory before asking users to repeat information they may have already provided.",
+        description = "Searches agent memories. Do not use this directly, always populate memoryLookup in response " +
+            "instead.",
         requiresTokenManagement = true,
         argName = "memory_query",
         exampleJson = "{ \"query\": \"user name\", \"agentId\": \"my-agent\", \"markings\": \"PUBLIC\", \"limit\": 10 }"
@@ -1328,7 +1326,7 @@ public class AgentVerbs extends VerbBase {
         if (isHtml(response)) {
             throw new RuntimeException("Received HTML response from memory search endpoint");
         }
-        log.info("Memory search response: {}", response);
+        //log.info("Memory search response: {}", response);
         // Parse the response
         JsonNode responseNode = JsonUtil.MAPPER.readTree(response);
         

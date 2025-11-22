@@ -28,16 +28,19 @@ public class VectorAgentMemoryStore {
     private final AgentMemoryRepository agentMemoryRepository;
     private final EmbeddingService embeddingService;
     private final MemoryAccessControlService accessControlService;
+    private final MemoryQueryExpansionService queryExpansionService;
 
     public VectorAgentMemoryStore(
             PersistentAgentMemoryStore persistentMemoryStore,
             AgentMemoryRepository agentMemoryRepository,
             EmbeddingService embeddingService,
-            MemoryAccessControlService accessControlService) {
+            MemoryAccessControlService accessControlService,
+            MemoryQueryExpansionService queryExpansionService) {
         this.persistentMemoryStore = persistentMemoryStore;
         this.agentMemoryRepository = agentMemoryRepository;
         this.embeddingService = embeddingService;
         this.accessControlService = accessControlService;
+        this.queryExpansionService = queryExpansionService;
     }
 
     /**
@@ -145,16 +148,27 @@ public class VectorAgentMemoryStore {
     }
 
     /**
-     * Hybrid search combining text and vector similarity with markings filter
+     * Hybrid search combining text and vector similarity with markings filter.
+     * Enhanced with query expansion to improve recall.
      */
     public List<AgentMemory>  hybridSearch(
         AccessEvaluator evaluator, String searchTerm, String markingsFilter,
         String requestingUserId, int limit, double threshold) {
 
-        log.debug("Hybrid search - term: {}, markings: {}, user: {}", searchTerm, markingsFilter, requestingUserId);
+        log.info("Hybrid search - term: '{}', markings: {}, user: {}, threshold: {}", 
+                 searchTerm, markingsFilter, requestingUserId, threshold);
 
         try {
-            // --- 1. Get semantic embedding
+            // Use a more lenient threshold if not explicitly provided
+            // Lower threshold helps with recall for queries like "user name" vs "my name is marc"
+            double effectiveThreshold = threshold > 0 ? threshold : queryExpansionService.getSuggestedThreshold(searchTerm);
+            log.info("Using effective threshold: {}", effectiveThreshold);
+
+            // --- 1. Expand the query to improve matching
+            List<String> expandedTerms = queryExpansionService.getTopSearchTerms(searchTerm, 5);
+            log.info("Expanded query '{}' to terms: {}", searchTerm, expandedTerms);
+
+            // --- 2. Get semantic embedding for original query
             float[] queryEmbedding = embeddingService.embed(searchTerm);
             if (queryEmbedding == null) {
                 log.warn("Embedding service returned null, falling back to lexical only");
@@ -164,32 +178,39 @@ public class VectorAgentMemoryStore {
 
             String embeddingString = Arrays.toString(queryEmbedding);
 
-            // --- 2. Run lexical + semantic searches in parallel
-            List<AgentMemory> lexicalResults = persistentMemoryStore
-                .lexicalSearch(searchTerm, requestingUserId);
+            // --- 3. Run lexical searches for all expanded terms
+            // Use LinkedHashSet to maintain insertion order for predictable results
+            Set<AgentMemory> allLexicalResults = new LinkedHashSet<>();
+            for (String term : expandedTerms) {
+                List<AgentMemory> termResults = persistentMemoryStore.lexicalSearch(term, requestingUserId);
+                allLexicalResults.addAll(termResults);
+                log.debug("Lexical search for '{}' found {} results", term, termResults.size());
+            }
 
+            // --- 4. Run semantic search with original query embedding
             List<AgentMemory> semanticResults = (markingsFilter != null && !markingsFilter.trim().isEmpty())
                 ? agentMemoryRepository.findSimilarMemoriesByMarkings(embeddingString, markingsFilter, limit * 3)
                 : agentMemoryRepository.findSimilarMemories(embeddingString, limit * 3);
 
-            log.info("Lexical found {}, Semantic found {}", lexicalResults.size(), semanticResults.size());
+            log.info("Lexical (expanded) found {}, Semantic found {}", allLexicalResults.size(), semanticResults.size());
 
-            // --- 3. Score + normalize
+            // --- 5. Score + normalize
             Map<Long, Double> scores = new HashMap<>();
 
-            // Boost lexical matches
-            for (AgentMemory m : lexicalResults) {
+            // Boost lexical matches (exact/partial text matches are highly relevant)
+            for (AgentMemory m : allLexicalResults) {
                 scores.put(m.getId(), 1.5);
             }
 
-            // Filter + score semantic matches
+            // Filter + score semantic matches with the effective threshold
             List<AgentMemory> filteredSemantic = semanticResults.stream()
                 .filter(m -> m.getEmbedding() != null)
                 .filter(m -> {
                     float sim = CosineSimilarity.score(queryEmbedding, m.getEmbedding());
                     double normalized = (sim + 1) / 2.0;
-                    log.info("Semantic match - ID: {}, similarity: {}, normalized: {}", m.getId(), sim, normalized);
-                    if (normalized >= threshold) {
+                    log.debug("Semantic match - ID: {}, key: {}, similarity: {}, normalized: {}", 
+                             m.getId(), m.getMemoryKey(), sim, normalized);
+                    if (normalized >= effectiveThreshold) {
                         scores.merge(m.getId(), normalized, Double::sum);
                         return true;
                     }
@@ -197,9 +218,14 @@ public class VectorAgentMemoryStore {
                 })
                 .toList();
 
-            // --- 5. Merge + dedupe + sort
+            log.info("After threshold filtering: {} semantic results passed (threshold: {})", 
+                     filteredSemantic.size(), effectiveThreshold);
+
+            // --- 6. Merge + dedupe + sort
+            // Convert to List for better stream performance
+            List<AgentMemory> lexicalList = new ArrayList<>(allLexicalResults);
             Set<Long> seen = new HashSet<>();
-            return Stream.concat(lexicalResults.stream(), filteredSemantic.stream())
+            List<AgentMemory> results = Stream.concat(lexicalList.stream(), filteredSemantic.stream())
                 .filter(m -> seen.add(m.getId())) // dedupe by ID
                 .filter(m -> !m.isExpired())
                 .filter(m -> accessControlService.canAccessMemory(m, evaluator, requestingUserId, null, "READ"))
@@ -209,6 +235,8 @@ public class VectorAgentMemoryStore {
                 .limit(limit)
                 .toList();
 
+            log.info("Hybrid search returned {} results for query '{}'", results.size(), searchTerm);
+            return results;
 
         } catch (Exception e) {
             log.error("Error in hybrid search", e);

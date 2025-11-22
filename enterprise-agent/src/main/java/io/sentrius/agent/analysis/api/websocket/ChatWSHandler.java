@@ -323,6 +323,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                     memoryArgs.put("query", response.getMemoryLookup());
 
                                     // Execute memory lookup
+
                                     var memoryResponse = verbRegistry.execute(
                                         chatAgent.getAgentExecution(),
                                         websocketCommunication.getAgentExecutionContextDTO(),
