@@ -42,6 +42,7 @@ public class RegisteredMonitoringAgent implements ApplicationListener<Applicatio
     
     private volatile boolean running = true;
     private Thread workerThread;
+    private AgentExecution agentExecution;
     
     @Autowired
     public RegisteredMonitoringAgent(
@@ -66,11 +67,11 @@ public class RegisteredMonitoringAgent implements ApplicationListener<Applicatio
             .username(agentName)
             .build();
         
-        var execution = agentExecutionService.getAgentExecution(user);
+        agentExecution = agentExecutionService.getAgentExecution(user);
         
         // Send heartbeat to register as active agent
         try {
-            agentClientService.heartbeat(execution, agentName);
+            agentClientService.heartbeat(agentExecution, agentName);
             log.info("Monitoring Agent registered and sent heartbeat");
         } catch (ZtatException e) {
             log.error("Failed to send initial heartbeat", e);
@@ -79,7 +80,7 @@ public class RegisteredMonitoringAgent implements ApplicationListener<Applicatio
         // Register with the system
         while (running) {
             try {
-                var register = zeroTrustClientService.registerAgent(execution);
+                var register = zeroTrustClientService.registerAgent(agentExecution);
                 log.info("Monitoring Agent registered response: {}", register);
                 break;
             } catch (Exception | ZtatException e) {
@@ -94,7 +95,7 @@ public class RegisteredMonitoringAgent implements ApplicationListener<Applicatio
         }
         
         // Start monitoring worker thread
-        startMonitoringWorker(execution, user);
+        startMonitoringWorker(agentExecution, user);
     }
     
     private void startMonitoringWorker(AgentExecution execution, UserDTO user) {
@@ -193,7 +194,7 @@ public class RegisteredMonitoringAgent implements ApplicationListener<Applicatio
         
         // Always monitor the Sentrius API itself as a baseline
         MonitoringConfig sentriusApiConfig = MonitoringConfig.builder()
-            .endpointUrl("http://localhost:8080/actuator/health")
+            .endpointUrl("http://sentrius-sentrius:8080/actuator/health")
             .serviceName("sentrius-api")
             .responseTimeThreshold(1000L) // 1 second
             .errorRateThreshold(5.0) // 5%
@@ -209,7 +210,7 @@ public class RegisteredMonitoringAgent implements ApplicationListener<Applicatio
             .build();
         
         endpointMonitoringService.registerEndpoint(
-            "http://localhost:8080/actuator/health", 
+            "http://sentrius-sentrius:8080/actuator/health",
             sentriusApiConfig
         );
         
@@ -233,6 +234,107 @@ public class RegisteredMonitoringAgent implements ApplicationListener<Applicatio
                 log.error("Error evaluating stability for {}", url, e);
             }
         }
+    }
+    
+    /**
+     * Get the current agent execution context.
+     * Used for chat functionality to access agent state.
+     */
+    public AgentExecution getAgentExecution() {
+        return agentExecution;
+    }
+
+    /**
+     * Get the agent name.
+     */
+    public String getAgentName() {
+        return agentName;
+    }
+
+    /**
+     * Get current status information for chat queries.
+     */
+    public String getStatusInfo() {
+        StringBuilder status = new StringBuilder();
+        status.append("Monitoring Agent Status\n");
+        status.append("========================\n\n");
+        status.append("Agent Name: ").append(agentName).append("\n");
+        status.append("Running: ").append(running ? "Yes" : "No").append("\n");
+        status.append("Auto-discover Endpoints: ").append(autoDiscoverEndpoints ? "Enabled" : "Disabled").append("\n");
+        status.append("\nNote: This agent runs continuously and does not pause during chat sessions.\n");
+        return status.toString();
+    }
+
+    /**
+     * Get endpoint health information for chat queries.
+     */
+    public String getEndpointHealthInfo() {
+        StringBuilder info = new StringBuilder();
+        info.append("Endpoint Health Information\n");
+        info.append("===========================\n\n");
+        
+        var endpointHealthMap = endpointMonitoringService.getAllEndpointHealth();
+        
+        if (endpointHealthMap.isEmpty()) {
+            info.append("No endpoints are currently being monitored.\n");
+        } else {
+            for (var entry : endpointHealthMap.entrySet()) {
+                String url = entry.getKey();
+                var health = entry.getValue();
+                info.append("Endpoint: ").append(url).append("\n");
+                info.append("  Status: ").append(health.getStatus()).append("\n");
+                info.append("  Last Check: ").append(health.getLastChecked()).append("\n");
+                if (health.getResponseTime() != null) {
+                    info.append("  Response Time: ").append(health.getResponseTime()).append(" ms\n");
+                }
+                if (health.getErrorRate() != null) {
+                    info.append("  Error Rate: ").append(String.format("%.2f", health.getErrorRate())).append("%\n");
+                }
+                if (health.getAvgLatency() != null) {
+                    info.append("  Avg Latency: ").append(String.format("%.2f", health.getAvgLatency())).append(" ms\n");
+                }
+                if (health.getThroughput() != null) {
+                    info.append("  Throughput: ").append(String.format("%.2f", health.getThroughput())).append(" req/s\n");
+                }
+                if (health.getLastError() != null) {
+                    info.append("  Error: ").append(health.getLastError()).append("\n");
+                }
+                info.append("\n");
+            }
+        }
+        
+        return info.toString();
+    }
+
+    /**
+     * Get monitoring configuration information for chat queries.
+     */
+    public String getMonitoringConfigInfo() {
+        StringBuilder info = new StringBuilder();
+        info.append("Monitoring Configuration\n");
+        info.append("========================\n\n");
+        
+        var configs = endpointMonitoringService.getAllMonitoringConfigs();
+        
+        if (configs.isEmpty()) {
+            info.append("No monitoring configurations are currently active.\n");
+        } else {
+            for (var entry : configs.entrySet()) {
+                String url = entry.getKey();
+                var config = entry.getValue();
+                info.append("Endpoint: ").append(url).append("\n");
+                info.append("  Service Name: ").append(config.getServiceName()).append("\n");
+                info.append("  Response Time Threshold: ").append(config.getResponseTimeThreshold()).append(" ms\n");
+                info.append("  Error Rate Threshold: ").append(config.getErrorRateThreshold()).append("%\n");
+                info.append("  Latency Threshold: ").append(config.getLatencyThreshold()).append(" ms\n");
+                info.append("  Analysis Window: ").append(config.getAnalysisWindowMinutes()).append(" minutes\n");
+                info.append("  AI Evaluation: ").append(config.isUseAiEvaluation() ? "Enabled" : "Disabled").append("\n");
+                info.append("  Notification Channels: ").append(String.join(", ", config.getNotificationChannels())).append("\n");
+                info.append("\n");
+            }
+        }
+        
+        return info.toString();
     }
     
     @PreDestroy

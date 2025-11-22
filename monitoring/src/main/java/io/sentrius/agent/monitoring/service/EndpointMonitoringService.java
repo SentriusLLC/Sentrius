@@ -226,4 +226,11 @@ public class EndpointMonitoringService {
     public Map<String, EndpointHealth> getAllEndpointHealth() {
         return new ConcurrentHashMap<>(endpointHealthMap);
     }
+    
+    /**
+     * Get all monitoring configurations
+     */
+    public Map<String, MonitoringConfig> getAllMonitoringConfigs() {
+        return new ConcurrentHashMap<>(monitoringConfigs);
+    }
 }

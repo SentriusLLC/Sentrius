@@ -270,7 +270,7 @@ data:
     otel.traces.exporter=otlp
     otel.metrics.exporter=none
     otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
-    otel.resource.attributes.service.name=ai-agent
+    otel.resource.attributes.service.name=analysis-agent
     otel.traces.sampler=always_on
     otel.exporter.otlp.timeout=10s
     otel.exporter.otlp.protocol=grpc
@@ -337,14 +337,20 @@ data:
     spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
     # Monitoring Agent Configuration
     agents.monitoring.enabled=true
+    agents.monitoring.chat.enabled=true
+    agent.listen.websocket=true
     agents.monitoring.name=monitoring-agent
     agents.monitoring.check-interval=60000
     agents.monitoring.auto-discover-endpoints=true
     # OpenTelemetry Configuration
     otel.traces.exporter=otlp
+    otel.metrics.exporter=none
     otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
-    otel.backend.url=http://sentrius-jaeger:16686
-    otel.service.name=monitoring-agent
+    jaeger.query.url=http://sentrius-jaeger:16686
+    otel.resource.attributes.service.name=monitoring-agent
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
     # Health and Actuator
     management.endpoints.web.exposure.include=health,metrics
     management.endpoint.health.show-details=always
