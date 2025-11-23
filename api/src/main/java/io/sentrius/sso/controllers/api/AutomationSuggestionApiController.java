@@ -8,12 +8,15 @@ import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.automation.AutomationSuggestionService;
+import io.sentrius.sso.core.services.automation.AutomationAgentService;
+import io.sentrius.sso.core.services.automation.AutomationTestService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +33,8 @@ public class AutomationSuggestionApiController {
 
     private final AutomationSuggestionService suggestionService;
     private final UserService userService;
+    private final AutomationAgentService agentService;
+    private final AutomationTestService testService;
 
     /**
      * Get all pending automation suggestions
@@ -42,6 +47,61 @@ public class AutomationSuggestionApiController {
             .map(this::toDTO)
             .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
+    }
+    
+    /**
+     * Create a new user-created automation script
+     */
+    @PostMapping
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<Map<String, Object>> createSuggestion(
+            @RequestBody Map<String, String> requestBody,
+            Principal principal) {
+        try {
+            User user = userService.getUserByUsername(principal.getName());
+            
+            String description = requestBody.get("description");
+            String script = requestBody.get("script");
+            String scriptType = requestBody.get("scriptType");
+            
+            if (description == null || description.trim().isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Description is required");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            if (script == null || script.trim().isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Script content is required");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            AutomationSuggestion suggestion = AutomationSuggestion.builder()
+                .description(description)
+                .suggestedScript(script)
+                .scriptType(scriptType != null ? scriptType : "bash")
+                .status("APPROVED")
+                .confidenceScore(1.0)
+                .patternFrequency(0)
+                .suggestedForUser(user)
+                .build();
+            
+            AutomationSuggestion saved = suggestionService.createSuggestion(suggestion);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "Automation script created successfully");
+            response.put("id", saved.getId());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error creating automation script", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 
     /**
@@ -179,6 +239,174 @@ public class AutomationSuggestionApiController {
         } catch (Exception e) {
             log.error("Error deleting suggestion {}", id, e);
             Map<String, String> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Update the script content of a suggestion
+     */
+    @PutMapping("/{id}/script")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<Map<String, String>> updateScript(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> requestBody) {
+        try {
+            String newScript = requestBody.get("script");
+            if (newScript == null || newScript.trim().isEmpty()) {
+                Map<String, String> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Script content is required");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            AutomationSuggestion suggestion = suggestionService.getSuggestionById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Suggestion not found: " + id));
+            
+            suggestion.setSuggestedScript(newScript);
+            suggestion.setUpdatedAt(new Timestamp(System.currentTimeMillis()));
+            suggestionService.createSuggestion(suggestion);
+            
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "Script updated successfully");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error updating script for suggestion {}", id, e);
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Generate automation code using AI agent
+     */
+    @PostMapping("/{id}/generate")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<Map<String, Object>> generateCode(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> requestBody) {
+        try {
+            AutomationSuggestion suggestion = suggestionService.getSuggestionById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Suggestion not found: " + id));
+            
+            String userPrompt = requestBody != null ? requestBody.get("prompt") : null;
+            String generatedCode = agentService.generateAutomationCode(suggestion, userPrompt);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("generatedCode", generatedCode);
+            response.put("message", "Code generated successfully");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error generating code for suggestion {}", id, e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Improve existing automation code with AI assistance
+     */
+    @PostMapping("/{id}/improve")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<Map<String, Object>> improveCode(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> requestBody) {
+        try {
+            AutomationSuggestion suggestion = suggestionService.getSuggestionById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Suggestion not found: " + id));
+            
+            String feedback = requestBody.get("feedback");
+            if (feedback == null || feedback.trim().isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Feedback is required");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            String existingCode = suggestion.getSuggestedScript();
+            String context = suggestion.getDescription();
+            
+            String improvedCode = agentService.improveAutomationCode(
+                existingCode, 
+                suggestion.getScriptType(), 
+                feedback, 
+                context
+            );
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("improvedCode", improvedCode);
+            response.put("message", "Code improved successfully");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error improving code for suggestion {}", id, e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Analyze automation code for safety
+     */
+    @PostMapping("/{id}/analyze")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<Map<String, Object>> analyzeCode(@PathVariable Long id) {
+        try {
+            AutomationSuggestion suggestion = suggestionService.getSuggestionById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Suggestion not found: " + id));
+            
+            Map<String, Object> analysis = agentService.analyzeAutomationCode(
+                suggestion.getSuggestedScript(), 
+                suggestion.getScriptType()
+            );
+            
+            analysis.put("status", "success");
+            return ResponseEntity.ok(analysis);
+        } catch (Exception e) {
+            log.error("Error analyzing code for suggestion {}", id, e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Test automation on target system via SSH
+     */
+    @PostMapping("/{id}/test")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<Map<String, Object>> testAutomation(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> requestBody) {
+        try {
+            AutomationSuggestion suggestion = suggestionService.getSuggestionById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Suggestion not found: " + id));
+            
+            String script = requestBody != null && requestBody.containsKey("script") 
+                ? (String) requestBody.get("script")
+                : suggestion.getSuggestedScript();
+            
+            Boolean dryRun = requestBody != null && requestBody.containsKey("dryRun")
+                ? (Boolean) requestBody.get("dryRun")
+                : true;
+            
+            Map<String, Object> testResult = testService.testAutomation(suggestion, script, dryRun);
+            
+            return ResponseEntity.ok(testResult);
+        } catch (Exception e) {
+            log.error("Error testing automation for suggestion {}", id, e);
+            Map<String, Object> response = new HashMap<>();
             response.put("status", "error");
             response.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(response);

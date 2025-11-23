@@ -2,7 +2,10 @@
 <html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
 <head>
     <meta th:replace="~{fragments/header}">
-    <title>[[${systemOptions.systemLogoName}]] - Automation Suggestions</title>
+    <title>[[${systemOptions.systemLogoName}]] - Automation Scripts</title>
+    <!-- Monaco Editor -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/editor/editor.main.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
     <style>
         .confidence-badge {
             padding: 5px 10px;
@@ -58,11 +61,65 @@
         .table {
             color: #fff;
         }
+        #editor-container {
+            height: 500px;
+            border: 1px solid #405d80;
+            margin-bottom: 10px;
+        }
+        .chat-panel {
+            height: 400px;
+            overflow-y: auto;
+            background-color: #1e2936;
+            border: 1px solid #405d80;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .chat-message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 5px;
+        }
+        .chat-message.user {
+            background-color: #2c5282;
+            text-align: right;
+        }
+        .chat-message.agent {
+            background-color: #234e52;
+        }
+        .safety-warning {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .safety-high {
+            background-color: #dc3545;
+            color: white;
+        }
+        .safety-medium {
+            background-color: #ffc107;
+            color: black;
+        }
+        .safety-low {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .safety-safe {
+            background-color: #28a745;
+            color: white;
+        }
+        .test-output {
+            background-color: #1e2936;
+            border: 1px solid #405d80;
+            padding: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 
 <body>
-<th:block th:replace="~{fragments/topbar}"></th:block>
 <div class="container-fluid">
     <div class="row flex-nowrap">
         <th:block th:replace="~{fragments/sidebar}"></th:block>
@@ -70,9 +127,14 @@
         <div class="col py-3">
             <div class="container-fluid">
                 <div class="row mb-3">
-                    <div class="col-12">
-                        <h2><i class="fas fa-magic"></i> Automation Suggestions</h2>
-                        <p class="text-muted">AI-generated automation suggestions based on repetitive session patterns</p>
+                    <div class="col-md-8">
+                        <h2><i class="fas fa-code"></i> Automation Scripts</h2>
+                        <p class="text-muted">AI-generated suggestions and user-created automation scripts</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-primary" onclick="createNewScript()">
+                            <i class="fas fa-plus"></i> Create New Script
+                        </button>
                     </div>
                 </div>
 
@@ -80,7 +142,7 @@
                     <div class="col-12">
                         <div class="card">
                             <div class="card-header">
-                                <h5 class="mb-0">Suggestion Statistics</h5>
+                                <h5 class="mb-0">Script Statistics</h5>
                             </div>
                             <div class="card-body">
                                 <div class="row">
@@ -118,7 +180,7 @@
                     <div class="col-12">
                         <div class="card">
                             <div class="card-header">
-                                <h5 class="mb-0">All Suggestions</h5>
+                                <h5 class="mb-0">All Automation Scripts</h5>
                             </div>
                             <div class="card-body">
                                 <table id="suggestions-table" class="table table-striped table-dark table-hover" style="width:100%">
@@ -218,6 +280,85 @@
     </div>
 </div>
 
+<!-- Code Editor Modal -->
+<div class="modal fade" id="editorModal" tabindex="-1" aria-labelledby="editorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editorModalLabel">Edit Automation Script</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <label for="script-description" class="form-label">Description</label>
+                            <input type="text" class="form-control" id="script-description" placeholder="Enter script description">
+                        </div>
+                        <div class="mb-3">
+                            <label for="script-type-select" class="form-label">Script Type</label>
+                            <select class="form-select" id="script-type-select">
+                                <option value="bash">Bash</option>
+                                <option value="python">Python</option>
+                            </select>
+                        </div>
+                        <h6>Script Editor <span id="editor-script-type" class="badge bg-secondary"></span></h6>
+                        <div id="editor-container"></div>
+                        
+                        <div id="safety-analysis" style="display:none;" class="safety-warning">
+                            <strong>Safety Analysis:</strong>
+                            <div id="safety-details"></div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-primary" onclick="saveScript()">
+                                <i class="fas fa-save"></i> Save Script
+                            </button>
+                            <button type="button" class="btn btn-info" onclick="analyzeScript()">
+                                <i class="fas fa-shield-alt"></i> Analyze Safety
+                            </button>
+                            <button type="button" class="btn btn-success" onclick="testScript(true)">
+                                <i class="fas fa-vial"></i> Dry Run
+                            </button>
+                            <button type="button" class="btn btn-warning" onclick="testScript(false)">
+                                <i class="fas fa-play"></i> Test on System
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="generateWithAI()">
+                                <i class="fas fa-robot"></i> Generate with AI
+                            </button>
+                        </div>
+                        
+                        <div id="test-results" style="display:none; margin-top:20px;">
+                            <h6>Test Results</h6>
+                            <div class="test-output" id="test-output"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <h6>AI Assistant <i class="fas fa-robot"></i></h6>
+                        <div class="chat-panel" id="chat-panel">
+                            <div class="chat-message agent">
+                                <strong>AI Agent:</strong><br>
+                                Hello! I can help you write and improve automation scripts. Ask me anything!
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="chat-input" placeholder="Ask AI for help...">
+                            <button class="btn btn-primary" onclick="sendChatMessage()">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" id="editor-suggestion-id">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script th:inline="none">
 $(document).ready(function() {
     // Initialize DataTable
@@ -284,6 +425,7 @@ $(document).ready(function() {
                 render: function(data, type, row) {
                     var buttons = '<div class="action-buttons">';
                     buttons += '<button class="btn btn-sm btn-info" onclick="viewSuggestion(' + row.id + ')"><i class="fas fa-eye"></i></button>';
+                    buttons += '<button class="btn btn-sm btn-warning" onclick="editSuggestion(' + row.id + ')"><i class="fas fa-edit"></i> Edit</button>';
                     
                     if (row.status === 'PENDING') {
                         buttons += '<button class="btn btn-sm btn-success" onclick="approveSuggestion(' + row.id + ')"><i class="fas fa-check"></i></button>';
@@ -444,6 +586,402 @@ function deleteSuggestion(id) {
         }
     });
 }
+
+// Monaco Editor variables
+var monacoEditor = null;
+var currentSuggestionData = null;
+var chatHistory = [];
+var isNewScript = false;
+
+// Create new automation script
+function createNewScript() {
+    isNewScript = true;
+    currentSuggestionData = null;
+    
+    $('#editorModalLabel').text('Create New Automation Script');
+    $('#editor-suggestion-id').val('');
+    $('#script-description').val('');
+    $('#script-type-select').val('bash');
+    $('#editor-script-type').text('BASH');
+    
+    $('#script-description').prop('disabled', false);
+    $('#script-type-select').prop('disabled', false);
+    
+    chatHistory = [];
+    $('#chat-panel').html('<div class="chat-message agent"><strong>AI Agent:</strong><br>Hello! I can help you write automation scripts from scratch. Describe what you want to automate!</div>');
+    
+    $('#editorModal').modal('show');
+    
+    setTimeout(function() {
+        if (!monacoEditor) {
+            require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
+            require(['vs/editor/editor.main'], function() {
+                monacoEditor = monaco.editor.create(document.getElementById('editor-container'), {
+                    value: '#!/bin/bash\n# Enter your script here\n',
+                    language: 'shell',
+                    theme: 'vs-dark',
+                    automaticLayout: true,
+                    minimap: { enabled: true }
+                });
+            });
+        } else {
+            monacoEditor.setValue('#!/bin/bash\n# Enter your script here\n');
+            monaco.editor.setModelLanguage(monacoEditor.getModel(), 'shell');
+        }
+    }, 300);
+    
+    // Update script type badge when select changes
+    $('#script-type-select').off('change').on('change', function() {
+        var scriptType = $(this).val();
+        $('#editor-script-type').text(scriptType.toUpperCase());
+        if (monacoEditor) {
+            var language = scriptType === 'python' ? 'python' : 'shell';
+            monaco.editor.setModelLanguage(monacoEditor.getModel(), language);
+            
+            var defaultContent = scriptType === 'python' 
+                ? '#!/usr/bin/env python3\n# Enter your script here\n'
+                : '#!/bin/bash\n# Enter your script here\n';
+            monacoEditor.setValue(defaultContent);
+        }
+    });
+}
+
+// Edit suggestion with code editor
+function editSuggestion(id) {
+    isNewScript = false;
+    
+    $.get('/api/v1/automation/suggestions/' + id, function(data) {
+        currentSuggestionData = data;
+        
+        $('#editorModalLabel').text('Edit Automation Script');
+        $('#editor-suggestion-id').val(id);
+        $('#script-description').val(data.description || '');
+        $('#script-type-select').val(data.scriptType || 'bash');
+        $('#editor-script-type').text((data.scriptType || 'bash').toUpperCase());
+        
+        $('#script-description').prop('disabled', true);
+        $('#script-type-select').prop('disabled', true);
+        
+        chatHistory = [];
+        $('#chat-panel').html('<div class="chat-message agent"><strong>AI Agent:</strong><br>Hello! I can help you write and improve automation scripts. Ask me anything!</div>');
+        
+        $('#editorModal').modal('show');
+        
+        setTimeout(function() {
+            if (!monacoEditor) {
+                require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
+                require(['vs/editor/editor.main'], function() {
+                    monacoEditor = monaco.editor.create(document.getElementById('editor-container'), {
+                        value: data.suggestedScript,
+                        language: data.scriptType === 'python' ? 'python' : 'shell',
+                        theme: 'vs-dark',
+                        automaticLayout: true,
+                        minimap: { enabled: true }
+                    });
+                });
+            } else {
+                monacoEditor.setValue(data.suggestedScript);
+                var language = data.scriptType === 'python' ? 'python' : 'shell';
+                monaco.editor.setModelLanguage(monacoEditor.getModel(), language);
+            }
+        }, 300);
+    });
+}
+
+// Save script changes
+function saveScript() {
+    var id = $('#editor-suggestion-id').val();
+    var script = monacoEditor.getValue();
+    var description = $('#script-description').val();
+    var scriptType = $('#script-type-select').val();
+    
+    if (isNewScript) {
+        // Create new automation script
+        if (!description || description.trim() === '') {
+            alert('Please enter a description for the script');
+            return;
+        }
+        
+        $.ajax({
+            url: '/api/v1/automation/suggestions',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ 
+                description: description,
+                script: script,
+                scriptType: scriptType
+            }),
+            success: function(response) {
+                alert('Automation script created successfully!');
+                $('#editorModal').modal('hide');
+                $('#suggestions-table').DataTable().ajax.reload();
+            },
+            error: function(xhr) {
+                alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Failed to create script'));
+            }
+        });
+    } else {
+        // Update existing suggestion
+        $.ajax({
+            url: '/api/v1/automation/suggestions/' + id + '/script',
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ script: script }),
+            success: function(response) {
+                alert('Script saved successfully!');
+                $('#suggestions-table').DataTable().ajax.reload();
+            },
+            error: function(xhr) {
+                alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Failed to save script'));
+            }
+        });
+    }
+}
+
+// Analyze script safety
+function analyzeScript() {
+    var id = $('#editor-suggestion-id').val();
+    var script = monacoEditor.getValue();
+    var scriptType = $('#script-type-select').val();
+    
+    if (isNewScript || !id) {
+        // For new scripts, use the standalone analyze endpoint
+        $.ajax({
+            url: '/api/v1/automation/agent/analyze',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ 
+                code: script,
+                scriptType: scriptType
+            }),
+            success: function(response) {
+                displaySafetyAnalysis(response);
+            },
+            error: function(xhr) {
+                alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Failed to analyze script'));
+            }
+        });
+    } else {
+        // For existing suggestions, use the suggestion-specific endpoint
+        $.ajax({
+            url: '/api/v1/automation/suggestions/' + id + '/analyze',
+            type: 'POST',
+            success: function(response) {
+                displaySafetyAnalysis(response);
+            },
+            error: function(xhr) {
+                alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Failed to analyze script'));
+            }
+        });
+    }
+}
+
+function displaySafetyAnalysis(analysis) {
+    var html = '<strong>Risk Level: </strong>';
+    var riskLevel = analysis.overallRisk || 'UNKNOWN';
+    
+    $('#safety-analysis').removeClass('safety-high safety-medium safety-low safety-safe');
+    
+    if (riskLevel === 'HIGH') {
+        $('#safety-analysis').addClass('safety-high');
+    } else if (riskLevel === 'MEDIUM') {
+        $('#safety-analysis').addClass('safety-medium');
+    } else if (riskLevel === 'LOW') {
+        $('#safety-analysis').addClass('safety-low');
+    } else {
+        $('#safety-analysis').addClass('safety-safe');
+    }
+    
+    html += '<span class="badge bg-' + 
+            (riskLevel === 'HIGH' ? 'danger' : riskLevel === 'MEDIUM' ? 'warning' : 'success') + 
+            '">' + riskLevel + '</span><br>';
+    
+    if (analysis.isDestructive) {
+        html += '<strong>Warning:</strong> Script contains potentially destructive operations!<br>';
+    }
+    
+    if (analysis.destructiveOperations && analysis.destructiveOperations.length > 0) {
+        html += '<strong>Destructive Operations:</strong><ul>';
+        analysis.destructiveOperations.forEach(function(op) {
+            html += '<li>' + op + '</li>';
+        });
+        html += '</ul>';
+    }
+    
+    if (analysis.securityIssues && analysis.securityIssues.length > 0) {
+        html += '<strong>Security Issues:</strong><ul>';
+        analysis.securityIssues.forEach(function(issue) {
+            html += '<li>' + issue + '</li>';
+        });
+        html += '</ul>';
+    }
+    
+    if (analysis.suggestions && analysis.suggestions.length > 0) {
+        html += '<strong>Suggestions:</strong><ul>';
+        analysis.suggestions.forEach(function(suggestion) {
+            html += '<li>' + suggestion + '</li>';
+        });
+        html += '</ul>';
+    }
+    
+    $('#safety-details').html(html);
+    $('#safety-analysis').show();
+}
+
+// Test script on system
+function testScript(dryRun) {
+    var id = $('#editor-suggestion-id').val();
+    var script = monacoEditor.getValue();
+    
+    if (isNewScript || !id) {
+        alert('Please save the script first before testing');
+        return;
+    }
+    
+    if (!dryRun && !confirm('Are you sure you want to run this script on the target system? This is not a dry run.')) {
+        return;
+    }
+    
+    $.ajax({
+        url: '/api/v1/automation/suggestions/' + id + '/test',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ 
+            script: script,
+            dryRun: dryRun
+        }),
+        success: function(response) {
+            displayTestResults(response);
+        },
+        error: function(xhr) {
+            alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Failed to test script'));
+        }
+    });
+}
+
+function displayTestResults(results) {
+    var output = 'Test Status: ' + results.status + '\n\n';
+    
+    if (results.message) {
+        output += 'Message: ' + results.message + '\n\n';
+    }
+    
+    if (results.safetyAnalysis) {
+        output += 'Safety Analysis:\n';
+        output += '  Risk Level: ' + results.safetyAnalysis.overallRisk + '\n';
+        output += '  Is Destructive: ' + results.safetyAnalysis.isDestructive + '\n\n';
+    }
+    
+    if (results.stdout) {
+        output += 'Standard Output:\n';
+        output += results.stdout + '\n\n';
+    }
+    
+    if (results.stderr) {
+        output += 'Standard Error:\n';
+        output += results.stderr + '\n\n';
+    }
+    
+    if (results.exitCode !== undefined) {
+        output += 'Exit Code: ' + results.exitCode + '\n';
+    }
+    
+    $('#test-output').text(output);
+    $('#test-results').show();
+}
+
+// Generate code with AI
+function generateWithAI() {
+    var id = $('#editor-suggestion-id').val();
+    var prompt = window.prompt('What would you like the AI to generate or improve?', 
+                               'Generate a complete automation script based on the description');
+    
+    if (!prompt) return;
+    
+    $.ajax({
+        url: '/api/v1/automation/suggestions/' + id + '/generate',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ prompt: prompt }),
+        success: function(response) {
+            if (response.generatedCode) {
+                monacoEditor.setValue(response.generatedCode);
+                alert('Code generated successfully! Review and save when ready.');
+            }
+        },
+        error: function(xhr) {
+            alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Failed to generate code'));
+        }
+    });
+}
+
+// AI Chat functionality
+function sendChatMessage() {
+    var message = $('#chat-input').val().trim();
+    if (!message) return;
+    
+    addChatMessage('user', message);
+    $('#chat-input').val('');
+    
+    var context = 'Editing automation script';
+    if (currentSuggestionData && currentSuggestionData.description) {
+        context = 'Editing automation script for: ' + currentSuggestionData.description;
+    } else if (isNewScript) {
+        var description = $('#script-description').val();
+        if (description) {
+            context = 'Creating new automation script: ' + description;
+        } else {
+            context = 'Creating new automation script';
+        }
+    }
+    
+    $.ajax({
+        url: '/api/v1/automation/agent/chat',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            message: message,
+            context: context,
+            conversationHistory: chatHistory
+        }),
+        success: function(response) {
+            chatHistory.push({ role: 'user', content: message });
+            chatHistory.push({ role: 'assistant', content: response.response });
+            addChatMessage('agent', response.response);
+        },
+        error: function(xhr) {
+            addChatMessage('agent', 'Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Failed to get response'));
+        }
+    });
+}
+
+function addChatMessage(role, message) {
+    var className = role === 'user' ? 'user' : 'agent';
+    var label = role === 'user' ? 'You' : 'AI Agent';
+    
+    var messageHtml = '<div class="chat-message ' + className + '">' +
+                      '<strong>' + label + ':</strong><br>' +
+                      escapeHtml(message) +
+                      '</div>';
+    
+    $('#chat-panel').append(messageHtml);
+    $('#chat-panel').scrollTop($('#chat-panel')[0].scrollHeight);
+}
+
+function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Allow Enter key to send chat messages
+$('#chat-input').keypress(function(e) {
+    if (e.which === 13) {
+        sendChatMessage();
+        return false;
+    }
+});
+
 </script>
 
 </body>

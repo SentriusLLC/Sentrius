@@ -15,6 +15,8 @@ public interface SystemRepository extends JpaRepository<HostSystem, Long> {
     List<HostSystem> findByDisplayName(String systemObj);
 
     List<HostSystem> findByDisplayNameAndHost(String displayName, String host);
+    
+    List<HostSystem> findByHost(String host);
 
     @Query("SELECT COUNT(hs) > 0 FROM HostSystem hs JOIN hs.hostGroups hg WHERE hs.id = :hostSystemId AND hg.id IN :hostGroupIds")
     boolean isAssignedToHostGroups(@Param("hostSystemId") Long hostSystemId, @Param("hostGroupIds") List<Long> hostGroupIds);
