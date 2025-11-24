@@ -37,4 +37,15 @@ public class K8sViewController extends BaseController {
         log.info("Loading pod logs view");
         return "sso/k8s/pod_logs";
     }
+
+    /**
+     * View page for pod settings management
+     * Requires CAN_MANAGE_SYSTEMS permission
+     */
+    @GetMapping("/pods/settings")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public String viewPodSettings(Model model) {
+        log.info("Loading pod settings view");
+        return "sso/k8s/pod_settings";
+    }
 }

@@ -226,6 +226,11 @@
                             data-pod="${pod.name}">
                         Restart
                     </button>
+                    <button class="btn btn-sm btn-success ms-2 manage-settings-btn" 
+                            data-namespace="${pod.namespace}" 
+                            data-pod="${pod.name}">
+                        Manage Settings
+                    </button>
                 </td>
             `;
             tbody.appendChild(row);
@@ -245,6 +250,14 @@
                 const namespace = this.getAttribute('data-namespace');
                 const podName = this.getAttribute('data-pod');
                 restartPod(namespace, podName);
+            });
+        });
+        
+        document.querySelectorAll('.manage-settings-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const namespace = this.getAttribute('data-namespace');
+                const podName = this.getAttribute('data-pod');
+                managePodSettings(namespace, podName);
             });
         });
     }
@@ -445,6 +458,11 @@
             console.error('Failed to restart pod:', err);
             showError('Failed to restart pod: ' + err.message);
         });
+    }
+    
+    function managePodSettings(namespace, podName) {
+        // Navigate to the pod settings page
+        window.location.href = `/sso/v1/k8s/pods/settings?namespace=${encodeURIComponent(namespace)}&podName=${encodeURIComponent(podName)}`;
     }
 </script>
 

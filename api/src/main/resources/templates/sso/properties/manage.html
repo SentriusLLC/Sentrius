@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Property Management</title>
+    <style>
+        .properties-container {
+            margin: 80px auto;
+            background: #1e1e1e;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+        .page-title {
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: bold;
+            font-size: 1.8rem;
+            color: #f8f9fa;
+        }
+        .page-description {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #aaa;
+        }
+        .search-container {
+            margin-bottom: 20px;
+        }
+        .search-input {
+            width: 100%;
+            padding: 10px;
+            background-color: #2b2b2b;
+            border: 1px solid #444;
+            color: #eaeaea;
+            border-radius: 5px;
+        }
+        .search-input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+            outline: none;
+        }
+        .table-container {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            color: #eaeaea;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            vertical-align: middle;
+        }
+        th {
+            position: sticky;
+            top: 0;
+            background-color: #2b2b2b;
+            color: #f8f9fa;
+            font-weight: bold;
+            border-bottom: 2px solid #444;
+            z-index: 10;
+        }
+        td {
+            border-bottom: 1px solid #3c3c3c;
+        }
+        .property-name {
+            font-family: monospace;
+            color: #61dafb;
+            font-weight: 500;
+        }
+        .property-value {
+            font-family: monospace;
+            color: #98c379;
+            word-break: break-all;
+        }
+        .file-value {
+            font-family: monospace;
+            color: #888;
+            font-style: italic;
+            word-break: break-all;
+        }
+        .override-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .default-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            background-color: #6c757d;
+            color: white;
+            border-radius: 3px;
+            font-size: 0.75rem;
+        }
+        .btn-edit {
+            padding: 5px 10px;
+            background-color: #007bff;
+            border: none;
+            color: white;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-right: 5px;
+            font-size: 0.85rem;
+        }
+        .btn-edit:hover {
+            background-color: #0056b3;
+        }
+        .btn-delete {
+            padding: 5px 10px;
+            background-color: #dc3545;
+            border: none;
+            color: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .btn-delete:hover {
+            background-color: #c82333;
+        }
+        .btn-delete:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.7);
+        }
+        .modal-content {
+            background-color: #1e1e1e;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #444;
+            border-radius: 10px;
+            width: 50%;
+            max-width: 600px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .modal-title {
+            font-size: 1.5rem;
+            color: #f8f9fa;
+            font-weight: bold;
+        }
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover,
+        .close:focus {
+            color: #fff;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            color: #f8f9fa;
+            font-weight: 500;
+        }
+        .form-control-modal {
+            width: 100%;
+            padding: 10px;
+            background-color: #2b2b2b;
+            border: 1px solid #444;
+            color: #eaeaea;
+            border-radius: 5px;
+        }
+        .form-control-modal:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+            outline: none;
+        }
+        .btn-save {
+            padding: 10px 20px;
+            background-color: #28a745;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+        }
+        .btn-save:hover {
+            background-color: #218838;
+        }
+        .info-text {
+            color: #aaa;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        .no-properties {
+            text-align: center;
+            padding: 40px;
+            color: #aaa;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+
+<body>
+<div th:replace="fragments/upload_config"></div>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div class="navbar navbar-dark fixed-top navbar-expand-md" role="navigation">
+                    <div class="container bg-dark px-3 py-2">
+                        <a class="navbar-brand" href="#" style="padding-left: 45px;">
+                            <a href="/sso/v1/dashboard" class="nav-link">
+                                <img th:src="${systemOptions.systemLogoPathSmall}" alt="Logo" class="nav-img">
+                            </a>
+                        </a>
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+                        <div class="collapse navbar-collapse" id="navbarCollapse">
+                            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                                <li class="nav-item">
+                                    <span id="alertWarn" class="badge text-bg-warning ms-2"></span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div th:replace="~{fragments/alerts}"></div>
+                
+                <div class="properties-container">
+                    <div class="page-title">Property Management</div>
+                    <div class="page-description">
+                        Manage application.properties configuration overrides. Changes are stored in the database and take precedence over file values.
+                    </div>
+                    
+                    <div class="search-container">
+                        <input type="text" id="searchInput" class="search-input" placeholder="Search properties...">
+                    </div>
+                    
+                    <div class="table-container">
+                        <table id="propertiesTable" th:if="${properties != null && !properties.empty}">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30%;">Property Name</th>
+                                    <th style="width: 25%;">Current Value</th>
+                                    <th style="width: 25%;">File Value</th>
+                                    <th style="width: 10%;">Status</th>
+                                    <th style="width: 10%;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="entry : ${properties}" class="property-row">
+                                    <td class="property-name" th:text="${entry.value.propertyName}"></td>
+                                    <td class="property-value" th:text="${entry.value.currentValue}"></td>
+                                    <td class="file-value" th:text="${entry.value.fileValue}"></td>
+                                    <td>
+                                        <span class="override-badge" th:if="${entry.value.hasOverride}">Override</span>
+                                        <span class="default-badge" th:unless="${entry.value.hasOverride}">Default</span>
+                                    </td>
+                                    <td>
+                                        <button class="btn-edit" 
+                                                th:attr="data-property-name=${entry.value.propertyName},
+                                                        data-current-value=${entry.value.currentValue},
+                                                        data-file-value=${entry.value.fileValue}"
+                                                onclick="openEditModal(this)">Edit</button>
+                                        <button class="btn-delete" 
+                                                th:attr="data-property-name=${entry.value.propertyName}"
+                                                th:disabled="${!entry.value.hasOverride}"
+                                                onclick="deleteOverride(this)">Remove</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="no-properties" th:if="${properties == null || properties.empty}">
+                            No properties found.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Property Modal -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span class="modal-title">Edit Property</span>
+            <span class="close" onclick="closeEditModal()">&times;</span>
+        </div>
+        <form id="editForm" onsubmit="saveProperty(event)">
+            <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+            <div class="form-group">
+                <label class="form-label" for="propertyName">Property Name</label>
+                <input type="text" id="propertyName" class="form-control-modal" readonly>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="propertyValue">Value</label>
+                <textarea id="propertyValue" class="form-control-modal" rows="4" required></textarea>
+                <div class="info-text">This value will override the file value and be stored in the database.</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">File Value (for reference)</label>
+                <textarea id="fileValue" class="form-control-modal" rows="2" readonly></textarea>
+            </div>
+            <button type="submit" class="btn-save">Save Override</button>
+        </form>
+    </div>
+</div>
+
+<script type="module" th:src="@{/js/upload_config.js}" defer></script>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const csrfToken = /*[[${_csrf.token}]]*/ '';
+    const csrfHeader = /*[[${_csrf.headerName}]]*/ '';
+    
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('.property-row');
+        
+        rows.forEach(row => {
+            const propertyName = row.querySelector('.property-name').textContent.toLowerCase();
+            const currentValue = row.querySelector('.property-value').textContent.toLowerCase();
+            
+            if (propertyName.includes(searchTerm) || currentValue.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+    
+    function openEditModal(button) {
+        const propertyName = button.getAttribute('data-property-name');
+        const currentValue = button.getAttribute('data-current-value');
+        const fileValue = button.getAttribute('data-file-value');
+        
+        document.getElementById('propertyName').value = propertyName;
+        document.getElementById('propertyValue').value = currentValue || '';
+        document.getElementById('fileValue').value = fileValue || '(not set in file)';
+        
+        document.getElementById('editModal').style.display = 'block';
+    }
+    
+    function closeEditModal() {
+        document.getElementById('editModal').style.display = 'none';
+    }
+    
+    async function saveProperty(event) {
+        event.preventDefault();
+        
+        const propertyName = document.getElementById('propertyName').value;
+        const propertyValue = document.getElementById('propertyValue').value;
+        
+        try {
+            const response = await fetch('/api/v1/properties', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    [csrfHeader]: csrfToken
+                },
+                body: JSON.stringify({
+                    propertyName: propertyName,
+                    value: propertyValue
+                })
+            });
+            
+            if (response.ok) {
+                alert('Property override saved successfully. Page will reload.');
+                closeEditModal();
+                location.reload();
+            } else {
+                const error = await response.json();
+                alert('Error: ' + (error.error || 'Failed to save property override'));
+            }
+        } catch (error) {
+            console.error('Error saving property:', error);
+            alert('Failed to save property override');
+        }
+    }
+    
+    async function deleteOverride(button) {
+        const propertyName = button.getAttribute('data-property-name');
+        
+        if (!confirm('Are you sure you want to remove the override for "' + propertyName + '"? It will revert to the file value.')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/v1/properties/' + encodeURIComponent(propertyName), {
+                method: 'DELETE',
+                headers: {
+                    [csrfHeader]: csrfToken
+                }
+            });
+            
+            if (response.ok) {
+                alert('Property override removed successfully. Page will reload.');
+                location.reload();
+            } else {
+                const error = await response.json();
+                alert('Error: ' + (error.error || 'Failed to remove property override'));
+            }
+        } catch (error) {
+            console.error('Error removing override:', error);
+            alert('Failed to remove property override');
+        }
+    }
+    
+    // Close modal when clicking outside of it
+    window.onclick = function(event) {
+        const modal = document.getElementById('editModal');
+        if (event.target == modal) {
+            closeEditModal();
+        }
+    }
+    /*]]>*/
+</script>
+</body>
+</html>
