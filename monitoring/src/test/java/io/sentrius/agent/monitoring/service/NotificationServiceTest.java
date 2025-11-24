@@ -12,11 +12,11 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class NotificationServiceTest {
     
-    private NotificationService notificationService;
+    private MonitoringNotificationService notificationService;
     
     @BeforeEach
     void setUp() {
-        notificationService = new NotificationService();
+        notificationService = new MonitoringNotificationService();
     }
     
     @Test

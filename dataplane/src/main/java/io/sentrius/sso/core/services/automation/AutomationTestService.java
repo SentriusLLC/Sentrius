@@ -7,6 +7,7 @@ import io.sentrius.sso.core.model.automation.AutomationSuggestion;
 import io.sentrius.sso.core.repository.SystemRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -24,6 +25,7 @@ import java.util.regex.Pattern;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class AutomationTestService {
     
     private final SystemRepository systemRepository;

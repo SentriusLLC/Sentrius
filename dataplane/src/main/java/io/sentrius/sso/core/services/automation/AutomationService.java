@@ -9,6 +9,7 @@ import io.sentrius.sso.core.repository.automation.ScriptExecutionRepository;
 import io.sentrius.sso.core.repository.automation.ScriptRepository;
 import io.sentrius.sso.core.repository.automation.ScriptShareRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

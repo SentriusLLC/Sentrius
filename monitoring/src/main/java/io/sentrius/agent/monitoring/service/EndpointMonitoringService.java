@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -23,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class EndpointMonitoringService {
     
     private final OtelTraceQueryService traceQueryService;
-    private final NotificationService notificationService;
+    private final MonitoringNotificationService notificationService;
     private final RestTemplate restTemplate = new RestTemplate();
     
     @Autowired(required = false)

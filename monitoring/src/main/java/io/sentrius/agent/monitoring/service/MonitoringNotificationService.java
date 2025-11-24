@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Service
-public class NotificationService {
+public class MonitoringNotificationService {
     
     // In-memory storage for recent notifications (for UI display)
     private final Map<String, NotificationRecord> recentNotifications = new ConcurrentHashMap<>();
