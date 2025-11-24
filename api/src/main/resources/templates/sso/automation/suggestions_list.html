@@ -120,6 +120,7 @@
 </head>
 
 <body>
+<input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
 <div class="container-fluid">
     <div class="row flex-nowrap">
         <th:block th:replace="~{fragments/sidebar}"></th:block>
@@ -514,11 +515,17 @@ function rejectSuggestion(id) {
 function submitApprove() {
     var id = $('#approveSuggestionId').val();
     var comments = $('#approveComments').val();
-    
+
+    const csrfToken = document.getElementById("csrf-token").value;
+
     $.ajax({
         url: '/api/v1/automation/suggestions/' + id + '/approve',
         type: 'POST',
         contentType: 'application/json',
+        headers: {
+            'Content-Type': 'application/json',
+            "X-CSRF-TOKEN": csrfToken
+        },
         data: JSON.stringify({ comments: comments }),
         success: function(response) {
             $('#approveModal').modal('hide');
@@ -555,10 +562,14 @@ function convertToAutomation(id) {
     if (!confirm('Convert this suggestion to an executable automation?')) {
         return;
     }
-    
+    const csrfToken = document.getElementById("csrf-token").value;
     $.ajax({
         url: '/api/v1/automation/suggestions/' + id + '/convert',
         type: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            "X-CSRF-TOKEN": csrfToken
+        },
         success: function(response) {
             $('#suggestions-table').DataTable().ajax.reload();
             alert('Suggestion converted to automation #' + response.automationId + ' successfully!');
@@ -701,11 +712,16 @@ function saveScript() {
             alert('Please enter a description for the script');
             return;
         }
-        
+
+        const csrfToken = document.getElementById("csrf-token").value;
         $.ajax({
             url: '/api/v1/automation/suggestions',
             type: 'POST',
             contentType: 'application/json',
+            headers: {
+                'Content-Type': 'application/json',
+                "X-CSRF-TOKEN": csrfToken
+            },
             data: JSON.stringify({ 
                 description: description,
                 script: script,
@@ -743,13 +759,17 @@ function analyzeScript() {
     var id = $('#editor-suggestion-id').val();
     var script = monacoEditor.getValue();
     var scriptType = $('#script-type-select').val();
-    
+    const csrfToken = document.getElementById("csrf-token").value;
     if (isNewScript || !id) {
         // For new scripts, use the standalone analyze endpoint
         $.ajax({
             url: '/api/v1/automation/agent/analyze',
             type: 'POST',
             contentType: 'application/json',
+            headers: {
+                'Content-Type': 'application/json',
+                "X-CSRF-TOKEN": csrfToken
+            },
             data: JSON.stringify({ 
                 code: script,
                 scriptType: scriptType
@@ -766,6 +786,10 @@ function analyzeScript() {
         $.ajax({
             url: '/api/v1/automation/suggestions/' + id + '/analyze',
             type: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                "X-CSRF-TOKEN": csrfToken
+            },
             success: function(response) {
                 displaySafetyAnalysis(response);
             },
@@ -841,10 +865,15 @@ function testScript(dryRun) {
     if (!dryRun && !confirm('Are you sure you want to run this script on the target system? This is not a dry run.')) {
         return;
     }
-    
+
+    const csrfToken = document.getElementById("csrf-token").value;
     $.ajax({
         url: '/api/v1/automation/suggestions/' + id + '/test',
         type: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            "X-CSRF-TOKEN": csrfToken
+        },
         contentType: 'application/json',
         data: JSON.stringify({ 
             script: script,
@@ -897,10 +926,14 @@ function generateWithAI() {
                                'Generate a complete automation script based on the description');
     
     if (!prompt) return;
-    
+    const csrfToken = document.getElementById("csrf-token").value;
     $.ajax({
         url: '/api/v1/automation/suggestions/' + id + '/generate',
         type: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            "X-CSRF-TOKEN": csrfToken
+        },
         contentType: 'application/json',
         data: JSON.stringify({ prompt: prompt }),
         success: function(response) {
@@ -934,10 +967,14 @@ function sendChatMessage() {
             context = 'Creating new automation script';
         }
     }
-    
+    const csrfToken = document.getElementById("csrf-token").value;
     $.ajax({
         url: '/api/v1/automation/agent/chat',
         type: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            "X-CSRF-TOKEN": csrfToken
+        },
         contentType: 'application/json',
         data: JSON.stringify({
             message: message,

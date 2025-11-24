@@ -1,11 +1,14 @@
 package io.sentrius.sso.core.services.automation;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.automation.AutomationSuggestion;
+import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
+import io.sentrius.sso.core.utils.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,14 +23,14 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class AutomationAgentService {
-    
-    private final RestTemplate restTemplate;
-    
-    @Value("${sentrius.integration.proxy.url:http://localhost:8080}")
+
+    @Value("${integrationproxy.externalUrl:http://localhost:8080}")
     private String integrationProxyUrl;
     
     @Value("${sentrius.llm.model:gpt-4}")
     private String defaultModel;
+
+    final ZeroTrustClientService zeroTrustClientService;
     
     /**
      * Generate automation code based on a suggestion
@@ -38,14 +41,20 @@ public class AutomationAgentService {
         
         String systemPrompt = buildSystemPrompt(suggestion);
         String prompt = buildGenerationPrompt(suggestion, userPrompt);
-        
-        return callLLM(systemPrompt, prompt);
+
+        var resp = callLLM(systemPrompt, prompt);
+        return asString(resp);
     }
-    
+
+    private String asString(Object obj) {
+        if (obj == null) return "";
+        if (obj instanceof String s) return s;
+        return obj.toString();
+    }
     /**
      * Improve existing automation code based on user feedback
      */
-    public String improveAutomationCode(String existingCode, String scriptType, 
+    public String improveAutomationCode(String existingCode, String scriptType,
                                        String userFeedback, String context) {
         log.info("Improving automation code of type {} based on feedback: {}", 
                  scriptType, userFeedback);
@@ -67,8 +76,9 @@ public class AutomationAgentService {
             Please improve this script based on the user's feedback. Return only the improved script code 
             without any explanation or markdown formatting.
             """, scriptType, scriptType, existingCode, context, userFeedback);
-        
-        return callLLM(systemPrompt, prompt);
+
+        var resp = callLLM(systemPrompt, prompt);
+        return asString(resp);
     }
     
     /**
@@ -85,7 +95,7 @@ public class AutomationAgentService {
         messages.addAll(conversationHistory);
         messages.add(Map.of("role", "user", "content", newMessage));
         
-        String response = callLLMWithMessages(messages);
+        Object response = callLLMWithMessages(messages);
         
         Map<String, Object> result = new HashMap<>();
         result.put("response", response);
@@ -128,11 +138,12 @@ public class AutomationAgentService {
             Return ONLY the JSON, no additional text.
             """, scriptType, scriptType, code);
         
-        String response = callLLM(systemPrompt, prompt);
+        Object response = callLLM(systemPrompt, prompt);
         
         Map<String, Object> result = new HashMap<>();
         try {
-            result = parseJsonResponse(response);
+            log.info("Analysis response: {}", response);
+            return (Map<String, Object>) response;
         } catch (Exception e) {
             log.warn("Failed to parse analysis response as JSON, using fallback", e);
             result.put("isDestructive", false);
@@ -146,7 +157,7 @@ public class AutomationAgentService {
         
         return result;
     }
-    
+
     private String buildSystemPrompt(AutomationSuggestion suggestion) {
         return String.format("""
             You are an expert automation engineer specializing in %s scripts for system administration.
@@ -198,66 +209,84 @@ public class AutomationAgentService {
             """, context != null ? context : "General automation assistance");
     }
     
-    private String callLLM(String systemPrompt, String userPrompt) {
+    private Object callLLM(String systemPrompt, String userPrompt) {
         List<Map<String, String>> messages = new ArrayList<>();
         messages.add(Map.of("role", "system", "content", systemPrompt));
         messages.add(Map.of("role", "user", "content", userPrompt));
         
         return callLLMWithMessages(messages);
     }
-    
-    private String callLLMWithMessages(List<Map<String, String>> messages) {
+
+    private Object callLLMWithMessages(List<Map<String, String>> messages) {
         try {
             Map<String, Object> request = new HashMap<>();
             request.put("messages", messages);
             request.put("model", defaultModel);
             request.put("temperature", 0.7);
-            
+
             String llmEndpoint = integrationProxyUrl + "/api/v1/llm/chat";
-            
-            @SuppressWarnings("unchecked")
-            Map<String, Object> response = restTemplate.postForObject(
-                llmEndpoint, 
-                request, 
-                Map.class
-            );
-            
-            if (response != null && response.containsKey("choices")) {
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
-                if (!choices.isEmpty()) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
-                    return (String) message.get("content");
+
+            // ---- FIX 1: Do NOT assume resp is a JSON string ----
+            Object rawResp = zeroTrustClientService.callAuthenticatedPostOnApi(llmEndpoint, request);
+            log.info("Raw LLM response: {}", rawResp);
+
+            Map<String, Object> response;
+
+            if (rawResp instanceof Map) {
+                response = (Map<String, Object>) rawResp;
+            } else if (rawResp instanceof String s) {
+                response = JsonUtil.MAPPER.readValue(s, Map.class);
+            } else {
+                log.error("Unexpected LLM response type: {}", rawResp.getClass());
+                return "Error: Unexpected LLM response type";
+            }
+
+            // ---- FIX 2: Handle both streaming and non-streaming OpenAI formats ----
+            if (!response.containsKey("choices")) {
+                log.warn("LLM response missing 'choices': {}", response);
+                return "Error: LLM returned no choices";
+            }
+
+            List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
+            if (choices.isEmpty()) {
+                return "Error: LLM returned empty choices";
+            }
+
+            Map<String, Object> choice = choices.get(0);
+
+            // Non-streaming format (standard)
+            if (choice.containsKey("message")) {
+                Map<String, Object> message = (Map<String, Object>) choice.get("message");
+                return message.get("content");
+            }
+
+            // Streaming format: { "delta": { "content": ... } }
+            if (choice.containsKey("delta")) {
+                Map<String, Object> delta = (Map<String, Object>) choice.get("delta");
+                if (delta.containsKey("content")) {
+                    return delta.get("content");
                 }
             }
-            
-            log.warn("Unexpected LLM response format: {}", response);
-            return "Error: Unexpected response format from LLM";
-            
+
+            // Sometimes the proxy returns { "content": ... } directly
+            if (choice.containsKey("content")) {
+                return choice.get("content");
+            }
+
+            log.warn("Unable to extract LLM content from: {}", choice);
+            return "Error: Unable to extract LLM content";
+
         } catch (Exception e) {
             log.error("Error calling LLM endpoint", e);
             return "Error: Failed to communicate with AI agent - " + e.getMessage();
+        } catch (ZtatException e) {
+            throw new RuntimeException(e);
         }
     }
-    
+
     @SuppressWarnings("unchecked")
-    private Map<String, Object> parseJsonResponse(String jsonString) {
+    private Map<String, Object> parseJsonResponse(String jsonString) throws JsonProcessingException {
         jsonString = jsonString.trim();
-        
-        int startIdx = jsonString.indexOf('{');
-        int endIdx = jsonString.lastIndexOf('}');
-        
-        if (startIdx >= 0 && endIdx > startIdx) {
-            jsonString = jsonString.substring(startIdx, endIdx + 1);
-        }
-        
-        try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = 
-                new com.fasterxml.jackson.databind.ObjectMapper();
-            return mapper.readValue(jsonString, Map.class);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to parse JSON response", e);
-        }
+        return JsonUtil.MAPPER.readValue(jsonString, Map.class);
     }
 }

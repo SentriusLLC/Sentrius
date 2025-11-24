@@ -295,7 +295,7 @@ public class AutomationSuggestionApiController {
                 .orElseThrow(() -> new IllegalArgumentException("Suggestion not found: " + id));
             
             String userPrompt = requestBody != null ? requestBody.get("prompt") : null;
-            String generatedCode = agentService.generateAutomationCode(suggestion, userPrompt);
+            String generatedCode = agentService.generateAutomationCode(suggestion, userPrompt).toString();
             
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
@@ -339,7 +339,7 @@ public class AutomationSuggestionApiController {
                 suggestion.getScriptType(), 
                 feedback, 
                 context
-            );
+            ).toString();
             
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
