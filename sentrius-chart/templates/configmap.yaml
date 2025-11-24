@@ -581,7 +581,7 @@ data:
     management.metrics.enable.system.processor={{ .Values.metrics.enabled }}
     spring.autoconfigure.exclude={{ .Values.metrics.class.exclusion }}
     #flyway configuration
-    spring.main.web-application-type=reactive
+    #spring.main.web-application-type=reactive
     spring.flyway.enabled=false
     logging.level.org.springframework.web=INFO
     logging.level.org.springframework.security=INFO
@@ -600,7 +600,7 @@ data:
     # Keycloak configuration
     spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.agentproxy.oauth2.client_id }}
     spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
-    spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.sentriusagent.oauth2.authorization_grant_type }}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type={{ .Values.agentproxy.oauth2.authorization_grant_type }}
     #spring.security.oauth2.client.registration.keycloak.redirect-uri={{ .Values.sentriusDomain }}/login/oauth2/code/keycloak
     #spring.security.oauth2.client.registration.keycloak.scope={{ .Values.sentriusagent.oauth2.scope }}
     spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}/realms/sentrius
@@ -639,6 +639,8 @@ data:
     spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
     spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
     spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+    sentrius.agent.launcher.service=http://sentrius-agents-launcherservice:8080/
+    agent.chat.enabled=true
   rdpproxy-application.properties: |
     keystore.file=sso.jceks
     keystore.password=${KEYSTORE_PASSWORD}

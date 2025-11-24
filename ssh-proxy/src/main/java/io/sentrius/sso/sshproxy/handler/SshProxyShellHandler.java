@@ -15,6 +15,7 @@ import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import io.sentrius.sso.sshproxy.config.SshProxyConfig;
 import io.sentrius.sso.sshproxy.service.HostSystemSelectionService;
 import io.sentrius.sso.sshproxy.service.InlineTerminalResponseService;
+import io.sentrius.sso.sshproxy.service.SshAgentInteractionService;
 import io.sentrius.sso.sshproxy.service.SshCommandProcessor;
 import io.sentrius.sso.sshproxy.streams.SessionRoute;
 import lombok.Getter;
@@ -45,6 +46,7 @@ public class SshProxyShellHandler implements Factory<Command> {
     final InlineTerminalResponseService terminalResponseService;
     final HostSystemSelectionService hostSystemSelectionService;
     final SshProxyConfig config;
+    final SshAgentInteractionService agentInteractionService;
 
     final SessionTrackingService sessionTrackingService;
     final SessionService sessionService;
@@ -79,7 +81,8 @@ public class SshProxyShellHandler implements Factory<Command> {
             cryptoService,
             sessionRoute,
             userService,
-            taskExecutor
+            taskExecutor,
+            agentInteractionService
         );
     }
 

@@ -265,6 +265,8 @@ keycloak:
         client_secret: ""  # Dynamically generated if not provided
       sentriusLauncher:
         client_secret: ""  # Dynamically generated if not provided
+      sshProxy:
+        client_secret: ""  # Dynamically generated if not provided
       javaAgents:
         client_secret: ""  # Dynamically generated if not provided
       aiAgentAssessor:

@@ -214,6 +214,55 @@
       ]
     },
     {
+      "clientId": "ssh-proxy",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${SSH_PROXY_CLIENT_SECRET}",
+      "rootUrl": "${ROOT_URL}",
+      "baseUrl": "${ROOT_URL}",
+      "redirectUris": [
+        "${REDIRECT_URIS}/*"
+      ],
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.claim": "true",
+        "id.token.claim": "true",
+        "userinfo.token.claim": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "userType",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "userType",
+            "jsonType.label": "String",
+            "user.attribute": "userType"
+          }
+        },
+        {
+          "name": "attributes",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "attributes",
+            "jsonType.label": "String",
+            "user.attribute": "attributes",
+            "multivalued": "true"
+          }
+        }
+      ]
+    },
+    {
       "clientId": "java-agents",
       "name": "",
       "description": "",
@@ -518,6 +567,12 @@
           "description": "Default user role for sentrius-api client"
         }
       ],
+      "sentrius-agent-proxy": [
+              {
+                "name": "user",
+                "description": "Default user role for sentrius-agent-proxy client"
+              }
+            ],
       "sentrius-launcher-service": [
         {
           "name": "user",
@@ -610,7 +665,58 @@
       },
       "notBefore": 0,
       "groups": []
-    }
+    },
+    {
+          "username": "service-account-sentrius-agent-proxy",
+          "emailVerified": false,
+          "createdTimestamp": 1745090850622,
+          "enabled": true,
+          "totp": false,
+          "serviceAccountClientId": "sentrius-agent-proxy",
+          "disableableCredentialTypes": [],
+          "requiredActions": [],
+          "realmRoles": [
+            "default-roles-sentrius"
+          ],
+          "clientRoles": {
+            "realm-management": [
+              "query-groups",
+              "view-clients",
+              "manage-users",
+              "manage-authorization",
+              "view-authorization",
+              "manage-identity-providers",
+              "impersonation",
+              "manage-realm",
+              "view-identity-providers",
+              "view-users",
+              "manage-clients",
+              "view-realm",
+              "create-client",
+              "manage-events",
+              "query-realms",
+              "query-clients",
+              "view-events",
+              "query-users",
+              "realm-admin"
+            ],
+            "broker": [
+              "read-token"
+            ],
+            "account": [
+              "delete-account",
+              "manage-consent",
+              "manage-account-links",
+              "view-applications",
+              "view-profile",
+              "view-groups",
+              "view-consent",
+              "manage-account"
+            ]
+          },
+          "notBefore": 0,
+          "groups": []
+        }
   ],
   "identityProviders": [
     {

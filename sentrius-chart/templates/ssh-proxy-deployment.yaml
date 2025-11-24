@@ -50,6 +50,15 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-db-secret
                   key: keystore-password
+            - name: KEYCLOAK_BASE_URL
+              value: {{ .Values.keycloakInternalDomain }}
+            - name: SSH_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: ssh-proxy-client-secret
+            - name: AGENT_LAUNCHER_URL
+              value: "http://sentrius-launcher-service:8082"
           resources:
             {{- toYaml .Values.sshproxy.resources | nindent 12 }}
           volumeMounts:

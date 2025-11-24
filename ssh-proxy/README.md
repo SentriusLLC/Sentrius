@@ -121,7 +121,54 @@ This session is being recorded for audit purposes.
 - `status` - Display session status
 - `hosts` - List available target hosts
 - `connect <id|name>` - Switch to different HostSystem
+- `@agent <query>` - Ask the Sentrius agent a question
+- `/ask <query>` - Alternative agent command
 - `exit` - Close SSH session
+
+### Agent Assistance
+
+Users can interact with Sentrius agents directly from their SSH session:
+
+```bash
+# Ask the agent for help
+$ @agent How do I list all files in a directory?
+🤖 Processing your query...
+
+╔════════════════════════════════════════════════════════════════╗
+║                      AGENT RESPONSE                            ║
+╚════════════════════════════════════════════════════════════════╝
+
+I received your query: "How do I list all files in a directory?"
+
+Agent integration is in progress. This is a placeholder response.
+Once fully integrated, I will be able to:
+- Answer questions about your infrastructure
+- Provide security recommendations
+- Analyze commands and suggest alternatives
+- Help with troubleshooting
+
+# Alternative syntax
+$ /ask What is the purpose of the chmod command?
+
+# Get agent help
+$ @agent
+╔════════════════════════════════════════════════════════════════╗
+║                    AGENT ASSISTANCE                            ║
+╚════════════════════════════════════════════════════════════════╝
+
+Ask questions and get help from the Sentrius agent:
+
+Usage:
+  @agent <question>     - Ask the agent a question
+  /ask <question>       - Alternative command prefix
+
+Examples:
+  @agent How do I list all files in a directory?
+  /ask What is the purpose of the chmod command?
+  @agent Can you explain this error message?
+```
+
+All agent interactions are logged and tracked for audit purposes.
 
 ## Configuration
 
@@ -138,6 +185,48 @@ sentrius:
       connection-timeout: 30000
       keep-alive-interval: 60000
       max-retries: 3
+
+# Keycloak Configuration for Agent Launcher Authentication
+keycloak:
+  realm: sentrius
+  base-url: ${KEYCLOAK_BASE_URL:http://localhost:8081}
+
+# Agent Integration
+agent:
+  launcher:
+    url: ${AGENT_LAUNCHER_URL:http://localhost:8082}
+  chat:
+    enabled: ${AGENT_CHAT_ENABLED:true}
+```
+
+### Keycloak Setup for SSH Proxy
+
+The SSH proxy requires a Keycloak client to authenticate with the agent launcher service:
+
+1. **Create SSH Proxy Client in Keycloak**:
+   - Client ID: `ssh-proxy`
+   - Access Type: `confidential`
+   - Service Accounts Enabled: `ON`
+   - Authorization Enabled: `OFF`
+   
+2. **Configure Client Credentials**:
+   - Generate client secret in Keycloak
+   - Set environment variable: `SSH_PROXY_CLIENT_SECRET=<your-secret>`
+
+3. **Grant Required Roles**:
+   - The service account needs permissions to create agents
+   - Assign `realm-management` roles as needed
+
+### Environment Variables
+
+```bash
+# Required
+KEYCLOAK_BASE_URL=http://localhost:8081
+SSH_PROXY_CLIENT_SECRET=<your-client-secret>
+
+# Optional
+AGENT_LAUNCHER_URL=http://localhost:8082
+AGENT_CHAT_ENABLED=true
 ```
 
 ### Kubernetes Deployment

@@ -15,6 +15,7 @@ import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import io.sentrius.sso.protobuf.Session;
 import io.sentrius.sso.sshproxy.service.HostSystemSelectionService;
 import io.sentrius.sso.sshproxy.service.InlineTerminalResponseService;
+import io.sentrius.sso.sshproxy.service.SshAgentInteractionService;
 import io.sentrius.sso.sshproxy.streams.SessionRoute;
 import lombok.Builder;
 import lombok.Getter;
@@ -41,7 +42,7 @@ public class ShellHandlerRunnable implements Runnable {
 
     private final HostSystemSelectionService hostSystemSelectionService;
     private final InlineTerminalResponseService terminalResponseService;
-
+    private final SshAgentInteractionService agentInteractionService;
 
     private HostSystem selectedHostSystem;
     private ServerSession session;
@@ -193,6 +194,13 @@ public class ShellHandlerRunnable implements Runnable {
                     log.info("Handling connect command to switch target host");
                     return handleConnectCommand(parts);
                 }
+                
+                // Check for agent commands
+                if (agentInteractionService != null && agentInteractionService.isAgentCommand(command)) {
+                    log.info("Handling agent command");
+                    return handleAgentCommand(command);
+                }
+                
                 log.info("Unknown command '{}'", cmd);
                 return true;
         }
@@ -206,6 +214,8 @@ public class ShellHandlerRunnable implements Runnable {
             "  hosts             - List available target hosts\r\n" +
             "  connect <id>      - Connect to HostSystem by ID\r\n" +
             "  connect <name>    - Connect to HostSystem by display name\r\n" +
+            "  @agent <query>    - Ask the Sentrius agent a question\r\n" +
+            "  /ask <query>      - Alternative agent command\r\n" +
             "  exit              - Close SSH session\r\n" +
             "\r\n" +
             "All other commands are forwarded to the target SSH server\r\n" +
@@ -334,6 +344,34 @@ public class ShellHandlerRunnable implements Runnable {
         );
 
         return false;
+    }
+
+    private boolean handleAgentCommand(String command) throws IOException {
+        String query = agentInteractionService.extractQuery(command);
+        
+        if (query.isEmpty()) {
+            // Show agent help if no query provided
+            agentInteractionService.sendAgentHelp(sessionRoute.getOut());
+            return true;
+        }
+        
+        // Get the user and session from the current connected system
+        ConnectedSystem connectedSystem = sessionRoute.getCurrent().get();
+        if (connectedSystem != null && connectedSystem.getUser() != null) {
+            agentInteractionService.processAgentQuery(
+                connectedSystem.getUser(),
+                connectedSystem.getSession(),
+                query,
+                sessionRoute.getOut()
+            );
+        } else {
+            terminalResponseService.sendMessage(
+                "\r\n❌ Error: Unable to process agent query - session not initialized\r\n",
+                sessionRoute.getOut()
+            );
+        }
+        
+        return true;
     }
 
 }

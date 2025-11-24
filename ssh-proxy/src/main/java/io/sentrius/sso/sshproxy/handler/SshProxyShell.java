@@ -15,6 +15,7 @@ import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import io.sentrius.sso.sshproxy.config.SshProxyConfig;
 import io.sentrius.sso.sshproxy.service.HostSystemSelectionService;
 import io.sentrius.sso.sshproxy.service.InlineTerminalResponseService;
+import io.sentrius.sso.sshproxy.service.SshAgentInteractionService;
 import io.sentrius.sso.sshproxy.service.SshCommandProcessor;
 import io.sentrius.sso.sshproxy.streams.SessionRoute;
 import lombok.Getter;
@@ -37,6 +38,7 @@ public class SshProxyShell implements Command {
     final InlineTerminalResponseService terminalResponseService;
     final HostSystemSelectionService hostSystemSelectionService;
     final SshProxyConfig config;
+    final SshAgentInteractionService agentInteractionService;
 
     final SessionTrackingService sessionTrackingService;
     final SshListenerService sshListenerService;
@@ -72,7 +74,8 @@ public class SshProxyShell implements Command {
         SessionTrackingService sessionTrackingService,
         SshListenerService sshListenerService, CryptoService cryptoService,
         SessionRoute sessionRoute, UserService userService,
-        ThreadPoolTaskExecutor taskExecutor
+        ThreadPoolTaskExecutor taskExecutor,
+        SshAgentInteractionService agentInteractionService
     ) {
         this.commandProcessor = commandProcessor;
         this.terminalResponseService = terminalResponseService;
@@ -84,6 +87,7 @@ public class SshProxyShell implements Command {
         this.cryptoService = cryptoService;
         this.taskExecutor = taskExecutor;
         this.sessionRoute = sessionRoute;
+        this.agentInteractionService = agentInteractionService;
     }
 
 
@@ -174,6 +178,7 @@ public class SshProxyShell implements Command {
             sshListenerService(sshListenerService).
             sessionTrackingService(sessionTrackingService).
             hostSystemSelectionService(hostSystemSelectionService).selectedHostSystem(selectedHostSystem).terminalResponseService(terminalResponseService).
+            agentInteractionService(agentInteractionService).
             build();
 
         log.info("Submitting shell handler to executor");
