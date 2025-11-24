@@ -94,8 +94,11 @@ mvn spring-boot:run
 
 ### Kubernetes Deployment (Recommended)
 ```bash
-# Build all Docker images (5-10 minutes - NEVER CANCEL)
+# Build all Docker images sequentially (5-10 minutes - NEVER CANCEL)
 ./ops-scripts/base/build-images.sh --all --no-cache
+
+# OR build all Docker images concurrently for faster builds (3-7 minutes - NEVER CANCEL)
+./ops-scripts/base/build-all-images-concurrent.sh --all --no-cache
 
 # Deploy to local Kubernetes cluster (HTTP)
 ./ops-scripts/local/deploy-helm.sh
@@ -205,11 +208,17 @@ TEST_MODE=true python3 main.py my-custom
 
 ### Docker Image Management
 ```bash
-# Build specific images
+# Build specific images (sequential)
 ./ops-scripts/base/build-images.sh --sentrius --sentrius-keycloak
+
+# Build specific images (concurrent - faster)
+./ops-scripts/base/build-all-images-concurrent.sh --sentrius --sentrius-keycloak
 
 # Build with development certificates
 ./ops-scripts/base/build-images.sh --all --include-dev-certs
+
+# Build concurrently with development certificates (faster)
+./ops-scripts/base/build-all-images-concurrent.sh --all --include-dev-certs
 ```
 
 ### Debugging Tips

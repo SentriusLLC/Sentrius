@@ -123,6 +123,10 @@ Build the images in your local Docker registry (note this builds all images, inc
 
     /build-images.sh --all --no-cache
 
+For faster builds, you can use the concurrent build script which builds all images in parallel:
+
+    ./ops-scripts/base/build-all-images-concurrent.sh --all --no-cache
+
 Run the Helm deployment script to deploy Sentrius to your local Kubernetes cluster:
 
     ./ops-scripts/local/deploy-helm.sh
@@ -246,8 +250,11 @@ Sentrius provides comprehensive Helm charts for Kubernetes deployment across mul
 #### Local Deployment
 
 ```bash
-# Build all images
+# Build all images (sequential)
 ./build-images.sh --all --no-cache
+
+# OR build all images concurrently (faster)
+./ops-scripts/base/build-all-images-concurrent.sh --all --no-cache
 
 # Deploy to local Kubernetes cluster (HTTP)
 ./ops-scripts/local/deploy-helm.sh
