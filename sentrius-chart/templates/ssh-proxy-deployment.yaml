@@ -69,5 +69,10 @@ spec:
             periodSeconds: 5
       volumes:
         - name: config-volume
+          {{- if .Values.config.usePVC }}
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-config-pvc
+          {{- else }}
           configMap:
             name: {{ .Release.Name }}-config
+          {{- end }}

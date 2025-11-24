@@ -258,6 +258,7 @@ if [[ -z "$KEYCLOAK_CLIENT_SECRET" ]]; then
 fi
 
 helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
+    --set config.usePVC=false \
     --set adminer.enabled=${DEPLOY_ADMINER} \
     --set tenant=${TENANT} \
     --set environment=${ENVIRONMENT} \
@@ -311,6 +312,7 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
 
 
 helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${TENANT}-agents \
+    --set config.usePVC=false \
     --set tenant=${TENANT}-agents \
     --set baseRelease=sentrius \
     --set sentriusNamespace=${TENANT} \

@@ -1,0 +1,20 @@
+{{- if .Values.config.usePVC }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-config-pvc
+  namespace: {{ .Values.tenant }}
+  labels:
+    {{- include "sentrius.labels" . | nindent 4 }}
+  annotations:
+    description: "Configuration storage - requires ReadWriteMany storage class"
+spec:
+  accessModes:
+    - ReadWriteMany  # Required: Storage class must support ReadWriteMany (e.g., NFS, EFS, Azure Files, GCS Filestore)
+  {{- if .Values.config.storageClassName }}
+  storageClassName: {{ .Values.config.storageClassName }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.config.storageSize | default "1Gi" }}
+{{- end }}

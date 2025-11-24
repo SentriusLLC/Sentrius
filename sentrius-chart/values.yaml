@@ -30,6 +30,12 @@ certificates:
   enabled: false  # Disable certs for local; enable for cloud
   issuer: "letsencrypt-prod"  # Change for cloud environments
 
+# Configuration storage
+config:
+  usePVC: true  # Use PVC for config storage. Set to false for local dev without ReadWriteMany storage
+  storageSize: "1Gi"  # Size of PVC for configuration files
+  # storageClassName: ""  # Optional: Specify storage class (must support ReadWriteMany). If not set, uses cluster default.
+  # Examples: "nfs", "azurefile", "efs.csi.aws.com", "filestore.csi.storage.gke.io"
 
 # Sentrius configuration
 sentrius:

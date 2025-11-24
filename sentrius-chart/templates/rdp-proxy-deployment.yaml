@@ -2,8 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 # deployment.yaml (pod template)
 metadata:
-  annotations:
-    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
   name: sentrius-rdp-proxy
   labels:
     app: sentrius-rdp-proxy
@@ -101,5 +99,10 @@ spec:
             periodSeconds: 5
       volumes:
         - name: config-volume
+          {{- if .Values.config.usePVC }}
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-config-pvc
+          {{- else }}
           configMap:
             name: {{ .Release.Name }}-config
+          {{- end }}
