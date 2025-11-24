@@ -1,5 +1,6 @@
 package io.sentrius.agent.analysis.agents.trust;
 
+import io.sentrius.agent.analysis.service.LLMGuidedSchedulerService;
 import io.sentrius.sso.core.model.AgentHeartbeat;
 import io.sentrius.sso.core.model.sessions.SessionLog;
 import io.sentrius.sso.core.model.trust.AgentTrustScoreHistory;
@@ -14,6 +15,7 @@ import io.sentrius.sso.core.services.trust.AgentTrustScoreService;
 import io.sentrius.sso.core.trust.*;
 import io.sentrius.sso.provenance.ProvenanceEvent;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,9 @@ public class TrustEvaluationService {
     private final ATPLPolicyService atplPolicyService;
     private final UserService userService;
     
+    @Autowired(required = false)
+    private LLMGuidedSchedulerService llmScheduler;
+    
     private final Map<String, List<ProvenanceEvent>> provenanceCache = new ConcurrentHashMap<>();
     private final Map<String, Integer> incidentTracker = new ConcurrentHashMap<>();
     
@@ -56,6 +61,27 @@ public class TrustEvaluationService {
     
     @Scheduled(fixedRate = 300000, initialDelay = 60000)
     public void evaluateAllAgentsAndUsers() {
+        // Check with LLM if evaluation should run now
+        if (llmScheduler != null && llmScheduler.isEnabled()) {
+            llmScheduler.shouldRunTrustEvaluation().thenAccept(shouldRun -> {
+                if (shouldRun) {
+                    log.info("LLM recommended running trust evaluation");
+                    performEvaluation();
+                } else {
+                    log.info("LLM recommended skipping trust evaluation this cycle");
+                }
+            }).exceptionally(ex -> {
+                log.error("Error consulting LLM for trust evaluation guidance, running anyway", ex);
+                performEvaluation();
+                return null;
+            });
+        } else {
+            // No LLM guidance available, run as normal
+            performEvaluation();
+        }
+    }
+    
+    private void performEvaluation() {
         log.info("Starting scheduled trust evaluation for all agents and users");
         
         // Evaluate agents (NON_PERSON_ENTITY)

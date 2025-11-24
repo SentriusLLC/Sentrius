@@ -35,6 +35,9 @@ public class RegisteredMonitoringAgent implements ApplicationListener<Applicatio
     private final EndpointMonitoringService endpointMonitoringService;
     private final ServiceStabilityEvaluationService stabilityEvaluationService;
     
+    @Autowired(required = false)
+    private LLMGuidedMonitoringService llmMonitoringService;
+    
     @Value("${agents.monitoring.name:monitoring-agent}")
     private String agentName;
     
@@ -118,8 +121,24 @@ public class RegisteredMonitoringAgent implements ApplicationListener<Applicatio
                     // Endpoint monitoring is handled by @Scheduled method in EndpointMonitoringService
                     // This thread handles agent-level coordination and AI-based analysis
                     
-                    // Perform AI-based stability evaluation periodically
-                    performStabilityEvaluation();
+                    // Perform AI-based stability evaluation with LLM guidance
+                    if (llmMonitoringService != null && llmMonitoringService.isEnabled()) {
+                        llmMonitoringService.shouldRunStabilityEvaluation().thenAccept(shouldRun -> {
+                            if (shouldRun) {
+                                log.debug("LLM recommended running stability evaluation");
+                                performStabilityEvaluation();
+                            } else {
+                                log.debug("LLM recommended skipping stability evaluation this cycle");
+                            }
+                        }).exceptionally(ex -> {
+                            log.error("Error consulting LLM for stability evaluation, running anyway", ex);
+                            performStabilityEvaluation();
+                            return null;
+                        });
+                    } else {
+                        // No LLM guidance, run normally
+                        performStabilityEvaluation();
+                    }
                     
                     // Sleep between iterations
                     Thread.sleep(60_000); // 1 minute

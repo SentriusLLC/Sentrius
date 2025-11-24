@@ -4,6 +4,7 @@ import io.sentrius.agent.monitoring.model.EndpointHealth;
 import io.sentrius.agent.monitoring.model.MonitoringConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -24,6 +25,9 @@ public class EndpointMonitoringService {
     private final OtelTraceQueryService traceQueryService;
     private final NotificationService notificationService;
     private final RestTemplate restTemplate = new RestTemplate();
+    
+    @Autowired(required = false)
+    private LLMGuidedMonitoringService llmMonitoringService;
     
     // Track endpoint health status
     private final Map<String, EndpointHealth> endpointHealthMap = new ConcurrentHashMap<>();
@@ -52,6 +56,27 @@ public class EndpointMonitoringService {
      */
     @Scheduled(fixedDelayString = "${agents.monitoring.check-interval:60000}")
     public void checkEndpoints() {
+        // Check with LLM if monitoring should run now
+        if (llmMonitoringService != null && llmMonitoringService.isEnabled()) {
+            llmMonitoringService.shouldRunEndpointMonitoring().thenAccept(shouldRun -> {
+                if (shouldRun) {
+                    log.debug("LLM recommended running endpoint monitoring");
+                    performEndpointChecks();
+                } else {
+                    log.debug("LLM recommended skipping endpoint monitoring this cycle");
+                }
+            }).exceptionally(ex -> {
+                log.error("Error consulting LLM for endpoint monitoring guidance, running anyway", ex);
+                performEndpointChecks();
+                return null;
+            });
+        } else {
+            // No LLM guidance, run normally
+            performEndpointChecks();
+        }
+    }
+    
+    private void performEndpointChecks() {
         log.debug("Checking {} registered endpoints", monitoringConfigs.size());
         
         for (Map.Entry<String, MonitoringConfig> entry : monitoringConfigs.entrySet()) {

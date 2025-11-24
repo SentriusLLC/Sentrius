@@ -1,4 +1,4 @@
-package io.sentrius.agent.monitoring.api.websocket;
+package io.sentrius.agent.analysis.api.websocket;
 
 import java.io.IOException;
 import java.net.URI;
@@ -13,9 +13,9 @@ import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.sentrius.agent.monitoring.model.MonitoringConfigurationChange;
-import io.sentrius.agent.monitoring.service.MonitoringConfigurationApprovalService;
-import io.sentrius.agent.monitoring.service.RegisteredMonitoringAgent;
+import io.sentrius.agent.analysis.model.AgentConfigurationChange;
+import io.sentrius.agent.analysis.service.AgentConfigurationApprovalService;
+import io.sentrius.agent.analysis.service.RegisteredAnalyticsAgent;
 import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.protobuf.Session;
@@ -32,28 +32,28 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 /**
- * WebSocket handler for monitoring agent chat sessions.
- * Provides read-only view into the monitoring agent's state without pausing its operations.
+ * WebSocket handler for analytics agent chat sessions.
+ * Provides interface to query agent state and request configuration changes.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "agents.monitoring.chat.enabled", havingValue = "true", matchIfMissing = false)
-public class MonitoringChatWSHandler extends TextWebSocketHandler {
+@ConditionalOnProperty(name = "agents.analytics.chat.enabled", havingValue = "true", matchIfMissing = false)
+public class AnalyticsChatWSHandler extends TextWebSocketHandler {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    private final MonitoringUserCommunicationService userCommunicationService;
+    private final AnalyticsUserCommunicationService userCommunicationService;
     private final ZeroTrustClientService zeroTrustClientService;
-    private final RegisteredMonitoringAgent monitoringAgent;
+    private final RegisteredAnalyticsAgent analyticsAgent;
     private final AgentClientService agentClientService;
     
     @Autowired(required = false)
-    private MonitoringConfigurationApprovalService approvalService;
+    private AgentConfigurationApprovalService approvalService;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        log.info("New monitoring chat connection established");
+        log.info("New analytics chat connection established");
         URI uri = session.getUri();
         if (uri == null) {
             session.close(CloseStatus.BAD_DATA);
@@ -73,7 +73,7 @@ public class MonitoringChatWSHandler extends TextWebSocketHandler {
 
         // Store session
         var websocky = userCommunicationService.createSession(queryParams.get("sessionId"), session);
-        log.info("Monitoring chat session {} created for incoming connection", sessionId);
+        log.info("Analytics chat session {} created for incoming connection", sessionId);
 
         // Generate and store nonce for this session
         String nonce = UUID.randomUUID().toString();
@@ -85,7 +85,7 @@ public class MonitoringChatWSHandler extends TextWebSocketHandler {
         log.info("Sending challenge to client: {}", nonce);
         var challenge = Session.ChatMessage.newBuilder()
             .setMessage(String.format("{\"type\":\"challenge\",\"nonce\":\"%s\"}", nonce))
-            .setSender("monitoring-agent")
+            .setSender("analytics-agent")
             .setChatGroupId(chatGroupId)
             .setSessionId(sessionId)
             .setTimestamp(System.currentTimeMillis())
@@ -99,12 +99,12 @@ public class MonitoringChatWSHandler extends TextWebSocketHandler {
             ProvenanceEvent provenanceEvent = ProvenanceEvent.builder()
                 .eventType(ProvenanceEvent.EventType.USER_CHAT_AGENT)
                 .actor("admin")
-                .triggeringUser(monitoringAgent.getAgentName())
-                .outputSummary("Monitoring agent chat session established (read-only)")
+                .triggeringUser(analyticsAgent.getAgentName())
+                .outputSummary("Analytics agent chat session established")
                 .sessionId(session.getId())
                 .build();
 
-            agentClientService.submitProvenance(monitoringAgent.getAgentExecution(), provenanceEvent);
+            agentClientService.submitProvenance(analyticsAgent.getAgentExecution(), provenanceEvent);
         } catch (Exception e) {
             log.error("Failed to submit provenance event", e);
         }
@@ -115,7 +115,7 @@ public class MonitoringChatWSHandler extends TextWebSocketHandler {
         throws IOException, GeneralSecurityException {
 
         URI uri = session.getUri();
-        log.info("Received message on monitoring chat");
+        log.info("Received message on analytics chat");
         
         try {
             if (uri != null) {
@@ -126,7 +126,7 @@ public class MonitoringChatWSHandler extends TextWebSocketHandler {
 
                 if (sessionId != null && websocky.isPresent()) {
                     var websocketCommunication = websocky.get();
-                    log.info("Processing message from monitoring chat session ID: {}", sessionId);
+                    log.info("Processing message from analytics chat session ID: {}", sessionId);
 
                     byte[] messageBytes = Base64.getDecoder().decode(message.getPayload());
                     Session.ChatMessage chatMessage = Session.ChatMessage.parseFrom(messageBytes);
@@ -144,60 +144,20 @@ public class MonitoringChatWSHandler extends TextWebSocketHandler {
                         String ztat = (String) session.getAttributes().get("ztatToken");
 
                         boolean verified = zeroTrustClientService.verifyZtatChallenge(
-                            monitoringAgent.getAgentExecution(), ztat, nonce, signature, publicKey);
+                            analyticsAgent.getAgentExecution(), ztat, nonce, signature, publicKey);
 
                         if (verified) {
                             session.getAttributes().put("verified", true);
-                            log.info("ZTAT challenge verified for monitoring chat session {}", session.getId());
+                            log.info("ZTAT challenge verified for analytics chat session {}", session.getId());
                         } else {
-                            log.warn("ZTAT challenge failed for monitoring chat session {}", session.getId());
+                            log.warn("ZTAT challenge failed for analytics chat session {}", session.getId());
                             session.close();
                         }
                         return;
                     } else if ("get-status".equals(json.get("type").asText())) {
                         log.info("Received status query from session {}", sessionId);
-                        String statusInfo = monitoringAgent.getStatusInfo();
-                        
-                        var statusResponse = Session.ChatMessage.newBuilder()
-                            .setMessage(statusInfo)
-                            .setSender("monitoring-agent")
-                            .setChatGroupId("")
-                            .setSessionId(websocketCommunication.getUniqueIdentifier())
-                            .setTimestamp(System.currentTimeMillis())
-                            .build();
-                        messageBytes = statusResponse.toByteArray();
-                        String base64Message = Base64.getEncoder().encodeToString(messageBytes);
-                        session.sendMessage(new TextMessage(base64Message));
-                        return;
-                    } else if ("get-endpoint-health".equals(json.get("type").asText())) {
-                        log.info("Received endpoint health query from session {}", sessionId);
-                        String endpointHealth = monitoringAgent.getEndpointHealthInfo();
-                        
-                        var healthResponse = Session.ChatMessage.newBuilder()
-                            .setMessage(endpointHealth)
-                            .setSender("monitoring-agent")
-                            .setChatGroupId("")
-                            .setSessionId(websocketCommunication.getUniqueIdentifier())
-                            .setTimestamp(System.currentTimeMillis())
-                            .build();
-                        messageBytes = healthResponse.toByteArray();
-                        String base64Message = Base64.getEncoder().encodeToString(messageBytes);
-                        session.sendMessage(new TextMessage(base64Message));
-                        return;
-                    } else if ("get-monitoring-config".equals(json.get("type").asText())) {
-                        log.info("Received monitoring config query from session {}", sessionId);
-                        String configInfo = monitoringAgent.getMonitoringConfigInfo();
-                        
-                        var configResponse = Session.ChatMessage.newBuilder()
-                            .setMessage(configInfo)
-                            .setSender("monitoring-agent")
-                            .setChatGroupId("")
-                            .setSessionId(websocketCommunication.getUniqueIdentifier())
-                            .setTimestamp(System.currentTimeMillis())
-                            .build();
-                        messageBytes = configResponse.toByteArray();
-                        String base64Message = Base64.getEncoder().encodeToString(messageBytes);
-                        session.sendMessage(new TextMessage(base64Message));
+                        String statusInfo = getStatusInfo();
+                        sendTextResponse(session, websocketCommunication, statusInfo);
                         return;
                     } else if ("request-config-change".equals(json.get("type").asText())) {
                         if (approvalService == null) {
@@ -213,14 +173,13 @@ public class MonitoringChatWSHandler extends TextWebSocketHandler {
                         String requestedBy = json.has("requestedBy") ? json.get("requestedBy").asText() : "admin";
                         
                         try {
-                            MonitoringConfigurationChange change = approvalService.requestChange(
-                                MonitoringConfigurationChange.ChangeType.valueOf(changeType),
+                            AgentConfigurationChange change = approvalService.requestChange(
+                                AgentConfigurationChange.ChangeType.valueOf(changeType),
                                 configKey,
                                 "current", // oldValue - could be fetched from current config
                                 newValue,
                                 requestedBy,
-                                reason,
-                                json.has("endpoint") ? json.get("endpoint").asText() : null
+                                reason
                             );
                             
                             String responseMsg = String.format(
@@ -254,7 +213,7 @@ public class MonitoringChatWSHandler extends TextWebSocketHandler {
                         String ztat = json.get("ztat").asText();
                         
                         try {
-                            MonitoringConfigurationChange change = approvalService.approveChange(changeId, approver, ztat);
+                            AgentConfigurationChange change = approvalService.approveChange(changeId, approver, ztat);
                             
                             String responseMsg = String.format(
                                 "Configuration change approved and applied successfully.\n\n" +
@@ -284,7 +243,7 @@ public class MonitoringChatWSHandler extends TextWebSocketHandler {
                         }
                         
                         log.info("Received list pending changes request from session {}", sessionId);
-                        Map<String, MonitoringConfigurationChange> pending = approvalService.getPendingChanges();
+                        Map<String, AgentConfigurationChange> pending = approvalService.getPendingChanges();
                         
                         StringBuilder responseMsg = new StringBuilder("Pending Configuration Changes\n");
                         responseMsg.append("================================\n\n");
@@ -314,31 +273,19 @@ public class MonitoringChatWSHandler extends TextWebSocketHandler {
                         log.info("Received user message from session {}", sessionId);
                         String userMsg = json.get("message").asText();
                         
-                        // For now, provide a simple response explaining this is read-only
                         String responseMsg = String.format(
-                            "Monitoring Agent\n\n" +
+                            "Analytics Agent\n\n" +
                             "Your message: %s\n\n" +
                             "Available commands:\n" +
                             "- {\"type\":\"get-status\"} - Get current agent status\n" +
-                            "- {\"type\":\"get-endpoint-health\"} - Get endpoint health information\n" +
-                            "- {\"type\":\"get-monitoring-config\"} - Get monitoring configuration\n" +
                             "- {\"type\":\"list-pending-changes\"} - List pending configuration changes\n" +
-                            "- {\"type\":\"request-config-change\",\"changeType\":\"UPDATE_THRESHOLD\",\"configKey\":\"key\",\"newValue\":\"value\",\"reason\":\"reason\"} - Request a configuration change\n" +
+                            "- {\"type\":\"request-config-change\",\"changeType\":\"TYPE\",\"configKey\":\"key\",\"newValue\":\"value\",\"reason\":\"reason\"} - Request a configuration change\n" +
                             "- {\"type\":\"approve-config-change\",\"changeId\":\"id\",\"approver\":\"username\",\"ztat\":\"token\"} - Approve a configuration change (requires ZTAT)\n\n" +
                             "Note: Configuration changes require two-party approval via ZTAT tokens.",
                             userMsg
                         );
                         
-                        var response = Session.ChatMessage.newBuilder()
-                            .setMessage(responseMsg)
-                            .setSender("monitoring-agent")
-                            .setChatGroupId("")
-                            .setSessionId(websocketCommunication.getUniqueIdentifier())
-                            .setTimestamp(System.currentTimeMillis())
-                            .build();
-                        messageBytes = response.toByteArray();
-                        String base64Message = Base64.getEncoder().encodeToString(messageBytes);
-                        session.sendMessage(new TextMessage(base64Message));
+                        sendTextResponse(session, websocketCommunication, responseMsg);
                         return;
                     } else {
                         log.info("Unknown message type, ignoring: {}", chatMessage.getMessage());
@@ -348,7 +295,7 @@ public class MonitoringChatWSHandler extends TextWebSocketHandler {
                 }
             }
         } catch (Exception e) {
-            log.error("Error handling monitoring chat message", e);
+            log.error("Error handling analytics chat message", e);
             throw new RuntimeException(e);
         }
     }
@@ -362,7 +309,7 @@ public class MonitoringChatWSHandler extends TextWebSocketHandler {
 
             if (sessionId != null) {
                 userCommunicationService.remove(sessionId);
-                log.info("Monitoring chat connection closed, session ID: {}", sessionId);
+                log.info("Analytics chat connection closed, session ID: {}", sessionId);
             }
         }
     }
@@ -374,32 +321,25 @@ public class MonitoringChatWSHandler extends TextWebSocketHandler {
         return Stream.of(query.split("&"))
             .map(param -> param.split("="))
             .collect(Collectors.toMap(
-                param -> URLDecoder.decode(param[0], StandardCharsets.UTF_8),
-                param -> param.length > 1 ? URLDecoder.decode(param[1], StandardCharsets.UTF_8) : ""
+                arr -> URLDecoder.decode(arr[0], StandardCharsets.UTF_8),
+                arr -> arr.length > 1 ? URLDecoder.decode(arr[1], StandardCharsets.UTF_8) : ""
             ));
     }
-
-    public void sendMessageToSession(String sessionId, String message) {
-        var websocket = userCommunicationService.getSession(sessionId);
-        if (websocket.isPresent()) {
-            WebSocketSession session = websocket.get().getWebSocketSession();
-
-            if (session != null && session.isOpen()) {
-                try {
-                    session.sendMessage(new TextMessage(message));
-                } catch (IOException e) {
-                    log.error("Error sending message to monitoring chat session {}", sessionId, e);
-                }
-            } else {
-                log.error("Monitoring chat session not found or already closed: {}", sessionId);
-            }
-        }
+    
+    private String getStatusInfo() {
+        StringBuilder status = new StringBuilder();
+        status.append("Analytics Agent Status\n");
+        status.append("======================\n\n");
+        status.append("Agent Name: ").append(analyticsAgent.getAgentName()).append("\n");
+        status.append("Running: Yes\n");
+        status.append("\nThe analytics agent performs trust evaluation, session analysis, and automation suggestions.\n");
+        return status.toString();
     }
     
-    private void sendTextResponse(WebSocketSession session, io.sentrius.agent.monitoring.model.MonitoringWebSocky websocky, String message) throws IOException {
+    private void sendTextResponse(WebSocketSession session, AnalyticsWebSocky websocky, String message) throws IOException {
         var response = Session.ChatMessage.newBuilder()
             .setMessage(message)
-            .setSender("monitoring-agent")
+            .setSender("analytics-agent")
             .setChatGroupId("")
             .setSessionId(websocky.getUniqueIdentifier())
             .setTimestamp(System.currentTimeMillis())
@@ -409,7 +349,7 @@ public class MonitoringChatWSHandler extends TextWebSocketHandler {
         session.sendMessage(new TextMessage(base64Message));
     }
     
-    private void sendErrorResponse(WebSocketSession session, io.sentrius.agent.monitoring.model.MonitoringWebSocky websocky, String errorMessage) throws IOException {
+    private void sendErrorResponse(WebSocketSession session, AnalyticsWebSocky websocky, String errorMessage) throws IOException {
         String message = "Error: " + errorMessage;
         sendTextResponse(session, websocky, message);
     }
