@@ -37,6 +37,15 @@ public class PersistentAgentMemoryStore {
     private final EmbeddingService embeddingService;
     
     private final SystemOptions systemOptions;
+    
+    // Memory keys that should be excluded from search results to prevent recursive nesting
+    private static final Set<String> EXCLUDED_MEMORY_KEY_PREFIXES = Set.of(
+        "lookup_agent_memory",
+        "search_agent_memory_semantic"
+    );
+    
+    // Maximum memory value size in characters to prevent storage of extremely large blobs
+    private static final int MAX_MEMORY_VALUE_SIZE = 50000; // 50KB of text
 
     public PersistentAgentMemoryStore(
         AgentMemoryRepository agentMemoryRepository,
@@ -57,6 +66,27 @@ public class PersistentAgentMemoryStore {
     private boolean isMemoryStoreEnabled() {
         return systemOptions.getEnableMemoryStore();
     }
+    
+    /**
+     * Check if a memory key should be excluded from search results.
+     * Excludes temporary lookup/search results to prevent recursive nesting.
+     */
+    private boolean isExcludedMemoryKey(String memoryKey) {
+        if (memoryKey == null) {
+            return false;
+        }
+        return EXCLUDED_MEMORY_KEY_PREFIXES.stream()
+            .anyMatch(memoryKey::startsWith);
+    }
+    
+    /**
+     * Filter a list of memories to exclude temporary lookup results
+     */
+    private List<AgentMemory> filterExcludedMemories(List<AgentMemory> memories) {
+        return memories.stream()
+            .filter(memory -> !isExcludedMemoryKey(memory.getMemoryKey()))
+            .collect(Collectors.toList());
+    }
 
     /**
      * Store memory with markings and access control
@@ -70,11 +100,26 @@ public class PersistentAgentMemoryStore {
             throw new IllegalStateException("Memory store is disabled");
         }
         
+        // Skip storing if this is a temporary lookup/search result
+        if (isExcludedMemoryKey(memoryKey)) {
+            log.debug("Skipping storage of excluded memory key: {} for agent: {}", memoryKey, agentId);
+            throw new IllegalArgumentException("Cannot store temporary lookup/search results with key: " + memoryKey);
+        }
+        
         log.info("Storing memory for agent: {}, key: {}, classification: {}", agentId, memoryKey, classification);
         
         try {
             // Convert value to JSON string
             String valueJson = JsonUtil.MAPPER.writeValueAsString(memoryValue);
+            
+            // Validate memory value size to prevent extremely large blobs
+            if (valueJson.length() > MAX_MEMORY_VALUE_SIZE) {
+                log.warn("Memory value too large for agent: {}, key: {}, size: {} chars, max: {} chars", 
+                         agentId, memoryKey, valueJson.length(), MAX_MEMORY_VALUE_SIZE);
+                throw new IllegalArgumentException(
+                    String.format("Memory value exceeds maximum size of %d characters (actual: %d)", 
+                                  MAX_MEMORY_VALUE_SIZE, valueJson.length()));
+            }
             
             // Check if memory already exists
             Optional<AgentMemory> existing = agentMemoryRepository.findByAgentIdAndMemoryKey(agentId, memoryKey);
@@ -188,8 +233,9 @@ public class PersistentAgentMemoryStore {
         
         List<AgentMemory> shareableMemories = agentMemoryRepository.findShareableMemories(agentId, Instant.now());
         
-        // Filter based on access control policies
+        // Filter based on access control policies and exclude temporary lookup results
         return shareableMemories.stream()
+                .filter(memory -> !isExcludedMemoryKey(memory.getMemoryKey()))
                 .filter(memory -> accessControlService.canAccessMemory(memory, requestingUserId, agentId, "READ"))
                 .collect(Collectors.toList());
     }
@@ -202,9 +248,10 @@ public class PersistentAgentMemoryStore {
         
         List<AgentMemory> memories = agentMemoryRepository.findByMarkingsContaining(marking);
         
-        // Filter based on access control policies
+        // Filter based on access control policies and exclude temporary lookup results
         return memories.stream()
                 .filter(memory -> !memory.isExpired())
+                .filter(memory -> !isExcludedMemoryKey(memory.getMemoryKey()))
                 .filter(memory -> accessControlService.canAccessMemory(memory, requestingUserId, null, "READ"))
                 .collect(Collectors.toList());
     }
@@ -225,7 +272,8 @@ public class PersistentAgentMemoryStore {
         // Note: For large datasets, consider implementing access control at the database level
         // For now, we filter in memory
         var filteredMemories = memories.map(memory ->
-                accessControlService.canAccessMemory(memory, requestingUserId, agentId, "READ") ? memory : null)
+                (accessControlService.canAccessMemory(memory, requestingUserId, agentId, "READ") 
+                 && !isExcludedMemoryKey(memory.getMemoryKey())) ? memory : null)
                 .map(memory -> memory); // Remove nulls would need additional implementation
         return filteredMemories.stream().filter(x -> x != null).collect(Collectors.toList())
                 .stream()
@@ -250,7 +298,8 @@ public class PersistentAgentMemoryStore {
         // Note: For large datasets, consider implementing access control at the database level
         // For now, we filter in memory
         var filteredMemories = memories.stream().map(memory ->
-                accessControlService.canAccessMemory(memory, requestingUserId, agentId, "READ") ? memory : null)
+                (accessControlService.canAccessMemory(memory, requestingUserId, agentId, "READ")
+                 && !isExcludedMemoryKey(memory.getMemoryKey())) ? memory : null)
             .map(memory -> memory); // Remove nulls would need additional implementation
         return filteredMemories.filter(x -> x != null).collect(Collectors.toList())
             .stream()
@@ -277,7 +326,8 @@ public class PersistentAgentMemoryStore {
         // Note: For large datasets, consider implementing access control at the database level
         // For now, we filter in memory
         var filteredMemories = memories.stream().map(memory ->
-                accessControlService.canAccessMemory(memory, requestingUserId, agentId, "READ") ? memory : null)
+                (accessControlService.canAccessMemory(memory, requestingUserId, agentId, "READ")
+                 && !isExcludedMemoryKey(memory.getMemoryKey())) ? memory : null)
             .map(memory -> memory); // Remove nulls would need additional implementation
         return filteredMemories.filter(x -> x != null).collect(Collectors.toList())
             .stream()
@@ -394,6 +444,7 @@ public class PersistentAgentMemoryStore {
 
         return results.stream()
             .filter(memory -> !memory.isExpired())
+            .filter(memory -> !isExcludedMemoryKey(memory.getMemoryKey()))
             .filter(memory -> accessControlService.canAccessMemory(
                 memory,
                 requestingUserId,

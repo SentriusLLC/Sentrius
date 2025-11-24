@@ -29,6 +29,12 @@ public class VectorAgentMemoryStore {
     private final EmbeddingService embeddingService;
     private final MemoryAccessControlService accessControlService;
     private final MemoryQueryExpansionService queryExpansionService;
+    
+    // Memory keys that should be excluded from search results to prevent recursive nesting
+    private static final Set<String> EXCLUDED_MEMORY_KEY_PREFIXES = Set.of(
+        "lookup_agent_memory",
+        "search_agent_memory_semantic"
+    );
 
     public VectorAgentMemoryStore(
             PersistentAgentMemoryStore persistentMemoryStore,
@@ -41,6 +47,18 @@ public class VectorAgentMemoryStore {
         this.embeddingService = embeddingService;
         this.accessControlService = accessControlService;
         this.queryExpansionService = queryExpansionService;
+    }
+    
+    /**
+     * Check if a memory key should be excluded from search results.
+     * Excludes temporary lookup/search results to prevent recursive nesting.
+     */
+    private boolean isExcludedMemoryKey(String memoryKey) {
+        if (memoryKey == null) {
+            return false;
+        }
+        return EXCLUDED_MEMORY_KEY_PREFIXES.stream()
+            .anyMatch(memoryKey::startsWith);
     }
 
     /**
@@ -99,6 +117,7 @@ public class VectorAgentMemoryStore {
             // Filter based on access control and threshold
             return similarMemories.stream()
                     .filter(memory -> !memory.isExpired())
+                    .filter(memory -> !isExcludedMemoryKey(memory.getMemoryKey()))
                     .filter(memory -> memory.calculateCosineSimilarity(queryEmbedding) >= threshold)
                     .filter(memory -> accessControlService.canAccessMemory(memory, requestingUserId, null, "READ"))
                     .limit(limit)
@@ -136,6 +155,7 @@ public class VectorAgentMemoryStore {
 
             return similarMemories.stream()
                     .filter(memory -> !memory.isExpired())
+                    .filter(memory -> !isExcludedMemoryKey(memory.getMemoryKey()))
                     .filter(memory -> accessControlService.canAccessMemory(memory, requestingUserId, agentId, "READ"))
                     .limit(limit)
                     .collect(Collectors.toList());
@@ -228,6 +248,7 @@ public class VectorAgentMemoryStore {
             List<AgentMemory> results = Stream.concat(lexicalList.stream(), filteredSemantic.stream())
                 .filter(m -> seen.add(m.getId())) // dedupe by ID
                 .filter(m -> !m.isExpired())
+                .filter(m -> !isExcludedMemoryKey(m.getMemoryKey())) // Exclude temporary lookup results
                 .filter(m -> accessControlService.canAccessMemory(m, evaluator, requestingUserId, null, "READ"))
                 .sorted((a, b) -> Double.compare(
                     scores.getOrDefault(b.getId(), 0.0),
@@ -471,6 +492,7 @@ public class VectorAgentMemoryStore {
             // Sort by weighted score and return top results
             return scoredMemories.values().stream()
                     .sorted((a, b) -> Double.compare(b.getWeightedScore(), a.getWeightedScore()))
+                    .filter(sm -> !isExcludedMemoryKey(sm.memory.getMemoryKey()))
                     .filter(sm -> accessControlService.canAccessMemory(sm.memory, requestingUserId, agentId, "READ"))
                     .map(sm -> sm.memory)
                     .limit(limit)
