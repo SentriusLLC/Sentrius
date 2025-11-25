@@ -44,19 +44,25 @@ public class TrustEvaluationService {
     private final Map<String, List<ProvenanceEvent>> provenanceCache = new ConcurrentHashMap<>();
     private final Map<String, Integer> incidentTracker = new ConcurrentHashMap<>();
     
+    // Optional RLHF service - may not be available in all contexts
+    private final io.sentrius.sso.core.services.feedback.RLHFFeedbackService rlhfFeedbackService;
+    
     public TrustEvaluationService(
             AgentHeartbeatRepository heartbeatRepository,
             AgentCommunicationRepository communicationRepository,
             SessionLogRepository sessionLogRepository,
             AgentTrustScoreService trustScoreService,
             ATPLPolicyService atplPolicyService,
-            UserService userService) {
+            UserService userService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) 
+            io.sentrius.sso.core.services.feedback.RLHFFeedbackService rlhfFeedbackService) {
         this.heartbeatRepository = heartbeatRepository;
         this.communicationRepository = communicationRepository;
         this.sessionLogRepository = sessionLogRepository;
         this.trustScoreService = trustScoreService;
         this.atplPolicyService = atplPolicyService;
         this.userService = userService;
+        this.rlhfFeedbackService = rlhfFeedbackService;
     }
     
     @Scheduled(fixedRate = 300000, initialDelay = 60000)
@@ -157,6 +163,7 @@ public class TrustEvaluationService {
             .provenanceScore(context.evaluateProvenance())
             .runtimeScore(context.evaluateRuntime())
             .behaviorScore(context.evaluateBehavior())
+            .feedbackScore(context.evaluateFeedback())
             .evaluationResult(result.name())
             .policyId(policy.getPolicyId())
             .timestamp(LocalDateTime.now())
@@ -238,6 +245,13 @@ public class TrustEvaluationService {
         List<ProvenanceEvent> events = provenanceCache.getOrDefault(agentId, Collections.emptyList());
         String identityIssuer = events.isEmpty() ? null : "keycloak";
         
+        // Calculate RLHF feedback score if service is available
+        Double feedbackScore = null;
+        if (rlhfFeedbackService != null) {
+            feedbackScore = rlhfFeedbackService.calculateFeedbackScore(agentId);
+            log.debug("RLHF feedback score for agent {}: {}", agentId, feedbackScore);
+        }
+        
         return AgentContext.builder()
             .agentId(agentId)
             .tags(extractTags(agentName))
@@ -245,6 +259,7 @@ public class TrustEvaluationService {
             .enclaveVerified(enclaveVerified)
             .priorRuns(priorRuns)
             .incidentCount(incidentCount)
+            .feedbackScore(feedbackScore)
             .build();
     }
     

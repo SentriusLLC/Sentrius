@@ -20,6 +20,7 @@ public class AgentTrustScoreDTO {
     private Double provenanceScore;
     private Double runtimeScore;
     private Double behaviorScore;
+    private Double feedbackScore;
     private String evaluationResult;
     private String policyId;
     private LocalDateTime timestamp;

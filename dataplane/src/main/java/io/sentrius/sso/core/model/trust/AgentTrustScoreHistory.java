@@ -41,6 +41,9 @@ public class AgentTrustScoreHistory {
     @Column(name = "behavior_score")
     private Double behaviorScore;
     
+    @Column(name = "feedback_score")
+    private Double feedbackScore;
+    
     @Column(name = "evaluation_result", length = 50)
     private String evaluationResult; // SUCCESS, MARGINAL, FAILURE
     

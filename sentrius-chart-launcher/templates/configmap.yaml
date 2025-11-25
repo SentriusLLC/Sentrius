@@ -165,3 +165,6 @@ data:
     agent.open.ai.endpoint=http://sentrius-integrationproxy:8080/
     agent.listen.websocket=true
     server.port=8090
+    # RLHF Feedback System Configuration
+    sentrius.rlhf.enabled=true
+    sentrius.rlhf.feedback.api.url={{ .Values.sentriusDomain }}

@@ -45,7 +45,8 @@ class LearningServiceTest {
                 vectorMemoryStore,
                 policyEvaluator,
                 provenanceLogger,
-                embeddingService
+                embeddingService,
+                null  // feedbackRepository not needed for this test
         );
     }
 

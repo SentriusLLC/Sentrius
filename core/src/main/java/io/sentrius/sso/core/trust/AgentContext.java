@@ -15,6 +15,7 @@ public class AgentContext {
     private boolean enclaveVerified;
     private int priorRuns;
     private int incidentCount;
+    private Double feedbackScore; // RLHF feedback score (0-100)
 
 
     public double evaluateIdentity() {
@@ -46,5 +47,10 @@ public class AgentContext {
         } else {
             return 50.0; // New agent
         }
+    }
+    
+    public double evaluateFeedback() {
+        // Return RLHF feedback score if available, otherwise neutral
+        return feedbackScore != null ? feedbackScore : 50.0;
     }
 }

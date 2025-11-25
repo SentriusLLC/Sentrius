@@ -35,6 +35,7 @@ public class LearningService {
     private final PolicyEvaluator policyEvaluator;
     private final ProvenanceLogger provenanceLogger;
     private final EmbeddingService embeddingService;
+    private final io.sentrius.sso.core.repository.feedback.AgentFeedbackRepository feedbackRepository;
 
     // Trust adjustment constants
     private static final double MAX_TRUST_ADJUSTMENT = 0.05;
@@ -45,12 +46,14 @@ public class LearningService {
             VectorAgentMemoryStore vectorMemoryStore,
             PolicyEvaluator policyEvaluator,
             @Autowired(required = false) ProvenanceLogger provenanceLogger,
-            EmbeddingService embeddingService) {
+            EmbeddingService embeddingService,
+            @Autowired(required = false) io.sentrius.sso.core.repository.feedback.AgentFeedbackRepository feedbackRepository) {
         this.agentMemoryRepository = agentMemoryRepository;
         this.vectorMemoryStore = vectorMemoryStore;
         this.policyEvaluator = policyEvaluator;
         this.provenanceLogger = provenanceLogger;
         this.embeddingService = embeddingService;
+        this.feedbackRepository = feedbackRepository;
     }
 
     /**
@@ -177,6 +180,7 @@ public class LearningService {
     /**
      * Bootstraps a child agent's memory from its parent with decay applied.
      * Validates MEMORY_INHERIT policy before copying.
+     * Includes feedback-based learned behaviors.
      *
      * @param parent The parent agent context
      * @param child The child agent context
@@ -208,9 +212,56 @@ public class LearningService {
         }
 
         log.info("Inherited {} memories from parent to child", inheritedCount);
+        
+        // Inherit feedback-based learned behaviors
+        if (feedbackRepository != null) {
+            inheritFeedbackPatterns(parent, child);
+        }
 
         // Log provenance
         logMemoryInheritance(parent, child, inheritedCount);
+    }
+    
+    /**
+     * Inherit feedback-based behavior patterns from parent to child.
+     */
+    private void inheritFeedbackPatterns(AgentContext parent, AgentContext child) {
+        log.info("Inheriting feedback patterns from parent {} to child {}", parent.getId(), child.getId());
+        
+        // Get behavior pattern memories from parent
+        List<AgentMemory> behaviorPatterns = agentMemoryRepository
+            .findByAgentIdAndMarkingsContaining(parent.getName(), "BEHAVIOR_PATTERN")
+            .stream()
+            .limit(50) // Limit to most recent 50 patterns
+            .collect(Collectors.toList());
+        
+        int inheritedPatterns = 0;
+        for (AgentMemory pattern : behaviorPatterns) {
+            AgentMemory childPattern = new AgentMemory();
+            childPattern.setAgentId(child.getName());
+            childPattern.setAgentName(child.getName());
+            childPattern.setMemoryKey("inherited_pattern/" + pattern.getMemoryKey());
+            childPattern.setMemoryValue(pattern.getMemoryValue());
+            childPattern.setMemoryType(pattern.getMemoryType());
+            childPattern.setClassification(pattern.getClassification());
+            childPattern.setAccessLevel(pattern.getAccessLevel());
+            childPattern.setCreatorUserId(pattern.getCreatorUserId());
+            childPattern.setCreatorUserType(pattern.getCreatorUserType());
+            childPattern.setConversationId(child.getMemoryNamespace());
+            
+            // Mark as inherited pattern
+            String[] childMarkings = {"BEHAVIOR_PATTERN", "INHERITED", "RLHF"};
+            childPattern.setMarkingsArray(childMarkings);
+            
+            if (pattern.hasEmbedding()) {
+                childPattern.setEmbedding(pattern.getEmbedding());
+            }
+            
+            agentMemoryRepository.save(childPattern);
+            inheritedPatterns++;
+        }
+        
+        log.info("Inherited {} feedback-based behavior patterns to child", inheritedPatterns);
     }
 
     // Private helper methods

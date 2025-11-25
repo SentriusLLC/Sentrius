@@ -307,6 +307,9 @@ data:
     spring.kafka.properties.metadata.max.age.ms=10000
     spring.kafka.properties.retry.backoff.ms=1000
     agents.automation-suggestion.enabled=true
+    # RLHF Feedback System Configuration
+    sentrius.rlhf.enabled=true
+    sentrius.rlhf.feedback.api.url={{ .Values.sentriusDomain }}
   monitoring-agent-application.properties: |
     keystore.file=sso.jceks
     keystore.password=${KEYSTORE_PASSWORD}
@@ -377,6 +380,9 @@ data:
     spring.kafka.properties.metadata.max.age.ms=10000
     spring.kafka.properties.retry.backoff.ms=1000
     spring.kafka.bootstrap-servers=sentrius-kafka:9092
+    # RLHF Feedback System Configuration
+    sentrius.rlhf.enabled=true
+    sentrius.rlhf.feedback.api.url={{ .Values.sentriusDomain }}
   api-application.properties: |
     org.springframework.context.ApplicationListener=your.package.DbEnvPrinter
     keystore.file=sso.jceks

@@ -138,6 +138,64 @@
                         </div>
                     </div>
                 </div>
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Submit Feedback (RLHF)</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="feedbackForm">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="feedbackType" class="form-label">Feedback Type</label>
+                                            <select class="form-select" id="feedbackType" required>
+                                                <option value="">Select feedback type...</option>
+                                                <option value="POSITIVE">Positive - Reinforce behavior</option>
+                                                <option value="NEGATIVE">Negative - Discourage behavior</option>
+                                                <option value="CORRECTIVE">Corrective - Provide guidance</option>
+                                                <option value="NEUTRAL">Neutral - Informational</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="behaviorCategory" class="form-label">Behavior Category</label>
+                                            <input type="text" class="form-control" id="behaviorCategory" 
+                                                   placeholder="e.g., communication, accuracy, security">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="feedbackText" class="form-label">Feedback Details</label>
+                                        <textarea class="form-control" id="feedbackText" rows="4" required
+                                                  placeholder="Describe the agent's behavior and your feedback..."></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="context" class="form-label">Context (Optional)</label>
+                                        <input type="text" class="form-control" id="context" 
+                                               placeholder="Additional context about when this occurred">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Submit Feedback</button>
+                                    <div id="feedbackMessage" class="mt-2"></div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Feedback History</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="feedbackHistory">
+                                    <p class="text-muted">Loading feedback history...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -151,9 +209,14 @@ let componentChart = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     loadAgentTrustScore();
+    loadFeedbackHistory();
+    
+    // Setup feedback form submission
+    document.getElementById('feedbackForm').addEventListener('submit', submitFeedback);
     
     // Refresh every 30 seconds
     setInterval(loadAgentTrustScore, 30000);
+    setInterval(loadFeedbackHistory, 30000);
 });
 
 async function loadAgentTrustScore() {
@@ -190,6 +253,7 @@ function displayCurrentScore(score) {
     document.getElementById('provenanceScore').textContent = Math.round(score.provenanceScore || 0);
     document.getElementById('runtimeScore').textContent = Math.round(score.runtimeScore || 0);
     document.getElementById('behaviorScore').textContent = Math.round(score.behaviorScore || 0);
+    document.getElementById('feedbackScore').textContent = Math.round(score.feedbackScore || 50);
     
     document.getElementById('priorRuns').textContent = score.priorRuns || 0;
     document.getElementById('incidentCount').textContent = score.incidentCount || 0;
@@ -333,6 +397,156 @@ function getScoreClass(result) {
         case 'MARGINAL': return 'score-marginal';
         case 'FAILURE': return 'score-failure';
         default: return 'score-marginal';
+    }
+}
+
+async function submitFeedback(event) {
+    event.preventDefault();
+    
+    const messageDiv = document.getElementById('feedbackMessage');
+    const submitButton = event.target.querySelector('button[type="submit"]');
+    
+    try {
+        submitButton.disabled = true;
+        messageDiv.innerHTML = '<div class="alert alert-info">Submitting feedback...</div>';
+        
+        const feedbackData = {
+            agentId: agentId,
+            feedbackType: document.getElementById('feedbackType').value,
+            feedbackText: document.getElementById('feedbackText').value,
+            behaviorCategory: document.getElementById('behaviorCategory').value || null,
+            context: document.getElementById('context').value || null
+        };
+        
+        const response = await fetch('/api/v1/feedback/submit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(feedbackData)
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to submit feedback');
+        }
+        
+        const result = await response.json();
+        messageDiv.innerHTML = '<div class="alert alert-success">Feedback submitted successfully!</div>';
+        
+        // Reset form
+        document.getElementById('feedbackForm').reset();
+        
+        // Reload feedback history
+        loadFeedbackHistory();
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+            messageDiv.innerHTML = '';
+        }, 3000);
+        
+    } catch (error) {
+        console.error('Error submitting feedback:', error);
+        messageDiv.innerHTML = '<div class="alert alert-danger">Error submitting feedback. Please try again.</div>';
+    } finally {
+        submitButton.disabled = false;
+    }
+}
+
+async function loadFeedbackHistory() {
+    try {
+        const response = await fetch(`/api/v1/feedback/agent/${encodeURIComponent(agentId)}`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to load feedback history');
+        }
+        
+        const feedbackList = await response.json();
+        displayFeedbackHistory(feedbackList);
+        
+    } catch (error) {
+        console.error('Error loading feedback history:', error);
+        document.getElementById('feedbackHistory').innerHTML = 
+            '<p class="text-danger">Error loading feedback history</p>';
+    }
+}
+
+function displayFeedbackHistory(feedbackList) {
+    const container = document.getElementById('feedbackHistory');
+    
+    if (feedbackList.length === 0) {
+        container.innerHTML = '<p class="text-muted">No feedback recorded yet.</p>';
+        return;
+    }
+    
+    let html = '<div class="list-group">';
+    
+    // Show most recent 10 items
+    feedbackList.slice(0, 10).forEach(feedback => {
+        const typeClass = getFeedbackTypeClass(feedback.feedbackType);
+        const timestamp = new Date(feedback.timestamp).toLocaleString();
+        
+        html += `
+            <div class="list-group-item">
+                <div class="d-flex w-100 justify-content-between align-items-start">
+                    <div>
+                        <h6 class="mb-1">
+                            <span class="badge ${typeClass}">${feedback.feedbackType}</span>
+                            ${feedback.behaviorCategory ? '<span class="badge bg-secondary">' + feedback.behaviorCategory + '</span>' : ''}
+                        </h6>
+                        <p class="mb-1">${escapeHtml(feedback.feedbackText)}</p>
+                        ${feedback.context ? '<small class="text-muted">Context: ' + escapeHtml(feedback.context) + '</small>' : ''}
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted">${timestamp}</small>
+                        ${feedback.processed ? '<br><span class="badge bg-success">Processed</span>' : '<br><span class="badge bg-warning">Pending</span>'}
+                        ${feedback.trustImpact ? '<br><small>Impact: ' + feedback.trustImpact + '</small>' : ''}
+                        <br><button class="btn btn-sm btn-danger mt-1" onclick="deleteFeedback(${feedback.id})">Remove</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function getFeedbackTypeClass(type) {
+    switch(type) {
+        case 'POSITIVE': return 'bg-success';
+        case 'NEGATIVE': return 'bg-danger';
+        case 'CORRECTIVE': return 'bg-warning';
+        case 'NEUTRAL': return 'bg-secondary';
+        default: return 'bg-secondary';
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+async function deleteFeedback(feedbackId) {
+    if (!confirm('Are you sure you want to remove this feedback? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/v1/feedback/${feedbackId}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to delete feedback');
+        }
+        
+        // Reload feedback history
+        loadFeedbackHistory();
+        
+    } catch (error) {
+        console.error('Error deleting feedback:', error);
+        alert('Error deleting feedback. Please try again.');
     }
 }
 </script>

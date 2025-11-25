@@ -60,7 +60,8 @@ class MemoryInheritanceIsolationTest {
                 vectorMemoryStore,
                 policyEvaluator,
                 provenanceLogger,
-                embeddingService
+                embeddingService,
+                null  // feedbackRepository not needed for this test
         );
 
         generationManager = new GenerationManager(

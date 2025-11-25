@@ -29,7 +29,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public abstract class BaseController {
 
-
     protected final UserService userService;
 
     protected final SystemOptions systemOptions;

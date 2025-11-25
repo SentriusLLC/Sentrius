@@ -81,6 +81,7 @@ public class AgentTrustScoreService {
             .provenanceScore(entity.getProvenanceScore())
             .runtimeScore(entity.getRuntimeScore())
             .behaviorScore(entity.getBehaviorScore())
+            .feedbackScore(entity.getFeedbackScore())
             .evaluationResult(entity.getEvaluationResult())
             .policyId(entity.getPolicyId())
             .timestamp(entity.getTimestamp())

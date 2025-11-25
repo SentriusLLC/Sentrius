@@ -13,6 +13,7 @@ from .keycloak_service import KeycloakService
 from .agent_client_service import AgentClientService, ProvenanceEvent
 from .key_service import EphemeralKeyGen
 from .config import SentriusAgentConfig
+from .feedback_client_service import FeedbackClientService, FeedbackType
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,11 @@ class SentriusAgent:
         )
         
         self.agent_client_service = AgentClientService(
+            api_base_url=config.agent.api_url,
+            keycloak_service=self.keycloak_service
+        )
+        
+        self.feedback_client_service = FeedbackClientService(
             api_base_url=config.agent.api_url,
             keycloak_service=self.keycloak_service
         )

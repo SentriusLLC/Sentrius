@@ -11,6 +11,7 @@ public class TrustScoreCalculator {
         score += weights.getOrDefault("provenance", 0.0) * ctx.evaluateProvenance();
         score += weights.getOrDefault("runtime", 0.0) * ctx.evaluateRuntime();
         score += weights.getOrDefault("behavior", 0.0) * ctx.evaluateBehavior();
+        score += weights.getOrDefault("feedback", 0.0) * ctx.evaluateFeedback();
 
         return (int) Math.round(score);
     }
