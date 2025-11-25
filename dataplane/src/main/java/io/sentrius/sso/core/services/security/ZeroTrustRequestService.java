@@ -193,7 +193,12 @@ public class ZeroTrustRequestService {
     }
 
     public Optional<OpsApproval> getOpsTokenStatus(String token ) {
-        return opsApprovalRepository.findByToken(UUID.fromString(token));
+        try {
+            return opsApprovalRepository.findByToken(UUID.fromString(token));
+        }catch (IllegalArgumentException e){
+            log.error("Invalid UUID token format: {}", token);
+            return Optional.empty();
+        }
     }
 
     public Optional<ZeroTrustAccessTokenApproval> getAccessTokenStatus(ZeroTrustAccessTokenRequest request) {
