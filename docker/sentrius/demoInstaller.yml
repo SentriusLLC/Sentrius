@@ -40,6 +40,11 @@ npes:
     authorizationType:
       userTypeName: agentType
     atlpDefinition: behavior-risk-openai
+  - username: service-account-ssh-agent
+    name: SSH Agent(s)
+    authorizationType:
+      userTypeName: agentType
+    atlpDefinition: behavior-risk-openai
 rules:
   - displayName: deleteRule
     ruleClass: io.sentrius.sso.automation.auditing.rules.DeletePrevention
