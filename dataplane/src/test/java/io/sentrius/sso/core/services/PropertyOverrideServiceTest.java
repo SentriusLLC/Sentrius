@@ -36,7 +36,7 @@ class PropertyOverrideServiceTest {
     }
 
     @Test
-    void getProperty_whenDatabaseOverrideExists_returnsDbValue() {
+    void getProperty_whenGlobalDatabaseOverrideExists_returnsDbValue() {
         // Given
         String propertyName = "test.property";
         String dbValue = "database-value";
@@ -46,7 +46,7 @@ class PropertyOverrideServiceTest {
             .configurationValue(dbValue)
             .build();
         
-        when(configurationOptionRepository.findLatestByConfigurationName(propertyName))
+        when(configurationOptionRepository.findLatestGlobalByConfigurationName(propertyName))
             .thenReturn(Optional.of(option));
         
         // When
@@ -54,7 +54,7 @@ class PropertyOverrideServiceTest {
         
         // Then
         assertEquals(dbValue, result);
-        verify(configurationOptionRepository).findLatestByConfigurationName(propertyName);
+        verify(configurationOptionRepository).findLatestGlobalByConfigurationName(propertyName);
     }
 
     @Test
@@ -63,7 +63,7 @@ class PropertyOverrideServiceTest {
         String propertyName = "test.property";
         String fileValue = "file-value";
         
-        when(configurationOptionRepository.findLatestByConfigurationName(propertyName))
+        when(configurationOptionRepository.findLatestGlobalByConfigurationName(propertyName))
             .thenReturn(Optional.empty());
         when(environment.getProperty(propertyName)).thenReturn(fileValue);
         
@@ -85,7 +85,57 @@ class PropertyOverrideServiceTest {
         
         // Then
         assertNull(result);
-        verify(configurationOptionRepository, never()).findLatestByConfigurationName(any());
+        verify(configurationOptionRepository, never()).findLatestGlobalByConfigurationName(any());
+    }
+
+    @Test
+    void getPropertyForPod_whenPodOverrideExists_returnsPodValue() {
+        // Given
+        String podName = "pod-1";
+        String propertyName = "test.property";
+        String podValue = "pod-value";
+        
+        ConfigurationOption option = ConfigurationOption.builder()
+            .podName(podName)
+            .configurationName(propertyName)
+            .configurationValue(podValue)
+            .build();
+        
+        when(configurationOptionRepository.findLatestByPodNameAndConfigurationName(podName, propertyName))
+            .thenReturn(Optional.of(option));
+        
+        // When
+        String result = propertyOverrideService.getProperty(podName, propertyName);
+        
+        // Then
+        assertEquals(podValue, result);
+        verify(configurationOptionRepository).findLatestByPodNameAndConfigurationName(podName, propertyName);
+    }
+
+    @Test
+    void getPropertyForPod_whenNoPodOverride_fallsBackToGlobal() {
+        // Given
+        String podName = "pod-1";
+        String propertyName = "test.property";
+        String globalValue = "global-value";
+        
+        ConfigurationOption globalOption = ConfigurationOption.builder()
+            .configurationName(propertyName)
+            .configurationValue(globalValue)
+            .build();
+        
+        when(configurationOptionRepository.findLatestByPodNameAndConfigurationName(podName, propertyName))
+            .thenReturn(Optional.empty());
+        when(configurationOptionRepository.findLatestGlobalByConfigurationName(propertyName))
+            .thenReturn(Optional.of(globalOption));
+        
+        // When
+        String result = propertyOverrideService.getProperty(podName, propertyName);
+        
+        // Then
+        assertEquals(globalValue, result);
+        verify(configurationOptionRepository).findLatestByPodNameAndConfigurationName(podName, propertyName);
+        verify(configurationOptionRepository).findLatestGlobalByConfigurationName(propertyName);
     }
 
     @Test
@@ -114,6 +164,34 @@ class PropertyOverrideServiceTest {
     }
 
     @Test
+    void setPropertyOverrideForPod_whenValidProperty_savesToDatabase() {
+        // Given
+        String podName = "pod-1";
+        String propertyName = "test.property";
+        String value = "pod-value";
+        
+        ConfigurationOption savedOption = ConfigurationOption.builder()
+            .id(1L)
+            .podName(podName)
+            .configurationName(propertyName)
+            .configurationValue(value)
+            .build();
+        
+        when(configurationOptionRepository.save(any(ConfigurationOption.class)))
+            .thenReturn(savedOption);
+        
+        // When
+        ConfigurationOption result = propertyOverrideService.setPropertyOverride(podName, propertyName, value);
+        
+        // Then
+        assertNotNull(result);
+        assertEquals(podName, result.getPodName());
+        assertEquals(propertyName, result.getConfigurationName());
+        assertEquals(value, result.getConfigurationValue());
+        verify(configurationOptionRepository).save(any(ConfigurationOption.class));
+    }
+
+    @Test
     void setPropertyOverride_whenSecuritySensitive_throwsException() {
         // Given
         String propertyName = "spring.security.oauth2.client.registration.keycloak.client-secret";
@@ -128,7 +206,7 @@ class PropertyOverrideServiceTest {
     }
 
     @Test
-    void removePropertyOverride_whenOverrideExists_deletesIt() {
+    void removePropertyOverride_whenGlobalOverrideExists_deletesIt() {
         // Given
         String propertyName = "test.property";
         
@@ -138,14 +216,38 @@ class PropertyOverrideServiceTest {
             .configurationValue("value")
             .build();
         
-        when(configurationOptionRepository.findLatestByConfigurationName(propertyName))
+        when(configurationOptionRepository.findLatestGlobalByConfigurationName(propertyName))
             .thenReturn(Optional.of(option));
         
         // When
         propertyOverrideService.removePropertyOverride(propertyName);
         
         // Then
-        verify(configurationOptionRepository).findLatestByConfigurationName(propertyName);
+        verify(configurationOptionRepository).findLatestGlobalByConfigurationName(propertyName);
+        verify(configurationOptionRepository).delete(option);
+    }
+
+    @Test
+    void removePropertyOverrideForPod_whenPodOverrideExists_deletesIt() {
+        // Given
+        String podName = "pod-1";
+        String propertyName = "test.property";
+        
+        ConfigurationOption option = ConfigurationOption.builder()
+            .id(1L)
+            .podName(podName)
+            .configurationName(propertyName)
+            .configurationValue("value")
+            .build();
+        
+        when(configurationOptionRepository.findLatestByPodNameAndConfigurationName(podName, propertyName))
+            .thenReturn(Optional.of(option));
+        
+        // When
+        propertyOverrideService.removePropertyOverride(podName, propertyName);
+        
+        // Then
+        verify(configurationOptionRepository).findLatestByPodNameAndConfigurationName(podName, propertyName);
         verify(configurationOptionRepository).delete(option);
     }
 
@@ -154,14 +256,14 @@ class PropertyOverrideServiceTest {
         // Given
         String propertyName = "test.property";
         
-        when(configurationOptionRepository.findLatestByConfigurationName(propertyName))
+        when(configurationOptionRepository.findLatestGlobalByConfigurationName(propertyName))
             .thenReturn(Optional.empty());
         
         // When
         propertyOverrideService.removePropertyOverride(propertyName);
         
         // Then
-        verify(configurationOptionRepository).findLatestByConfigurationName(propertyName);
+        verify(configurationOptionRepository).findLatestGlobalByConfigurationName(propertyName);
         verify(configurationOptionRepository, never()).delete(any());
     }
 
@@ -175,7 +277,7 @@ class PropertyOverrideServiceTest {
             propertyOverrideService.removePropertyOverride(propertyName);
         });
         
-        verify(configurationOptionRepository, never()).findLatestByConfigurationName(any());
+        verify(configurationOptionRepository, never()).findLatestGlobalByConfigurationName(any());
         verify(configurationOptionRepository, never()).delete(any());
     }
 
@@ -196,9 +298,9 @@ class PropertyOverrideServiceTest {
         
         when(environment.getProperty("test.property1")).thenReturn("value1");
         when(environment.getProperty("test.property2")).thenReturn("value2");
-        when(configurationOptionRepository.findLatestByConfigurationName(any()))
+        when(configurationOptionRepository.findLatestGlobalByConfigurationName(any()))
             .thenReturn(Optional.empty());
-        when(configurationOptionRepository.findAll()).thenReturn(Collections.emptyList());
+        when(configurationOptionRepository.findAllGlobal()).thenReturn(Collections.emptyList());
         
         // When
         Map<String, PropertyOverrideService.PropertyInfo> result = 
@@ -208,6 +310,37 @@ class PropertyOverrideServiceTest {
         assertNotNull(result);
         assertTrue(result.containsKey("test.property1"));
         assertTrue(result.containsKey("test.property2"));
+    }
+
+    @Test
+    void getAllPropertiesForPod_includesPropertiesFromEnvironment() {
+        // Given
+        String podName = "pod-1";
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("test.property1", "value1");
+        
+        MapPropertySource propertySource = new MapPropertySource("test", properties);
+        
+        when(environment.getPropertySources()).thenReturn(
+            new org.springframework.core.env.MutablePropertySources() {{
+                addFirst(propertySource);
+            }}
+        );
+        
+        when(environment.getProperty("test.property1")).thenReturn("value1");
+        when(configurationOptionRepository.findLatestByPodNameAndConfigurationName(eq(podName), any()))
+            .thenReturn(Optional.empty());
+        when(configurationOptionRepository.findLatestGlobalByConfigurationName(any()))
+            .thenReturn(Optional.empty());
+        when(configurationOptionRepository.findAllByPodName(podName)).thenReturn(Collections.emptyList());
+        
+        // When
+        Map<String, PropertyOverrideService.PropertyInfo> result = 
+            propertyOverrideService.getAllProperties(podName);
+        
+        // Then
+        assertNotNull(result);
+        assertTrue(result.containsKey("test.property1"));
     }
 
     @Test
@@ -227,9 +360,9 @@ class PropertyOverrideServiceTest {
         );
         
         when(environment.getProperty("test.property")).thenReturn("value");
-        when(configurationOptionRepository.findLatestByConfigurationName(any()))
+        when(configurationOptionRepository.findLatestGlobalByConfigurationName(any()))
             .thenReturn(Optional.empty());
-        when(configurationOptionRepository.findAll()).thenReturn(Collections.emptyList());
+        when(configurationOptionRepository.findAllGlobal()).thenReturn(Collections.emptyList());
         
         // When
         Map<String, PropertyOverrideService.PropertyInfo> result = 
@@ -263,9 +396,9 @@ class PropertyOverrideServiceTest {
         );
         
         when(environment.getProperty(propertyName)).thenReturn("file-value");
-        when(configurationOptionRepository.findLatestByConfigurationName(propertyName))
+        when(configurationOptionRepository.findLatestGlobalByConfigurationName(propertyName))
             .thenReturn(Optional.of(dbOption));
-        when(configurationOptionRepository.findAll()).thenReturn(Collections.emptyList());
+        when(configurationOptionRepository.findAllGlobal()).thenReturn(Collections.emptyList());
         
         // When
         Map<String, PropertyOverrideService.PropertyInfo> result = 
@@ -279,5 +412,57 @@ class PropertyOverrideServiceTest {
         assertEquals("db-value", info.getCurrentValue());
         assertEquals("file-value", info.getFileValue());
         assertEquals("db-value", info.getDatabaseValue());
+    }
+
+    @Test
+    void getAllConfigurationsForPod_returnsPodConfigurations() {
+        // Given
+        String podName = "pod-1";
+        
+        ConfigurationOption option1 = ConfigurationOption.builder()
+            .id(1L)
+            .podName(podName)
+            .configurationName("property1")
+            .configurationValue("value1")
+            .build();
+        
+        ConfigurationOption option2 = ConfigurationOption.builder()
+            .id(2L)
+            .podName(podName)
+            .configurationName("property2")
+            .configurationValue("value2")
+            .build();
+        
+        when(configurationOptionRepository.findAllByPodName(podName))
+            .thenReturn(Arrays.asList(option1, option2));
+        
+        // When
+        List<ConfigurationOption> result = propertyOverrideService.getAllConfigurationsForPod(podName);
+        
+        // Then
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        verify(configurationOptionRepository).findAllByPodName(podName);
+    }
+
+    @Test
+    void getAllConfigurationsForPod_whenNullPodName_returnsGlobalConfigurations() {
+        // Given
+        ConfigurationOption option = ConfigurationOption.builder()
+            .id(1L)
+            .configurationName("property1")
+            .configurationValue("value1")
+            .build();
+        
+        when(configurationOptionRepository.findAllGlobal())
+            .thenReturn(Collections.singletonList(option));
+        
+        // When
+        List<ConfigurationOption> result = propertyOverrideService.getAllConfigurationsForPod(null);
+        
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        verify(configurationOptionRepository).findAllGlobal();
     }
 }

@@ -13,7 +13,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -60,17 +62,77 @@ class PropertyOverrideControllerTest {
             .build();
         mockProperties.put("test.property", info);
         
-        when(propertyOverrideService.getAllProperties()).thenReturn(mockProperties);
+        when(propertyOverrideService.getAllProperties(null)).thenReturn(mockProperties);
         
         // When
         ResponseEntity<Map<String, PropertyOverrideService.PropertyInfo>> response = 
-            propertyOverrideController.getAllProperties();
+            propertyOverrideController.getAllProperties(null);
         
         // Then
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertTrue(response.getBody().containsKey("test.property"));
-        verify(propertyOverrideService).getAllProperties();
+        verify(propertyOverrideService).getAllProperties(null);
+    }
+
+    @Test
+    void getAllProperties_withPodName_returnsPropertiesForPod() {
+        // Given
+        String podName = "pod-1";
+        Map<String, PropertyOverrideService.PropertyInfo> mockProperties = new HashMap<>();
+        PropertyOverrideService.PropertyInfo info = PropertyOverrideService.PropertyInfo.builder()
+            .propertyName("test.property")
+            .podName(podName)
+            .fileValue("file-value")
+            .databaseValue("pod-value")
+            .currentValue("pod-value")
+            .hasOverride(true)
+            .build();
+        mockProperties.put("test.property", info);
+        
+        when(propertyOverrideService.getAllProperties(podName)).thenReturn(mockProperties);
+        
+        // When
+        ResponseEntity<Map<String, PropertyOverrideService.PropertyInfo>> response = 
+            propertyOverrideController.getAllProperties(podName);
+        
+        // Then
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().containsKey("test.property"));
+        assertEquals(podName, response.getBody().get("test.property").getPodName());
+        verify(propertyOverrideService).getAllProperties(podName);
+    }
+
+    @Test
+    void getPropertiesForPod_returnsConfigurationsForPod() {
+        // Given
+        String podName = "pod-1";
+        ConfigurationOption option1 = ConfigurationOption.builder()
+            .id(1L)
+            .podName(podName)
+            .configurationName("property1")
+            .configurationValue("value1")
+            .build();
+        ConfigurationOption option2 = ConfigurationOption.builder()
+            .id(2L)
+            .podName(podName)
+            .configurationName("property2")
+            .configurationValue("value2")
+            .build();
+        
+        when(propertyOverrideService.getAllConfigurationsForPod(podName))
+            .thenReturn(Arrays.asList(option1, option2));
+        
+        // When
+        ResponseEntity<List<ConfigurationOption>> response = 
+            propertyOverrideController.getPropertiesForPod(podName);
+        
+        // Then
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(2, response.getBody().size());
+        verify(propertyOverrideService).getAllConfigurationsForPod(podName);
     }
 
     @Test
@@ -79,18 +141,40 @@ class PropertyOverrideControllerTest {
         String propertyName = "test.property";
         String propertyValue = "test-value";
         
-        when(propertyOverrideService.getProperty(propertyName)).thenReturn(propertyValue);
+        when(propertyOverrideService.getProperty(null, propertyName)).thenReturn(propertyValue);
         
         // When
         ResponseEntity<Map<String, String>> response = 
-            propertyOverrideController.getProperty(propertyName);
+            propertyOverrideController.getProperty(propertyName, null);
         
         // Then
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(propertyName, response.getBody().get("propertyName"));
         assertEquals(propertyValue, response.getBody().get("value"));
-        verify(propertyOverrideService).getProperty(propertyName);
+        verify(propertyOverrideService).getProperty(null, propertyName);
+    }
+
+    @Test
+    void getProperty_withPodName_returnsValueForPod() {
+        // Given
+        String podName = "pod-1";
+        String propertyName = "test.property";
+        String propertyValue = "pod-value";
+        
+        when(propertyOverrideService.getProperty(podName, propertyName)).thenReturn(propertyValue);
+        
+        // When
+        ResponseEntity<Map<String, String>> response = 
+            propertyOverrideController.getProperty(propertyName, podName);
+        
+        // Then
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(propertyName, response.getBody().get("propertyName"));
+        assertEquals(propertyValue, response.getBody().get("value"));
+        assertEquals(podName, response.getBody().get("podName"));
+        verify(propertyOverrideService).getProperty(podName, propertyName);
     }
 
     @Test
@@ -98,15 +182,15 @@ class PropertyOverrideControllerTest {
         // Given
         String propertyName = "nonexistent.property";
         
-        when(propertyOverrideService.getProperty(propertyName)).thenReturn(null);
+        when(propertyOverrideService.getProperty(null, propertyName)).thenReturn(null);
         
         // When
         ResponseEntity<Map<String, String>> response = 
-            propertyOverrideController.getProperty(propertyName);
+            propertyOverrideController.getProperty(propertyName, null);
         
         // Then
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        verify(propertyOverrideService).getProperty(propertyName);
+        verify(propertyOverrideService).getProperty(null, propertyName);
     }
 
     @Test
@@ -121,7 +205,7 @@ class PropertyOverrideControllerTest {
             .configurationValue("new-value")
             .build();
         
-        when(propertyOverrideService.setPropertyOverride("test.property", "new-value"))
+        when(propertyOverrideService.setPropertyOverride(null, "test.property", "new-value"))
             .thenReturn(savedOption);
         
         // When
@@ -133,7 +217,40 @@ class PropertyOverrideControllerTest {
         assertNotNull(response.getBody());
         assertEquals("Property override saved successfully", response.getBody().get("message"));
         assertEquals("test.property", response.getBody().get("propertyName"));
-        verify(propertyOverrideService).setPropertyOverride("test.property", "new-value");
+        verify(propertyOverrideService).setPropertyOverride(null, "test.property", "new-value");
+    }
+
+    @Test
+    void setPropertyOverride_withPodName_savesForPod() {
+        // Given
+        String podName = "pod-1";
+        PropertyOverrideController.PropertyUpdateRequest request = 
+            new PropertyOverrideController.PropertyUpdateRequest();
+        request.setPropertyName("test.property");
+        request.setValue("pod-value");
+        request.setPodName(podName);
+        
+        ConfigurationOption savedOption = ConfigurationOption.builder()
+            .id(1L)
+            .podName(podName)
+            .configurationName("test.property")
+            .configurationValue("pod-value")
+            .build();
+        
+        when(propertyOverrideService.setPropertyOverride(podName, "test.property", "pod-value"))
+            .thenReturn(savedOption);
+        
+        // When
+        ResponseEntity<Map<String, String>> response = 
+            propertyOverrideController.setPropertyOverride(request);
+        
+        // Then
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Property override saved successfully", response.getBody().get("message"));
+        assertEquals("test.property", response.getBody().get("propertyName"));
+        assertEquals(podName, response.getBody().get("podName"));
+        verify(propertyOverrideService).setPropertyOverride(podName, "test.property", "pod-value");
     }
 
     @Test
@@ -142,7 +259,7 @@ class PropertyOverrideControllerTest {
         PropertyOverrideController.PropertyUpdateRequest request = 
             new PropertyOverrideController.PropertyUpdateRequest("database.password", "secret");
         
-        when(propertyOverrideService.setPropertyOverride("database.password", "secret"))
+        when(propertyOverrideService.setPropertyOverride(null, "database.password", "secret"))
             .thenThrow(new SecurityException("Cannot override security-sensitive property: database.password"));
         
         // When
@@ -153,7 +270,7 @@ class PropertyOverrideControllerTest {
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         assertNotNull(response.getBody());
         assertTrue(response.getBody().get("error").contains("security-sensitive"));
-        verify(propertyOverrideService).setPropertyOverride("database.password", "secret");
+        verify(propertyOverrideService).setPropertyOverride(null, "database.password", "secret");
     }
 
     @Test
@@ -161,18 +278,39 @@ class PropertyOverrideControllerTest {
         // Given
         String propertyName = "test.property";
         
-        doNothing().when(propertyOverrideService).removePropertyOverride(propertyName);
+        doNothing().when(propertyOverrideService).removePropertyOverride(null, propertyName);
         
         // When
         ResponseEntity<Map<String, String>> response = 
-            propertyOverrideController.deletePropertyOverride(propertyName);
+            propertyOverrideController.deletePropertyOverride(propertyName, null);
         
         // Then
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("Property override removed successfully", response.getBody().get("message"));
         assertEquals(propertyName, response.getBody().get("propertyName"));
-        verify(propertyOverrideService).removePropertyOverride(propertyName);
+        verify(propertyOverrideService).removePropertyOverride(null, propertyName);
+    }
+
+    @Test
+    void deletePropertyOverride_withPodName_deletesForPod() {
+        // Given
+        String podName = "pod-1";
+        String propertyName = "test.property";
+        
+        doNothing().when(propertyOverrideService).removePropertyOverride(podName, propertyName);
+        
+        // When
+        ResponseEntity<Map<String, String>> response = 
+            propertyOverrideController.deletePropertyOverride(propertyName, podName);
+        
+        // Then
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Property override removed successfully", response.getBody().get("message"));
+        assertEquals(propertyName, response.getBody().get("propertyName"));
+        assertEquals(podName, response.getBody().get("podName"));
+        verify(propertyOverrideService).removePropertyOverride(podName, propertyName);
     }
 
     @Test
@@ -181,16 +319,16 @@ class PropertyOverrideControllerTest {
         String propertyName = "keystore.password";
         
         doThrow(new SecurityException("Cannot remove security-sensitive property: keystore.password"))
-            .when(propertyOverrideService).removePropertyOverride(propertyName);
+            .when(propertyOverrideService).removePropertyOverride(null, propertyName);
         
         // When
         ResponseEntity<Map<String, String>> response = 
-            propertyOverrideController.deletePropertyOverride(propertyName);
+            propertyOverrideController.deletePropertyOverride(propertyName, null);
         
         // Then
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         assertNotNull(response.getBody());
         assertTrue(response.getBody().get("error").contains("security-sensitive"));
-        verify(propertyOverrideService).removePropertyOverride(propertyName);
+        verify(propertyOverrideService).removePropertyOverride(null, propertyName);
     }
 }

@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,7 +14,9 @@ import lombok.NoArgsConstructor;
 
 // ErrorOutput Entity
 @Entity
-@Table(name = "configuration_options")
+@Table(name = "configuration_options", indexes = {
+    @Index(name = "idx_config_pod_name", columnList = "pod_name, configuration_name")
+})
 @Data
 @Builder
 @NoArgsConstructor
@@ -23,6 +26,9 @@ public class ConfigurationOption {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "pod_name")
+    private String podName;
 
     @Column(name = "configuration_name")
     private String configurationName;

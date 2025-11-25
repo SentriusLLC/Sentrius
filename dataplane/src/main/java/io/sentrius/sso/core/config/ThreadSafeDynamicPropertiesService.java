@@ -18,6 +18,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class ThreadSafeDynamicPropertiesService {
 
     private final String configLocation;
+    private final String podName;
 
     private static final String DYNAMIC_CONFIG_PATH = "dynamic.properties";
     private final Properties properties = new Properties();
@@ -26,8 +27,10 @@ public class ThreadSafeDynamicPropertiesService {
 
     public ThreadSafeDynamicPropertiesService(ConfigurationOptionRepository configurationOptionRepository,
                                               @Value("$" +
-        "{dynamic.properties.path:/config/dynamic.properties}") String configLocation) throws IllegalAccessException {
+        "{dynamic.properties.path:/config/dynamic.properties}") String configLocation,
+                                              @Value("${sentrius.pod.name:${HOSTNAME:#{null}}}") String podName) throws IllegalAccessException {
         this.configLocation = configLocation;
+        this.podName = podName;
         this.configurationOptionRepository = configurationOptionRepository;
         loadProperties();
     }
@@ -35,6 +38,7 @@ public class ThreadSafeDynamicPropertiesService {
     @PostConstruct
     public void logConfigLocation() {
         log.info("*** Dynamic Properties Path: " + configLocation);
+        log.info("*** Pod Name: " + (podName != null ? podName : "not set (global)"));
     }
 
     private String getDynamicPropertiesPath() {
@@ -75,28 +79,62 @@ public class ThreadSafeDynamicPropertiesService {
         }
     }
 
-    // Updates a property if it's in the allowed list
+    // Updates a property if it's in the allowed list (uses current pod name)
     public void updateProperty(String key, String value) throws IOException {
+        updateProperty(podName, key, value);
+    }
+
+    // Updates a property for a specific pod
+    public void updateProperty(String targetPodName, String key, String value) throws IOException {
         lock.writeLock().lock();
         try{
-            configurationOptionRepository.save(ConfigurationOption.builder().configurationName(key).configurationValue(null == value ? "" : value).build());
+            configurationOptionRepository.save(ConfigurationOption.builder()
+                .podName(targetPodName)
+                .configurationName(key)
+                .configurationValue(null == value ? "" : value)
+                .build());
         } finally {
             lock.writeLock().unlock();
         }
     }
 
-
+    // Gets property for the current pod (falls back to global if not found)
     public String getProperty(String key, String defaultValue) {
+        return getProperty(podName, key, defaultValue);
+    }
+
+    // Gets property for a specific pod (falls back to global if not found)
+    public String getProperty(String targetPodName, String key, String defaultValue) {
         lock.readLock().lock();
         try {
-            var dbOption = configurationOptionRepository.findLatestByConfigurationName(key);
-            if (dbOption.isEmpty()) {
-                return properties.getProperty(key, defaultValue);
+            // First try pod-specific override
+            if (targetPodName != null) {
+                var podOption = configurationOptionRepository.findLatestByPodNameAndConfigurationName(targetPodName, key);
+                if (podOption.isPresent()) {
+                    return podOption.get().getConfigurationValue();
+                }
             }
-            return dbOption.get().getConfigurationValue();
+            
+            // Fall back to global override
+            var globalOption = configurationOptionRepository.findLatestGlobalByConfigurationName(key);
+            if (globalOption.isPresent()) {
+                return globalOption.get().getConfigurationValue();
+            }
+            
+            // Fall back to file properties
+            return properties.getProperty(key, defaultValue);
         } finally {
             lock.readLock().unlock();
         }
+    }
+
+    /**
+     * Get the current pod name.
+     * 
+     * @return The pod name or null if not set
+     */
+    public String getPodName() {
+        return podName;
     }
 
 }
