@@ -8,6 +8,7 @@ import io.sentrius.sso.core.services.agents.VectorAgentMemoryStore;
 import io.sentrius.sso.core.model.agents.AgentMemory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 @ConditionalOnProperty(name = "sentrius.rlhf.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class RLHFFeedbackService {
     
     private final AgentFeedbackRepository feedbackRepository;
