@@ -216,6 +216,7 @@ while [[ "$#" -gt 0 ]]; do
         --sentrius-keycloak) update_sentrius_keycloak=true ;;
         --sentrius-agent) update_sentrius_agent=true ;;
         --sentrius-monitoring-agent) update_sentrius_monitoring_agent=true ;;
+        --sentrius-ssh-agent) update_sentrius_ssh_agent=true ;;
         --sentrius-ai-agent) update_sentrius_ai_agent=true ;;
         --sentrius-launcher-service) update_launcher=true ;;
         --sentrius-integration-proxy) update_integrationproxy=true ;;
@@ -224,7 +225,7 @@ while [[ "$#" -gt 0 ]]; do
         --sentrius-rdp-proxy) update_rdp_proxy=true ;;
         --github-mcp-server) update_github_mcp=true ;;
         --prompt-advisor) update_prompt_advisor=true ;;
-        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_integrationproxy=true; update_launcher=true; update_agent_proxy=true; update_ssh_proxy=true; update_rdp_proxy=true; update_github_mcp=true; update_prompt_advisor=true; update_sentrius_monitoring_agent=true;;
+        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_integrationproxy=true; update_launcher=true; update_agent_proxy=true; update_ssh_proxy=true; update_rdp_proxy=true; update_github_mcp=true; update_prompt_advisor=true; update_sentrius_monitoring_agent=true; update_sentrius_ssh_agent=true;;
         --no-cache) NO_CACHE=true ;;
         --include-dev-certs) INCLUDE_DEV_CERTS=true ;;
         *) echo "Unknown flag: $1"; exit 1 ;;
@@ -369,6 +370,18 @@ if $update_monitoring_agent; then
     fi
     build_image "sentrius-monitoring-agent" "$MONITORING_AGENT_VERSION" "${SCRIPT_DIR}/../../docker/monitoring"
     rm docker/monitoring/monitoring.jar
+fi
+
+if $update_ssh_agent; then
+    cp \/target/ssh-agent-*.jar docker/ssh-agent/ssh-agent.jar
+    if [[ "$ENV_TARGET" == "gcp" ]]; then
+        $SSH_AGENT_VERSION=$(increment_patch_version $SSH_AGENT_VERSION)
+        update_env_var "$SSH_AGENT_VERSION" "$SSH_AGENT_VERSION"
+    else
+        $SSH_AGENT_VERSION="latest"
+    fi
+    build_image "sentrius-ssh-agent" "$SSH_AGENT_VERSION" "${SCRIPT_DIR}/../../docker/ssh-agent"
+    rm docker/ssh-agent/ssh-agent.jar
 fi
 
 if $update_github_mcp; then

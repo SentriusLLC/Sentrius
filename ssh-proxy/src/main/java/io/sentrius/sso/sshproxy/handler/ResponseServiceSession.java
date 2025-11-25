@@ -108,6 +108,7 @@ public class ResponseServiceSession implements DataSession {
 
             log.info("Sending terminal message to session {}: ",
                 msg);
+
             out.write(msg.getBytes(StandardCharsets.UTF_8));
             out.flush();
 

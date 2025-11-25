@@ -16,6 +16,7 @@ agentproxySubdomain: "agentproxy.sentrius-demo.sentrius.cloud"
 agentproxyDomain: "https://agentproxy.sentrius-demo.sentrius.cloud"
 rdpproxySubdomain: "rdpproxy.sentrius-demo.sentrius.cloud"
 rdpproxyDomain: "https://rdpproxy.sentrius-demo.sentrius.cloud"
+sshAgentDomain: "http://sshagent.sentrius-demo.sentrius.cloud:30088"
 
 metrics:
   enabled: true
@@ -99,6 +100,33 @@ agentproxy:
   resources: {}
   oauth2:
     client_id: sentrius-agent-proxy
+    authorization_grant_type: authorization_code
+    redirect_uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
+    scope: openid,profile,email
+    issuer_uri: http://keycloak.{{ .Values.subdomain }}/realms/sentrius
+  annotations:
+    gke:
+      cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
+    aws:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    azure:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+
+sshagent:
+  service:
+    type: NodePort
+    nodePort: 30088
+  image:
+    repository: sentrius-ssh-agent
+    tag: tag
+    pullPolicy: IfNotPresent
+  port: 8080
+  serviceType: ClusterIP
+  ssh:
+    port: 22
+  resources: {}
+  oauth2:
+    client_id: ssh-agent
     authorization_grant_type: authorization_code
     redirect_uri: http://{{ .Values.subdomain }}/login/oauth2/code/keycloak
     scope: openid,profile,email
@@ -270,6 +298,8 @@ keycloak:
       javaAgents:
         client_secret: ""  # Dynamically generated if not provided
       aiAgentAssessor:
+        client_secret: ""  # Dynamically generated if not provided
+      sshagent:
         client_secret: ""  # Dynamically generated if not provided
       agentProxy:
         client_secret: ""  # Dynamically generated if not provided

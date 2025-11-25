@@ -24,7 +24,6 @@ spec:
               value: "broker,controller"
             - name: KAFKA_NODE_ID
               value: "1"
-            # 👇 Controller quorum voters should use localhost in a single-node deployment
             - name: KAFKA_CONTROLLER_QUORUM_VOTERS
               value: "1@localhost:9093"
             - name: KAFKA_LISTENERS
@@ -41,5 +40,12 @@ spec:
               value: "/tmp/kraft-combined-logs"
             - name: KAFKA_CLUSTER_ID
               value: "{{ .Values.kafka.kraft.clusterId }}"
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+
           resources: {{- toYaml .Values.kafka.resources | nindent 12 }}
 {{- end }}

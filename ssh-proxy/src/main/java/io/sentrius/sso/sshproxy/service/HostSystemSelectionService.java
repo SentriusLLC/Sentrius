@@ -1,5 +1,6 @@
 package io.sentrius.sso.sshproxy.service;
 
+import io.sentrius.sso.core.model.Host;
 import io.sentrius.sso.core.model.HostSystem;
 import io.sentrius.sso.core.model.hostgroup.HostGroup;
 import io.sentrius.sso.core.repository.SystemRepository;
@@ -101,14 +102,23 @@ public class HostSystemSelectionService {
         try {
             List<HostSystem> hostSystems = systemRepository.findAll();
             if (!hostSystems.isEmpty()) {
-                HostSystem defaultHost = hostSystems.get(0);
-                Hibernate.initialize(defaultHost.getHostGroups());
-                for(HostGroup group : defaultHost.getHostGroups()) {
-                    Hibernate.initialize(group.getRules());
+                for(HostSystem defaultHost : hostSystems) {
+
+                    Hibernate.initialize(defaultHost.getHostGroups());
+                    for (HostGroup group : defaultHost.getHostGroups()) {
+                        Hibernate.initialize(group.getRules());
+                    }
+                    log.info(
+                        "Using default HostSystem: {} ({}:{})",
+                        defaultHost.getDisplayName(), defaultHost.getHost(), defaultHost.getPort()
+                    );
+                    if (defaultHost.getPort() == 3389){
+                        log.warn("Default HostSystem {} is configured for RDP (port 3389). " +
+                                "Ensure this is intended for SSH proxy usage.", defaultHost.getId());
+                        continue;
+                    }
+                    return Optional.of(defaultHost);
                 }
-                log.info("Using default HostSystem: {} ({}:{})", 
-                    defaultHost.getDisplayName(), defaultHost.getHost(), defaultHost.getPort());
-                return Optional.of(defaultHost);
             }
         } catch (Exception e) {
             log.error("Error retrieving default HostSystem", e);

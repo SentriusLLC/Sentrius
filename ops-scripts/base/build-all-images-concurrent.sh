@@ -203,6 +203,7 @@ build_keycloak_image() {
           --build-arg SENTRIUS_LAUNCHER_CLIENT_SECRET="$SENTRIUS_LAUNCHER_CLIENT_SECRET" \
           --build-arg JAVA_AGENTS_CLIENT_SECRET="$JAVA_AGENTS_CLIENT_SECRET" \
           --build-arg MONITORING_AGENT_CLIENT_SECRET="$MONITORING_AGENT_CLIENT_SECRET" \
+          --build-arg SSH_AGENT_CLIENT_SECRET="$SSH_AGENT_CLIENT_SECRET" \
           --build-arg SENTRIUS_RDPPROXY_CLIENT_SECRET="$SENTRIUS_RDPPROXY_CLIENT_SECRET" \
           --build-arg PROMPT_ADVISOR_CLIENT_SECRET="$PROMPT_ADVISOR_CLIENT_SECRET" \
           "$context_dir"
@@ -213,6 +214,7 @@ build_keycloak_image() {
           --build-arg SENTRIUS_LAUNCHER_CLIENT_SECRET="$SENTRIUS_LAUNCHER_CLIENT_SECRET" \
           --build-arg JAVA_AGENTS_CLIENT_SECRET="$JAVA_AGENTS_CLIENT_SECRET" \
           --build-arg MONITORING_AGENT_CLIENT_SECRET="$MONITORING_AGENT_CLIENT_SECRET" \
+          --build-arg SSH_AGENT_CLIENT_SECRET="$SSH_AGENT_CLIENT_SECRET" \
           --build-arg SENTRIUS_RDPPROXY_CLIENT_SECRET="$SENTRIUS_RDPPROXY_CLIENT_SECRET" \
           --build-arg PROMPT_ADVISOR_CLIENT_SECRET="$PROMPT_ADVISOR_CLIENT_SECRET" \
           "$context_dir"
@@ -256,6 +258,7 @@ update_ssh_proxy=false
 update_rdp_proxy=false
 update_github_mcp=false
 update_prompt_advisor=false
+update_sentrius_ssh_agent=false
 update_sentrius_monitoring_agent=false
 
 
@@ -270,11 +273,12 @@ while [[ "$#" -gt 0 ]]; do
         --sentrius-launcher-service) update_launcher=true ;;
         --sentrius-integration-proxy) update_integrationproxy=true ;;
         --sentrius-agent-proxy) update_agent_proxy=true ;;
+        --sentrius-ssh-agent) update_sentrius_ssh_agent=true ;;
         --sentrius-ssh-proxy) update_ssh_proxy=true ;;
         --sentrius-rdp-proxy) update_rdp_proxy=true ;;
         --github-mcp-server) update_github_mcp=true ;;
         --prompt-advisor) update_prompt_advisor=true ;;
-        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_integrationproxy=true; update_launcher=true; update_agent_proxy=true; update_ssh_proxy=true; update_rdp_proxy=true; update_github_mcp=true; update_prompt_advisor=true; update_sentrius_monitoring_agent=true;;
+        --all) update_sentrius=true; update_sentrius_ssh=true; update_sentrius_keycloak=true; update_sentrius_agent=true; update_sentrius_ai_agent=true; update_integrationproxy=true; update_launcher=true; update_agent_proxy=true; update_ssh_proxy=true; update_rdp_proxy=true; update_github_mcp=true; update_prompt_advisor=true; update_sentrius_monitoring_agent=true; update_sentrius_ssh_agent=true;;
         --no-cache) NO_CACHE=true ;;
         --include-dev-certs) INCLUDE_DEV_CERTS=true ;;
         *) echo "Unknown flag: $1"; exit 1 ;;
@@ -420,7 +424,7 @@ if $update_rdp_proxy; then
     start_build "sentrius-rdp-proxy" "build_image 'sentrius-rdp-proxy' '$RDPPROXY_VERSION' '${SCRIPT_DIR}/../../docker/rdp-proxy'"
 fi
 
-if $update_monitoring_agent; then
+if $update_sentrius_monitoring_agent; then
     cp monitoring/target/monitoring-*.jar docker/monitoring/monitoring.jar
     if [[ "$ENV_TARGET" == "gcp" ]]; then
         MONITORING_AGENT_VERSION=$(increment_patch_version $MONITORING_AGENT_VERSION)
@@ -429,6 +433,17 @@ if $update_monitoring_agent; then
         MONITORING_AGENT_VERSION="latest"
     fi
     start_build "sentrius-monitoring-agent" "build_image 'sentrius-monitoring-agent' '$MONITORING_AGENT_VERSION' '${SCRIPT_DIR}/../../docker/monitoring'"
+fi
+
+if $update_sentrius_ssh_agent; then
+    cp ssh-agent/target/ssh-agent-*.jar docker/ssh-agent/ssh-agent.jar
+    if [[ "$ENV_TARGET" == "gcp" ]]; then
+        $SSH_AGENT_VERSION=$(increment_patch_version $SSH_AGENT_VERSION)
+        update_env_var "$SSH_AGENT_VERSION" "$SSH_AGENT_VERSION"
+    else
+        SSH_AGENT_VERSION="latest"
+    fi
+    start_build "sentrius-ssh-agent" "build_image 'sentrius-ssh-agent' '$SSH_AGENT_VERSION' '${SCRIPT_DIR}/../../docker/ssh-agent'"
 fi
 
 if $update_github_mcp; then
@@ -509,8 +524,12 @@ if $update_rdp_proxy; then
     rm -f docker/rdp-proxy/rdpproxy.jar
 fi
 
-if $update_monitoring_agent; then
+if $update_sentrius_monitoring_agent; then
     rm -f docker/monitoring/monitoring.jar
+fi
+
+if $update_sentrius_ssh_agent; then
+    rm -f docker/ssh-agent/ssh-agent.jar
 fi
 
 # Print summary

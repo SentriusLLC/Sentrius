@@ -27,6 +27,11 @@ app.kubernetes.io/name: sentrius-monitoring-agent
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end -}}
+{{- define "ssh-agent.labels" -}}
+app.kubernetes.io/name: sentrius-ssh-agent
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end -}}
 {{- define "launcherservice.labels" -}}
 app.kubernetes.io/name: sentrius-launcher-service
 app.kubernetes.io/instance: {{ .Release.Name }}

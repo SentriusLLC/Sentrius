@@ -20,6 +20,7 @@
     <module>enterprise-agent</module>
     <module>agent-launcher</module>
     <module>monitoring</module>
+    <module>ssh-agent</module>
     <module>ssh-proxy</module>
     <module>rdp-proxy</module>
   </modules>

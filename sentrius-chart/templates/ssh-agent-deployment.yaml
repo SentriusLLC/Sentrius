@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-ssh-agent
+  labels:
+    {{- include "ssh-agent.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: ssh-agent
+  template:
+    metadata:
+      labels:
+        app: ssh-agent
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: [ 'sh', '-c', 'until nc -z {{ .Release.Name }}-postgres 5432; do echo waiting for postgres; sleep 2; done;' ]
+      containers:
+        - name: sentrius-ssh-agent
+          image: "{{ .Values.sshagent.image.repository }}:{{ .Values.sshagent.image.tag }}"
+          imagePullPolicy: {{ .Values.sshagent.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.sshagent.port }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+          env:
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: keystore-password
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: db-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db-secret
+                  key: db-password
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: ssh-agent-client-secret
+      volumes:
+        - name: config-volume
+          {{- if .Values.config.usePVC }}
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-config-pvc
+          {{- else }}
+          configMap:
+            name: {{ .Release.Name }}-config
+          {{- end }}

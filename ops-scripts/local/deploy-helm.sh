@@ -12,6 +12,7 @@ SENTRIUS_SSH_VERSION="${SENTRIUS_SSH_VERSION:-latest}"
 SENTRIUS_KEYCLOAK_VERSION="${SENTRIUS_KEYCLOAK_VERSION:-latest}"
 SENTRIUS_AGENT_VERSION="${SENTRIUS_AGENT_VERSION:-latest}"
 MONTORING_AGENT_VERSION="${MONTORING_AGENT_VERSION:-latest}"
+SSH_AGENT_VERSION="${SSH_AGENT_VERSION:-latest}"
 LLMPROXY_VERSION="${LLMPROXY_VERSION:-latest}"
 LAUNCHER_VERSION="${LAUNCHER_VERSION:-latest}"
 AGENTPROXY_VERSION="${AGENTPROXY_VERSION:-latest}"
@@ -187,6 +188,7 @@ if [[ "$ENABLE_TLS" == "true" ]]; then
     SENTRIUS_DOMAIN="https://${SUBDOMAIN}"
     APROXY_DOMAIN="https://${APROXY_SUBDOMAIN}"
     RDPPROXY_DOMAIN="https://${RDPPROXY_SUBDOMAIN}"
+    SSH_AGENT_DOMAIN="https://sshagent-${TENANT}.local"
     CERTIFICATES_ENABLED="true"
     INGRESS_TLS_ENABLED="true"
     ENVIRONMENT="local"
@@ -202,6 +204,7 @@ else
     APROXY_DOMAIN="http://sentrius-agentproxy:8080"
     SENTRIUS_DOMAIN="http://sentrius-sentrius:8080"
     RDPPROXY_DOMAIN="http://sentrius-rdp-proxy:8080"
+    SSH_AGENT_DOMAIN="http://ssh-agent:8080"
     CERTIFICATES_ENABLED="false"
     INGRESS_TLS_ENABLED="false"
     ENVIRONMENT="local"
@@ -269,6 +272,7 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set rdpproxySubdomain="${RDPPROXY_SUBDOMAIN}" \
     --set keycloakSubdomain="${KEYCLOAK_SUBDOMAIN}" \
     --set keycloakHostname="${KEYCLOAK_HOSTNAME}" \
+    --set sshAgentDomain="${SSH_AGENT_DOMAIN}" \
     --set keycloakDomain="${KEYCLOAK_DOMAIN}" \
     --set keycloakInternalDomain="${KEYCLOAK_INTERNAL_DOMAIN}" \
     --set sentriusDomain="${SENTRIUS_DOMAIN}" \
@@ -293,6 +297,7 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set keycloak.realm.clients.sentriusLauncher.client_secret="${SENTRIUS_LAUNCHER_CLIENT_SECRET}" \
     --set keycloak.realm.clients.javaAgents.client_secret="${JAVA_AGENTS_CLIENT_SECRET}" \
     --set keycloak.realm.clients.aiAgentAssessor.client_secret="${MONITORING_AGENT_CLIENT_SECRET}" \
+    --set keycloak.realm.clients.sshagent.client_secret="${SSH_AGENT_CLIENT_SECRET}" \
     --set keycloak.realm.clients.agentProxy.client_secret="${SENTRIUS_APROXY_CLIENT_SECRET}" \
     --set sentrius.image.pullPolicy="Never" \
     --set keycloak.image.pullPolicy="Never" \
@@ -302,6 +307,7 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set ssh.image.tag=${SENTRIUS_SSH_VERSION} \
     --set keycloak.image.tag=${SENTRIUS_KEYCLOAK_VERSION} \
     --set monitoringagent.image.tag=${MONTORING_AGENT_VERSION} \
+    --set sshagent.image.tag=${SSH_AGENT_VERSION} \
     --set launcherservice.image.pullPolicy="Never" \
     --set launcherservice.image.tag=${LAUNCHER_VERSION} \
     --set sshproxy.image.tag=${SSHPROXY_VERSION} \
@@ -328,6 +334,7 @@ helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${T
     --set keycloakSubdomain="${KEYCLOAK_SUBDOMAIN}" \
     --set keycloakHostname="${KEYCLOAK_HOSTNAME}" \
     --set keycloakDomain="${KEYCLOAK_DOMAIN}" \
+    --set sshAgentDomain="${SSH_AGENT_DOMAIN}" \
     --set keycloakInternalDomain="${KEYCLOAK_INTERNAL_DOMAIN}" \
     --set sentriusDomain="${SENTRIUS_DOMAIN}" \
     --set integrationproxy.image.repository="sentrius-integration-proxy" \

@@ -24,3 +24,16 @@ spec:
                 --topic sentrius-provenance \
                 --partitions 1 \
                 --replication-factor 1
+              /opt/kafka/bin/kafka-topics.sh \
+                --bootstrap-server {{ .Values.kafka.serverName | default "kafka:9092" }} \
+                --create --if-not-exists \
+                --topic ssh-agent-queries \
+                --partitions 1 \
+                --replication-factor 1
+              /opt/kafka/bin/kafka-topics.sh \
+                --bootstrap-server {{ .Values.kafka.serverName | default "kafka:9092" }} \
+                --create --if-not-exists \
+                --topic ssh-agent-responses \
+                --partitions 1 \
+                --replication-factor 1
+

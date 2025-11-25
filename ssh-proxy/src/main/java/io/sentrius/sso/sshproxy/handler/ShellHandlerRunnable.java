@@ -94,6 +94,7 @@ public class ShellHandlerRunnable implements Runnable {
                     } else {
                         // Control characters and special keys
                         if (handleBuiltinCommand(commandBuffer.toString())) {
+                            var prevBuffer = commandBuffer.get().toString();
                             log.info("Handled built-in command: {}", commandBuffer);
                             commandBuffer.set(new StringBuilder());
                             auditLog.setKeycode(c);
@@ -130,13 +131,22 @@ public class ShellHandlerRunnable implements Runnable {
                                 sessionRoute.getCurrent().get().getTerminalAuditor().setSessionTrigger(noActionTrigger);
                             }
 
-                            log.debug("Sending terminal keycode to session");
 
-                            getSshListenerService().processTerminalMessage(
-                                sessionRoute.getCurrent().get(),
-                                auditLogSend
-                            );
-                            auditLog = Session.TerminalMessage.newBuilder();
+
+                            if (prevBuffer.startsWith("@agent")){
+                                sessionRoute.getCurrent().get().getCommander().write(SshListenerService.keyMap.get(3));
+                                sessionRoute.getCurrent().get().getTerminalAuditor().clear(0); // clear in case
+                                auditLog = Session.TerminalMessage.newBuilder();
+                                log.info("Processed agent command, cleared command buffer");
+                            }
+                            else {
+                                log.debug("Sending terminal keycode to session");
+                                getSshListenerService().processTerminalMessage(
+                                    sessionRoute.getCurrent().get(),
+                                    auditLogSend
+                                );
+                                auditLog = Session.TerminalMessage.newBuilder();
+                            }
                         } else {
 
                             log.info("Appending control character to command buffer: {}", (int) c);

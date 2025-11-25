@@ -131,3 +131,8 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-oauth2-secrets
                   key: prompt-advisor-client-secret
+            - name: SSH_AGENT_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-oauth2-secrets
+                  key: ssh-agent-client-secret

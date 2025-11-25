@@ -1,31 +1,25 @@
 package io.sentrius.sso.sshproxy.service;
 
 import io.sentrius.sso.core.dto.UserDTO;
-import io.sentrius.sso.core.dto.AgentRegistrationDTO;
 import io.sentrius.sso.core.dto.agents.AgentExecution;
-import io.sentrius.sso.core.dto.agents.AgentLaunchResponseDTO;
+import io.sentrius.sso.core.dto.agents.SshAgentResponseMessage;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.model.chat.ChatLog;
 import io.sentrius.sso.core.model.sessions.SessionLog;
 import io.sentrius.sso.core.services.ChatService;
 import io.sentrius.sso.core.services.agents.AgentExecutionService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
-import io.sentrius.sso.core.services.security.KeycloakService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Service that handles agent interactions from SSH proxy sessions.
@@ -38,22 +32,28 @@ public class SshAgentInteractionService {
     private final ChatService chatService;
     private final AgentExecutionService agentExecutionService;
     private final InlineTerminalResponseService terminalResponseService;
-    private final RestTemplate restTemplate = new RestTemplate();
     private final ZeroTrustClientService zeroTrustClientService;
     
     @Autowired(required = false)
-    private KeycloakService keycloakService;
+    private SshAgentKafkaProducer kafkaProducer;
     
-    @Value("${sentrius.agent.launcher.service:http://sentrius-agents-launcherservice:8080/}")
-    private String agentLauncherUrl;
+    @Autowired(required = false)
+    private SshAgentKafkaConsumer kafkaConsumer;
     
     @Value("${agent.chat.enabled:false}")
     private boolean agentChatEnabled;
     
+    @Value("${ssh.agent.kafka.enabled:false}")
+    private boolean kafkaEnabled;
+    
+    @Value("${ssh.agent.response.timeout.seconds:8}")
+    private int responseTimeoutSeconds;
+    
     public SshAgentInteractionService(
         ChatService chatService,
         AgentExecutionService agentExecutionService,
-        InlineTerminalResponseService terminalResponseService, ZeroTrustClientService zeroTrustClientService
+        InlineTerminalResponseService terminalResponseService, 
+        ZeroTrustClientService zeroTrustClientService
     ) {
         this.chatService = chatService;
         this.agentExecutionService = agentExecutionService;
@@ -128,7 +128,7 @@ public class SshAgentInteractionService {
     }
 
     /**
-     * Get response from agent by launching a chat-helper agent
+     * Get response from agent via Kafka queue
      */
     private String getAgentResponse(User user, String query, String chatGroupId) {
         if (!agentChatEnabled) {
@@ -136,80 +136,55 @@ public class SshAgentInteractionService {
             return getFallbackResponse(query);
         }
         
-        // Check if Keycloak service is available
-        if (keycloakService == null) {
-            log.warn("KeycloakService not available - SSH proxy may not be configured with Keycloak authentication");
+        if (!kafkaEnabled || kafkaProducer == null || kafkaConsumer == null) {
+            log.warn("Kafka is not enabled or not configured, returning fallback response");
             return getFallbackResponse(query);
         }
         
         try {
-            // Get service account token from Keycloak
-            String token;
-            try {
-                token = keycloakService.getJwtToken();
-                if (token == null || token.isEmpty()) {
-                    log.warn("Failed to obtain Keycloak token for agent launcher authentication");
-                    return getFallbackResponse(query);
-                }
-            } catch (Exception e) {
-                log.warn("Failed to get Keycloak token: {}", e.getMessage());
-                return getFallbackResponse(query);
-            }
+            // Send query to Kafka
+            // Note: chatGroupId serves as both session ID and chat group ID since they represent
+            // the same logical grouping for SSH agent conversations
+            String queryId = kafkaProducer.sendQuery(
+                user.getId().toString(),
+                user.getUsername(),
+                user.getEmailAddress() != null ? user.getEmailAddress() : "",
+                chatGroupId,  // sessionId - using chatGroupId as session identifier
+                query,
+                chatGroupId   // chatGroupId
+            );
             
-            // Launch a chat-helper agent for this query
-            AgentRegistrationDTO agentConfig = AgentRegistrationDTO.builder()
-                .agentName("chat-helper-" + chatGroupId)
-                .agentType("chat-helper")
-                .agentCallbackUrl("http://ssh-proxy:2222")
-                .build();
+            log.info("Sent SSH agent query to Kafka: queryId={}, userId={}", queryId, user.getId());
             
-            // Invoke agent launcher service with authentication
-            String launchUrl = agentLauncherUrl + "/api/v1/agent/launcher/create";
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Content-Type", "application/json");
-            headers.set("Authorization", "Bearer " + token);
-            
-            HttpEntity<AgentRegistrationDTO> request = new HttpEntity<>(agentConfig, headers);
+            // Wait for response with timeout
+            CompletableFuture<SshAgentResponseMessage> responseFuture = kafkaConsumer.awaitResponse(queryId);
             
             try {
-                ResponseEntity<Map> response = restTemplate.exchange(
-                    launchUrl,
-                    HttpMethod.POST,
-                    request,
-                    Map.class
-                );
+                SshAgentResponseMessage response = responseFuture.get(responseTimeoutSeconds, TimeUnit.SECONDS);
                 
-                if (response.getStatusCode().is2xxSuccessful()) {
-                    log.info("Successfully launched agent for query: {}", query);
-                    // For now, return a response indicating agent was invoked
-                    return buildAgentResponse(query, user.getUsername());
+                if ("success".equalsIgnoreCase(response.getStatus())) {
+                    log.info("Received successful SSH agent response: queryId={}", queryId);
+                    return response.getResponse();
                 } else {
-                    log.warn("Agent launch returned non-success status: {}", response.getStatusCode());
+                    log.warn("SSH agent response had error status: {}, error: {}", 
+                            response.getStatus(), response.getErrorMessage());
                     return getFallbackResponse(query);
                 }
+                
+            } catch (TimeoutException e) {
+                log.warn("Timeout waiting for SSH agent response after {} seconds", responseTimeoutSeconds);
+                return "I'm processing your query but it's taking longer than expected. " +
+                       "Your request has been queued and an agent will respond shortly. " +
+                       "Please try again in a moment.";
             } catch (Exception e) {
-                log.warn("Failed to connect to agent launcher service at {}: {}", launchUrl, e.getMessage());
+                log.error("Error waiting for SSH agent response", e);
                 return getFallbackResponse(query);
             }
             
         } catch (Exception e) {
-            log.error("Error getting agent response", e);
+            log.error("Error getting agent response via Kafka", e);
             return getFallbackResponse(query);
         }
-    }
-    
-    /**
-     * Build a response from the agent (placeholder until full WebSocket integration)
-     */
-    private String buildAgentResponse(String query, String username) {
-        return String.format("I received your query: \"%s\"\n\n" +
-               "I'm your Sentrius AI assistant, here to help you with:\n" +
-               "- Understanding and using SSH commands safely\n" +
-               "- Explaining security policies and why certain commands may be blocked\n" +
-               "- Suggesting alternative approaches to accomplish your tasks\n" +
-               "- Providing guidance on infrastructure operations\n\n" +
-               "Your query has been processed and logged for audit purposes.\n" +
-               "For complex requests, the system may launch a dedicated agent instance.", query);
     }
     
     /**
