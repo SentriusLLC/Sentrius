@@ -140,25 +140,50 @@ public class AutomationAgentService {
             
             Return ONLY the JSON, no additional text.
             """, scriptType, scriptType, code);
-        
-        Object response = callLLM(systemPrompt, prompt);
-        
-        Map<String, Object> result = new HashMap<>();
+
+        Object rawResponse = callLLM(systemPrompt, prompt);
+        log.info("Analysis response: {}", rawResponse);
+
         try {
-            log.info("Analysis response: {}", response);
-            return (Map<String, Object>) response;
+
+            if (rawResponse instanceof Map<?, ?> map &&
+                map.containsKey("isDestructive")) {
+                return (Map<String, Object>) map;
+            }
+            
+            if (rawResponse instanceof Map<?, ?> root &&
+                root.containsKey("output")) {
+
+                List<?> output = (List<?>) root.get("output");
+                Map<?, ?> msg = (Map<?, ?>) output.get(0);
+                List<?> content = (List<?>) msg.get("content");
+                Map<?, ?> textItem = (Map<?, ?>) content.get(0);
+
+                String jsonText = (String) textItem.get("text");
+                return JsonUtil.MAPPER.readValue(jsonText, Map.class);
+            }
+
+            // ✅ CASE 3: Raw JSON string
+            if (rawResponse instanceof String s) {
+                return JsonUtil.MAPPER.readValue(s, Map.class);
+            }
+
+            throw new IllegalStateException("Unsupported LLM response type: "
+                + rawResponse.getClass());
+
         } catch (Exception e) {
-            log.warn("Failed to parse analysis response as JSON, using fallback", e);
-            result.put("isDestructive", false);
-            result.put("destructiveOperations", new ArrayList<>());
-            result.put("securityIssues", new ArrayList<>());
-            result.put("qualityIssues", new ArrayList<>());
-            result.put("suggestions", new ArrayList<>());
-            result.put("overallRisk", "UNKNOWN");
-            result.put("rawResponse", response);
+            log.warn("Failed to parse analysis response, using fallback", e);
+
+            Map<String, Object> fallback = new HashMap<>();
+            fallback.put("isDestructive", false);
+            fallback.put("destructiveOperations", List.of());
+            fallback.put("securityIssues", List.of());
+            fallback.put("qualityIssues", List.of());
+            fallback.put("suggestions", List.of());
+            fallback.put("overallRisk", "UNKNOWN");
+            fallback.put("rawResponse", rawResponse);
+            return fallback;
         }
-        
-        return result;
     }
 
     private String buildSystemPrompt(AutomationSuggestion suggestion) {

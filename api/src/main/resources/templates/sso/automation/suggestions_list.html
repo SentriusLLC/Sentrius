@@ -120,6 +120,25 @@
 </head>
 
 <body>
+<div class="modal fade" id="aiPromptModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Generate with AI</h5>
+            </div>
+            <div class="modal-body">
+        <textarea id="aiPromptInput"
+                  class="form-control"
+                  rows="5"
+                  placeholder="Describe what you want the AI to generate"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitAIPrompt()">Generate</button>
+            </div>
+        </div>
+    </div>
+</div>
 <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
 <div class="container-fluid">
     <div class="row flex-nowrap">
@@ -705,15 +724,13 @@ function saveScript() {
     var script = monacoEditor.getValue();
     var description = $('#script-description').val();
     var scriptType = $('#script-type-select').val();
-    
+    const csrfToken = document.getElementById("csrf-token").value;
     if (isNewScript) {
         // Create new automation script
         if (!description || description.trim() === '') {
             alert('Please enter a description for the script');
             return;
         }
-
-        const csrfToken = document.getElementById("csrf-token").value;
         $.ajax({
             url: '/api/v1/automation/suggestions',
             type: 'POST',
@@ -742,6 +759,10 @@ function saveScript() {
             url: '/api/v1/automation/suggestions/' + id + '/script',
             type: 'PUT',
             contentType: 'application/json',
+            headers: {
+                'Content-Type': 'application/json',
+                "X-CSRF-TOKEN": csrfToken
+            },
             data: JSON.stringify({ script: script }),
             success: function(response) {
                 alert('Script saved successfully!');
@@ -921,11 +942,15 @@ function displayTestResults(results) {
 
 // Generate code with AI
 function generateWithAI() {
+    console.log("ahahahha");
     var id = $('#editor-suggestion-id').val();
-    var prompt = window.prompt('What would you like the AI to generate or improve?', 
+    var prompt = window.prompt('What would you like the AI to generate or improve?',
                                'Generate a complete automation script based on the description');
-    
-    if (!prompt) return;
+
+    if (!prompt) {
+        console.log("leaving....");
+        return;
+    }
     const csrfToken = document.getElementById("csrf-token").value;
     $.ajax({
         url: '/api/v1/automation/suggestions/' + id + '/generate',
