@@ -19,11 +19,11 @@ import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenRequest;
 import io.sentrius.sso.core.model.zt.OpsZeroTrustAcessTokenRequest;
 import io.sentrius.sso.core.repository.OpsJITRequestRepository;
 import io.sentrius.sso.core.utils.ZTATUtils;
-import jakarta.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -323,6 +323,7 @@ public class ZeroTrustAccessTokenService {
     ztatRequestService.addCommunicationLink(link);
   }
 
+  @Transactional(readOnly = true)
   public boolean isOpsActive(String ztat) {
     var status = ztatRequestService.getOpsTokenStatus(ztat);
     if (status.isPresent()) {
@@ -346,6 +347,7 @@ public class ZeroTrustAccessTokenService {
 
   }
 
+  @Transactional
   public boolean incremenOpsUses(String ztat) {
     var status = ztatRequestService.getOpsTokenStatus(ztat);
     if (status.isPresent()) {

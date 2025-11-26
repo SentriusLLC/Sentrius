@@ -192,6 +192,7 @@ public class ZeroTrustRequestService {
         }
     }
 
+    @Transactional(readOnly = true)
     public Optional<OpsApproval> getOpsTokenStatus(String token ) {
         try {
             return opsApprovalRepository.findByToken(UUID.fromString(token));
