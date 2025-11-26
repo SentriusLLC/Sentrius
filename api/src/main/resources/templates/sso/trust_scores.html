@@ -220,8 +220,11 @@ function formatTimestamp(timestamp) {
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
     
-    if (diffMins < 60) return `${diffMins} minutes ago`;
-    if (diffMins < 1440) return `${Math.floor(diffMins / 60)} hours ago`;
+    // Handle future timestamps or very recent (within 1 minute)
+    if (diffMins <= 0) return 'just now';
+    if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffMins < 1440) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
     return date.toLocaleString();
 }
 
