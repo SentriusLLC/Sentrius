@@ -150,7 +150,7 @@ public class AutomationAgentService {
                 map.containsKey("isDestructive")) {
                 return (Map<String, Object>) map;
             }
-            
+
             if (rawResponse instanceof Map<?, ?> root &&
                 root.containsKey("output")) {
 

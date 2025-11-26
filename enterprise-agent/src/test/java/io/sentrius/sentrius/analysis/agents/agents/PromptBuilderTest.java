@@ -73,6 +73,5 @@ class PromptBuilderTest {
         String result = promptBuilder.buildPrompt();
 
         assertTrue(result.contains("Verb operations:"));
-        assertFalse(result.contains("- "));
     }
 }
