@@ -70,33 +70,44 @@ public class LLMService implements EmbeddingServiceIfc {
      * @param prompt Text prompt describing what to analyze
      * @return AI analysis result
      */
-    public String analyzeImages(TokenDTO dto, List<String> imagesBase64, String prompt) throws ZtatException, JsonProcessingException {
+    public String analyzeImages(
+        TokenDTO dto,
+        List<String> imagesBase64,
+        String prompt
+    ) throws ZtatException, JsonProcessingException {
+
         List<Map<String, Object>> content = new ArrayList<>();
-        content.add(Map.of("type", "text", "text", prompt));
-        
+
+        // Text first
+        content.add(Map.of(
+            "type", "input_text",
+            "text", prompt
+        ));
+
+        // Images
         for (String imageBase64 : imagesBase64) {
-            Map<String, Object> imageUrl = Map.of(
-                "url", imageBase64,
-                "detail", "auto"
-            );
-            content.add(Map.of("type", "image_url", "image_url", imageUrl));
+            content.add(Map.of(
+                "type", "input_image",
+                "image_base64", imageBase64
+            ));
         }
-        
-        Map<String, Object> message = Map.of(
+
+        Map<String, Object> inputItem = Map.of(
             "role", "user",
             "content", content
         );
-        
-        // Adjust max_tokens based on number of images (more images = more tokens needed)
-        int maxTokens = 300 + (imagesBase64.size() * 100);
-        
+
         Map<String, Object> payload = Map.of(
             "model", "gpt-4o-mini",
-            "messages", List.of(message),
-            "max_tokens", maxTokens
+            "input", List.of(inputItem)
         );
-        
-        return zeroTrustClientService.callPostOnApi(dto, openAiEndpoint, "/chat/completions", payload);
+
+        return zeroTrustClientService.callPostOnApi(
+            dto,
+            openAiEndpoint,
+            "/chat/completions",
+            payload
+        );
     }
 
     @Override

@@ -4,6 +4,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
@@ -275,6 +276,7 @@ public class ZeroTrustClientService {
         String keycloakJwt = getKeycloakToken();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(keycloakJwt);
+        headers.set("X-Communication-Id", UUID.randomUUID().toString());
 
         log.info("Sending {}", body.toString());
         HttpEntity<T> requestEntity = new HttpEntity<>(body, headers);

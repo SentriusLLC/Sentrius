@@ -1,6 +1,7 @@
 package io.sentrius.sso.core.services.automation;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.automation.AutomationSuggestion;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
@@ -226,57 +227,44 @@ public class AutomationAgentService {
             request.put("model", defaultModel);
             request.put("temperature", 0.7);
 
-            String llmEndpoint = integrationProxyUrl + "/api/v1/llm/chat";
+            String llmEndpoint  = "/api/v1/chat/completions";
 
             // ---- FIX 1: Do NOT assume resp is a JSON string ----
-            Object rawResp = zeroTrustClientService.callAuthenticatedPostOnApi(llmEndpoint, request);
+
+
+
+            Object rawResp = zeroTrustClientService.callAuthenticatedPostOnApi(integrationProxyUrl, llmEndpoint,
+                request);
             log.info("Raw LLM response: {}", rawResp);
 
-            Map<String, Object> response;
-
-            if (rawResp instanceof Map) {
-                response = (Map<String, Object>) rawResp;
-            } else if (rawResp instanceof String s) {
-                response = JsonUtil.MAPPER.readValue(s, Map.class);
+            JsonNode root;
+            if (rawResp instanceof String s) {
+                root = JsonUtil.MAPPER.readTree(s);
             } else {
-                log.error("Unexpected LLM response type: {}", rawResp.getClass());
-                return "Error: Unexpected LLM response type";
+                root = JsonUtil.MAPPER.valueToTree(rawResp);
+            }
+            JsonNode output = root.path("output");
+            if (!output.isArray() || output.isEmpty()) {
+                log.warn("LLM response missing output: {}", root);
+                return "Error: LLM returned no output";
             }
 
-            // ---- FIX 2: Handle both streaming and non-streaming OpenAI formats ----
-            if (!response.containsKey("choices")) {
-                log.warn("LLM response missing 'choices': {}", response);
-                return "Error: LLM returned no choices";
-            }
+            for (JsonNode item : output) {
+                if (!"message".equals(item.path("type").asText())) continue;
 
-            List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
-            if (choices.isEmpty()) {
-                return "Error: LLM returned empty choices";
-            }
+                JsonNode content = item.path("content");
+                if (!content.isArray()) continue;
 
-            Map<String, Object> choice = choices.get(0);
-
-            // Non-streaming format (standard)
-            if (choice.containsKey("message")) {
-                Map<String, Object> message = (Map<String, Object>) choice.get("message");
-                return message.get("content");
-            }
-
-            // Streaming format: { "delta": { "content": ... } }
-            if (choice.containsKey("delta")) {
-                Map<String, Object> delta = (Map<String, Object>) choice.get("delta");
-                if (delta.containsKey("content")) {
-                    return delta.get("content");
+                for (JsonNode c : content) {
+                    if ("output_text".equals(c.path("type").asText())) {
+                        return c.path("text").asText();
+                    }
                 }
             }
 
-            // Sometimes the proxy returns { "content": ... } directly
-            if (choice.containsKey("content")) {
-                return choice.get("content");
-            }
+            log.warn("Unable to extract output_text from response: {}", root);
+            return "Error: Unable to extract LLM output";
 
-            log.warn("Unable to extract LLM content from: {}", choice);
-            return "Error: Unable to extract LLM content";
 
         } catch (Exception e) {
             log.error("Error calling LLM endpoint", e);

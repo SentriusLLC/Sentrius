@@ -2,9 +2,16 @@ package io.sentrius.sso.genai.model.endpoints;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import io.sentrius.sso.genai.Message;
 import io.sentrius.sso.genai.model.ApiEndPointRequest;
 import io.sentrius.sso.genai.model.LLMRequest;
 import io.sentrius.sso.genai.model.LLMResponse;
+import io.sentrius.sso.genai.model.ResponsesApiRequest;
+import io.sentrius.sso.genai.model.ResponsesApiInputItem;
+import io.sentrius.sso.genai.model.ResponsesApiContentItem;
+import io.sentrius.sso.genai.model.ResponsesApiImageUrl;
 import lombok.Builder;
 import lombok.Data;
 import lombok.experimental.SuperBuilder;
@@ -12,9 +19,6 @@ import lombok.experimental.SuperBuilder;
 /**
  * Represents a request to the OpenAI Chat API endpoint.
  *
- * This class provides a convenient way to build a request to the OpenAI Chat API. It includes methods to set the input
- * text, the model to use, and the parameters for the request, among others. Once the request is built, it can be sent
- * using the {@link ChatApiEndpoint#send(io.sentrius.sso.genai.model.endpoints.RawConversationRequest)} method.
  *
  * Example usage:
  *
@@ -31,7 +35,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 public class RawConversationRequest extends ApiEndPointRequest {
 
-    public static final String API_ENDPOINT = "https://api.openai.com/v1/chat/completions";
+    public static final String API_ENDPOINT = "https://api.openai.com/v1/responses";
 
     @Builder.Default
     private Float temperature = 1.0F;
@@ -49,29 +53,184 @@ public class RawConversationRequest extends ApiEndPointRequest {
 
 
     /**
-     * Creates a new instance of the ChatApiEndpoint with the specified API key.
+     * Creates a new instance of the Responses API request by converting from Chat Completions format.
      *
-     * This method is used to create a new instance of the ChatApiEndpoint with the specified API key. The API key is
-     * required to send requests to the OpenAI Chat API endpoint. If the API key is invalid or not provided, an
-     * IllegalArgumentException will be thrown.
+     * This method converts the LLMRequest (Chat Completions format) to ResponsesApiRequest format.
+     * The main differences:
+     * - Endpoint changes from /v1/chat/completions to /v1/responses
+     * - Messages are converted to input items with content arrays
+     * - max_tokens becomes max_output_tokens
      *
-     * Example usage:
-     *
-     * <pre>{@code
-     * ChatApiEndpoint endpoint = ChatApiEndpoint.create("my-api-key");
-     * }</pre>
-     *
-     * @param apiKey
-     *            The API key to use for requests to the OpenAI Chat API endpoint.
-     *
-     * @return A new instance of the ChatApiEndpoint.
-     *
-     * @throws IllegalArgumentException
-     *             If the API key is null or empty.
+     * @return A ResponsesApiRequest instance ready to be sent to OpenAI's Responses API.
      */
     @Override
     public Object create() {
-        return request;
+        // Convert messages from Chat Completions format to Responses API format
+        List<ResponsesApiInputItem> inputItems = new ArrayList<>();
+        
+        if (request.getMessages() != null) {
+            inputItems = request.getMessages().stream()
+                .map(this::convertMessageToInputItem)
+                .collect(Collectors.toList());
+        }
+        
+        // Build the ResponsesApiRequest with converted fields
+        ResponsesApiRequest.ResponsesApiRequestBuilder builder = ResponsesApiRequest.builder()
+            .model(request.getModel() != null ? request.getModel() : "gpt-4o")
+            .input(inputItems);
+        
+        // Map optional parameters (only those supported by Responses API)
+        if (request.getTemperature() != null) {
+            builder.temperature(request.getTemperature());
+        }
+        
+        if (request.getTopP() != null) {
+            builder.topP(request.getTopP());
+        }
+        
+        if (request.getMaxTokens() != null) {
+            builder.maxOutputTokens(request.getMaxTokens());
+        }
+        
+        if (request.getStream() != null) {
+            builder.stream(request.getStream());
+        }
+        
+        // Note: stop, presence_penalty, frequency_penalty, and logit_bias are not supported by Responses API
+        
+        return builder.build();
+    }
+    
+    /**
+     * Converts a Message (Chat Completions format) to ResponsesApiInputItem (Responses API format)
+     */
+    private ResponsesApiInputItem convertMessageToInputItem(Message message) {
+
+        // Defensive null handling
+        if (message == null) {
+            return ResponsesApiInputItem.builder()
+                .role("system")
+                .content(List.of())
+                .build();
+        }
+
+        String role = message.getRole() != null ? message.getRole() : "system";
+
+        /*
+         * RESPONSES API RULE:
+         * Only USER or SYSTEM messages may use structured input blocks.
+         * ASSISTANT / TOOL / HISTORY messages MUST be flattened.
+         */
+        if (!"user".equals(role) && !"system".equals(role)) {
+            return ResponsesApiInputItem.builder()
+                .role("system") // treat replayed model output as system facts
+                .content(List.of(
+                    ResponsesApiContentItem.builder()
+                        .type("input_text")
+                        .text(safeString(message.getContentAsString()))
+                        .build()
+                ))
+                .build();
+        }
+
+        List<ResponsesApiContentItem> contentItems = new ArrayList<>();
+
+        Object content = message.getContent();
+
+        // ---------- SIMPLE STRING CONTENT ----------
+        if (content instanceof String) {
+            contentItems.add(
+                ResponsesApiContentItem.builder()
+                    .type("input_text")
+                    .text(safeString((String) content))
+                    .build()
+            );
+        }
+
+        // ---------- MULTIMODAL / STRUCTURED CONTENT ----------
+        else if (content instanceof List<?>) {
+            for (Object item : (List<?>) content) {
+                if (!(item instanceof Map<?, ?> map)) {
+                    continue;
+                }
+
+                String type = (String) map.get("type");
+
+                // TEXT
+                if ("text".equals(type)) {
+                    Object text = map.get("text");
+                    if (text != null) {
+                        contentItems.add(
+                            ResponsesApiContentItem.builder()
+                                .type("input_text")
+                                .text(text.toString())
+                                .build()
+                        );
+                    }
+                }
+
+                // IMAGE
+                else if ("image_url".equals(type)) {
+                    Object imageObj = map.get("image_url");
+                    String url = null;
+                    String detail = "auto";
+
+                    if (imageObj instanceof String s) {
+                        url = s;
+                    } else if (imageObj instanceof Map<?, ?> imgMap) {
+                        Object u = imgMap.get("url");
+                        Object d = imgMap.get("detail");
+                        if (u != null) url = u.toString();
+                        if (d != null) detail = d.toString();
+                    }
+
+                    if (url != null) {
+                        contentItems.add(
+                            ResponsesApiContentItem.builder()
+                                .type("input_image")
+                                .imageUrl(
+                                    ResponsesApiImageUrl.builder()
+                                        .url(url)
+                                        .detail(detail)
+                                        .build()
+                                )
+                                .build()
+                        );
+                    }
+                }
+                else if ("image_base64".equals(type)) {
+                    Object imageObj = map.get("image_base64");
+
+                    if (imageObj instanceof String base64 && !base64.isBlank()) {
+                        contentItems.add(
+                            ResponsesApiContentItem.builder()
+                                .type("input_image")
+                                .imageBase64(base64)   // ✅ CORRECT
+                                .build()
+                        );
+                    }
+                }
+            }
+        }
+
+        // ---------- GUARANTEE NON-EMPTY CONTENT ----------
+        if (contentItems.isEmpty()) {
+            contentItems.add(
+                ResponsesApiContentItem.builder()
+                    .type("input_text")
+                    .text("")
+                    .build()
+            );
+        }
+
+        return ResponsesApiInputItem.builder()
+            .role(role)
+            .content(contentItems)
+            .build();
+    }
+
+    private static String safeString(String s) {
+        return s == null ? "" : s;
     }
 
 }

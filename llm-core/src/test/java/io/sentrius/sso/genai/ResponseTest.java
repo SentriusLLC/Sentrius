@@ -10,9 +10,9 @@ import static org.junit.jupiter.api.Assertions.*;
 class ResponseTest {
 
     @Test
-    void concatenateResponsesReturnsEmptyStringForEmptyChoices() {
+    void concatenateResponsesReturnsEmptyStringForEmptyOutputItems() {
         Response response = Response.builder()
-            .choices(Arrays.asList())
+            .outputItems(Arrays.asList())
             .build();
 
         String result = response.concatenateResponses();
@@ -21,23 +21,21 @@ class ResponseTest {
     }
 
     @Test
-    void concatenateResponsesJoinsMultipleMessages() {
-        Message message1 = Message.builder()
-            .content("Hello")
-            .build();
+    void concatenateResponsesJoinsMultipleTextItems() {
+        Response.ContentItem content1 = new Response.ContentItem();
+        content1.setType("output_text");
+        content1.setText("Hello");
         
-        Message message2 = Message.builder()
-            .content(" World")
-            .build();
+        Response.ContentItem content2 = new Response.ContentItem();
+        content2.setType("output_text");
+        content2.setText(" World");
 
-        Response.Choice choice1 = new Response.Choice();
-        choice1.setMessage(message1);
-        
-        Response.Choice choice2 = new Response.Choice();
-        choice2.setMessage(message2);
+        Response.OutputItem outputItem = new Response.OutputItem();
+        outputItem.setRole("assistant");
+        outputItem.setContent(Arrays.asList(content1, content2));
 
         Response response = Response.builder()
-            .choices(Arrays.asList(choice1, choice2))
+            .outputItems(Arrays.asList(outputItem))
             .build();
 
         String result = response.concatenateResponses();
@@ -47,15 +45,16 @@ class ResponseTest {
 
     @Test
     void concatenateResponsesHandlesSingleMessage() {
-        Message message = Message.builder()
-            .content("Single message")
-            .build();
+        Response.ContentItem content = new Response.ContentItem();
+        content.setType("output_text");
+        content.setText("Single message");
 
-        Response.Choice choice = new Response.Choice();
-        choice.setMessage(message);
+        Response.OutputItem outputItem = new Response.OutputItem();
+        outputItem.setRole("assistant");
+        outputItem.setContent(Arrays.asList(content));
 
         Response response = Response.builder()
-            .choices(Arrays.asList(choice))
+            .outputItems(Arrays.asList(outputItem))
             .build();
 
         String result = response.concatenateResponses();
@@ -66,65 +65,60 @@ class ResponseTest {
     @Test
     void responseBuilderCreatesValidObject() {
         Response.Usage usage = new Response.Usage();
-        usage.setPromptTokens(10);
-        usage.setCompletionTokens(20);
+
         usage.setTotalTokens(30);
 
         Response response = Response.builder()
             .id("test-id")
-            .object("chat.completion")
+            .object("response")
             .created(1234567890L)
-            .model("gpt-3.5-turbo")
+            .model("gpt-4o")
             .usage(usage)
             .systemFingerprint("test-fingerprint")
             .build();
 
         assertNotNull(response);
         assertEquals("test-id", response.getId());
-        assertEquals("chat.completion", response.getObject());
+        assertEquals("response", response.getObject());
         assertEquals(1234567890L, response.getCreated());
-        assertEquals("gpt-3.5-turbo", response.getModel());
+        assertEquals("gpt-4o", response.getModel());
         assertEquals(usage, response.getUsage());
         assertEquals("test-fingerprint", response.getSystemFingerprint());
     }
 
     @Test
-    void choiceObjectStoresCorrectData() {
-        Message message = Message.builder()
-            .content("Test content")
-            .role("assistant")
-            .build();
+    void outputItemStoresCorrectData() {
+        Response.ContentItem content = new Response.ContentItem();
+        content.setType("output_text");
+        content.setText("Test content");
 
-        Response.Choice choice = new Response.Choice();
-        choice.setIndex(0);
-        choice.setMessage(message);
-        choice.setFinishReason("stop");
-        choice.setLogprobs(null);
+        Response.OutputItem outputItem = new Response.OutputItem();
+        outputItem.setRole("assistant");
+        outputItem.setContent(Arrays.asList(content));
 
-        assertEquals(0, choice.getIndex());
-        assertEquals(message, choice.getMessage());
-        assertEquals("stop", choice.getFinishReason());
-        assertNull(choice.getLogprobs());
+        assertEquals("assistant", outputItem.getRole());
+        assertEquals(1, outputItem.getContent().size());
+        assertEquals("Test content", outputItem.getContent().get(0).getText());
     }
 
-    @Test
-    void usageObjectStoresTokenCounts() {
-        Response.Usage usage = new Response.Usage();
-        usage.setPromptTokens(15);
-        usage.setCompletionTokens(25);
-        usage.setTotalTokens(40);
-
-        assertEquals(15, usage.getPromptTokens());
-        assertEquals(25, usage.getCompletionTokens());
-        assertEquals(40, usage.getTotalTokens());
-    }
 
     @Test
-    void responseHandlesNullChoicesGracefully() {
+    void responseHandlesNullOutputItemsGracefully() {
         Response response = Response.builder()
-            .choices(null)
+            .outputItems(null)
             .build();
 
-        assertThrows(NullPointerException.class, () -> response.concatenateResponses());
+        String result = response.concatenateResponses();
+        assertEquals("", result);
+    }
+    
+    @Test
+    void contentItemStoresTypeAndText() {
+        Response.ContentItem content = new Response.ContentItem();
+        content.setType("output_text");
+        content.setText("Sample text");
+
+        assertEquals("output_text", content.getType());
+        assertEquals("Sample text", content.getText());
     }
 }

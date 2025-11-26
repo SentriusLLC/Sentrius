@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.sentrius.sso.genai.model.EmbeddingRequest;
 import io.sentrius.sso.genai.model.endpoints.EmbeddingApiRequest;
+import io.sentrius.sso.genai.model.endpoints.RawConversationRequest;
 import io.sentrius.sso.security.TokenProvider;
 import io.sentrius.sso.genai.model.ApiEndPointRequest;
 import io.sentrius.sso.integrations.exceptions.HttpException;
@@ -55,7 +56,7 @@ public class GenerativeAPI {
 
     /**
      * Builds the request body for an API endpoint request.
-     *a
+     *
      * @param request the API endpoint request
      * @return the request body as a string
      */
@@ -68,15 +69,22 @@ public class GenerativeAPI {
     }
 
     /**
-     * ask for response message
+     * Execute request and get response from API.
+     * Returns response in native Responses API format.
      *
      * @param apiRequest Api Request object
-     * @return ChatCompletionResponseBody
+     * @return Response body in Responses API format
      */
     public String sample(final ApiEndPointRequest apiRequest) throws HttpException {
         Objects.requireNonNull(apiRequest);
         log.info("making request to {}", apiRequest.getEndpoint());
-        RequestBody body = RequestBody.create(buildRequestBody(apiRequest), MediaType.get("application/json; charset=utf-8"));
+        
+        String requestBodyJson = buildRequestBody(apiRequest);
+
+
+        log.info("Raw request is {}",requestBodyJson);
+
+        RequestBody body = RequestBody.create(requestBodyJson, MediaType.get("application/json; charset=utf-8"));
         Request
             request = new Request.Builder().url(apiRequest.getEndpoint()).header("Authorization", "Bearer " + authToken.getToken()).post(body).build();
 
@@ -86,12 +94,14 @@ public class GenerativeAPI {
                     log.error("Request failed: {}, please try again", response.message());
                     throw new HttpException(response.code(), "Request failed");
                 } else {
-                    log.error("Request failed: {}, please try again", response.body().string());
-                    throw new HttpException(response.code(), response.body().string());
+                    String errorBody = response.body().string();
+                    log.error("Request failed: {}, please try again", errorBody);
+                    throw new HttpException(response.code(), errorBody);
                 }
             } else {
-                log.info("body is {}" , response.body());
-                return response.body().string();
+                String responseBody = response.body().string();
+                log.info("Received response from {}", apiRequest.getEndpoint());
+                return responseBody;
             }
         } catch (IOException e) {
             log.error("Request failed: {}", e.getMessage());

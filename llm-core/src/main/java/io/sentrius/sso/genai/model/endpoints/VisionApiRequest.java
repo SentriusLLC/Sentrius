@@ -19,7 +19,7 @@ public class VisionApiRequest extends ApiEndPointRequest {
     
     @Override
     public String getEndpoint() {
-        return "https://api.openai.com/v1/chat/completions";
+        return "https://api.openai.com/v1/responses";
     }
     
     @Override

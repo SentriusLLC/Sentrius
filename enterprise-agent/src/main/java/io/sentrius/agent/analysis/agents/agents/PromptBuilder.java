@@ -48,21 +48,32 @@ public class PromptBuilder {
 
         if (applyInstructions) {
             // Append instructions for using the JSON format
-            prompt.append("Instructions: ").append("Respond using this JSON format. Only use verbs provided in " +
-                "Available Verbs. Formulate a complete plan with all possible steps.:\n" +
-                "\n" +
+            prompt.append("STRICT RESPONSE PROTOCOL\n" +
+                "You are participating in a machine-executed planning protocol.\n\n" +
+
+                "RULES:\n" +
+                "- You MUST respond with EXACTLY ONE valid JSON object.\n" +
+                "- You MUST NOT include prose, explanations, markdown, or conversational text outside JSON.\n" +
+                "- You MUST ONLY use verbs explicitly listed in Available Verbs.\n" +
+                "- You MUST produce a complete execution plan when possible.\n" +
+                "- If required information is missing, you MUST return an EMPTY plan and explain why USING ONLY the JSON fields.\n" +
+                "- Any response that is not valid JSON MUST be considered a failure.\n\n" +
+
+                "OUTPUT SCHEMA (MANDATORY):\n" +
                 "{\n" +
                 "  \"plan\": [\n" +
                 "    {\n" +
-                "      \"verb\": \"list_open_terminals\",\n" +
-                "      \"params\": {}\n" +
-                "    },\n" +
-                "    {\n" +
-                "      \"verb\": \"send_terminal_command\",\n" +
-                "      \"params\": {}\n" +
+                "      \"verb\": \"<verb_name_from_available_verbs>\",\n" +
+                "      \"params\": { <verb_parameters> }\n" +
                 "    }\n" +
                 "  ]\n" +
-                "}\n");
+                "}\n\n" +
+
+                "FAILURE MODE:\n" +
+                "- If no verbs are required, return: { \"plan\": [] }\n" +
+                "- NEVER ask questions.\n" +
+                "- NEVER explain outside the JSON structure.\n"
+            );
         }
             // Append the list of available verbs
             prompt.append("Verb operations:\n");

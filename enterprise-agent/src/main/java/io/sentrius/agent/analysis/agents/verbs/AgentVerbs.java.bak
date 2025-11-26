@@ -143,8 +143,8 @@ public class AgentVerbs extends VerbBase {
         }
         Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
         //log.info("Response is {}", resp);
-        for (Response.OutputItem choice : response.getOutputItems()) {
-            var content = choice.getContent().stream().filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType())).map(c -> c.getText()).findFirst().orElse("");
+        for (Response.Choice choice : response.getChoices()) {
+            var content = choice.getMessage().getContentAsString();
             if (content.startsWith("```json")) {
                 content = content.substring(7, content.length() - 3);
             } else if (content.startsWith("```")) {
@@ -254,8 +254,8 @@ public class AgentVerbs extends VerbBase {
                 var resp = llmService.askQuestion(execution, chatRequest);
                 Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
                 //log.info("Response is {}", resp);
-                for (Response.OutputItem choice : response.getOutputItems()) {
-                    var content = choice.getContent().stream().filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType())).map(c -> c.getText()).findFirst().orElse("");
+                for (Response.Choice choice : response.getChoices()) {
+                    var content = choice.getMessage().getContentAsString();
                     if (content.startsWith("```json")) {
                         content = content.substring(7, content.length() - 3);
                     }
@@ -332,8 +332,8 @@ public class AgentVerbs extends VerbBase {
                 var resp = llmService.askQuestion(execution, chatRequest);
                 Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
                 //log.info("Response is {}", resp);
-                for (Response.OutputItem choice : response.getOutputItems()) {
-                    var content = choice.getContent().stream().filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType())).map(c -> c.getText()).findFirst().orElse("");
+                for (Response.Choice choice : response.getChoices()) {
+                    var content = choice.getMessage().getContentAsString();
                     if (content.startsWith("```json")) {
                         content = content.substring(7, content.length() - 3);
                     }
@@ -367,8 +367,8 @@ public class AgentVerbs extends VerbBase {
             var resp = llmService.askQuestion(execution, chatRequest);
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             //log.info("Response is {}", resp);
-            for (Response.OutputItem choice : response.getOutputItems()) {
-                var content = choice.getContent().stream().filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType())).map(c -> c.getText()).findFirst().orElse("");
+            for (Response.Choice choice : response.getChoices()) {
+                var content = choice.getMessage().getContentAsString();
                 if (content.startsWith("```json")) {
                     content = content.substring(7, content.length() - 3);
                 }
@@ -493,13 +493,13 @@ public class AgentVerbs extends VerbBase {
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             //log.info("Assess Response is {}", resp);
             List<ZtatAsessment> assessments = new ArrayList<>();
-            if (response.getOutputItems().isEmpty()) {
+            if (response.getChoices().isEmpty()) {
                 log.info("No choices in response");
                 return responses;
             }
-            var choice = response.getOutputItems().get(0);
+            var choice = response.getChoices().get(0);
 
-            var content = choice.getContent().stream().filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType())).map(c -> c.getText()).findFirst().orElse("");
+            var content = choice.getMessage().getContentAsString();
             if (content.startsWith("```json")) {
                 content = content.substring(7, content.length() - 3);
             }
@@ -558,12 +558,12 @@ public class AgentVerbs extends VerbBase {
                         chatRequest = LLMRequest.builder().model("gpt-4o-mini-mini").messages(messages).build();
                         resp = llmService.askQuestion(execution, chatRequest);
                         response = JsonUtil.MAPPER.readValue(resp, Response.class);
-                        if (response.getOutputItems().isEmpty()) {
+                        if (response.getChoices().isEmpty()) {
                             return responses;
                         }
-                        choice = response.getOutputItems().get(0);
+                        choice = response.getChoices().get(0);
 
-                        content = choice.getContent().stream().filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType())).map(c -> c.getText()).findFirst().orElse("");
+                        content = choice.getMessage().getContentAsString();
                         if (content.startsWith("```json")) {
                             content = content.substring(7, content.length() - 3);
                         }
@@ -610,7 +610,7 @@ public class AgentVerbs extends VerbBase {
 
         var originalContext = context.getExecutionArgument("context");
 
-        var requestDtoContext = normalize( originalContext.orElseThrow().toString() );
+        var requestDtoContext = originalContext.orElseThrow().toString();
         requestDtoContext += ". Please request endpoints to perform your work.";
         AgentContextRequestDTO dto = AgentContextRequestDTO.builder().context(requestDtoContext).
             description(requestDtoContext).name(agentName).build();
@@ -640,10 +640,10 @@ public class AgentVerbs extends VerbBase {
         var resp = llmService.askQuestion(execution, chatRequest);
 
         Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
-        log.info("Response is {}", resp);
+//        log.info("Response is {}", resp);
         ArrayNode endpointsLikeList = JsonUtil.MAPPER.createArrayNode();
-        for (Response.OutputItem choice : response.getOutputItems()) {
-            var content = choice.getContent().stream().filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType())).map(c -> c.getText()).findFirst().orElse("");
+        for (Response.Choice choice : response.getChoices()) {
+            var content = choice.getMessage().getContentAsString();
             if (content.startsWith("```json")) {
                 content = content.substring(7, content.length() - 3);
             } else if (content.startsWith("```")) {
@@ -693,14 +693,6 @@ public class AgentVerbs extends VerbBase {
         return createdContext;
     }
 
-    private String normalize(String s) {
-        if (s == null) return null;
-        if (s.startsWith("\"") && s.endsWith("\"")) {
-            return s.substring(1, s.length() - 1);
-        }
-        return s;
-    }
-
     @Verb(
         name = "summarize_agent_status", returnType = AgentExecutionContextDTO.class, description =
         "Summarizes agent status. Used when user asks for agent status.",
@@ -725,8 +717,8 @@ public class AgentVerbs extends VerbBase {
         context.addMessages(messages);
         Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
         //log.info("Response is {}", resp);
-        for (Response.OutputItem choice : response.getOutputItems()) {
-            var content = choice.getContent().stream().filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType())).map(c -> c.getText()).findFirst().orElse("");
+        for (Response.Choice choice : response.getChoices()) {
+            var content = choice.getMessage().getContentAsString();
             if (content.startsWith("```json")) {
                 content = content.substring(7, content.length() - 3);
             } else if (content.startsWith("```")) {
@@ -830,8 +822,8 @@ public class AgentVerbs extends VerbBase {
         context.addMessages(messages);
         Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
         
-        for (Response.OutputItem choice : response.getOutputItems()) {
-            var content = choice.getContent().stream().filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType())).map(c -> c.getText()).findFirst().orElse("");
+        for (Response.Choice choice : response.getChoices()) {
+            var content = choice.getMessage().getContentAsString();
             if (content.startsWith("```json")) {
                 content = content.substring(7, content.length() - 3);
             } else if (content.startsWith("```")) {
@@ -1235,76 +1227,58 @@ public class AgentVerbs extends VerbBase {
      */
     @Verb(
         name = "lookup_agent_memory",
-        returnName = "memories",
         returnType = ObjectNode.class,
-        description = "Searches agent memories. Do not use this directly, always populate memoryLookup in response " +
-            "instead.",
+        description = "Searches agent memories using text-based lookup with optional filters. " +
+            "Use this to recall information from previous conversations or sessions. " +
+            "For example, if a user told you their name in a previous session, use this verb to look it up. " +
+            "Returns memories that match the query text, filtered by agent ID and markings if provided. " +
+            "Always check memory before asking users to repeat information they may have already provided.",
         requiresTokenManagement = true,
         argName = "memory_query",
-        exampleJson = "{ \"query\": \"user name\", \"agentId\": \"my-agent\", \"markings\": \"PUBLIC\", \"limit\": 10 }",
-        skipMemoryStorage = true
+        exampleJson = "{ \"query\": \"user name\", \"agentId\": \"my-agent\", \"markings\": \"PUBLIC\", \"limit\": 10 }"
     )
     public ObjectNode lookupAgentMemory(AgentExecution execution, AgentExecutionContextDTO executionContextDTO)
         throws ZtatException, JsonProcessingException {
         
         log.info("Looking up agent memories");
         
-        // Extract query parameters
+        // Extract query parameters - handle Optional.of() that throws on null
         String query = "";
         String agentId = null;
         String markings = "";
         int limit = 10;
         
-        Optional<JsonNode> queryNode = executionContextDTO.getExecutionArgument("memory_query", "query");
-        query = queryNode
-            .filter(node -> !node.isNull())  // Filter out null JsonNodes
-            .map(JsonNode::asText)
-            .filter(s -> s != null && !s.isBlank() && !"null".equals(s))
-            .orElse("");
-        log.debug("Query parameter extracted: '{}'", query);
+        try {
+            Optional<JsonNode> queryNode = executionContextDTO.getExecutionArgument("memory_query", "query");
+            query = queryNode.map(JsonNode::asText).orElse("");
+        } catch (NullPointerException e) {
+            // getExecutionArgument can throw NPE if value is null
+            log.debug("Query parameter not found or null");
+        }
         
-        Optional<JsonNode> agentIdNode = executionContextDTO.getExecutionArgument("memory_query", "agentId");
-        agentId = agentIdNode
-            .filter(node -> !node.isNull())
-            .map(JsonNode::asText)
-            .filter(s -> s != null && !s.isBlank() && !"null".equals(s))
-            .orElse(null);
-        log.debug("AgentId parameter extracted: {}", agentId);
+        try {
+            Optional<JsonNode> agentIdNode = executionContextDTO.getExecutionArgument("memory_query", "agentId");
+            agentId = agentIdNode.map(JsonNode::asText).orElse(null);
+        } catch (NullPointerException e) {
+            log.debug("AgentId parameter not found or null");
+        }
         
-        Optional<JsonNode> markingsNode = executionContextDTO.getExecutionArgument("memory_query", "markings");
-        markings = markingsNode
-            .filter(node -> !node.isNull())
-            .map(JsonNode::asText)
-            .filter(s -> s != null && !s.isBlank() && !"null".equals(s))
-            .orElse("");
-        log.debug("Markings parameter extracted: '{}'", markings);
+        try {
+            Optional<JsonNode> markingsNode = executionContextDTO.getExecutionArgument("memory_query", "markings");
+            markings = markingsNode.map(JsonNode::asText).orElse("");
+        } catch (NullPointerException e) {
+            log.debug("Markings parameter not found or null");
+        }
         
-        Optional<JsonNode> limitNode = executionContextDTO.getExecutionArgument("memory_query", "limit");
-        limit = limitNode.map(JsonNode::asInt).orElse(10);
-        log.debug("Limit parameter extracted: {}", limit);
-        
-        // If query is still empty, try to infer from recent conversation messages
-        if (query.isEmpty()) {
-            log.debug("Query parameter not provided, attempting to infer from recent messages");
-            List<Message> messages = executionContextDTO.getMessages();
-            if (messages != null && !messages.isEmpty()) {
-                // Get the most recent user message (check last 3 messages)
-                int lowerBound = Math.max(0, messages.size() - 3);
-                for (int i = messages.size() - 1; i >= lowerBound; i--) {
-                    Message msg = messages.get(i);
-                    String contentStr = msg.getContentAsString();
-                    if ("user".equals(msg.getRole()) && contentStr != null && !contentStr.isBlank()) {
-                        query = contentStr;
-                        log.info("Inferred query from recent user message: '{}'", query);
-                        break;
-                    }
-                }
-            }
+        try {
+            Optional<JsonNode> limitNode = executionContextDTO.getExecutionArgument("memory_query", "limit");
+            limit = limitNode.map(JsonNode::asInt).orElse(10);
+        } catch (NullPointerException e) {
+            log.debug("Limit parameter not found or null, using default");
         }
         
         if (query.isEmpty()) {
-            log.error("Query parameter is required for memory lookup but was not provided and could not be inferred");
-            throw new IllegalArgumentException("Query parameter is required for memory lookup. Please provide a search query.");
+            throw new IllegalArgumentException("Query parameter is required for memory lookup");
         }
         
         log.info("Memory lookup - query: '{}', agentId: {}, markings: {}, limit: {}", 
@@ -1335,7 +1309,7 @@ public class AgentVerbs extends VerbBase {
         if (isHtml(response)) {
             throw new RuntimeException("Received HTML response from memory search endpoint");
         }
-        //log.info("Memory search response: {}", response);
+        log.info("Memory search response: {}", response);
         // Parse the response
         JsonNode responseNode = JsonUtil.MAPPER.readTree(response);
         
@@ -1385,8 +1359,7 @@ public class AgentVerbs extends VerbBase {
             "Always prefer this over lookup_agent_memory when searching for conceptual information across sessions.",
         requiresTokenManagement = true,
         argName = "semantic_query",
-        exampleJson = "{ \"query\": \"user personal information\", \"agentId\": \"my-agent\", \"limit\": 5, \"threshold\": 0.75 }",
-        skipMemoryStorage = true
+        exampleJson = "{ \"query\": \"user personal information\", \"agentId\": \"my-agent\", \"limit\": 5, \"threshold\": 0.75 }"
     )
     public ObjectNode searchAgentMemorySemantic(AgentExecution execution, AgentExecutionContextDTO executionContextDTO)
         throws ZtatException, JsonProcessingException {

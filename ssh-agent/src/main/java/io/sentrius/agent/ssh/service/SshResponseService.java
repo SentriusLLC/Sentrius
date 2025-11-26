@@ -1,13 +1,9 @@
 package io.sentrius.agent.ssh.service;
 
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.dto.agents.AgentExecution;
 import io.sentrius.sso.core.exceptions.ZtatException;
-import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.AgentExecutionService;
 import io.sentrius.sso.core.services.agents.LLMService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
@@ -198,20 +194,45 @@ public class SshResponseService {
         var resp = llmService.askQuestion(agentExecution, chatRequest);
         Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
         //log.info("Response is {}", resp);
-        for (Response.Choice choice : response.getChoices()) {
-            var content = choice.getMessage().getContentAsString();
+        for (Response.OutputItem output : response.getOutputItems()) {
+
+            var content = output.getContent().stream()
+                .filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType()))
+                .map(Response.ContentItem::getText)
+                .findFirst()
+                .orElse(null);
+
+            if (content == null) {
+                continue;
+            }
+
             if (content.startsWith("```json")) {
                 content = content.substring(7, content.length() - 3);
             } else if (content.startsWith("```")) {
                 content = content.substring(3, content.length() - 3);
             }
+
             log.info("content is {}", content);
-            if (null != content && !content.isEmpty()) {
-                return content+ "\n\n(Your query has been logged for audit and provenance.)";
+
+            if (!content.isEmpty()) {
+                return content + "\n\n(Your query has been logged for audit and provenance.)";
             }
         }
 
+
         // Add minimal framing for the terminal
         return "Error getting Agent response (Your query has been logged for audit and provenance.)";
+    }
+
+    private static String stripCodeFence(String content) {
+        content = content.trim();
+
+        if (content.startsWith("```json")) {
+            return content.substring(7, content.length() - 3).trim();
+        }
+        if (content.startsWith("```")) {
+            return content.substring(3, content.length() - 3).trim();
+        }
+        return content;
     }
 }

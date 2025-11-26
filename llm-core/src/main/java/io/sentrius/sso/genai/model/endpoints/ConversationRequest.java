@@ -32,7 +32,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 public class ConversationRequest extends ApiEndPointRequest {
 
-    public static final String API_ENDPOINT = "https://api.openai.com/v1/chat/completions";
+    public static final String API_ENDPOINT = "https://api.openai.com/v1/responses";
 
     @Builder.Default
     private Float temperature = 1.0F;

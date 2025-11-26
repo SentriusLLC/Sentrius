@@ -303,10 +303,10 @@ public class AgentClientService {
     public AgentContextDTO getAgentContext(TokenDTO token, String agentContextId) throws ZtatException,
         JsonProcessingException {
         String url = "/api/v1/agent/context/" + agentContextId;
-        var response = zeroTrustClientService.callGetOnApi(token, url);
+        String response = zeroTrustClientService.callGetOnApi(token, url);
         if (response != null) {
-            AgentContextDTO context = JsonUtil.MAPPER.convertValue(response, AgentContextDTO.class);
-            return context;
+            log.info("Response is {}", response);
+            return JsonUtil.MAPPER.readValue(response, AgentContextDTO.class);
         }
         return null;
     }

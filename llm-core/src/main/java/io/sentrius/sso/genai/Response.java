@@ -1,95 +1,136 @@
 package io.sentrius.sso.genai;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.core.JsonParser;
+import io.sentrius.sso.core.utils.JsonUtil;
+import io.sentrius.sso.genai.model.LLMResponse;
+import lombok.*;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
- * Response class is responsible for collecting and storing user responses. It provides a string
- * concatenation method to combine all responses. Use the 'addResponse' method to collect user
- * responses and the 'concatenateResponses' method to combine them into a single string.
+ * OpenAI Responses API response model.
+ *
+ * This replaces legacy Chat Completions (choices[]) handling.
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Response {
 
-    @JsonProperty(value = "id")
-    public String id;
+    // =========================
+    // Top-level fields
+    // =========================
 
-    @JsonProperty(value = "object")
-    public String object;
+    private String id;
+    private String object;
 
-    @JsonProperty(value = "created")
-    public Long created;
+    @JsonProperty("created")
+    @JsonAlias("created_at")
+    private Long created;
 
-    @JsonProperty(value = "model")
-    public String model;
+    private String model;
 
-    @JsonProperty(value = "choices")
-    public List<Choice> choices;
+    /** Core response output (assistant messages, tool calls, etc.) */
+    @JsonProperty("output")
+    @JsonAlias("output_items")
+    private List<OutputItem> outputItems;
 
-    @JsonProperty(value = "usage")
-    public Usage usage;
+    private Usage usage;
 
-    @JsonProperty(value = "service_tier", required = false)
-    public String serviceTier;
+    @JsonProperty("service_tier")
+    private String serviceTier;
 
-    /**
-     * Response class is responsible for collecting and storing user responses. It provides a string
-     * concatenation method to combine all responses. Use the 'addResponse' method to collect user
-     * responses and the 'concatenateResponses' method to combine them into a single string.
-     */
+    @JsonProperty("system_fingerprint")
+    private String systemFingerprint;
+
+    // =========================
+    // Nested models
+    // =========================
+
     @Data
-    public static class Choice {
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class OutputItem {
 
-        @JsonProperty(value = "index")
-        public Integer index;
+        private String id;
+        private String type;
+        private String status;
+        private String role;
+        private List<ContentItem> content;
 
-        @JsonProperty(value = "message")
-        public Message message;
-
-        @JsonProperty(value = "finish_reason")
-        public String finishReason;
-
-        @JsonProperty(value = "logprobs")
-        public Integer logprobs;
+        /** Safe accessor */
+        public List<ContentItem> safeContent() {
+            return content == null ? Collections.emptyList() : content;
+        }
     }
 
-    /**
-     * Response class is responsible for collecting and storing user responses. It provides a string
-     * concatenation method to combine all responses. Use the 'addResponse' method to collect user
-     * responses and the 'concatenateResponses' method to combine them into a single string.
-     */
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class ContentItem {
+
+        private String type;
+        private String text;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Usage {
 
-        @JsonProperty(value = "prompt_tokens")
-        public Integer promptTokens;
+        @JsonProperty("input_tokens")
+        private Integer inputTokens;
 
-        @JsonProperty(value = "completion_tokens")
-        public Integer completionTokens;
+        @JsonProperty("output_tokens")
+        private Integer outputTokens;
 
-        @JsonProperty(value = "total_tokens")
-        public Integer totalTokens;
+        @JsonProperty("total_tokens")
+        private Integer totalTokens;
     }
 
-    @JsonProperty(value = "system_fingerprint")
-    String systemFingerprint;
+    // =========================
+    // Convenience helpers
+    // =========================
+
+    /** Defensive accessor */
+    public List<OutputItem> safeOutputItems() {
+        return outputItems == null ? Collections.emptyList() : outputItems;
+    }
 
     /**
-     * This method concatenates all responses in a Response object and returns a string.
-     *
-     * @return      a string that contains all responses in a Response object
+     * Concatenates all assistant output text into one string.
+     * Safe for empty responses.
      */
     public String concatenateResponses() {
-        return getChoices().stream().map(x -> x.getMessage().getContentAsString()).collect(Collectors.joining());
+        return safeOutputItems().stream()
+            .filter(o -> "assistant".equals(o.getRole()))
+            .flatMap(o -> o.safeContent().stream())
+            .filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType()))
+            .map(ContentItem::getText)
+            .collect(Collectors.joining());
+    }
+
+    /**
+     * Returns the first assistant message text (most common use case).
+     */
+    public String getFirstAssistantText() {
+        return safeOutputItems().stream()
+            .filter(o -> "assistant".equals(o.getRole()))
+            .flatMap(o -> o.safeContent().stream())
+            .filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType()))
+            .map(ContentItem::getText)
+            .findFirst()
+            .orElse("");
     }
 }

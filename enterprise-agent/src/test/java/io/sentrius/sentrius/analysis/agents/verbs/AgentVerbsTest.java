@@ -134,11 +134,12 @@ class AgentVerbsTest {
 
         // Mock LLM response
         String llmResponse = "{"
-            + "\"choices\": ["
+            + "\"output_items\": ["
             + "  {"
-            + "    \"message\": {"
-            + "      \"content\": \"{\\\"answer\\\": \\\"The agent has 3 messages and 2 memory items.\\\", \\\"details\\\": \\\"Agent is currently processing tasks.\\\"}\""
-            + "    }"
+            + "    \"role\": \"assistant\","
+            + "    \"content\": ["
+            + "      {\"type\": \"output_text\", \"text\": \"{\\\"answer\\\": \\\"The agent has 3 messages and 2 memory items.\\\", \\\"details\\\": \\\"Agent is currently processing tasks.\\\"}\"}"
+            + "    ]"
             + "  }"
             + "]"
             + "}";
@@ -181,11 +182,12 @@ class AgentVerbsTest {
 
         // Mock LLM response
         String llmResponse = "{"
-            + "\"choices\": ["
+            + "\"output_items\": ["
             + "  {"
-            + "    \"message\": {"
-            + "      \"content\": \"{\\\"answer\\\": \\\"Agent is active with 1 message.\\\"}\" "
-            + "    }"
+            + "    \"role\": \"assistant\","
+            + "    \"content\": ["
+            + "      {\"type\": \"output_text\", \"text\": \"{\\\"answer\\\": \\\"Agent is active with 1 message.\\\"}\"}"
+            + "    ]"
             + "  }"
             + "]"
             + "}";
@@ -218,11 +220,12 @@ class AgentVerbsTest {
 
         // Mock LLM response with plain text
         String llmResponse = "{"
-            + "\"choices\": ["
+            + "\"output_items\": ["
             + "  {"
-            + "    \"message\": {"
-            + "      \"content\": \"The agent is currently active and has processed 1 message.\""
-            + "    }"
+            + "    \"role\": \"assistant\","
+            + "    \"content\": ["
+            + "      {\"type\": \"output_text\", \"text\": \"The agent is currently active and has processed 1 message.\"}"
+            + "    ]"
             + "  }"
             + "]"
             + "}";
@@ -268,11 +271,12 @@ class AgentVerbsTest {
 
         // Mock LLM response
         String llmResponse = "{"
-            + "\"choices\": ["
+            + "\"output_items\": ["
             + "  {"
-            + "    \"message\": {"
-            + "      \"content\": \"{\\\"answer\\\": \\\"Agent has persistent memory.\\\"}\" "
-            + "    }"
+            + "    \"role\": \"assistant\","
+            + "    \"content\": ["
+            + "      {\"type\": \"output_text\", \"text\": \"{\\\"answer\\\": \\\"Agent has persistent memory.\\\"}\"}"
+            + "    ]"
             + "  }"
             + "]"
             + "}";

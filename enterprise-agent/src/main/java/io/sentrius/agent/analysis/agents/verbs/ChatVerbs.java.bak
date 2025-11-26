@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Optional;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -99,62 +98,28 @@ public class ChatVerbs extends VerbBase{
 
             var history = getContextWindow(executionContext.getMessages(), 1024*96 - (size));
             messages.addAll(history);
-            messages.add(
-                Message.builder()
-                    .role("system")
-                    .content(
-                        "EXECUTION PROTOCOL — STRICT MODE\n\n" +
-
-                            "You are not a conversational agent.\n" +
-                            "You are a deterministic execution planner operating inside a machine-enforced protocol.\n\n" +
-
-                            "RULES:\n" +
-                            "- You MUST respond with EXACTLY ONE valid JSON object.\n" +
-                            "- You MUST NOT include conversational text, explanations, markdown, or prose.\n" +
-                            "- You MUST NOT ask the user any questions.\n" +
-                            "- You MUST NOT request clarification.\n" +
-                            "- You MUST select and execute the next operation using the available verbs.\n" +
-                            "- If required information is missing, you MUST infer conservatively OR return an executable fallback.\n" +
-                            "- Returning free-form text is a protocol violation.\n\n" +
-
-                            "- USER INTERACTION RULE:\n" +
-                            "- If the user input is a greeting (e.g., 'hello', 'hi', 'hey', 'good morning'),\n" +
-                            "  you MUST include a brief greeting ONLY inside the responseForUser field.\n" +
-                            "- Conversational language MUST NOT appear outside responseForUser.\n" +
-                            "- Conversational text MUST NOT affect nextOperation, arguments, or memoryLookup. " +
-                            "Always include a user response\n" +
-
-                            "MEMORY RULES:\n" +
-                            "- If required information is NOT in the current context, you MUST populate the memoryLookup field.\n" +
-                            "- memoryLookup is executed BEFORE nextOperation.\n" +
-                            "- Leave memoryLookup empty ONLY if the information is already present.\n\n" +
-
-                            "MANDATORY RESPONSE FORMAT (LLMResponse):\n" +
-                            "{\n" +
-                            "  \"previousOperation\": \"<string or empty>\" ,\n" +
-                            "  \"nextOperation\": \"<verb name or empty>\" ,\n" +
-                            "  \"memoryLookup\": \"<lookup query or empty>\" ,\n" +
-                            "  \"arguments\": { <arguments for nextOperation> },\n" +
-                            "  \"summaryForLLM\": \"<concise machine summary>\",\n" +
-                            "  \"responseForUser\": \"<user-visible output>\"\n" +
-                            "}\n\n" +
-
-                            "FAILURE MODE:\n" +
-                            "- If NO operation is valid, return nextOperation as an empty string.\n" +
-                            "- NEVER invent verbs.\n" +
-                            "- NEVER emit partial JSON.\n" +
-                            "- NEVER produce more than one JSON object.\n"
-                    )
-                    .build()
-            );
+            messages.add(Message.builder().role("system").content("Please ensure your nextOperation abides by the " +
+                "following json format and leave it empty if user's request doesn't require explicit use of system " +
+                "operations" +
+                ". Please summarize prior terminal " +
+                "sessions, using " +
+                "terminal output if needed " +
+                "for clarity of the next LLM request and for the user. " +
+                "IMPORTANT: Use the 'memoryLookup' field to search for information that is NOT in the current context. " +
+                "For example, if the user mentions something from a previous conversation that is not in the recent messages, " +
+                "populate memoryLookup with a query string to retrieve that information. " +
+                "Leave memoryLookup empty if the information is already available in the context or not needed. " +
+                "The memory lookup will be executed BEFORE the nextOperation. " +
+                "Ensure your all future responses meets this " +
+                "json format (LLMResponse format): " + terminalResponse).build());
             messages.add(Message.builder().role("user").content(userMessage.getContentAsString()).build());
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
             executionContext.addMessages( messages );
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             log.info("Response is {}", resp);
-            for (Response.OutputItem choice : response.getOutputItems()) {
-                var content = choice.getContent().stream().filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType())).map(c -> c.getText()).findFirst().orElse("");
+            for (Response.Choice choice : response.getChoices()) {
+                var content = choice.getMessage().getContentAsString();
                 if (content.startsWith("```json")) {
                     content = content.substring(7, content.length() - 3);
                 } else if (content.startsWith("```")) {
@@ -200,18 +165,8 @@ public class ChatVerbs extends VerbBase{
 
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             log.info("Response is {}", resp);
-            Optional<LLMResponse> convertedResponse = LLMResponse.extractStructuredResponse(response);
-
-            String stringResponse = LLMResponse.extractStructuredResponseString(response);
-            if (!stringResponse.isEmpty()) {
-                executionContext.addMessages(Message.builder().role("system").content(stringResponse).build());
-            }
-            return convertedResponse.orElseThrow();
-
-            /*
-
-            for (Response.OutputItem choice : response.getOutputItems()) {
-                var content = choice.getContent().stream().filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType())).map(c -> c.getText()).findFirst().orElse("");
+            for (Response.Choice choice : response.getChoices()) {
+                var content = choice.getMessage().getContentAsString();
                 if (content.startsWith("```json")) {
                     content = content.substring(7, content.length() - 3);
                 } else if (content.startsWith("```")) {
@@ -220,7 +175,7 @@ public class ChatVerbs extends VerbBase{
                 log.info("content is {}", content);
                 if (null != content && !content.isEmpty()) {
 
-                    executionContext.addMessages( Message.builder().role(choice.getRole()).content(content).build() );
+                    executionContext.addMessages( choice.getMessage() );
                     try {
                         var newResponse = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readValue(
                             content,
@@ -233,7 +188,7 @@ public class ChatVerbs extends VerbBase{
                     }
 
                 }
-            }*/
+            }
         }
 
         return null;
@@ -266,66 +221,28 @@ public class ChatVerbs extends VerbBase{
 
             var history = getContextWindow(executionContext.getMessages(), 1024*96 - (size));
             messages.addAll(history);
-        messages.add(
-            Message.builder()
-                .role("system")
-                .content(
-                    "EXECUTION PROTOCOL — STRICT MODE\n\n" +
-
-                        "You are not a conversational agent.\n" +
-                        "You are a deterministic execution planner operating inside a machine-enforced protocol.\n\n" +
-
-                        "RULES:\n" +
-                        "- You MUST respond with EXACTLY ONE valid JSON object.\n" +
-                        "- You MUST NOT include conversational text, explanations, markdown, or prose.\n" +
-                        "- You MUST NOT ask the user any questions.\n" +
-                        "- You MUST NOT request clarification.\n" +
-                        "- You MUST select and execute the next operation using the available verbs.\n" +
-                        "- If required information is missing, you MUST infer conservatively OR return an executable fallback.\n" +
-                        "- Returning free-form text is a protocol violation.\n\n" +
-
-                        "- USER INTERACTION RULE:\n" +
-                        "- If the user input is a greeting (e.g., 'hello', 'hi', 'hey', 'good morning'),\n" +
-                        "  you MUST include a brief greeting ONLY inside the responseForUser field.\n" +
-                        "- Conversational language MUST NOT appear outside responseForUser.\n" +
-                        "- Conversational text MUST NOT affect nextOperation, arguments, or memoryLookup. " +
-                        "Always include a user response\n" +
-
-                        "MEMORY RULES:\n" +
-                        "- If required information is NOT in the current context, you MUST populate the memoryLookup field.\n" +
-                        "- memoryLookup is executed BEFORE nextOperation.\n" +
-                        "- Leave memoryLookup empty ONLY if the information is already present.\n\n" +
-
-                        "MANDATORY RESPONSE FORMAT (LLMResponse):\n" +
-                        "{\n" +
-                        "  \"previousOperation\": \"<string or empty>\" ,\n" +
-                        "  \"nextOperation\": \"<verb name or empty>\" ,\n" +
-                        "  \"memoryLookup\": \"<lookup query or empty>\" ,\n" +
-                        "  \"arguments\": { <arguments for nextOperation> },\n" +
-                        "  \"summaryForLLM\": \"<concise machine summary>\",\n" +
-                        "  \"responseForUser\": \"<user-visible output>\"\n" +
-                        "}\n\n" +
-
-                        "FAILURE MODE:\n" +
-                        "- If NO operation is valid, return nextOperation as an empty string.\n" +
-                        "- NEVER invent verbs.\n" +
-                        "- NEVER emit partial JSON.\n" +
-                        "- NEVER produce more than one JSON object.\n"
-                )
-                .build()
-        );
-
-        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+            messages.add(Message.builder().role("system").content("Please ensure your nextOperation abides by the " +
+                "following json format. Don't leave next operation empty, restart the session if you need, and you " +
+                "are not interacting with the user, so don't request info from the user, but instead execute the " +
+                "necessary endpoints" +
+                "." +
+                ". " +
+                ". Please summarize messaging, using  " +
+                "for clarity of the next LLM request and for the user. " +
+                "IMPORTANT: Use the 'memoryLookup' field to search for information that is NOT in the current context. " +
+                "For example, if you need information from previous sessions that is not in recent messages, " +
+                "populate memoryLookup with a query string to retrieve that information. " +
+                "Leave memoryLookup empty if the information is already available in the context or not needed. " +
+                "The memory lookup will be executed BEFORE the nextOperation. " +
+                "Ensure your all future responses meets this " +
+                "json format (LLMResponse format): " + terminalResponse).build());
+            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
             executionContext.addMessages( messages );
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             log.info("Response is {}", resp);
-            Optional<LLMResponse> convertedResponse = LLMResponse.extractStructuredResponse(response);
-
-            return convertedResponse.orElseGet(() -> LLMResponse.builder().build());
-            /*
-            for (Response.OutputItem choice : response.getOutputItems()) {
-                var content = choice.getContent().stream().filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType())).map(c -> c.getText()).findFirst().orElse("");
+            for (Response.Choice choice : response.getChoices()) {
+                var content = choice.getMessage().getContentAsString();
                 if (content.startsWith("```json")) {
                     content = content.substring(7, content.length() - 3);
                 } else if (content.startsWith("```")) {
@@ -344,7 +261,8 @@ public class ChatVerbs extends VerbBase{
                         return LLMResponse.builder().responseForUser(content).build();
                     }
                 }
-            }*/
+            }
+        return LLMResponse.builder().build();
     }
 
 
@@ -451,24 +369,19 @@ public class ChatVerbs extends VerbBase{
             }
 
 
+            //messages.add(Message.builder().role("assistant").content("prior response: " + lastMessage
+        // .getTerminalSummaryForLLM()).build());
         if (!planExecutionOutput.isEmpty()) {
-            messages.add(Message.builder().role("system").content(planExecutionOutput).build());
+            messages.add(Message.builder().role("assistant").content(planExecutionOutput).build());
         }
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
 
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             log.info("Response is {}", resp);
-        Optional<LLMResponse> convertedResponse = LLMResponse.extractStructuredResponse(response);
-        String stringResponse = LLMResponse.extractStructuredResponseString(response);
-        if (!stringResponse.isEmpty()) {
-            executionContext.addMessages(Message.builder().role("system").content(stringResponse).build());
-        }
-        return convertedResponse.orElseGet(() -> LLMResponse.builder().build());
-            /*
-            for (Response.OutputItem choice : response.getOutputItems()) {
-                var content = choice.getContent().stream().filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType())).map(c -> c.getText()).findFirst().orElse("");
-                executionContext.addMessages(Message.builder().role(choice.getRole()).content(content).build());
+            for (Response.Choice choice : response.getChoices()) {
+                var content = choice.getMessage().getContentAsString();
+                executionContext.addMessages(choice.getMessage());
                 if (content.startsWith("```json")) {
                     content = content.substring(7, content.length() - 3);
                 } else if (content.startsWith("```")) {
@@ -488,7 +401,7 @@ public class ChatVerbs extends VerbBase{
 
                 }
             }
-        return null;*/
+        return null;
     }
 
 
