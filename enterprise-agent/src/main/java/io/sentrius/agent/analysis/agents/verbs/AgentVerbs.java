@@ -587,112 +587,6 @@ public class AgentVerbs extends VerbBase {
     }
 
 
-    @Verb(
-        name = "create_agent_context", returnType = AgentContextDTO.class, description = "Creates an agent Context." +
-        " must be done before creating an agent.",
-        requiresTokenManagement = true,
-        returnName = "created_context",
-        exampleJson = "{ \"context\": \"Notify when a new user is added\" }"
-    )
-    public AgentContextDTO createAgentContext(AgentExecution execution, AgentExecutionContextDTO context)
-        throws ZtatException, Exception {
-        log.info("Creating agent context");
-        var contextArgs = context.getExecutionArgs();
-        if (contextArgs == null || contextArgs.isEmpty()) {
-            throw new RuntimeException("Context is required to create an agent context");
-        }
-        var name = context.getExecutionArgument("agentName");
-
-        String agentName = name.isPresent() ? name.get().toString() : "name";
-        if (!agentName.isEmpty()) {
-            agentName = agentName.replaceAll("_", "-");
-        }
-
-        var originalContext = context.getExecutionArgument("context");
-
-        var requestDtoContext = normalize( originalContext.orElseThrow().toString() );
-        requestDtoContext += ". Please request endpoints to perform your work.";
-        AgentContextRequestDTO dto = AgentContextRequestDTO.builder().context(requestDtoContext).
-            description(requestDtoContext).name(agentName).build();
-        var createdContext = agentClientService.createAgentContext(execution, dto);
-        // Here you would typically create a context in your system, e.g., store it in a database or cache.
-
-        context.setAgentContext(AgentContextDTO.builder()
-            .contextId(createdContext.getContextId())
-            .name(createdContext.getName())
-            .context(createdContext.getContext())
-            .description(createdContext.getDescription())
-            .build());
-
-        // load the endpoints
-        var messages = new ArrayList<Message>();
-
-        messages.add(Message.builder().role("system").content("The user will provide the context of what an agent to " +
-            "be created will do. Respond with a json response { \"endpoints_like\" : [ array ] } where array is the " +
-            "features " +
-                "or tools to be called. Do not put endpoints in there, just text and explanation of the endpoint. " +
-            "We'll perform a text " +
-            "search to find" +
-            " endpoints").build());
-        messages.add(Message.builder().role("user").content(originalContext.get().asText()).build());
-
-        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
-        var resp = llmService.askQuestion(execution, chatRequest);
-
-        Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
-        log.info("Response is {}", resp);
-        ArrayNode endpointsLikeList = JsonUtil.MAPPER.createArrayNode();
-        for (Response.OutputItem choice : response.getOutputItems()) {
-            var content = choice.getContent().stream().filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType())).map(c -> c.getText()).findFirst().orElse("");
-            if (content.startsWith("```json")) {
-                content = content.substring(7, content.length() - 3);
-            } else if (content.startsWith("```")) {
-                content = content.substring(3, content.length() - 3);
-            }
-            log.info("content is {}", content);
-            if (null != content && !content.isEmpty()) {
-
-                var node = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readTree(content);
-
-                if (node.get("endpoints_like") == null || !node.get("endpoints_like").isArray()) {
-                    log.info("No endpoints_like found in response");
-                    continue;
-                }
-                var arrayNode = (ArrayNode) node.get("endpoints_like");
-                for (JsonNode localNode : arrayNode) {
-                    if (localNode.isNull() || localNode.asText().isEmpty()) {
-                        continue;
-                    }
-                    if (localNode.has("method") && localNode.has("endpoint")) {
-
-                        if (localNode.get("endpoint").asText().isEmpty() || localNode.get("method").asText().isEmpty()) {
-                            log.info("Skipping empty endpoint or method");
-                            continue;
-                        }
-
-                        endpointsLikeList.add(localNode.asText());
-                    }
-
-                }
-
-            }
-        }
-
-        if (endpointsLikeList.size() > 0) {
-
-            ObjectNode endpointsLike = JsonUtil.MAPPER.createObjectNode();
-            endpointsLike.put("context", originalContext.orElseThrow().toString());
-            endpointsLike.put("endpoints_like", endpointsLikeList);
-            context.setExecutionArgs(endpointsLike);
-            var endpoints = getEndpointsLike(execution, context);
-            log.info("Endpoints like {}", endpoints);
-
-            context.addToMemory("endpoints", endpoints);
-        }
-
-        return createdContext;
-    }
-
     private String normalize(String s) {
         if (s == null) return null;
         if (s.startsWith("\"") && s.endsWith("\"")) {
@@ -865,74 +759,214 @@ public class AgentVerbs extends VerbBase {
         return result;
     }
 
-    @Verb(name = "create_agent", returnType = AgentExecutionContextDTO.class, description = "Creates an agent who has the " +
-        "context. a previously defined contextId is required. previously defined endpoints can be used to build a " +
-        "trust policy. must call create_agent_context before this verb. agent type is chat or chat-autonomous. chat is chat only, chat-autonomous is chat and autonomous. determine based on workload.",
-        exampleJson = "{  \"agentName\": \"agentName\", \"agentType\": \"agentType\" }",
-        requiresTokenManagement = true )
-    public ObjectNode createAgent(AgentExecution execution, AgentExecutionContextDTO context)
-        throws ZtatException, JsonProcessingException {
-        log.info("Creating agent with context: {}", context);
+    /**
+     * Creates an agent with its context, trust policy, and endpoint discovery in a single call.
+     * This is the primary method for agent creation, handling context creation, 
+     * LLM-driven endpoint discovery, trust policy generation, and agent registration.
+     *
+     * @param execution The agent execution context containing authentication and execution details
+     * @param context The execution context DTO containing agentName, context, and agentType parameters
+     * @return ObjectNode containing the created agent's ID and context information
+     * @throws ZtatException If there is an error during API communication
+     * @throws Exception If there is an error during LLM communication or endpoint discovery
+     */
+    @Verb(
+        name = "create_agent_with_context",
+        returnType = ObjectNode.class,
+        description = "Creates an agent with context, trust policy, and endpoint discovery in a single call. " +
+            "This handles context creation, endpoint discovery via LLM, trust policy generation, and agent creation. " +
+            "Agent type can be 'chat' (chat only) or 'chat-autonomous' (chat and autonomous). " +
+            "Determine agent type based on whether the workload requires autonomous operation.",
+        exampleJson = "{ \"agentName\": \"my-agent\", \"context\": \"Notify when a new user is added\", \"agentType\": \"chat\" }",
+        requiresTokenManagement = true,
+        returnName = "created_agent"
+    )
+    public ObjectNode createAgentWithContext(AgentExecution execution, AgentExecutionContextDTO context)
+        throws ZtatException, Exception {
+        log.info("Creating agent with context in a single call");
 
-        var contextId=context.getSafeLabel("created_context", "contextId");
-        var agentName = context.getSafeLabel("agentName");
-        var agentType = context.getSafeLabel("agentType");
-        Optional<ObjectNode> optEndpoints = context.getExecutionArgumentScoped("endpoints", ObjectNode.class);
-        var policyId = "";
-        log.info("Context ID is {}, agentName is {}", contextId, agentName);
-        if (null != optEndpoints && optEndpoints.isPresent()) {
-            var policyBuilder  = ATPLPolicy.builder()
-                .version("v0")
-                .description("Policy for agent " + agentName)
-                .policyId(UUID.randomUUID().toString());
-
-            var endpoints = optEndpoints.get().get("endpoints");
-            log.info("Endpoints are {}", endpoints);
-            List<Capability> capabilities = new ArrayList<>();
-            for(JsonNode endpoint : endpoints) {
-                    var endpointStr = endpoint.get("endpoint").asText();
-
-                    Capability capability = Capability.builder()
-                        .description(endpoint.get("name").asText())
-                        .endpoints(List.of(extractNormalizedPath(endpointStr)))
-                        .build();
-                    capabilities.add(capability);
-
-
-            }
-            CapabilitySet capabilitySet = CapabilitySet.builder()
-                .primitives(capabilities)
-                .build();
-            policyBuilder.capabilities(capabilitySet);
-
-            ATPLPolicy policy = policyBuilder.build();
-
-            policyId = savePolicy(execution, true, policy);
-
-        } else {
-            log.info("No endpoints provided, using default");
+        // Step 1: Extract and validate parameters
+        var contextArgs = context.getExecutionArgs();
+        if (contextArgs == null || contextArgs.isEmpty()) {
+            throw new RuntimeException("Arguments are required to create an agent. Expected: agentName, context, agentType");
         }
 
+        var nameArg = context.getExecutionArgument("agentName");
+        String agentName = nameArg.isPresent() ? nameArg.get().asText() : "agent-" + UUID.randomUUID().toString().substring(0, 8);
+        if (!agentName.isEmpty()) {
+            agentName = agentName.replaceAll("_", "-");
+        }
 
+        var originalContext = context.getExecutionArgument("context");
+        if (originalContext.isEmpty()) {
+            throw new RuntimeException("Context is required to create an agent. Please provide a description of what the agent should do.");
+        }
 
-        var agentBuilder =  AgentRegistrationDTO.builder()
-            .agentContextId(contextId)
+        var agentTypeArg = context.getExecutionArgument("agentType");
+        String agentType = agentTypeArg.isPresent() ? agentTypeArg.get().asText() : "chat";
+
+        log.info("Creating agent '{}' with type '{}' and context: {}", agentName, agentType, originalContext.get().asText());
+
+        // Step 2: Create the agent context via API
+        var requestDtoContext = normalize(originalContext.get().asText());
+        requestDtoContext += ". Please request endpoints to perform your work.";
+        AgentContextRequestDTO dto = AgentContextRequestDTO.builder()
+            .context(requestDtoContext)
+            .description(requestDtoContext)
+            .name(agentName)
+            .build();
+        var createdContext = agentClientService.createAgentContext(execution, dto);
+
+        if (createdContext == null || createdContext.getContextId() == null) {
+            throw new RuntimeException("Failed to create agent context");
+        }
+
+        context.setAgentContext(AgentContextDTO.builder()
+            .contextId(createdContext.getContextId())
+            .name(createdContext.getName())
+            .context(createdContext.getContext())
+            .description(createdContext.getDescription())
+            .build());
+
+        log.info("Created agent context with ID: {}", createdContext.getContextId());
+
+        // Step 3: Use LLM to discover endpoints based on context
+        var messages = new ArrayList<Message>();
+        messages.add(Message.builder().role("system").content("The user will provide the context of what an agent to " +
+            "be created will do. Respond with a json response { \"endpoints_like\" : [ array ] } where array is the " +
+            "features " +
+            "or tools to be called. Do not put endpoints in there, just text and explanation of the endpoint. " +
+            "We'll perform a text " +
+            "search to find" +
+            " endpoints").build());
+        messages.add(Message.builder().role("user").content(originalContext.get().asText()).build());
+
+        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+        var resp = llmService.askQuestion(execution, chatRequest);
+
+        Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
+        log.info("LLM response for endpoint discovery: {}", resp);
+
+        ArrayNode endpointsLikeList = JsonUtil.MAPPER.createArrayNode();
+        for (Response.OutputItem choice : response.getOutputItems()) {
+            var content = choice.getContent().stream()
+                .filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType()))
+                .map(c -> c.getText())
+                .findFirst()
+                .orElse("");
+            if (content.startsWith("```json")) {
+                content = content.substring(7, content.length() - 3);
+            } else if (content.startsWith("```")) {
+                content = content.substring(3, content.length() - 3);
+            }
+
+            if (null != content && !content.isEmpty()) {
+                var node = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readTree(content);
+
+                if (node.get("endpoints_like") == null || !node.get("endpoints_like").isArray()) {
+                    log.info("No endpoints_like found in response");
+                    continue;
+                }
+                var arrayNode = (ArrayNode) node.get("endpoints_like");
+                for (JsonNode localNode : arrayNode) {
+                    if (localNode.isNull() || localNode.asText().isEmpty()) {
+                        continue;
+                    }
+                    if (localNode.has("method") && localNode.has("endpoint")) {
+                        if (localNode.get("endpoint").asText().isEmpty() || localNode.get("method").asText().isEmpty()) {
+                            log.info("Skipping empty endpoint or method");
+                            continue;
+                        }
+                        endpointsLikeList.add(localNode.asText());
+                    } else {
+                        // Handle simple text entries (common LLM response format)
+                        endpointsLikeList.add(localNode.asText());
+                    }
+                }
+            }
+        }
+
+        // Step 4: Discover actual endpoints based on LLM suggestions
+        ObjectNode discoveredEndpoints = null;
+        if (endpointsLikeList.size() > 0) {
+            ObjectNode endpointsLike = JsonUtil.MAPPER.createObjectNode();
+            endpointsLike.put("context", originalContext.get().asText());
+            endpointsLike.put("endpoints_like", endpointsLikeList);
+            context.setExecutionArgs(endpointsLike);
+            discoveredEndpoints = getEndpointsLike(execution, context);
+            log.info("Discovered endpoints: {}", discoveredEndpoints);
+            context.addToMemory("endpoints", discoveredEndpoints);
+        }
+
+        // Step 5: Build trust policy from discovered endpoints
+        String policyId = "";
+        if (discoveredEndpoints != null && discoveredEndpoints.has("endpoints")) {
+            var endpoints = discoveredEndpoints.get("endpoints");
+            if (endpoints.isArray() && endpoints.size() > 0) {
+                var policyBuilder = ATPLPolicy.builder()
+                    .version("v0")
+                    .description("Policy for agent " + agentName)
+                    .policyId(UUID.randomUUID().toString());
+
+                List<Capability> capabilities = new ArrayList<>();
+                for (JsonNode endpoint : endpoints) {
+                    if (endpoint.has("endpoint") && endpoint.has("name")) {
+                        var endpointStr = endpoint.get("endpoint").asText();
+                        Capability capability = Capability.builder()
+                            .description(endpoint.get("name").asText())
+                            .endpoints(List.of(extractNormalizedPath(endpointStr)))
+                            .build();
+                        capabilities.add(capability);
+                    }
+                }
+
+                if (!capabilities.isEmpty()) {
+                    CapabilitySet capabilitySet = CapabilitySet.builder()
+                        .primitives(capabilities)
+                        .build();
+                    policyBuilder.capabilities(capabilitySet);
+
+                    ATPLPolicy policy = policyBuilder.build();
+                    policyId = savePolicy(execution, true, policy);
+                    log.info("Created trust policy with ID: {}", policyId);
+                }
+            }
+        }
+
+        // Step 6: Create the agent with context and policy
+        var agentBuilder = AgentRegistrationDTO.builder()
+            .agentContextId(createdContext.getContextId().toString())
             .clientId(UUID.randomUUID().toString())
             .agentType(agentType)
             .agentName(agentName);
-        if (!policyId.isEmpty()){
+
+        if (!policyId.isEmpty()) {
             log.info("Using policyId {}", policyId);
             agentBuilder.agentPolicyId(policyId);
         } else {
-            log.info("No policyId provided, using default");
+            log.info("No policy created, using default policy");
         }
 
         AgentRegistrationDTO agentRegistration = agentBuilder.build();
-        var response = agentClientService.createAgent(execution, agentRegistration);
-        ObjectNode contextNode = JsonUtil.MAPPER.createObjectNode();
-        contextNode.put("agentId", agentRegistration.getAgentName());
+        var agentResponse = agentClientService.createAgent(execution, agentRegistration);
+        log.info("Agent creation response: {}", agentResponse);
 
-        return contextNode;
+        // Step 7: Build and return the result
+        ObjectNode resultNode = JsonUtil.MAPPER.createObjectNode();
+        resultNode.put("agentId", agentName);
+        resultNode.put("agentName", agentName);
+        resultNode.put("agentType", agentType);
+        resultNode.put("contextId", createdContext.getContextId().toString());
+        resultNode.put("policyId", policyId.isEmpty() ? "default" : policyId);
+        
+        if (discoveredEndpoints != null && discoveredEndpoints.has("endpoints")) {
+            resultNode.put("endpointCount", discoveredEndpoints.get("endpoints").size());
+        } else {
+            resultNode.put("endpointCount", 0);
+        }
+
+        log.info("Successfully created agent '{}' with context and trust policy", agentName);
+        return resultNode;
     }
 
     @Verb(name = "get_agent_status", returnType = AgentExecutionContextDTO.class, description = "Queries the agent " +

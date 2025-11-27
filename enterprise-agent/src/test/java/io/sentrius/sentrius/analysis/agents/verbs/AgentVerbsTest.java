@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -707,5 +708,156 @@ class AgentVerbsTest {
         assertTrue(result.has("endpoints"));
         assertEquals(1, result.get("endpoints").size());
         assertEquals("login", result.get("endpoints").get(0).get("name").asText());
+    }
+
+    @Test
+    void createAgentWithContextCombinesAllSteps() throws Exception, ZtatException {
+        // Given
+        String executionId = UUID.randomUUID().toString();
+        AgentExecution execution = AgentExecution.builder()
+            .executionId(executionId)
+            .build();
+
+        AgentExecutionContextDTO requestContext = AgentExecutionContextDTO.builder().build();
+        ObjectNode queryArgs = JsonUtil.MAPPER.createObjectNode();
+        queryArgs.put("agentName", "test-combined-agent");
+        queryArgs.put("context", "Notify when a new user is added to the system");
+        queryArgs.put("agentType", "chat-autonomous");
+        requestContext.setExecutionArgs(queryArgs);
+
+        // Mock agent context creation
+        UUID contextId = UUID.randomUUID();
+        AgentContextDTO createdContext = AgentContextDTO.builder()
+            .contextId(contextId)
+            .name("test-combined-agent")
+            .context("Notify when a new user is added to the system. Please request endpoints to perform your work.")
+            .description("Notify when a new user is added to the system. Please request endpoints to perform your work.")
+            .build();
+        when(agentClientService.createAgentContext(eq(execution), any(io.sentrius.sso.core.dto.agents.AgentContextRequestDTO.class)))
+            .thenReturn(createdContext);
+
+        // Mock LLM response for endpoint discovery
+        String llmResponse = "{"
+            + "\"output_items\": ["
+            + "  {"
+            + "    \"role\": \"assistant\","
+            + "    \"content\": ["
+            + "      {\"type\": \"output_text\", \"text\": \"{\\\"endpoints_like\\\": [\\\"user creation notifications\\\", \\\"user monitoring\\\"]}\"}"
+            + "    ]"
+            + "  }"
+            + "]"
+            + "}";
+        when(llmService.askQuestion(eq(execution), any(LLMRequest.class))).thenReturn(llmResponse);
+
+        // Mock endpoint search
+        List<EndpointDescriptor> mockEndpoints = new ArrayList<>();
+        mockEndpoints.add(EndpointDescriptor.builder()
+            .name("user_created_webhook")
+            .description("Webhook for user creation events")
+            .httpMethod("POST")
+            .path("/api/webhooks/user-created")
+            .build());
+        
+        when(endpointSearcher.getEndpointsLike(eq(execution), any(String.class)))
+            .thenReturn(mockEndpoints);
+
+        // Mock policy creation
+        when(zeroTrustClientService.callPostOnApi(eq(execution), eq("/api/v1/policies"), any(), any()))
+            .thenReturn("policy-123");
+
+        // Mock agent creation
+        when(agentClientService.createAgent(eq(execution), any(io.sentrius.sso.core.dto.AgentRegistrationDTO.class)))
+            .thenReturn("{\"agentId\": \"test-combined-agent\", \"status\": \"created\"}");
+
+        // When
+        ObjectNode result = agentVerbs.createAgentWithContext(execution, requestContext);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.has("agentId"));
+        assertEquals("test-combined-agent", result.get("agentId").asText());
+        assertTrue(result.has("agentName"));
+        assertEquals("test-combined-agent", result.get("agentName").asText());
+        assertTrue(result.has("agentType"));
+        assertEquals("chat-autonomous", result.get("agentType").asText());
+        assertTrue(result.has("contextId"));
+        assertEquals(contextId.toString(), result.get("contextId").asText());
+        assertTrue(result.has("policyId"));
+        assertTrue(result.has("endpointCount"));
+    }
+
+    @Test
+    void createAgentWithContextUsesDefaultAgentTypeWhenNotProvided() throws Exception, ZtatException {
+        // Given
+        String executionId = UUID.randomUUID().toString();
+        AgentExecution execution = AgentExecution.builder()
+            .executionId(executionId)
+            .build();
+
+        AgentExecutionContextDTO requestContext = AgentExecutionContextDTO.builder().build();
+        ObjectNode queryArgs = JsonUtil.MAPPER.createObjectNode();
+        queryArgs.put("agentName", "default-type-agent");
+        queryArgs.put("context", "Monitor system health");
+        // Note: agentType is not provided, should default to "chat"
+        requestContext.setExecutionArgs(queryArgs);
+
+        // Mock agent context creation
+        UUID contextId = UUID.randomUUID();
+        AgentContextDTO createdContext = AgentContextDTO.builder()
+            .contextId(contextId)
+            .name("default-type-agent")
+            .context("Monitor system health. Please request endpoints to perform your work.")
+            .description("Monitor system health. Please request endpoints to perform your work.")
+            .build();
+        when(agentClientService.createAgentContext(eq(execution), any(io.sentrius.sso.core.dto.agents.AgentContextRequestDTO.class)))
+            .thenReturn(createdContext);
+
+        // Mock LLM response with empty endpoints
+        String llmResponse = "{"
+            + "\"output_items\": ["
+            + "  {"
+            + "    \"role\": \"assistant\","
+            + "    \"content\": ["
+            + "      {\"type\": \"output_text\", \"text\": \"{\\\"endpoints_like\\\": []}\"}"
+            + "    ]"
+            + "  }"
+            + "]"
+            + "}";
+        when(llmService.askQuestion(eq(execution), any(LLMRequest.class))).thenReturn(llmResponse);
+
+        // Mock agent creation
+        when(agentClientService.createAgent(eq(execution), any(io.sentrius.sso.core.dto.AgentRegistrationDTO.class)))
+            .thenReturn("{\"agentId\": \"default-type-agent\", \"status\": \"created\"}");
+
+        // When
+        ObjectNode result = agentVerbs.createAgentWithContext(execution, requestContext);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.has("agentType"));
+        assertEquals("chat", result.get("agentType").asText());  // Default value
+        assertTrue(result.has("policyId"));
+        assertEquals("default", result.get("policyId").asText());  // No policy created when no endpoints
+    }
+
+    @Test
+    void createAgentWithContextThrowsExceptionWhenContextMissing() throws Exception, ZtatException {
+        // Given
+        String executionId = UUID.randomUUID().toString();
+        AgentExecution execution = AgentExecution.builder()
+            .executionId(executionId)
+            .build();
+
+        AgentExecutionContextDTO requestContext = AgentExecutionContextDTO.builder().build();
+        ObjectNode queryArgs = JsonUtil.MAPPER.createObjectNode();
+        queryArgs.put("agentName", "no-context-agent");
+        // Note: context is not provided
+        requestContext.setExecutionArgs(queryArgs);
+
+        // When/Then
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            agentVerbs.createAgentWithContext(execution, requestContext);
+        });
+        assertTrue(exception.getMessage().contains("Context is required"));
     }
 }
