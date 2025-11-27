@@ -12,6 +12,7 @@ import io.sentrius.sso.core.repository.SessionLogRepository;
 import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.trust.AgentTrustScoreService;
+import io.sentrius.sso.core.services.trust.PolicyViolationEventService;
 import io.sentrius.sso.core.trust.*;
 import io.sentrius.sso.provenance.ProvenanceEvent;
 import lombok.extern.slf4j.Slf4j;
@@ -37,16 +38,14 @@ public class TrustEvaluationService {
     private final AgentTrustScoreService trustScoreService;
     private final ATPLPolicyService atplPolicyService;
     private final UserService userService;
-    
-    @Autowired(required = false)
-    private LLMGuidedSchedulerService llmScheduler;
+    private final LLMGuidedSchedulerService llmScheduler;
+    private final io.sentrius.sso.core.services.feedback.RLHFFeedbackService rlhfFeedbackService;
+    private final PolicyViolationEventService policyViolationEventService;
     
     private final Map<String, List<ProvenanceEvent>> provenanceCache = new ConcurrentHashMap<>();
     private final Map<String, Integer> incidentTracker = new ConcurrentHashMap<>();
     
-    // Optional RLHF service - may not be available in all contexts
-    private final io.sentrius.sso.core.services.feedback.RLHFFeedbackService rlhfFeedbackService;
-    
+    @Autowired
     public TrustEvaluationService(
             AgentHeartbeatRepository heartbeatRepository,
             AgentCommunicationRepository communicationRepository,
@@ -54,15 +53,18 @@ public class TrustEvaluationService {
             AgentTrustScoreService trustScoreService,
             ATPLPolicyService atplPolicyService,
             UserService userService,
-            @org.springframework.beans.factory.annotation.Autowired(required = false) 
-            io.sentrius.sso.core.services.feedback.RLHFFeedbackService rlhfFeedbackService) {
+            @Autowired(required = false) LLMGuidedSchedulerService llmScheduler,
+            @Autowired(required = false) io.sentrius.sso.core.services.feedback.RLHFFeedbackService rlhfFeedbackService,
+            @Autowired(required = false) PolicyViolationEventService policyViolationEventService) {
         this.heartbeatRepository = heartbeatRepository;
         this.communicationRepository = communicationRepository;
         this.sessionLogRepository = sessionLogRepository;
         this.trustScoreService = trustScoreService;
         this.atplPolicyService = atplPolicyService;
         this.userService = userService;
+        this.llmScheduler = llmScheduler;
         this.rlhfFeedbackService = rlhfFeedbackService;
+        this.policyViolationEventService = policyViolationEventService;
     }
     
     @Scheduled(fixedRate = 300000, initialDelay = 60000)
@@ -193,7 +195,7 @@ public class TrustEvaluationService {
         List<SessionLog> userSessions = sessionLogRepository.findByUsername(username);
         
         int priorRuns = calculatePriorSessions(userSessions);
-        int incidentCount = incidentTracker.getOrDefault(userId, 0);
+        int incidentCount = getIncidentCount(userId);
         
         // Human users are verified through Keycloak authentication
         List<ProvenanceEvent> events = provenanceCache.getOrDefault(userId, Collections.emptyList());
@@ -236,7 +238,7 @@ public class TrustEvaluationService {
     private AgentContext buildAgentContext(String agentId, String agentName) {
         Optional<AgentHeartbeat> heartbeatOpt = heartbeatRepository.findByAgentId(agentId);
         int priorRuns = calculatePriorRuns(agentId);
-        int incidentCount = incidentTracker.getOrDefault(agentId, 0);
+        int incidentCount = getIncidentCount(agentId);
         
         boolean enclaveVerified = heartbeatOpt
             .map(hb -> hb.getStatus() != null && hb.getStatus().contains("verified"))
@@ -261,6 +263,19 @@ public class TrustEvaluationService {
             .incidentCount(incidentCount)
             .feedbackScore(feedbackScore)
             .build();
+    }
+    
+    /**
+     * Get the incident count for an entity from the persistent store if available,
+     * otherwise fall back to the in-memory tracker.
+     */
+    private int getIncidentCount(String entityId) {
+        // First try to get from persistent store (policy violation events)
+        if (policyViolationEventService != null) {
+            return policyViolationEventService.getIncidentCount(entityId);
+        }
+        // Fall back to in-memory tracker
+        return incidentTracker.getOrDefault(entityId, 0);
     }
     
     private int calculatePriorRuns(String agentId) {
@@ -317,14 +332,56 @@ public class TrustEvaluationService {
         }
     }
     
+    /**
+     * Record an incident for an entity. This is now primarily for legacy/manual incident tracking.
+     * For policy violations, use the PolicyViolationEventService directly.
+     */
     public void recordIncident(String agentId) {
         incidentTracker.merge(agentId, 1, Integer::sum);
-        log.warn("Incident recorded for agent: {}. Total incidents: {}", 
+        log.warn("Incident recorded for agent: {}. Total in-memory incidents: {}", 
             agentId, incidentTracker.get(agentId));
     }
     
+    /**
+     * Record a policy violation incident that will affect trust scores.
+     * This persists the violation to the database for accurate trust score calculation.
+     */
+    public void recordPolicyViolation(String entityId, String entityName, String endpoint, boolean approved, String approverId) {
+        if (policyViolationEventService != null) {
+            if (approved) {
+                policyViolationEventService.recordZtatApproval(
+                    entityId, entityName, endpoint, null, approverId, null,
+                    "Policy violation recorded via TrustEvaluationService"
+                );
+            } else {
+                policyViolationEventService.recordZtatDenial(
+                    entityId, entityName, endpoint, null, approverId, null,
+                    "Policy violation recorded via TrustEvaluationService"
+                );
+            }
+            log.info("Policy violation recorded for entity {}: endpoint={}, approved={}", 
+                entityId, endpoint, approved);
+        } else {
+            // Fall back to in-memory tracking if persistent service is not available
+            if (!approved) {
+                recordIncident(entityId);
+            }
+        }
+    }
+    
+    /**
+     * Clear incidents for an entity. Note: this only clears the in-memory tracker.
+     * Persistent policy violations cannot be cleared (they are part of the audit trail).
+     */
     public void clearIncidents(String agentId) {
         incidentTracker.put(agentId, 0);
-        log.info("Incidents cleared for agent: {}", agentId);
+        log.info("In-memory incidents cleared for agent: {}", agentId);
+    }
+    
+    /**
+     * Get the total incident count for an entity (from both persistent and in-memory stores).
+     */
+    public int getTotalIncidentCount(String entityId) {
+        return getIncidentCount(entityId);
     }
 }

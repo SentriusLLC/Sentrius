@@ -18,23 +18,35 @@ import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenRequest;
 import io.sentrius.sso.core.model.zt.OpsZeroTrustAcessTokenRequest;
 import io.sentrius.sso.core.repository.OpsJITRequestRepository;
+import io.sentrius.sso.core.services.trust.PolicyViolationEventService;
 import io.sentrius.sso.core.utils.ZTATUtils;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ZeroTrustAccessTokenService {
 
   private final SystemOptions systemOptions;
   private final OpsJITRequestRepository opsJITRequestRepository;
+  private final ZeroTrustRequestService ztatRequestService;
+  private final PolicyViolationEventService policyViolationEventService;
   MessageDigest digest;
 
-  private final ZeroTrustRequestService ztatRequestService;
+  @Autowired
+  public ZeroTrustAccessTokenService(
+      SystemOptions systemOptions,
+      OpsJITRequestRepository opsJITRequestRepository,
+      ZeroTrustRequestService ztatRequestService,
+      @Autowired(required = false) PolicyViolationEventService policyViolationEventService) {
+    this.systemOptions = systemOptions;
+    this.opsJITRequestRepository = opsJITRequestRepository;
+    this.ztatRequestService = ztatRequestService;
+    this.policyViolationEventService = policyViolationEventService;
+  }
 
   {
     try {
@@ -228,23 +240,89 @@ public class ZeroTrustAccessTokenService {
   public void approveAccessToken(@NonNull ZeroTrustAccessTokenRequest request, @NonNull User user)
       throws SQLException, GeneralSecurityException {
     ztatRequestService.getAccessTokenStatus(request, user, true);
+    
+    // Record policy violation event for trust score calculation
+    if (policyViolationEventService != null && request.getUser() != null) {
+      String entityId = request.getUser().getUserId();
+      String entityName = request.getUser().getUsername();
+      String endpoint = request.getCommand();
+      policyViolationEventService.recordZtatApproval(
+          entityId,
+          entityName,
+          endpoint,
+          null, // policy ID not directly available here
+          user.getUserId(),
+          request.getId(),
+          "ZTAT request approved for command: " + request.getCommand()
+      );
+    }
   }
 
   public OpsApproval approveOpsAccessToken(@NonNull OpsZeroTrustAcessTokenRequest request, @NonNull User user)
       throws SQLException, GeneralSecurityException {
-    return ztatRequestService.setOpsAccessTokenStatus(request, user, true);
+    OpsApproval approval = ztatRequestService.setOpsAccessTokenStatus(request, user, true);
+    
+    // Record policy violation event for trust score calculation
+    if (policyViolationEventService != null && request.getUser() != null) {
+      String entityId = request.getUser().getUserId();
+      String entityName = request.getUser().getUsername();
+      String endpoint = request.getCommand();
+      policyViolationEventService.recordOpsJitApproval(
+          entityId,
+          entityName,
+          endpoint,
+          null, // policy ID not directly available here
+          user.getUserId(),
+          request.getId(),
+          "OPS JIT request approved: " + request.getSummary()
+      );
+    }
+    
+    return approval;
   }
 
   @Transactional
   public void denyAccessToken(@NonNull ZeroTrustAccessTokenRequest request, @NonNull User user)
       throws SQLException, GeneralSecurityException {
     ztatRequestService.getAccessTokenStatus(request, user, false);
+    
+    // Record policy violation event for trust score calculation
+    if (policyViolationEventService != null && request.getUser() != null) {
+      String entityId = request.getUser().getUserId();
+      String entityName = request.getUser().getUsername();
+      String endpoint = request.getCommand();
+      policyViolationEventService.recordZtatDenial(
+          entityId,
+          entityName,
+          endpoint,
+          null, // policy ID not directly available here
+          user.getUserId(),
+          request.getId(),
+          "ZTAT request denied for command: " + request.getCommand()
+      );
+    }
   }
 
   @Transactional
   public void denyOpsAccessToken(@NonNull OpsZeroTrustAcessTokenRequest request, @NonNull User user)
       throws SQLException, GeneralSecurityException {
     ztatRequestService.setOpsAccessTokenStatus(request, user, false);
+    
+    // Record policy violation event for trust score calculation
+    if (policyViolationEventService != null && request.getUser() != null) {
+      String entityId = request.getUser().getUserId();
+      String entityName = request.getUser().getUsername();
+      String endpoint = request.getCommand();
+      policyViolationEventService.recordOpsJitDenial(
+          entityId,
+          entityName,
+          endpoint,
+          null, // policy ID not directly available here
+          user.getUserId(),
+          request.getId(),
+          "OPS JIT request denied: " + request.getSummary()
+      );
+    }
   }
 
   public void incrementUses(String command, User user, HostSystem system)
