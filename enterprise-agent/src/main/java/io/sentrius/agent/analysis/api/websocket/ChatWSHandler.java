@@ -357,18 +357,20 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                 }
                             }
 
-                            
+
+                            var responseToUser = getSafeResponse( response.getResponseForUser() );
+
                             // Store agent response for conversation history
                             websocketCommunication.getAgentExecutionContextDTO().addToPersistentMemory(
                                 "agent_response_" + System.currentTimeMillis(),
-                                response.getResponseForUser(),
+                                responseToUser,
                                 "PRIVATE",
                                 new String[]{"CONVERSATION"}
                             );
+
+
                             var newMessage = Session.ChatMessage.newBuilder()
-                                .setMessage(response.getResponseForUser()/*String.format("{\"type\":\"user-message\"," +
-                                        "\"message\":\"%s\"}",
-                                    response.getResponseForUser())*/
+                                .setMessage(responseToUser
                                 )
                                 .setSender("agent")
                                 .setChatGroupId("")
@@ -377,7 +379,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                 .build();
                             websocketCommunication.getAgentExecutionContextDTO().addToPersistentMemory(
                                 "agent_response_" + System.currentTimeMillis(),
-                                response.getResponseForUser(),
+                                responseToUser,
                                 "PRIVATE",
                                 new String[]{"CONVERSATION"}
                             );
@@ -605,6 +607,13 @@ public class ChatWSHandler extends TextWebSocketHandler {
         }catch (Exception | ZtatException e ){
             throw new RuntimeException(e);
         }
+    }
+
+    private String getSafeResponse(String responseForUser) {
+        if (null != responseForUser && !responseForUser.trim().isEmpty()) {
+            return  responseForUser;
+        }
+        return "Working on your request...";
     }
 
     @Override

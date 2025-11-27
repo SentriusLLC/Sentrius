@@ -3,9 +3,11 @@ package io.sentrius.agent.analysis.agents.verbs;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -57,6 +59,148 @@ public class ChatVerbs extends VerbBase{
         this.verbRegistry = verbRegistry;
         this.agentClientService = agentClientService1;
     }
+    
+    /**
+     * Ensures the LLMResponse has executed operations initialized.
+     * If not present, initializes with the provided default operations.
+     * 
+     * @param response The LLM response to update
+     * @param defaultOps The default operations to use if none are present (can be null)
+     */
+    private void ensureExecutedOperationsInitialized(LLMResponse response, List<String> defaultOps) {
+        if (response.getExecutedOperations() == null || response.getExecutedOperations().isEmpty()) {
+            response.setExecutedOperations(defaultOps != null ? new ArrayList<>(defaultOps) : new ArrayList<>());
+        }
+    }
+    
+    /**
+     * Builds the strict mode execution protocol for the LLM.
+     * This includes plan state awareness to prevent re-executing completed plans.
+     * 
+     * @param executedOperations List of operations that have been executed
+     * @param currentPlanStatus The current status of the plan
+     * @return The strict mode protocol string
+     */
+    private String buildStrictModeProtocol(List<String> executedOperations, String currentPlanStatus) {
+        return buildStrictModeProtocol(executedOperations, currentPlanStatus, false);
+    }
+    
+    /**
+     * Builds the strict mode execution protocol for the LLM.
+     * This includes plan state awareness to prevent re-executing completed plans.
+     * 
+     * @param executedOperations List of operations that have been executed
+     * @param currentPlanStatus The current status of the plan
+     * @param isAutonomous Whether this is an autonomous agent (not chat-driven)
+     * @return The strict mode protocol string
+     */
+    private String buildStrictModeProtocol(List<String> executedOperations, String currentPlanStatus, boolean isAutonomous) {
+        StringBuilder protocol = new StringBuilder();
+        
+        protocol.append("EXECUTION PROTOCOL — STRICT MODE\n\n");
+        protocol.append("You are a deterministic execution planner operating inside a machine-enforced protocol.\n\n");
+        
+        // Plan state awareness section
+        protocol.append("PLAN STATE AWARENESS:\n");
+        protocol.append("- Current plan status: ").append(currentPlanStatus != null ? currentPlanStatus : "idle").append("\n");
+        if (executedOperations != null && !executedOperations.isEmpty()) {
+            protocol.append("- Operations already executed in this session: ").append(String.join(", ", executedOperations)).append("\n");
+            protocol.append("- DO NOT re-execute operations that have already been completed.\n");
+            protocol.append("- If the task has been fulfilled, set planStatus to 'completed' and leave nextOperation empty.\n");
+        }
+        protocol.append("\n");
+        
+        protocol.append("RULES:\n");
+        protocol.append("- You MUST respond with EXACTLY ONE valid JSON object.\n");
+        protocol.append("- You MUST NOT include conversational text, explanations, markdown, or prose.\n");
+        protocol.append("- You MUST NOT ask the user any questions.\n");
+        protocol.append("- You MUST NOT request clarification.\n");
+        protocol.append("- You MUST select and execute the next operation using the available verbs ONLY if action is needed.\n");
+        protocol.append("- If required information is missing, you MUST infer conservatively OR return an executable fallback.\n");
+        protocol.append("- Returning free-form text is a protocol violation.\n\n");
+        
+        if (isAutonomous) {
+            // Autonomous agent mode - encourage plan creation and execution
+            protocol.append("AUTONOMOUS AGENT MODE:\n");
+            protocol.append("- You are operating autonomously without user interaction.\n");
+            protocol.append("- Analyze the available verbs and create a plan to accomplish your configured task.\n");
+            protocol.append("- Execute one verb at a time, using nextOperation to specify the verb to run.\n");
+            protocol.append("- After each verb execution, evaluate the results and determine the next step.\n");
+            protocol.append("- Continue executing verbs until your task is complete.\n");
+            protocol.append("- Set planStatus to 'in_progress' while working, 'completed' when done.\n\n");
+        } else {
+            // Chat-driven mode - handle conversational inputs
+            protocol.append("CONVERSATIONAL INPUT HANDLING:\n");
+            protocol.append("- If the user input is purely conversational (e.g., 'Thanks!', 'hello', 'great', 'ok', 'bye'),\n");
+            protocol.append("  you MUST include a brief response ONLY inside the responseForUser field.\n");
+            protocol.append("- For conversational inputs, set nextOperation to empty string and planStatus to 'completed' or 'idle'.\n");
+            protocol.append("- DO NOT execute any verbs for simple acknowledgments or greetings.\n");
+            protocol.append("- Conversational text MUST NOT trigger new operations.\n");
+            protocol.append("- Always include a user response even for conversational inputs.\n\n");
+        }
+        
+        protocol.append("MEMORY RULES:\n");
+        protocol.append("- If required information is NOT in the current context, you MUST populate the memoryLookup field.\n");
+        protocol.append("- memoryLookup is executed BEFORE nextOperation.\n");
+        protocol.append("- Leave memoryLookup empty ONLY if the information is already present.\n\n");
+        
+        protocol.append("MANDATORY RESPONSE FORMAT (LLMResponse):\n");
+        protocol.append("{\n");
+        protocol.append("  \"previousOperation\": \"<last executed operation or empty>\",\n");
+        protocol.append("  \"nextOperation\": \"<verb name or empty if no action needed>\",\n");
+        protocol.append("  \"planStatus\": \"<idle|in_progress|completed|awaiting_input>\",\n");
+        protocol.append("  \"executedOperations\": [\"<list of operations executed in this session>\"],\n");
+        protocol.append("  \"memoryLookup\": \"<lookup query or empty>\",\n");
+        protocol.append("  \"arguments\": { <arguments for nextOperation> },\n");
+        protocol.append("  \"summaryForLLM\": \"<concise machine summary>\",\n");
+        protocol.append("  \"responseForUser\": \"<user-visible output>\"\n");
+        protocol.append("}\n\n");
+        
+        protocol.append("PLAN STATUS VALUES:\n");
+        protocol.append("- 'idle': No plan is being executed (use for conversational responses)\n");
+        protocol.append("- 'in_progress': A plan is actively being executed\n");
+        protocol.append("- 'completed': The requested task has been completed\n");
+        protocol.append("- 'awaiting_input': The plan requires user input to continue\n\n");
+        
+        protocol.append("FAILURE MODE:\n");
+        protocol.append("- If NO operation is valid or needed, return nextOperation as an empty string.\n");
+        protocol.append("- NEVER invent verbs.\n");
+        protocol.append("- NEVER emit partial JSON.\n");
+        protocol.append("- NEVER produce more than one JSON object.\n");
+        protocol.append("- NEVER re-execute already completed operations.\n");
+        
+        return protocol.toString();
+    }
+    
+    /**
+     * Extracts executed operations from WebSocky communication responses.
+     * Uses LinkedHashSet for efficient uniqueness while maintaining insertion order.
+     */
+    private List<String> getExecutedOperations(WebSocky socketConnection) {
+        if (socketConnection == null || socketConnection.getCommunicationResponses() == null) {
+            return new ArrayList<>();
+        }
+        LinkedHashSet<String> uniqueOps = new LinkedHashSet<>();
+        for (LLMResponse r : socketConnection.getCommunicationResponses()) {
+            if (r.getPreviousOperation() != null && !r.getPreviousOperation().isEmpty()) {
+                uniqueOps.add(r.getPreviousOperation());
+            }
+        }
+        return new ArrayList<>(uniqueOps);
+    }
+    
+    /**
+     * Gets the current plan status from the last response.
+     */
+    private String getCurrentPlanStatus(WebSocky socketConnection) {
+        if (socketConnection == null || socketConnection.getCommunicationResponses() == null 
+            || socketConnection.getCommunicationResponses().isEmpty()) {
+            return "idle";
+        }
+        LLMResponse lastResponse = socketConnection.getCommunicationResponses()
+            .get(socketConnection.getCommunicationResponses().size() - 1);
+        return lastResponse.getPlanStatus() != null ? lastResponse.getPlanStatus() : "idle";
+    }
 
     /**
      * Prompts the agent for workload based on the provided arguments.
@@ -74,6 +218,11 @@ public class ChatVerbs extends VerbBase{
         IOException {
 
         var lastMessage = socketConnection.getCommunicationResponses().stream().reduce((prev, next) -> next).orElse(null);
+        
+        // Extract executed operations and current plan status for context
+        List<String> executedOperations = getExecutedOperations(socketConnection);
+        String currentPlanStatus = getCurrentPlanStatus(socketConnection);
+        
         if (socketConnection.getCommunicationResponses().isEmpty()) {
 
             InputStream terminalHelperStream = getClass().getClassLoader().getResourceAsStream("terminal-helper.json");
@@ -99,58 +248,21 @@ public class ChatVerbs extends VerbBase{
 
             var history = getContextWindow(executionContext.getMessages(), 1024*96 - (size));
             messages.addAll(history);
+            
+            // Use the new strict mode protocol with plan state awareness (chat mode, not autonomous)
             messages.add(
                 Message.builder()
                     .role("system")
-                    .content(
-                        "EXECUTION PROTOCOL — STRICT MODE\n\n" +
-
-                            "You are not a conversational agent.\n" +
-                            "You are a deterministic execution planner operating inside a machine-enforced protocol.\n\n" +
-
-                            "RULES:\n" +
-                            "- You MUST respond with EXACTLY ONE valid JSON object.\n" +
-                            "- You MUST NOT include conversational text, explanations, markdown, or prose.\n" +
-                            "- You MUST NOT ask the user any questions.\n" +
-                            "- You MUST NOT request clarification.\n" +
-                            "- You MUST select and execute the next operation using the available verbs.\n" +
-                            "- If required information is missing, you MUST infer conservatively OR return an executable fallback.\n" +
-                            "- Returning free-form text is a protocol violation.\n\n" +
-
-                            "- USER INTERACTION RULE:\n" +
-                            "- If the user input is a greeting (e.g., 'hello', 'hi', 'hey', 'good morning'),\n" +
-                            "  you MUST include a brief greeting ONLY inside the responseForUser field.\n" +
-                            "- Conversational language MUST NOT appear outside responseForUser.\n" +
-                            "- Conversational text MUST NOT affect nextOperation, arguments, or memoryLookup. " +
-                            "Always include a user response\n" +
-
-                            "MEMORY RULES:\n" +
-                            "- If required information is NOT in the current context, you MUST populate the memoryLookup field.\n" +
-                            "- memoryLookup is executed BEFORE nextOperation.\n" +
-                            "- Leave memoryLookup empty ONLY if the information is already present.\n\n" +
-
-                            "MANDATORY RESPONSE FORMAT (LLMResponse):\n" +
-                            "{\n" +
-                            "  \"previousOperation\": \"<string or empty>\" ,\n" +
-                            "  \"nextOperation\": \"<verb name or empty>\" ,\n" +
-                            "  \"memoryLookup\": \"<lookup query or empty>\" ,\n" +
-                            "  \"arguments\": { <arguments for nextOperation> },\n" +
-                            "  \"summaryForLLM\": \"<concise machine summary>\",\n" +
-                            "  \"responseForUser\": \"<user-visible output>\"\n" +
-                            "}\n\n" +
-
-                            "FAILURE MODE:\n" +
-                            "- If NO operation is valid, return nextOperation as an empty string.\n" +
-                            "- NEVER invent verbs.\n" +
-                            "- NEVER emit partial JSON.\n" +
-                            "- NEVER produce more than one JSON object.\n"
-                    )
+                    .content(buildStrictModeProtocol(executedOperations, currentPlanStatus, false))
                     .build()
             );
             messages.add(Message.builder().role("user").content(userMessage.getContentAsString()).build());
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
-            executionContext.addMessages( messages );
+            
+            // Only add user message to context, not the full messages array (avoids context duplication)
+            executionContext.addMessages(userMessage);
+            
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             log.info("Response is {}", resp);
             for (Response.OutputItem choice : response.getOutputItems()) {
@@ -162,15 +274,23 @@ public class ChatVerbs extends VerbBase{
                 }
                 log.info("+ {}", content);
                 if (null != content && !content.isEmpty()) {
+                    // Add assistant response to context
+                    executionContext.addMessages(Message.builder().role("assistant").content(content).build());
                     try {
                         var newResponse = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readValue(
                             content,
                             LLMResponse.class
                         );
+                        // Update executed operations list using helper
+                        ensureExecutedOperationsInitialized(newResponse, executedOperations);
                         return newResponse;
                     }catch (JsonParseException e) {
                         log.error("Failed to parse terminal response: {}", e.getMessage());
-                        return LLMResponse.builder().responseForUser(content).build();
+                        return LLMResponse.builder()
+                            .responseForUser(content)
+                            .planStatus("idle")
+                            .executedOperations(executedOperations)
+                            .build();
                     }
                 }
             }
@@ -191,7 +311,16 @@ public class ChatVerbs extends VerbBase{
 
             var history = getContextWindow(executionContext.getMessages(), 1024*96 );
             messages.addAll(history);
+            
+            // Add the strict mode protocol with plan state awareness for follow-on messages (chat mode)
+            messages.add(
+                Message.builder()
+                    .role("system")
+                    .content(buildStrictModeProtocol(executedOperations, currentPlanStatus, false))
+                    .build()
+            );
 
+            // Add user message to context (just the user message, not the full messages array)
             executionContext.addMessages( userMessage );
             messages.add(Message.builder().role("user").content(userMessage.getContentAsString()).build());
 
@@ -202,11 +331,23 @@ public class ChatVerbs extends VerbBase{
             log.info("Response is {}", resp);
             Optional<LLMResponse> convertedResponse = LLMResponse.extractStructuredResponse(response);
 
+            // Only add the LLM's response to context (avoids context duplication)
             String stringResponse = LLMResponse.extractStructuredResponseString(response);
             if (!stringResponse.isEmpty()) {
-                executionContext.addMessages(Message.builder().role("system").content(stringResponse).build());
+                executionContext.addMessages(Message.builder().role("assistant").content(stringResponse).build());
             }
-            return convertedResponse.orElseThrow();
+            
+            // Update the response with executed operations context
+            LLMResponse finalResponse = convertedResponse.orElseGet(() -> 
+                LLMResponse.builder()
+                    .planStatus("idle")
+                    .executedOperations(executedOperations)
+                    .build()
+            );
+            
+            ensureExecutedOperationsInitialized(finalResponse, executedOperations);
+            
+            return finalResponse;
 
             /*
 
@@ -243,6 +384,41 @@ public class ChatVerbs extends VerbBase{
         AgentExecution execution, AgentExecutionContextDTO executionContext,
         String prompt) throws ZtatException,
         IOException {
+        return promptAgent(execution, executionContext, prompt, new ArrayList<>(), "idle", false);
+    }
+    
+    /**
+     * Prompts the agent for workload with plan state awareness.
+     * 
+     * @param execution The agent execution context
+     * @param executionContext The execution context DTO
+     * @param prompt The prompt to send to the LLM
+     * @param executedOperations List of operations already executed
+     * @param currentPlanStatus The current plan status
+     * @return The LLM response
+     */
+    public LLMResponse promptAgent(
+        AgentExecution execution, AgentExecutionContextDTO executionContext,
+        String prompt, List<String> executedOperations, String currentPlanStatus) throws ZtatException,
+        IOException {
+        return promptAgent(execution, executionContext, prompt, executedOperations, currentPlanStatus, false);
+    }
+    
+    /**
+     * Prompts the agent for workload with plan state awareness.
+     * 
+     * @param execution The agent execution context
+     * @param executionContext The execution context DTO
+     * @param prompt The prompt to send to the LLM
+     * @param executedOperations List of operations already executed
+     * @param currentPlanStatus The current plan status
+     * @param isAutonomous Whether this is an autonomous agent (not chat-driven)
+     * @return The LLM response
+     */
+    public LLMResponse promptAgent(
+        AgentExecution execution, AgentExecutionContextDTO executionContext,
+        String prompt, List<String> executedOperations, String currentPlanStatus, boolean isAutonomous) throws ZtatException,
+        IOException {
 
 
             InputStream terminalHelperStream = getClass().getClassLoader().getResourceAsStream("terminal-helper.json");
@@ -260,69 +436,52 @@ public class ChatVerbs extends VerbBase{
             var context = Message.builder().role("system").content(prompt).build();
             messages.add(context);
 
-            messages.add(Message.builder().role("system").content("You have executed verbs for the previous user " +
-                "messages. Please generate a user response that summarizes the last message.").build());
+            if (isAutonomous) {
+                messages.add(Message.builder().role("system").content("You are operating in autonomous mode. " +
+                    "Analyze your available verbs and create a plan to accomplish your configured task. " +
+                    "Execute one operation at a time using nextOperation.").build());
+            } else {
+                messages.add(Message.builder().role("system").content("You have executed verbs for the previous user " +
+                    "messages. Please generate a user response that summarizes the last message.").build());
+            }
             int size = getMessageSize(context);
 
             var history = getContextWindow(executionContext.getMessages(), 1024*96 - (size));
             messages.addAll(history);
+            
+        // Use the new strict mode protocol with plan state awareness
         messages.add(
             Message.builder()
                 .role("system")
-                .content(
-                    "EXECUTION PROTOCOL — STRICT MODE\n\n" +
-
-                        "You are not a conversational agent.\n" +
-                        "You are a deterministic execution planner operating inside a machine-enforced protocol.\n\n" +
-
-                        "RULES:\n" +
-                        "- You MUST respond with EXACTLY ONE valid JSON object.\n" +
-                        "- You MUST NOT include conversational text, explanations, markdown, or prose.\n" +
-                        "- You MUST NOT ask the user any questions.\n" +
-                        "- You MUST NOT request clarification.\n" +
-                        "- You MUST select and execute the next operation using the available verbs.\n" +
-                        "- If required information is missing, you MUST infer conservatively OR return an executable fallback.\n" +
-                        "- Returning free-form text is a protocol violation.\n\n" +
-
-                        "- USER INTERACTION RULE:\n" +
-                        "- If the user input is a greeting (e.g., 'hello', 'hi', 'hey', 'good morning'),\n" +
-                        "  you MUST include a brief greeting ONLY inside the responseForUser field.\n" +
-                        "- Conversational language MUST NOT appear outside responseForUser.\n" +
-                        "- Conversational text MUST NOT affect nextOperation, arguments, or memoryLookup. " +
-                        "Always include a user response\n" +
-
-                        "MEMORY RULES:\n" +
-                        "- If required information is NOT in the current context, you MUST populate the memoryLookup field.\n" +
-                        "- memoryLookup is executed BEFORE nextOperation.\n" +
-                        "- Leave memoryLookup empty ONLY if the information is already present.\n\n" +
-
-                        "MANDATORY RESPONSE FORMAT (LLMResponse):\n" +
-                        "{\n" +
-                        "  \"previousOperation\": \"<string or empty>\" ,\n" +
-                        "  \"nextOperation\": \"<verb name or empty>\" ,\n" +
-                        "  \"memoryLookup\": \"<lookup query or empty>\" ,\n" +
-                        "  \"arguments\": { <arguments for nextOperation> },\n" +
-                        "  \"summaryForLLM\": \"<concise machine summary>\",\n" +
-                        "  \"responseForUser\": \"<user-visible output>\"\n" +
-                        "}\n\n" +
-
-                        "FAILURE MODE:\n" +
-                        "- If NO operation is valid, return nextOperation as an empty string.\n" +
-                        "- NEVER invent verbs.\n" +
-                        "- NEVER emit partial JSON.\n" +
-                        "- NEVER produce more than one JSON object.\n"
-                )
+                .content(buildStrictModeProtocol(executedOperations, currentPlanStatus, isAutonomous))
                 .build()
         );
 
         LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
-            executionContext.addMessages( messages );
+            
+            // Only add the LLM response to context, not the entire prompt/messages array
+            // This prevents context duplication
+            String stringResponse = LLMResponse.extractStructuredResponseString(
+                JsonUtil.MAPPER.readValue(resp, Response.class));
+            if (!stringResponse.isEmpty()) {
+                executionContext.addMessages(Message.builder().role("assistant").content(stringResponse).build());
+            }
+            
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             log.info("Response is {}", resp);
             Optional<LLMResponse> convertedResponse = LLMResponse.extractStructuredResponse(response);
 
-            return convertedResponse.orElseGet(() -> LLMResponse.builder().build());
+            LLMResponse finalResponse = convertedResponse.orElseGet(() -> 
+                LLMResponse.builder()
+                    .planStatus("idle")
+                    .executedOperations(executedOperations)
+                    .build()
+            );
+            
+            ensureExecutedOperationsInitialized(finalResponse, executedOperations);
+            
+            return finalResponse;
             /*
             for (Response.OutputItem choice : response.getOutputItems()) {
                 var content = choice.getContent().stream().filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType())).map(c -> c.getText()).findFirst().orElse("");
@@ -406,6 +565,49 @@ public class ChatVerbs extends VerbBase{
         AgentExecution execution, AgentExecutionContextDTO executionContext,
         AgentVerb agentVerb, String planExecutionOutput) throws ZtatException,
         IOException {
+        return interpret_plan_response(execution, executionContext, agentVerb, planExecutionOutput, 
+            new ArrayList<>(), "in_progress", false);
+    }
+    
+    /**
+     * Interprets the response from a plan execution with full plan state awareness.
+     * This method determines if the plan is complete or if more operations are needed.
+     * 
+     * @param execution The agent execution context
+     * @param executionContext The execution context DTO
+     * @param agentVerb The verb that was just executed
+     * @param planExecutionOutput The output from the verb execution
+     * @param executedOperations List of operations already executed
+     * @param currentPlanStatus The current status of the plan
+     * @return The LLM response indicating next steps or completion
+     */
+    public LLMResponse interpret_plan_response(
+        AgentExecution execution, AgentExecutionContextDTO executionContext,
+        AgentVerb agentVerb, String planExecutionOutput,
+        List<String> executedOperations, String currentPlanStatus) throws ZtatException,
+        IOException {
+        return interpret_plan_response(execution, executionContext, agentVerb, planExecutionOutput,
+            executedOperations, currentPlanStatus, false);
+    }
+    
+    /**
+     * Interprets the response from a plan execution with full plan state awareness.
+     * This method determines if the plan is complete or if more operations are needed.
+     * 
+     * @param execution The agent execution context
+     * @param executionContext The execution context DTO
+     * @param agentVerb The verb that was just executed
+     * @param planExecutionOutput The output from the verb execution
+     * @param executedOperations List of operations already executed
+     * @param currentPlanStatus The current status of the plan
+     * @param isAutonomous Whether this is an autonomous agent
+     * @return The LLM response indicating next steps or completion
+     */
+    public LLMResponse interpret_plan_response(
+        AgentExecution execution, AgentExecutionContextDTO executionContext,
+        AgentVerb agentVerb, String planExecutionOutput,
+        List<String> executedOperations, String currentPlanStatus, boolean isAutonomous) throws ZtatException,
+        IOException {
 
 
         log.info("interpret_plan_response {}", planExecutionOutput);
@@ -423,6 +625,12 @@ public class ChatVerbs extends VerbBase{
             PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
             var prompt = promptBuilder.buildPrompt(false);
             List<Message> messages = new ArrayList<>();
+            
+            // Track the verb we just executed
+            List<String> updatedExecutedOps = new ArrayList<>(executedOperations);
+            if (agentVerb != null && !updatedExecutedOps.contains(agentVerb.getName())) {
+                updatedExecutedOps.add(agentVerb.getName());
+            }
 
 
 
@@ -438,7 +646,7 @@ public class ChatVerbs extends VerbBase{
                     "LLMResponse format" +
                     ".").build());
             } else {
-                executionContext.addMessages( messages );
+                // Get a window of conversation history, don't add empty messages to context
                 var history = getContextWindow(executionContext.getMessages(), 1024*96 );
                 messages.addAll(history);
             }
@@ -446,14 +654,32 @@ public class ChatVerbs extends VerbBase{
 
             if (null != agentVerb) {
                 messages.add(
-                    Message.builder().role("system").content("You have executed verb: " + agentVerb.getName() +
-                        " with the following description: " + agentVerb.getDescription()).build());
+                    Message.builder().role("system").content("You have just executed verb: " + agentVerb.getName() +
+                        " with the following description: " + agentVerb.getDescription() + 
+                        ". Evaluate if the task is now complete.").build());
             }
 
 
         if (!planExecutionOutput.isEmpty()) {
-            messages.add(Message.builder().role("system").content(planExecutionOutput).build());
+            messages.add(Message.builder().role("system").content("Execution result: " + planExecutionOutput).build());
         }
+        
+        // Add the strict mode protocol with updated plan state
+        String taskCompleteInstructions = isAutonomous ?
+            "\nIMPORTANT: After executing a verb, evaluate if your autonomous task is complete. " +
+            "If the task is complete, set planStatus to 'completed' and nextOperation to empty string. " +
+            "Only continue with another operation if truly necessary to complete your task." :
+            "\nIMPORTANT: After executing a verb, evaluate if the user's request has been fulfilled. " +
+            "If the task is complete, set planStatus to 'completed' and nextOperation to empty string. " +
+            "Only continue with another operation if truly necessary to fulfill the original request.";
+            
+        messages.add(
+            Message.builder()
+                .role("system")
+                .content(buildStrictModeProtocol(updatedExecutedOps, currentPlanStatus, isAutonomous) + taskCompleteInstructions)
+                .build()
+        );
+        
             LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
 
@@ -461,34 +687,35 @@ public class ChatVerbs extends VerbBase{
             log.info("Response is {}", resp);
         Optional<LLMResponse> convertedResponse = LLMResponse.extractStructuredResponse(response);
         String stringResponse = LLMResponse.extractStructuredResponseString(response);
+        
+        // Only add the LLM's response to context, not all the prompts (prevents context duplication)
         if (!stringResponse.isEmpty()) {
-            executionContext.addMessages(Message.builder().role("system").content(stringResponse).build());
+            executionContext.addMessages(Message.builder().role("assistant").content(stringResponse).build());
         }
-        return convertedResponse.orElseGet(() -> LLMResponse.builder().build());
-            /*
-            for (Response.OutputItem choice : response.getOutputItems()) {
-                var content = choice.getContent().stream().filter(c -> "output_text".equals(c.getType()) || "text".equals(c.getType())).map(c -> c.getText()).findFirst().orElse("");
-                executionContext.addMessages(Message.builder().role(choice.getRole()).content(content).build());
-                if (content.startsWith("```json")) {
-                    content = content.substring(7, content.length() - 3);
-                } else if (content.startsWith("```")) {
-                    content = content.substring(3, content.length() - 3);
-                }
-                log.info("content is {}", content);
-                if (null != content && !content.isEmpty()) {
-                    try {
-                        var newResponse = JsonUtil.MAPPER.enable(JsonParser.Feature.ALLOW_COMMENTS).readValue(
-                            content,
-                            LLMResponse.class
-                        );
-                        return newResponse;
-                    } catch (Exception e){
-                        return LLMResponse.builder().responseForUser(content).build();
-                    }
-
-                }
+        
+        LLMResponse finalResponse = convertedResponse.orElseGet(() -> 
+            LLMResponse.builder()
+                .planStatus("completed")
+                .executedOperations(updatedExecutedOps)
+                .build()
+        );
+        
+        // Ensure executed operations are tracked using helper, then merge any additional
+        ensureExecutedOperationsInitialized(finalResponse, updatedExecutedOps);
+        
+        // Merge with any new operations from LLM that weren't already tracked
+        for (String op : updatedExecutedOps) {
+            if (!finalResponse.getExecutedOperations().contains(op)) {
+                finalResponse.getExecutedOperations().add(op);
             }
-        return null;*/
+        }
+        
+        // Update the previousOperation to the verb we just executed
+        if (agentVerb != null) {
+            finalResponse.setPreviousOperation(agentVerb.getName());
+        }
+        
+        return finalResponse;
     }
 
 

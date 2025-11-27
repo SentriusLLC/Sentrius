@@ -54,6 +54,9 @@ public class ChatAgent extends BaseEnterpriseAgent {
     private volatile boolean paused = false;
     private final Object pauseLock = new Object();
     private Thread workerThread;
+    
+    /** Maximum number of consecutive conversational-only responses before waiting for user input */
+    private static final int MAX_CONSECUTIVE_CONVERSATIONAL = 5;
 
     private AgentExecution agentExecution;
 
@@ -169,11 +172,15 @@ public class ChatAgent extends BaseEnterpriseAgent {
         }
         PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
         var prompt = promptBuilder.buildPrompt(false);
+        // Check if this is an autonomous agent
+        boolean isAutonomous = null != agentConfigOptions.getType() && 
+            agentConfigOptions.getType().equalsIgnoreCase("chat-autonomous");
+        
         try {
-            if (null != agentConfigOptions.getType() && agentConfigOptions.getType().equalsIgnoreCase("chat" +
-                "-autonomous")) {
-
-                response = chatVerbs.promptAgent(agentExecution, agentExecutionContext, prompt);
+            if (isAutonomous) {
+                // Pass isAutonomous=true to get autonomous-mode prompting
+                response = chatVerbs.promptAgent(agentExecution, agentExecutionContext, prompt, 
+                    new ArrayList<>(), "idle", true);
             }
         } catch (ZtatException e) {
             throw new RuntimeException(e);
@@ -182,18 +189,25 @@ public class ChatAgent extends BaseEnterpriseAgent {
         }
 
 
-        if (null != agentConfigOptions.getType() &&  agentConfigOptions.getType().equalsIgnoreCase("chat-autonomous") && response == null) {
+        if (isAutonomous && response == null) {
             log.error("Chat autonomous agent mode enabled but no response received from promptAgent, shutting down...");
             throw new RuntimeException("Chat autonomous agent mode enabled but no response received from promptAgent");
         }
         VerbResponse lastVerbResponse = null;
         LLMResponse nextResponse = null;
         List<VerbResponse> verbResponses = new ArrayList<>();
+        
+        // Track executed operations across the session for plan state awareness
+        List<String> executedOperations = new ArrayList<>();
+        String currentPlanStatus = "idle";
+        
+        // Track consecutive conversational-only responses to prevent infinite loops
+        int consecutiveConversationalResponses = 0;
+        
         while(running) {
 
                 // Check if agent is paused if autonomous mode
-                if (null != agentConfigOptions.getType() &&  agentConfigOptions.getType().equalsIgnoreCase("chat" +
-                    "-autonomous")) {
+                if (isAutonomous) {
                     synchronized (pauseLock) {
                         while (paused) {
                             try {
@@ -213,14 +227,14 @@ public class ChatAgent extends BaseEnterpriseAgent {
 
                     Thread.sleep(5_000);
                     agentClientService.heartbeat(agentExecution, agentExecution.getUser().getUsername());
-                    if (null != agentConfigOptions.getType() &&  agentConfigOptions.getType().equalsIgnoreCase("chat" +
-                        "-autonomous")) {
+                    if (isAutonomous) {
                         log.info("Chat autonomous agent mode enabled, executing workload...");
                         VerbResponse priorResponse = null;
                         Map<String, Object> args = new HashMap<>();
 
-                        var arguments = response.getArguments();
+
                         if (null != response) {
+                            var arguments = response.getArguments();
                             // Handle memory lookup if specified
                             if (response.getMemoryLookup() != null && !response.getMemoryLookup().isEmpty()) {
                                 log.info("Memory lookup requested: {}", response.getMemoryLookup());
@@ -263,7 +277,10 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                 }
                             }
                             
-                            if (response.getNextOperation() != null && !response.getNextOperation().isEmpty()) {
+                            // Check if the response requires execution or is purely conversational
+                            if (response.requiresExecution()) {
+                                currentPlanStatus = "in_progress";
+                                
                                 var executionResponse = verbRegistry.execute(
                                     agentExecution,
                                     agentExecutionContext,
@@ -272,6 +289,11 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                 );
                                 verbResponses.add(executionResponse);
                                 lastVerbResponse = executionResponse;
+                                
+                                // Track the executed operation
+                                if (!executedOperations.contains(response.getNextOperation())) {
+                                    executedOperations.add(response.getNextOperation());
+                                }
 
                                 var responses = agentExecutionContext.getAgentDataList();
                                 var planResponse =
@@ -285,12 +307,32 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                     }
                                 }
                                 log.info("Plan response: {} from {}", planResponse, responses);
+                                
+                                // Use the enhanced interpret_plan_response with executed operations tracking
                                 nextResponse = chatVerbs.interpret_plan_response(
                                     agentExecution,
                                     agentExecutionContext,
                                     verbRegistry.getVerbs().get(response.getNextOperation()),
-                                    planResponse
+                                    planResponse,
+                                    executedOperations,
+                                    currentPlanStatus,
+                                    isAutonomous
                                 );
+                                
+                                // Update plan status from response
+                                if (nextResponse.getPlanStatus() != null) {
+                                    currentPlanStatus = nextResponse.getPlanStatus();
+                                }
+                                
+                                // Merge executed operations from response
+                                if (nextResponse.getExecutedOperations() != null) {
+                                    for (String op : nextResponse.getExecutedOperations()) {
+                                        if (!executedOperations.contains(op)) {
+                                            executedOperations.add(op);
+                                        }
+                                    }
+                                }
+                                
                                 agentExecutionContext.addToPersistentMemory(
                                     "agent_response_" + System.currentTimeMillis(),
                                     nextResponse.getResponseForUser(),
@@ -337,10 +379,33 @@ public class ChatAgent extends BaseEnterpriseAgent {
 
 
                                 response = nextResponse;
+                                // Reset consecutive conversational counter on successful execution
+                                consecutiveConversationalResponses = 0;
+                            } else {
+                                // Response is conversational only - no execution needed
+                                consecutiveConversationalResponses++;
+                                log.info("Response is conversational only (count: {}), no execution needed. Plan status: {}", 
+                                    consecutiveConversationalResponses, response.getPlanStatus());
+                                currentPlanStatus = response.getPlanStatus() != null ? response.getPlanStatus() : "idle";
+                                
+                                // Check if we've exceeded the maximum consecutive conversational responses
+                                if (consecutiveConversationalResponses >= MAX_CONSECUTIVE_CONVERSATIONAL) {
+                                    log.info("Maximum consecutive conversational responses ({}) reached. Agent will wait for new user input.", 
+                                        MAX_CONSECUTIVE_CONVERSATIONAL);
+                                    // Reset counter and set response to null to trigger fresh prompt on next iteration
+                                    consecutiveConversationalResponses = 0;
+                                    response = null;
+                                } else {
+                                    // Re-prompt for next action with current plan state
+                                    response = chatVerbs.promptAgent(agentExecution, agentExecutionContext, prompt,
+                                        executedOperations, currentPlanStatus, isAutonomous);
+                                }
                             }
 
                         }else {
-                            response = chatVerbs.promptAgent(agentExecution, agentExecutionContext, prompt);
+                            response = chatVerbs.promptAgent(agentExecution, agentExecutionContext, prompt,
+                                executedOperations, currentPlanStatus, isAutonomous);
+                            consecutiveConversationalResponses = 0;
 
                         }
 
