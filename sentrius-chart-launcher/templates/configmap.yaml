@@ -122,6 +122,18 @@ data:
     keycloak.realm=sentrius
     keycloak.base-url={{ .Values.keycloakDomain }}
 
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.logs.exporter=none
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.resource.attributes.service.name=integration-proxy
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
+    #otel.instrumentation.spring.enabled=false
+    #otel.instrumentation.springboot.enabled=false
+
     # Keycloak configuration
     spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.launcherservice.oauth2.client_id }}
     spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
@@ -131,10 +143,7 @@ data:
     spring.security.oauth2.resourceserver.jwt.issuer-uri={{ .Values.keycloakDomain }}/realms/sentrius
     spring.security.oauth2.client.provider.keycloak.issuer-uri={{ .Values.keycloakDomain }}/realms/sentrius
     # otel.traces.exporter=none
-    otel.metrics.exporter=none
-    otel.logs.exporter=none
-    otel.instrumentation.spring.enabled=false
-    otel.instrumentation.springboot.enabled=false
+
 
     management.endpoints.web.exposure.include=health
     management.endpoint.health.show-details=always
