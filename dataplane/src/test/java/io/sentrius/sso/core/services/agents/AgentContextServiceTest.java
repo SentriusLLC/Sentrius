@@ -1,6 +1,8 @@
 package io.sentrius.sso.core.services.agents;
 
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.agents.AgentContext;
+import io.sentrius.sso.core.promptadvisor.service.PromptAdvisorService;
 import io.sentrius.sso.core.repository.AgentContextRepository;
 import io.sentrius.sso.core.repository.AgentMemoryRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,9 +31,14 @@ class AgentContextServiceTest {
 
     private AgentContextService service;
 
+    @Mock
+    private PromptAdvisorService promptAdvisorService;
+    @Mock
+    private SystemOptions systemOptions;
+
     @BeforeEach
     void setUp() {
-        service = new AgentContextService(contextRepo, memoryRepo);
+        service = new AgentContextService(contextRepo, memoryRepo, promptAdvisorService,  systemOptions);
     }
 
     @Test

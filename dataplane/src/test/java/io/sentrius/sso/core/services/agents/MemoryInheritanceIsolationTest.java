@@ -3,6 +3,7 @@ package io.sentrius.sso.core.services.agents;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.agents.AgentContext;
 import io.sentrius.sso.core.model.agents.AgentMemory;
+import io.sentrius.sso.core.promptadvisor.service.PromptAdvisorService;
 import io.sentrius.sso.core.repository.AgentContextRepository;
 import io.sentrius.sso.core.repository.AgentMemoryRepository;
 import io.sentrius.sso.core.services.abac.EvaluationContext;
@@ -47,6 +48,9 @@ class MemoryInheritanceIsolationTest {
     @Mock
     private VectorAgentMemoryStore vectorMemoryStore;
 
+    @Mock
+    private PromptAdvisorService promptAdvisorService;
+
     SystemOptions systemOptions = new SystemOptions();
 
     private GenerationManager generationManager;
@@ -75,7 +79,9 @@ class MemoryInheritanceIsolationTest {
 
         agentContextService = new AgentContextService(
                 agentContextRepository,
-                agentMemoryRepository
+                agentMemoryRepository,
+                promptAdvisorService,
+                systemOptions
         );
     }
 

@@ -1,4 +1,4 @@
-package io.sentrius.sso.promptadvisor.model;
+package io.sentrius.sso.core.promptadvisor.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;

@@ -1,9 +1,9 @@
-package io.sentrius.sso.promptadvisor.service;
+package io.sentrius.sso.core.promptadvisor.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentrius.sso.core.config.SystemOptions;
-import io.sentrius.sso.promptadvisor.model.ValidatePromptRequest;
-import io.sentrius.sso.promptadvisor.model.ValidatePromptResponse;
+import io.sentrius.sso.core.promptadvisor.model.ValidatePromptRequest;
+import io.sentrius.sso.core.promptadvisor.model.ValidatePromptResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;

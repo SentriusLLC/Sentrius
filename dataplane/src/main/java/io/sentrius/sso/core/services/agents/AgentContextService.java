@@ -4,10 +4,13 @@ package io.sentrius.sso.core.services.agents;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.HashMap;
 import java.util.UUID;
 import io.sentrius.sso.core.dto.agents.AgentContextLineageProjection;
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.dto.agents.AgentContextRequestDTO;
 import io.sentrius.sso.core.model.agents.AgentContext;
+import io.sentrius.sso.core.promptadvisor.service.PromptAdvisorService;
 import io.sentrius.sso.core.repository.AgentContextRepository;
 import io.sentrius.sso.core.repository.AgentMemoryRepository;
 import lombok.NonNull;
@@ -21,19 +24,49 @@ public class AgentContextService {
 
     private final AgentContextRepository contextRepo;
     private final AgentMemoryRepository memoryRepo;
+    private final PromptAdvisorService promptAdvisorService;
+    private final SystemOptions systemOptions;
 
-    public AgentContextService(AgentContextRepository contextRepo, AgentMemoryRepository memoryRepo) {
+    public AgentContextService(AgentContextRepository contextRepo,
+                                AgentMemoryRepository memoryRepo,
+                               PromptAdvisorService promptAdvisorService,
+                               SystemOptions systemOptions) {
         this.contextRepo = contextRepo;
-        this.memoryRepo = memoryRepo;
+            this.memoryRepo = memoryRepo;
+        this.promptAdvisorService = promptAdvisorService;
+        this.systemOptions = systemOptions;
     }
 
     @Transactional
     public AgentContext create(@NonNull AgentContextRequestDTO dto) {
         log.info("Creating AgentContext from {}", dto);
+        
+        // Refine the agent prompt/context using the prompt advisor
+        String originalContext = dto.getContext();
+        String refinedContext = originalContext;
+        
+        if (systemOptions.getEnablePromptAdvisor() && originalContext != null && !originalContext.isEmpty()) {
+            log.info("Refining agent context/prompt using prompt advisor");
+            var context = new HashMap<String, Object>();
+            context.put("agent_name", dto.getName());
+            context.put("description", dto.getDescription());
+            
+            refinedContext = promptAdvisorService.refinePrompt(originalContext, context);
+            
+            if (!refinedContext.equals(originalContext)) {
+                log.info("Agent context refined by prompt advisor. Original length: {}, Refined length: {}", 
+                    originalContext.length(), refinedContext.length());
+            } else {
+                log.info("Agent context unchanged by prompt advisor");
+            }
+        } else {
+            log.debug("Prompt advisor disabled or context is empty, using original context");
+        }
+        
         AgentContext context = new AgentContext();
         context.setName(dto.getName());
         context.setDescription(dto.getDescription());
-        context.setContext(dto.getContext());
+        context.setContext(refinedContext);
         return contextRepo.save(context);
     }
 
