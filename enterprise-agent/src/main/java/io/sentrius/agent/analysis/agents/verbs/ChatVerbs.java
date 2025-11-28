@@ -308,8 +308,14 @@ public class ChatVerbs extends VerbBase{
             PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
             var prompt = promptBuilder.buildPrompt(false);
             List<Message> messages = new ArrayList<>();
+            
+            // Always include the prompt with verb operations as the first system message
+            // This ensures the agent knows what verbs are available for follow-up requests
+            var context = Message.builder().role("system").content(prompt).build();
+            messages.add(context);
+            int size = getMessageSize(context);
 
-            var history = getContextWindow(executionContext.getMessages(), 1024*96 );
+            var history = getContextWindow(executionContext.getMessages(), 1024*96 - size);
             messages.addAll(history);
             
             // Add the strict mode protocol with plan state awareness for follow-on messages (chat mode)
@@ -633,21 +639,22 @@ public class ChatVerbs extends VerbBase{
             }
 
 
+            // Always include the prompt with verb operations as the first system message
+            // This ensures the agent knows what verbs are available for plan responses
+            var context = Message.builder().role("system").content(prompt).build();
+            messages.add(context);
+            int contextSize = getMessageSize(context);
 
             if (executionContext.getMessages().isEmpty()) {
-                log.info("*** Adding Prompt");
-                var context = Message.builder().role("system").content(prompt).build();
-                messages.add(context);
-
-
+                log.info("*** Adding Prompt instruction");
 
                 messages.add(Message.builder().role("system").content("You have executed verbs for the previous user " +
                     "messages. Please generate a user response that summarizes the last message. Keep all responses in " +
                     "LLMResponse format" +
                     ".").build());
             } else {
-                // Get a window of conversation history, don't add empty messages to context
-                var history = getContextWindow(executionContext.getMessages(), 1024*96 );
+                // Get a window of conversation history, accounting for the context size
+                var history = getContextWindow(executionContext.getMessages(), 1024*96 - contextSize);
                 messages.addAll(history);
             }
 
