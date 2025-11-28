@@ -57,6 +57,9 @@ public class ChatAgent extends BaseEnterpriseAgent {
     
     /** Maximum number of consecutive conversational-only responses before waiting for user input */
     private static final int MAX_CONSECUTIVE_CONVERSATIONAL = 5;
+    
+    /** Default idle sleep duration in milliseconds when autonomous agent plan completes */
+    private static final long DEFAULT_IDLE_SLEEP_MS = 30_000L;
 
     private AgentExecution agentExecution;
 
@@ -388,8 +391,38 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                     consecutiveConversationalResponses, response.getPlanStatus());
                                 currentPlanStatus = response.getPlanStatus() != null ? response.getPlanStatus() : "idle";
                                 
-                                // Check if we've exceeded the maximum consecutive conversational responses
-                                if (consecutiveConversationalResponses >= MAX_CONSECUTIVE_CONVERSATIONAL) {
+                                // For autonomous agents, when plan is completed with no next operation,
+                                // reset state and sleep before restarting the plan
+                                if (isAutonomous && "completed".equals(currentPlanStatus) && 
+                                    (response.getNextOperation() == null || response.getNextOperation().isEmpty())) {
+                                    log.info("Autonomous agent plan completed. Resetting state and sleeping before restart.");
+                                    
+                                    // Reset plan state for new cycle
+                                    executedOperations.clear();
+                                    currentPlanStatus = "idle";
+                                    consecutiveConversationalResponses = 0;
+                                    
+                                    // Get configurable idle sleep duration (default 30 seconds)
+                                    long idleSleepMs = agentConfigOptions.getIdleSleepMs() != null 
+                                        ? agentConfigOptions.getIdleSleepMs() 
+                                        : DEFAULT_IDLE_SLEEP_MS;
+                                    
+                                    log.info("Sleeping for {} ms before restarting autonomous agent plan.", idleSleepMs);
+                                    try {
+                                        Thread.sleep(idleSleepMs);
+                                    } catch (InterruptedException e) {
+                                        Thread.currentThread().interrupt();
+                                        log.warn("Autonomous agent idle sleep interrupted");
+                                        // Check if we should exit on shutdown
+                                        if (!running) {
+                                            break;
+                                        }
+                                    }
+                                    
+                                    // Start fresh with new prompt - set response to null to trigger fresh prompt
+                                    response = null;
+                                } else if (consecutiveConversationalResponses >= MAX_CONSECUTIVE_CONVERSATIONAL) {
+                                    // Check if we've exceeded the maximum consecutive conversational responses
                                     log.info("Maximum consecutive conversational responses ({}) reached. Agent will wait for new user input.", 
                                         MAX_CONSECUTIVE_CONVERSATIONAL);
                                     // Reset counter and set response to null to trigger fresh prompt on next iteration

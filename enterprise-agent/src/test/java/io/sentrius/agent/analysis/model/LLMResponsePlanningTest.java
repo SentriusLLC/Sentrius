@@ -276,4 +276,41 @@ class LLMResponsePlanningTest {
         assertTrue(step4.isConversationalOnly());
         assertFalse(step4.requiresExecution());
     }
+    
+    @Test
+    void testAutonomousAgentCompletedStateReset() {
+        // Simulates the scenario where autonomous agent completes a task
+        // and should be ready to restart with reset state
+        
+        List<String> executedOps = new ArrayList<>();
+        executedOps.add("list_active_terminal_sessions");
+        
+        LLMResponse completedResponse = LLMResponse.builder()
+            .planStatus("completed")
+            .executedOperations(executedOps)
+            .previousOperation("list_active_terminal_sessions")
+            .nextOperation("")  // Empty - plan is complete
+            .responseForUser("No active SSH terminal sessions were found.")
+            .summaryForLLM("No active SSH terminal sessions were found. Task is complete.")
+            .build();
+        
+        // Verify the response is conversational only (doesn't require execution)
+        assertTrue(completedResponse.isConversationalOnly());
+        assertFalse(completedResponse.requiresExecution());
+        assertEquals("completed", completedResponse.getPlanStatus());
+        assertTrue(completedResponse.getNextOperation() == null || completedResponse.getNextOperation().isEmpty());
+        
+        // After state reset, a fresh response should start with idle status
+        LLMResponse freshResponse = LLMResponse.builder()
+            .planStatus("idle")
+            .executedOperations(new ArrayList<>())  // Reset to empty
+            .previousOperation("")
+            .nextOperation("list_active_terminal_sessions")  // Starting fresh
+            .build();
+        
+        assertFalse(freshResponse.isConversationalOnly());
+        assertTrue(freshResponse.requiresExecution());
+        assertEquals("idle", freshResponse.getPlanStatus());
+        assertTrue(freshResponse.getExecutedOperations().isEmpty());
+    }
 }

@@ -23,6 +23,12 @@ public class AgentConfigOptions {
     private String clientId;
     private String type;
     private List<String> endpoints;
+    
+    /**
+     * Sleep duration in milliseconds when autonomous agent plan completes before restarting.
+     * Defaults to 30000 (30 seconds) if not specified.
+     */
+    private Long idleSleepMs;
 
     private Ai ai;
 
