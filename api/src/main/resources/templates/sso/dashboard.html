@@ -247,115 +247,6 @@
                 gridItem.appendChild(contentDiv);
             });
         });
-        document.addEventListener('DOMContentLoaded', function() {
-
-            // ---- Gridstack Configuration for #grid_stack_use ---- //
-            const gridElementUse = document.querySelector('#grid_stack_use');
-
-            const optionsUse = {
-                staticGrid: true, // Allow dragging and resizing for this one
-                columnMax: 12,
-                rowHeight: '100px'
-            };
-
-            const gridUse = GridStack.init(optionsUse, gridElementUse);
-            const itemsUse = [];
-
-            function addToItemsUse(content) {
-                const totalItems = itemsUse.length;
-                const columnsPerCard = 1;
-                const row = Math.floor(totalItems / (optionsUse.columnMax / columnsPerCard));
-                const column = (totalItems % (optionsUse.columnMax / columnsPerCard)) * columnsPerCard;
-
-                const newItem = {
-                    content: content,
-                    x: column,
-                    y: row,
-                    w: columnsPerCard,
-                    h: 1
-                };
-
-                itemsUse.push(newItem);
-            }
-
-            // ---- Fetch Terminal Data from /api/v1/ssh/terminal/list ---- //
-            function fetchAndAddTerminalWindows() {
-                fetch('/api/v1/ssh/terminal/list')
-                    .then(response => response.json())
-                    .then(data => {
-                        // Iterate through the returned HostSystemDTO list and create cards
-                        data.forEach(terminal => {
-                            const content = createTerminalCard(terminal);
-                            addToItemsUse(content);
-                        });
-
-                        // Load the items into the Gridstack for #grid_stack_use
-                        gridUse.load(itemsUse.map(item => {
-                            return {
-                                x: item.x,
-                                y: item.y,
-                                w: item.w,
-                                h: item.h,
-                                content: item.content
-                            };
-                        }));
-
-                        // Setting the content dynamically after loading
-                        const gridItemsUse = gridElementUse.querySelectorAll('.grid-stack-item');
-                        gridItemsUse.forEach((gridItem, index) => {
-                            const contentDiv = document.createElement('div');
-                            contentDiv.classList.add('grid-stack-item-content');
-                            contentDiv.classList.add('terminal-card-black');
-
-                            contentDiv.innerHTML = itemsUse[index].content;
-                            gridItem.appendChild(contentDiv);
-                        });
-                    })
-                    .catch(error => {
-                        console.error('Error fetching Terminal data:', error);
-                    });
-            }
-
-            // Function to create a terminal window card
-            function createTerminalCard(terminal) {
-                var id = encodeURIComponent(terminal.hostConnection);
-                return `
-            <div style="width: 100%;">
-                <a href="/sso/v1/enclaves/hosts/attach?sessionId=${id}">
-                    <table style="width: 100%; border-collapse: collapse; text-align: center; margin: 10px 0;">
-                        <tr>
-                            <td style="border: none; padding: 10px; background-color: #1b1f23;">
-                                <i class="fas fa-terminal"></i>
-                            </td>
-                            <td style="border: none; padding: 10px;">
-                                <a href="/sso/v1/enclaves/hosts/attach?sessionId=${id}" style="font-weight: bold; font-size: 1.2em; color: #FFFFFF; text-decoration: none;">
-                                    Terminal: ${terminal.displayName}
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="border-top: 1px solid #ccc; padding: 10px; background-color: #f9f9f9;">
-                                <table style="width: 100%; border-collapse: collapse;">
-                                    <tr>
-                                        <td style="padding: 5px;">Status:</td>
-                                        <td style="padding: 5px; font-weight: bold;">${terminal.statusCd}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 5px;">Last Accessed:</td>
-                                        <td style="padding: 5px; font-weight: bold;">${terminal.lastAccessed}</td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                    </table>
-                </a>
-            </div>
-        `;
-            }
-
-            // Fetch data and add items to grid_stack_use
-            fetchAndAddTerminalWindows();
-        });
 
     </script>
     <style>
@@ -736,8 +627,148 @@
 
                     <hr class="my-4">
                     <div class="grid-stack" id="grid_stack_configure"></div>
-                    <h3>Open Terminals</h3>
-                    <div class="grid-stack" id="grid_stack_use"></div>
+                    
+                    <!-- Dashboard Cards Section -->
+                    <h3>Platform Overview</h3>
+                    <div id="dashboard-cards-section" class="row g-4 mb-4">
+                        <!-- Zero Trust Card -->
+                        <div class="col-md-6 col-lg-3">
+                            <div id="zero-trust-display-card" class="card custom-dark-card shadow-sm h-100"
+                                 th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_VIEW_ZTATS')}">
+                                <div class="card-header position-relative">
+                                    <a href="/sso/v1/zerotrust/rules/list" class="card-link">
+                                        <i class="fas fa-shield-alt me-2"></i>Zero Trust
+                                    </a>
+                                    <i class="fas fa-lock card-icon"></i>
+                                </div>
+                                <div class="card-body">
+                                    <div class="text-center mb-3">
+                                        <img src="/images/zt_medium.png" alt="Zero Trust" style="width: 60px; height: auto; opacity: 0.9;">
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">System Rules:</span>
+                                        <span class="fw-bold" id="zt-system-rules">0</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <span class="text-muted">Open Connections:</span>
+                                        <span class="fw-bold" id="zt-open-connections">0</span>
+                                    </div>
+                                    <div class="d-grid gap-2">
+                                        <a href="/sso/v1/zerotrust/rules/list" class="btn btn-sm btn-primary">Assign Rules</a>
+                                        <a href="/sso/v1/zerotrust/accesstoken/list" class="btn btn-sm btn-outline-primary">View Trust ATs</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Deployed Agents Card -->
+                        <div class="col-md-6 col-lg-3">
+                            <div id="embedded-agents-display-card" class="card custom-dark-card shadow-sm h-100">
+                                <div class="card-header position-relative">
+                                    <a href="/sso/v1/agent/list" class="card-link">
+                                        <i class="fas fa-robot me-2"></i>Deployed Agents
+                                    </a>
+                                    <i class="fas fa-cog card-icon"></i>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted mb-2" style="font-size: 0.8rem;">Agents deployed across your infrastructure</p>
+                                    <div id="embedded-agents-list" class="agent-list" style="max-height: 180px; overflow-y: auto;">
+                                        <div class="text-center text-muted py-3">
+                                            <i class="fas fa-spinner fa-spin"></i> Loading...
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 text-center">
+                                        <span class="badge bg-success me-1"><span id="active-agents-count">0</span> Active</span>
+                                        <span class="badge bg-secondary"><span id="total-agents-count">0</span> Total</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Security Metrics Card -->
+                        <div class="col-md-6 col-lg-3">
+                            <div id="security-metrics-display-card" class="card custom-dark-card shadow-sm h-100">
+                                <div class="card-header position-relative">
+                                    <a href="/sso/v1/sessions/audit/list" class="card-link">
+                                        <i class="fas fa-chart-bar me-2"></i>Security Metrics
+                                    </a>
+                                    <i class="fas fa-shield-alt card-icon"></i>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <div class="text-center p-2 rounded" style="background-color: #1a1a1a;">
+                                                <div id="metric-active-sessions" style="font-size: 1.3rem; font-weight: bold; color: #82ca9d;">0</div>
+                                                <div class="text-muted" style="font-size: 0.7rem;">Sessions</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="text-center p-2 rounded" style="background-color: #1a1a1a;">
+                                                <div id="metric-trust-score" style="font-size: 1.3rem; font-weight: bold; color: #8884d8;">0%</div>
+                                                <div class="text-muted" style="font-size: 0.7rem;">Trust Score</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="text-center p-2 rounded" style="background-color: #1a1a1a;">
+                                                <div id="metric-ztat-tokens" style="font-size: 1.3rem; font-weight: bold; color: #ffc658;">0</div>
+                                                <div class="text-muted" style="font-size: 0.7rem;">ZTAT (24h)</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="text-center p-2 rounded" style="background-color: #1a1a1a;">
+                                                <div id="metric-policy-violations" style="font-size: 1.3rem; font-weight: bold; color: #82ca9d;">0</div>
+                                                <div class="text-muted" style="font-size: 0.7rem;">Violations</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- System Health Card -->
+                        <div class="col-md-6 col-lg-3">
+                            <div id="system-health-display-card" class="card custom-dark-card shadow-sm h-100">
+                                <div class="card-header position-relative">
+                                    <a href="/sso/v1/system/settings" class="card-link">
+                                        <i class="fas fa-heartbeat me-2"></i>System Health
+                                    </a>
+                                    <i class="fas fa-server card-icon"></i>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-2 text-center">
+                                        <span id="system-overall-status" class="badge bg-success px-3 py-2">
+                                            <i class="fas fa-check-circle me-1"></i> Operational
+                                        </span>
+                                    </div>
+                                    <div id="system-components-list" style="font-size: 0.85rem;">
+                                        <div class="d-flex justify-content-between py-1 border-bottom border-secondary">
+                                            <span><i class="fas fa-server me-1 text-info"></i>API Server</span>
+                                            <span class="badge bg-success">OK</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between py-1 border-bottom border-secondary">
+                                            <span><i class="fas fa-database me-1 text-info"></i>Database</span>
+                                            <span class="badge bg-success">OK</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between py-1 border-bottom border-secondary">
+                                            <span><i class="fas fa-key me-1 text-info"></i>Auth</span>
+                                            <span class="badge bg-success">OK</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between py-1 border-bottom border-secondary">
+                                            <span><i class="fas fa-terminal me-1 text-info"></i>SSH</span>
+                                            <span class="badge bg-success">OK</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between py-1">
+                                            <span><i class="fas fa-desktop me-1 text-info"></i>RDP</span>
+                                            <span class="badge bg-success">OK</span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 text-center text-muted" style="font-size: 0.7rem;">
+                                        <i class="fas fa-clock me-1"></i><span id="health-last-check">--</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <div th:replace="~{fragments/dashboard/dashboard_cards}"></div>
                     <div th:replace="~{fragments/zero_trust_card}"></div>
@@ -761,6 +792,7 @@
 <script type="module" th:src="@{/js/add_group.js}" defer></script>
 <script type="module" th:src="@{/js/dashboard-agents.js}" defer></script>
 <script type="module" th:src="@{/js/enclave-data.js}" defer></script>
+<script th:src="@{/js/dashboard-cards.js}" defer></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {

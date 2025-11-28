@@ -809,3 +809,62 @@ table.dataTable.display tbody tr.odd > .sorting_1, table.dataTable.order-column.
     font-size: 3em;
     font-weight: bolder; /* Makes the text bold */
 }
+
+/* Dashboard Cards Section Styles */
+#dashboard-cards-section .card {
+    background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+    border: 1px solid #404040;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#dashboard-cards-section .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+#dashboard-cards-section .card-header {
+    background: linear-gradient(135deg, #2f2f2f 0%, #3a3a3a 100%);
+    border-bottom: 1px solid #404040;
+    padding: 12px 15px;
+}
+
+#dashboard-cards-section .card-header .card-link {
+    color: #ffffff;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+#dashboard-cards-section .card-header .card-link:hover {
+    color: #8ab4f8;
+}
+
+#dashboard-cards-section .card-body {
+    padding: 15px;
+}
+
+#dashboard-cards-section .agent-item {
+    font-size: 0.85rem;
+}
+
+#dashboard-cards-section .agent-item:last-child {
+    border-bottom: none !important;
+}
+
+/* Agent list styling */
+.agent-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.agent-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.agent-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.agent-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}

@@ -56,4 +56,10 @@ public interface PolicyViolationEventRepository extends JpaRepository<PolicyViol
      */
     @Query("SELECT e FROM PolicyViolationEvent e WHERE e.timestamp >= :since ORDER BY e.timestamp DESC")
     List<PolicyViolationEvent> findRecentViolations(@Param("since") LocalDateTime since);
+
+    /**
+     * Count all denied violations (incidents) across all entities since a given time
+     */
+    @Query("SELECT COUNT(e) FROM PolicyViolationEvent e WHERE e.approved = false AND e.timestamp >= :since")
+    long countTotalDeniedViolationsSince(@Param("since") LocalDateTime since);
 }

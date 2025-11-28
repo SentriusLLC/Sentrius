@@ -1,5 +1,6 @@
 package io.sentrius.sso.core.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.model.zt.OpsZeroTrustAcessTokenRequest;
@@ -40,4 +41,10 @@ public interface OpsJITRequestRepository extends JpaRepository<OpsZeroTrustAcess
         "and a.ztatRequest.id = j.id " +
         "AND (:userId IS NULL OR j.user.id = :userId)")
     List<OpsZeroTrustAcessTokenRequest> findAllApprovedRequests(@Param("userId") Long userId);
+
+    @Query("SELECT COUNT(a) FROM OpsApproval a JOIN a.ztatRequest j WHERE a.approved = true AND j.lastUpdated >= :since")
+    long countApprovedTokensSince(@Param("since") java.sql.Timestamp since);
+
+    @Query("SELECT COUNT(a) FROM OpsApproval a JOIN a.ztatRequest j WHERE a.approved = false AND j.lastUpdated >= :since")
+    long countDeniedTokensSince(@Param("since") java.sql.Timestamp since);
 }

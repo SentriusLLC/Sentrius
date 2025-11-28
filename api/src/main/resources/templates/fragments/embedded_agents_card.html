@@ -1,0 +1,20 @@
+<div id="embedded-agents-card" class="card custom-dark-card shadow-sm" style="display: none;">
+    <div class="card-header position-relative">
+        <a href="/sso/v1/agent/list" class="card-link">
+            <i class="fas fa-robot me-2"></i>Embedded Agents
+        </a>
+        <i class="fas fa-cog card-icon"></i>
+    </div>
+    <div class="card-body">
+        <p class="card-subtitle text-muted mb-3">System agents providing zero trust security services</p>
+        <div id="embedded-agents-list" class="agent-list">
+            <div class="text-center text-muted py-3">
+                <i class="fas fa-spinner fa-spin"></i> Loading agents...
+            </div>
+        </div>
+        <div class="mt-3 text-center">
+            <span class="badge bg-success me-2"><span id="active-agents-count">0</span> Active</span>
+            <span class="badge bg-secondary"><span id="total-agents-count">0</span> Total</span>
+        </div>
+    </div>
+</div>

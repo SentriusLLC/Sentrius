@@ -1,0 +1,36 @@
+<div id="security-metrics-card" class="card custom-dark-card shadow-sm" style="display: none;">
+    <div class="card-header position-relative">
+        <a href="/sso/v1/sessions/audit/list" class="card-link">
+            <i class="fas fa-shield-alt me-2"></i>Security Metrics
+        </a>
+        <i class="fas fa-lock card-icon"></i>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-6">
+                <div class="metric-item text-center p-2 rounded" style="background-color: #1a1a1a;">
+                    <div class="metric-value" id="metric-active-sessions" style="font-size: 1.5rem; font-weight: bold; color: #82ca9d;">0</div>
+                    <div class="metric-label text-muted" style="font-size: 0.8rem;">Active Sessions</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="metric-item text-center p-2 rounded" style="background-color: #1a1a1a;">
+                    <div class="metric-value" id="metric-trust-score" style="font-size: 1.5rem; font-weight: bold; color: #8884d8;">0%</div>
+                    <div class="metric-label text-muted" style="font-size: 0.8rem;">Avg Trust Score</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="metric-item text-center p-2 rounded" style="background-color: #1a1a1a;">
+                    <div class="metric-value" id="metric-ztat-tokens" style="font-size: 1.5rem; font-weight: bold; color: #ffc658;">0</div>
+                    <div class="metric-label text-muted" style="font-size: 0.8rem;">ZTAT Tokens (24h)</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="metric-item text-center p-2 rounded" style="background-color: #1a1a1a;">
+                    <div class="metric-value" id="metric-policy-violations" style="font-size: 1.5rem; font-weight: bold; color: #ff8042;">0</div>
+                    <div class="metric-label text-muted" style="font-size: 0.8rem;">Policy Violations</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
