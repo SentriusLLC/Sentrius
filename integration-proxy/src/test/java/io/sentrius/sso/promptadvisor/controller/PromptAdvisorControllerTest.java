@@ -4,6 +4,7 @@ import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.promptadvisor.model.RefinePromptResponse;
 import io.sentrius.sso.core.promptadvisor.model.ValidatePromptRequest;
 import io.sentrius.sso.core.promptadvisor.model.ValidatePromptResponse;
 import io.sentrius.sso.core.promptadvisor.service.PromptAdvisorService;
@@ -126,7 +127,7 @@ class PromptAdvisorControllerTest {
     }
 
     @Test
-    void refinePromptReturnsRefinedPrompt() {
+    void refinePromptReturnsRefinedPromptFromLLM() {
         // Given
         when(systemOptions.getEnablePromptAdvisor()).thenReturn(true);
         doReturn(mockUser).when(controller).getOperatingUser(request, response);
@@ -136,8 +137,25 @@ class PromptAdvisorControllerTest {
             .prompt("Original prompt")
             .build();
 
-        when(promptAdvisorService.refinePrompt(anyString(), any()))
-            .thenReturn("Refined prompt");
+        // Mock the LLM-based refinement response
+        Map<String, Integer> ratings = new HashMap<>();
+        ratings.put("purpose", 9);
+        ratings.put("safety", 9);
+        ratings.put("compliance", 8);
+        ratings.put("provenance", 8);
+        ratings.put("autonomy", 9);
+
+        RefinePromptResponse refineResponse = RefinePromptResponse.builder()
+            .originalPrompt("Original prompt")
+            .refinedPrompt("LLM refined prompt with improvements")
+            .score(90)
+            .ratings(ratings)
+            .explanation("Refined prompt meets quality standards after LLM improvement")
+            .recommendations(Arrays.asList("Good clarity"))
+            .build();
+
+        when(promptAdvisorService.refinePromptWithLLM(anyString(), any()))
+            .thenReturn(refineResponse);
 
         // When
         ResponseEntity<?> result = controller.refinePrompt(requestBody, request, response);
@@ -147,7 +165,10 @@ class PromptAdvisorControllerTest {
         assertTrue(result.getBody() instanceof Map);
         Map<?, ?> responseBody = (Map<?, ?>) result.getBody();
         assertEquals("Original prompt", responseBody.get("original_prompt"));
-        assertEquals("Refined prompt", responseBody.get("refined_prompt"));
+        assertEquals("LLM refined prompt with improvements", responseBody.get("refined_prompt"));
+        assertEquals(90, responseBody.get("score"));
+        assertEquals(ratings, responseBody.get("ratings"));
+        assertEquals("Refined prompt meets quality standards after LLM improvement", responseBody.get("explanation"));
     }
 
     @Test

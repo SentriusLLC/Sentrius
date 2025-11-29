@@ -43,3 +43,23 @@ class CriteriaResponse(BaseModel):
     
     criteria: List[Criterion] = Field(..., description="List of ATPL criteria")
     total_weight: int = Field(..., description="Total weight percentage (should be 100)")
+
+
+class RefinePromptRequest(BaseModel):
+    """Request model for prompt refinement."""
+    
+    prompt: str = Field(..., description="The original prompt to refine")
+    recommendations: List[str] = Field(default=[], description="List of recommendations to apply")
+    explanation: str = Field(default="", description="Explanation from the evaluation")
+    context: Optional[Dict[str, Any]] = Field(None, description="Optional context as JSON")
+
+
+class RefinePromptResponse(BaseModel):
+    """Response model for prompt refinement."""
+    
+    original_prompt: str = Field(..., description="The original prompt")
+    refined_prompt: str = Field(..., description="The refined prompt")
+    score: int = Field(..., ge=0, le=100, description="Score of the refined prompt (0-100)")
+    ratings: CategoryRatings = Field(..., description="Individual category ratings of refined prompt")
+    explanation: str = Field(..., description="Evaluation explanation for the refined prompt")
+    recommendations: List[str] = Field(..., description="Any remaining recommendations")

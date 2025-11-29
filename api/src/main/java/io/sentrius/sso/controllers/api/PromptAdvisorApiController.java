@@ -1,7 +1,17 @@
 package io.sentrius.sso.controllers.api;
 
 import io.sentrius.sso.core.annotations.LimitAccess;
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.model.verbs.Endpoint;
+import io.sentrius.sso.core.promptadvisor.model.RefinePromptResponse;
+import io.sentrius.sso.core.promptadvisor.model.ValidatePromptRequest;
+import io.sentrius.sso.core.promptadvisor.service.PromptAdvisorService;
+import io.sentrius.sso.core.services.ErrorOutputService;
+import io.sentrius.sso.core.services.UserService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -17,12 +27,22 @@ import java.util.*;
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/prompt-advisor")
-public class PromptAdvisorApiController {
+public class PromptAdvisorApiController extends BaseController {
 
     private final RestTemplate restTemplate = new RestTemplate();
+    private final PromptAdvisorService promptAdvisorService;
+
 
     @Value("${sentrius.prompt-advisor.url:http://sentrius-prompt-advisor:80}")
     private String promptAdvisorUrl;
+
+    protected PromptAdvisorApiController(
+        UserService userService, SystemOptions systemOptions,
+        ErrorOutputService errorOutputService, PromptAdvisorService promptAdvisorService
+    ) {
+        super(userService, systemOptions, errorOutputService);
+        this.promptAdvisorService = promptAdvisorService;
+    }
 
     /**
      * Get current ATPL criteria and their weights
@@ -72,54 +92,54 @@ public class PromptAdvisorApiController {
      * Interactive prompt refinement session
      */
     @PostMapping("/refine")
-    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
-    public ResponseEntity<Map<String, Object>> refinePrompt(@RequestBody Map<String, Object> request) {
-        try {
-            // First validate the prompt
-            String prompt = (String) request.get("prompt");
-            String sessionId = (String) request.getOrDefault("sessionId", UUID.randomUUID().toString());
-            
-            Map<String, Object> validateRequest = new HashMap<>();
-            validateRequest.put("prompt", prompt);
-            
-            // Only include context if it's a non-empty Map (prompt-advisor expects Dict or null)
-            Object contextObj = request.get("context");
-            if (contextObj instanceof Map && !((Map<?, ?>) contextObj).isEmpty()) {
-                validateRequest.put("context", contextObj);
-            }
-            // If context is null or not provided, don't include it - let the service use its default
-            
-            String url = promptAdvisorUrl + "/validate_prompt";
-            
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(validateRequest, headers);
-            
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-            Map<String, Object> validationResult = response.getBody();
-            
-            // Build refinement response with suggestions
-            Map<String, Object> refinementResponse = new HashMap<>();
-            refinementResponse.put("sessionId", sessionId);
-            refinementResponse.put("originalPrompt", prompt);
-            refinementResponse.put("score", validationResult.get("score"));
-            refinementResponse.put("ratings", validationResult.get("ratings"));
-            refinementResponse.put("explanation", validationResult.get("explanation"));
-            refinementResponse.put("recommendations", validationResult.get("recommendations"));
-            
-            // Generate refinement suggestions based on scores
-            List<String> suggestions = generateRefinementSuggestions(validationResult);
-            refinementResponse.put("suggestions", suggestions);
-            
-            return ResponseEntity.ok(refinementResponse);
-        } catch (Exception e) {
-            log.error("Error refining prompt with prompt-advisor", e);
-            Map<String, Object> error = new HashMap<>();
-            error.put("status", "error");
-            error.put("message", "Failed to refine prompt: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
+    @Endpoint(description = "Refine a prompt using LLM to apply recommendations and improve quality")
+    public ResponseEntity<?> refinePrompt(
+        @RequestBody ValidatePromptRequest request,
+        HttpServletRequest httpRequest,
+        HttpServletResponse httpResponse
+    ) {
+        if (!systemOptions.getEnablePromptAdvisor()) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("error", "Prompt advisor service is disabled"));
         }
+
+        var operatingUser = getOperatingUser(httpRequest, httpResponse);
+        if (operatingUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", "Authentication required"));
+        }
+
+        log.info("Refining prompt using LLM for user: {}", operatingUser.getUsername());
+
+        // Use the new LLM-based refinement that actually rewrites the prompt
+        RefinePromptResponse refineResponse = promptAdvisorService.refinePromptWithLLM(
+            request.getPrompt(),
+            request.getContext()
+        );
+
+        if (refineResponse == null) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to refine prompt"));
+        }
+
+        // Build response with all refinement data
+        Map<String, Object> result = new HashMap<>();
+        result.put("original_prompt", refineResponse.getOriginalPrompt());
+        result.put("refined_prompt", refineResponse.getRefinedPrompt());
+        if (refineResponse.getScore() != null) {
+            result.put("score", refineResponse.getScore());
+        }
+        if (refineResponse.getRatings() != null) {
+            result.put("ratings", refineResponse.getRatings());
+        }
+        if (refineResponse.getExplanation() != null) {
+            result.put("explanation", refineResponse.getExplanation());
+        }
+        if (refineResponse.getRecommendations() != null) {
+            result.put("recommendations", refineResponse.getRecommendations());
+        }
+
+        return ResponseEntity.ok(result);
     }
 
     /**

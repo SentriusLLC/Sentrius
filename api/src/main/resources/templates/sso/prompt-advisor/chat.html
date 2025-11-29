@@ -287,6 +287,77 @@
             box-shadow: none;
         }
         
+        .refine-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--secondary-gradient);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        
+        .refine-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(56, 239, 125, 0.4);
+        }
+        
+        .refine-btn:disabled {
+            background: var(--border-color);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .refined-prompt-card {
+            background: rgba(56, 239, 125, 0.1);
+            border: 1px solid rgba(56, 239, 125, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 15px;
+        }
+        
+        .refined-prompt-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #38ef7d;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        .refined-prompt-content {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .use-refined-btn {
+            background: rgba(56, 239, 125, 0.2);
+            border: 1px solid rgba(56, 239, 125, 0.5);
+            color: #38ef7d;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-top: 10px;
+            transition: all 0.2s ease;
+        }
+        
+        .use-refined-btn:hover {
+            background: rgba(56, 239, 125, 0.3);
+        }
+        
         .quick-actions {
             display: flex;
             gap: 10px;
@@ -585,8 +656,11 @@
                                             rows="1"
                                             onkeydown="handleKeyDown(event)"></textarea>
                                     </div>
-                                    <button class="send-btn" id="sendBtn" onclick="analyzePrompt()">
+                                    <button class="send-btn" id="sendBtn" onclick="analyzePrompt()" title="Analyze Prompt">
                                         <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                    <button class="refine-btn" id="refineBtn" onclick="refinePrompt()" title="Refine Prompt">
+                                        <i class="fas fa-magic"></i>
                                     </button>
                                 </div>
                             </div>
@@ -669,6 +743,7 @@
     let sessionId = generateUUID();
     let sessionHistory = [];
     let currentAttempt = 0;
+    let refinedPrompts = {}; // Storage for refined prompts indexed by ID
 
     // Quick prompt templates
     const quickPrompts = {
@@ -796,14 +871,18 @@
         return html;
     }
 
-    function showTyping() {
-        document.getElementById('typingIndicator').classList.add('active');
+    function showTyping(message = 'Analyzing prompt...') {
+        const typingIndicator = document.getElementById('typingIndicator');
+        typingIndicator.querySelector('span').textContent = message;
+        typingIndicator.classList.add('active');
         document.getElementById('sendBtn').disabled = true;
+        document.getElementById('refineBtn').disabled = true;
     }
 
     function hideTyping() {
         document.getElementById('typingIndicator').classList.remove('active');
         document.getElementById('sendBtn').disabled = false;
+        document.getElementById('refineBtn').disabled = false;
     }
 
     async function analyzePrompt() {
@@ -816,7 +895,57 @@
         addMessage(prompt, 'user');
         input.value = '';
         
-        showTyping();
+        showTyping('Analyzing prompt...');
+        
+        try {
+            const response = await fetch('/api/v1/prompt-advisor/validate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({
+                    prompt: prompt,
+                    sessionId: sessionId,
+                    attempt: currentAttempt
+                })
+            });
+            
+            const data = await response.json();
+            
+            hideTyping();
+            
+            if (data.error) {
+                addMessage(`<i class="fas fa-exclamation-triangle"></i> ${data.error}`, 'assistant');
+            } else {
+                const explanation = data.explanation || 'Analysis complete.';
+                addMessage(explanation, 'assistant', {
+                    score: data.score,
+                    ratings: data.ratings,
+                    recommendations: data.recommendations || []
+                });
+                
+                // Save to session history
+                saveToHistory(prompt, data.score);
+            }
+        } catch (error) {
+            hideTyping();
+            console.error('Error analyzing prompt:', error);
+            addMessage(`<i class="fas fa-exclamation-triangle"></i> Failed to analyze prompt. The Prompt Advisor service may be unavailable. Please try again later.`, 'assistant');
+        }
+    }
+
+    async function refinePrompt() {
+        const input = document.getElementById('promptInput');
+        const prompt = input.value.trim();
+        
+        if (!prompt) return;
+        
+        currentAttempt++;
+        addMessage(prompt, 'user');
+        input.value = '';
+        
+        showTyping('Refining prompt...');
         
         try {
             const response = await fetch('/api/v1/prompt-advisor/refine', {
@@ -836,23 +965,91 @@
             
             hideTyping();
             
-            if (data.status === 'error') {
-                addMessage(`<i class="fas fa-exclamation-triangle"></i> ${data.message}`, 'assistant');
+            if (data.error) {
+                addMessage(`<i class="fas fa-exclamation-triangle"></i> ${data.error}`, 'assistant');
             } else {
-                const explanation = data.explanation || 'Analysis complete.';
-                addMessage(explanation, 'assistant', {
-                    score: data.score,
-                    ratings: data.ratings,
-                    recommendations: data.suggestions || data.recommendations || []
-                });
+                const explanation = data.explanation || 'Prompt refined successfully.';
+                addMessageWithRefinedPrompt(explanation, data);
                 
-                // Save to session history
-                saveToHistory(prompt, data.score);
+                // Save refined prompt to session history
+                if (data.refined_prompt) {
+                    saveToHistory(data.refined_prompt, data.score);
+                }
             }
         } catch (error) {
             hideTyping();
-            console.error('Error analyzing prompt:', error);
-            addMessage(`<i class="fas fa-exclamation-triangle"></i> Failed to analyze prompt. The Prompt Advisor service may be unavailable. Please try again later.`, 'assistant');
+            console.error('Error refining prompt:', error);
+            addMessage(`<i class="fas fa-exclamation-triangle"></i> Failed to refine prompt. The Prompt Advisor service may be unavailable. Please try again later.`, 'assistant');
+        }
+    }
+
+    function addMessageWithRefinedPrompt(content, data) {
+        const messagesContainer = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message assistant';
+        
+        let html = `
+            <div class="message-label">
+                <i class="fas fa-magic"></i> Prompt Advisor
+            </div>
+            <div class="message-content">${content}</div>
+        `;
+        
+        // Add refined prompt card if available
+        if (data.refined_prompt) {
+            // Store refined prompt with unique ID for safer retrieval
+            const promptId = generateUUID();
+            refinedPrompts[promptId] = data.refined_prompt;
+            
+            // Determine if the prompt was actually changed
+            const wasChanged = data.refined_prompt !== data.original_prompt;
+            const headerText = wasChanged ? 'Refined Prompt' : 'Prompt (No Changes Needed)';
+            const headerIcon = wasChanged ? 'fa-check-circle' : 'fa-info-circle';
+            
+            html += `
+                <div class="refined-prompt-card">
+                    <div class="refined-prompt-header">
+                        <i class="fas ${headerIcon}"></i> ${headerText}
+                    </div>
+                    <div class="refined-prompt-content">${escapeHtml(data.refined_prompt)}</div>
+                    <button class="use-refined-btn" data-prompt-id="${promptId}" onclick="useRefinedPrompt('${promptId}', this)">
+                        <i class="fas fa-copy"></i> Use This Prompt
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Add score card
+        if (data.score !== undefined) {
+            html += buildScoreCard({
+                score: data.score,
+                ratings: data.ratings,
+                recommendations: data.recommendations || []
+            });
+        }
+        
+        messageDiv.innerHTML = html;
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function useRefinedPrompt(promptId, button) {
+        const prompt = refinedPrompts[promptId];
+        if (prompt) {
+            document.getElementById('promptInput').value = prompt;
+            document.getElementById('promptInput').focus();
+            
+            // Provide visual feedback on the button
+            if (button) {
+                const originalText = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                button.style.background = 'rgba(56, 239, 125, 0.4)';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.background = '';
+                }, 2000);
+            }
         }
     }
 

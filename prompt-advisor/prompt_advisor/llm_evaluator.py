@@ -407,3 +407,107 @@ class LLMEvaluator:
             w = weights.get(k, 0.05)
             weighted_sum += (v / 10.0) * w
         return round(weighted_sum * 100)
+
+    # ================================================================
+    # Prompt Refinement
+    # ================================================================
+    async def refine_prompt(
+        self,
+        prompt: str,
+        recommendations: list,
+        explanation: str = "",
+        context: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """Use the LLM to refine a prompt based on recommendations."""
+        if not self.enabled or not self.endpoint:
+            logger.warning("LLM not enabled, returning original prompt")
+            return prompt
+
+        try:
+            refinement_prompt = self._build_refinement_prompt(prompt, recommendations, explanation, context)
+            logger.info(f"Refinement prompt{refinement_prompt}")
+            result = await self._call_llm(refinement_prompt)
+            refined = self._parse_refinement_response(result)
+            return refined if refined else prompt
+        except Exception as e:
+            logger.error(f"Prompt refinement failed: {e}")
+            return prompt
+
+    def _build_refinement_prompt(
+        self,
+        prompt: str,
+        recommendations: list,
+        explanation: str,
+        context: Optional[Dict[str, Any]]
+    ) -> str:
+        """Build the refinement prompt for the LLM."""
+        recommendations_text = "\n".join([f"- {rec}" for rec in recommendations]) if recommendations else "No specific recommendations."
+        
+        context_text = ""
+        if context:
+            context_text = f"\n\nContext: {json.dumps(context, indent=2)}"
+
+        return f"""You are an AI prompt engineer specializing in improving prompts for trust, safety, and clarity.
+
+You have been given a prompt that was evaluated and received the following feedback:
+
+**Original Prompt:**
+{prompt}
+
+**Evaluation Explanation:**
+{explanation}
+
+**Recommendations for Improvement:**
+{recommendations_text}
+{context_text}
+
+Your task is to rewrite the prompt to address the recommendations while maintaining the original intent.
+
+Guidelines:
+1. Improve clarity and specificity of purpose
+2. Address any safety or compliance concerns
+3. Add appropriate constraints and boundaries
+4. Improve provenance and auditability where applicable
+5. Clarify autonomy bounds if needed
+6. Maintain the core functionality and intent of the original prompt
+
+Output requirements:
+- Respond with ONLY the refined prompt text
+- Do not include any explanations, markdown formatting, or additional commentary
+- The refined prompt should be ready to use as-is
+
+Refined prompt:"""
+
+    def _parse_refinement_response(self, response: str) -> Optional[str]:
+        """Parse the LLM refinement response to extract the refined prompt."""
+        try:
+            # Clean up the response
+            refined = response.strip()
+            
+            # Remove any markdown code blocks if present
+            if refined.startswith("```"):
+                lines = refined.split("\n")
+                # Find and remove both opening and closing backticks
+                start_idx = 1  # Skip opening ```
+                end_idx = len(lines)
+                for i in range(len(lines) - 1, 0, -1):
+                    if lines[i].strip() == "```":
+                        end_idx = i
+                        break
+                refined = "\n".join(lines[start_idx:end_idx])
+            
+            # Remove common prefixes the LLM might add
+            prefixes_to_remove = [
+                "Refined prompt:",
+                "Here is the refined prompt:",
+                "Here's the refined prompt:",
+                "The refined prompt is:",
+            ]
+            for prefix in prefixes_to_remove:
+                if refined.lower().startswith(prefix.lower()):
+                    refined = refined[len(prefix):].strip()
+            
+            return refined if refined else None
+        except Exception as e:
+            logger.error(f"Failed to parse refinement response: {e}")
+            return None

@@ -5,6 +5,7 @@ import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.model.verbs.Endpoint;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.promptadvisor.model.RefinePromptResponse;
 import io.sentrius.sso.core.promptadvisor.model.ValidatePromptRequest;
 import io.sentrius.sso.core.promptadvisor.model.ValidatePromptResponse;
 import io.sentrius.sso.core.promptadvisor.service.PromptAdvisorService;
@@ -69,7 +70,7 @@ public class PromptAdvisorController extends BaseController {
     }
 
     @PostMapping("/refine")
-    @Endpoint(description = "Refine a prompt to meet quality threshold")
+    @Endpoint(description = "Refine a prompt using LLM to apply recommendations and improve quality")
     public ResponseEntity<?> refinePrompt(
         @RequestBody ValidatePromptRequest request,
         HttpServletRequest httpRequest,
@@ -86,16 +87,35 @@ public class PromptAdvisorController extends BaseController {
                 .body(Map.of("error", "Authentication required"));
         }
 
-        log.info("Refining prompt for user: {}", operatingUser.getUsername());
+        log.info("Refining prompt using LLM for user: {}", operatingUser.getUsername());
 
-        String refinedPrompt = promptAdvisorService.refinePrompt(
+        // Use the new LLM-based refinement that actually rewrites the prompt
+        RefinePromptResponse refineResponse = promptAdvisorService.refinePromptWithLLM(
             request.getPrompt(),
             request.getContext()
         );
 
+        if (refineResponse == null) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to refine prompt"));
+        }
+
+        // Build response with all refinement data
         Map<String, Object> result = new HashMap<>();
-        result.put("original_prompt", request.getPrompt());
-        result.put("refined_prompt", refinedPrompt);
+        result.put("original_prompt", refineResponse.getOriginalPrompt());
+        result.put("refined_prompt", refineResponse.getRefinedPrompt());
+        if (refineResponse.getScore() != null) {
+            result.put("score", refineResponse.getScore());
+        }
+        if (refineResponse.getRatings() != null) {
+            result.put("ratings", refineResponse.getRatings());
+        }
+        if (refineResponse.getExplanation() != null) {
+            result.put("explanation", refineResponse.getExplanation());
+        }
+        if (refineResponse.getRecommendations() != null) {
+            result.put("recommendations", refineResponse.getRecommendations());
+        }
 
         return ResponseEntity.ok(result);
     }

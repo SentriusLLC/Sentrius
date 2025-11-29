@@ -12,7 +12,9 @@ from prompt_advisor.models import (
     ValidatePromptResponse,
     CategoryRatings,
     CriteriaResponse,
-    Criterion
+    Criterion,
+    RefinePromptRequest,
+    RefinePromptResponse
 )
 from prompt_advisor.schema_loader import ATPlSchemaLoader
 from prompt_advisor.llm_evaluator import LLMEvaluator
@@ -264,6 +266,94 @@ async def validate_prompt(request: ValidatePromptRequest):
     except Exception as e:
         logger.error(f"Error validating prompt: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to validate prompt: {str(e)}")
+
+
+@app.post("/refine_prompt", response_model=RefinePromptResponse)
+async def refine_prompt(request: RefinePromptRequest):
+    """
+    Refine a prompt using the LLM based on recommendations.
+    
+    Takes the original prompt and recommendations from a previous evaluation,
+    uses the LLM to rewrite the prompt addressing the recommendations,
+    then re-evaluates the refined prompt to return the new score.
+    """
+    global schema_loader, llm_evaluator, scoring_engine
+    
+    # Ensure instances are initialized (for testing without lifespan)
+    if schema_loader is None:
+        schema_loader = ATPlSchemaLoader(settings.atpl_schema_url)
+    if llm_evaluator is None:
+        llm_evaluator = LLMEvaluator(
+            endpoint=settings.llm_endpoint,
+            api_key=settings.llm_api_key,
+            model=settings.llm_model,
+            enabled=settings.llm_enabled,
+            keycloak_url=settings.keycloak_url,
+            keycloak_realm=settings.keycloak_realm,
+            keycloak_client_id=settings.keycloak_client_id,
+            keycloak_client_secret=settings.keycloak_client_secret,
+            keycloak_verify_ssl=settings.keycloak_verify_ssl
+        )
+    if scoring_engine is None:
+        scoring_engine = ScoringEngine(
+            weight_purpose=settings.weight_purpose,
+            weight_safety=settings.weight_safety,
+            weight_compliance=settings.weight_compliance,
+            weight_provenance=settings.weight_provenance,
+            weight_autonomy=settings.weight_autonomy
+        )
+    
+    try:
+        # Step 1: Use LLM to refine the prompt based on recommendations
+        refined_prompt = await llm_evaluator.refine_prompt(
+            prompt=request.prompt,
+            recommendations=request.recommendations,
+            explanation=request.explanation,
+            context=request.context
+        )
+        
+        # Handle case where refinement returns None or empty
+        if not refined_prompt:
+            refined_prompt = request.prompt
+            logger.warning("LLM refinement returned empty result, using original prompt")
+        else:
+            logger.info(f"Prompt refined: original length={len(request.prompt)}, refined length={len(refined_prompt)}")
+        
+        # Step 2: Re-evaluate the refined prompt
+        criteria = await schema_loader.get_criteria()
+        evaluation = await llm_evaluator.evaluate_prompt(
+            prompt=refined_prompt,
+            context=request.context,
+            criteria=criteria
+        )
+        
+        # Extract ratings
+        ratings_dict = evaluation.get("ratings", {})
+        ratings = CategoryRatings(
+            purpose=ratings_dict.get("purpose", 7),
+            safety=ratings_dict.get("safety", 7),
+            compliance=ratings_dict.get("compliance", 7),
+            provenance=ratings_dict.get("provenance", 7),
+            autonomy=ratings_dict.get("autonomy", 7)
+        )
+        
+        # Calculate score
+        score = scoring_engine.calculate_score(ratings_dict)
+        
+        logger.info(f"Refined prompt evaluated - Score: {score}")
+        
+        return RefinePromptResponse(
+            original_prompt=request.prompt,
+            refined_prompt=refined_prompt,
+            score=score,
+            ratings=ratings,
+            explanation=evaluation.get("explanation", "Refined prompt evaluated successfully."),
+            recommendations=evaluation.get("recommendations", [])
+        )
+        
+    except Exception as e:
+        logger.error(f"Error refining prompt: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to refine prompt: {str(e)}")
 
 
 if __name__ == "__main__":
