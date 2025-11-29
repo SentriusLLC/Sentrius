@@ -719,7 +719,8 @@ function editSuggestion(id) {
 }
 
 // Save script changes
-function saveScript() {
+// Optional callback parameter receives the saved script ID on success
+function saveScript(callback) {
     var id = $('#editor-suggestion-id').val();
     var script = monacoEditor.getValue();
     var description = $('#script-description').val();
@@ -729,6 +730,7 @@ function saveScript() {
         // Create new automation script
         if (!description || description.trim() === '') {
             alert('Please enter a description for the script');
+            if (callback) callback(null);
             return;
         }
         $.ajax({
@@ -745,12 +747,22 @@ function saveScript() {
                 scriptType: scriptType
             }),
             success: function(response) {
-                alert('Automation script created successfully!');
-                $('#editorModal').modal('hide');
-                $('#suggestions-table').DataTable().ajax.reload();
+                // Update the ID and mark as no longer new
+                $('#editor-suggestion-id').val(response.id);
+                isNewScript = false;
+                
+                // If callback provided, call it with the new ID (for generateWithAI flow)
+                if (callback) {
+                    callback(response.id);
+                } else {
+                    alert('Automation script created successfully!');
+                    $('#editorModal').modal('hide');
+                    $('#suggestions-table').DataTable().ajax.reload();
+                }
             },
             error: function(xhr) {
                 alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Failed to create script'));
+                if (callback) callback(null);
             }
         });
     } else {
@@ -765,11 +777,16 @@ function saveScript() {
             },
             data: JSON.stringify({ script: script }),
             success: function(response) {
-                alert('Script saved successfully!');
-                $('#suggestions-table').DataTable().ajax.reload();
+                if (callback) {
+                    callback(id);
+                } else {
+                    alert('Script saved successfully!');
+                    $('#suggestions-table').DataTable().ajax.reload();
+                }
             },
             error: function(xhr) {
                 alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Failed to save script'));
+                if (callback) callback(null);
             }
         });
     }
@@ -942,15 +959,37 @@ function displayTestResults(results) {
 
 // Generate code with AI
 function generateWithAI() {
-    console.log("ahahahha");
     var id = $('#editor-suggestion-id').val();
     var prompt = window.prompt('What would you like the AI to generate or improve?',
                                'Generate a complete automation script based on the description');
 
     if (!prompt) {
-        console.log("leaving....");
         return;
     }
+    
+    // If this is a new script without an ID, auto-save it first
+    if (isNewScript || !id) {
+        var description = $('#script-description').val();
+        if (!description || description.trim() === '') {
+            alert('Please enter a description for the script before generating with AI');
+            return;
+        }
+        
+        // Auto-save the script, then call generate with the new ID
+        // Note: saveScript already shows error alerts on failure
+        saveScript(function(savedId) {
+            if (savedId) {
+                callGenerateAPI(savedId, prompt);
+            }
+            // If savedId is null, the save failed and saveScript already showed an error alert
+        });
+    } else {
+        callGenerateAPI(id, prompt);
+    }
+}
+
+// Helper function to call the generate API
+function callGenerateAPI(id, prompt) {
     const csrfToken = document.getElementById("csrf-token").value;
     $.ajax({
         url: '/api/v1/automation/suggestions/' + id + '/generate',
