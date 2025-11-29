@@ -28,6 +28,10 @@ class TokenRefresher:
         self.client_secret = os.getenv('KEYCLOAK_CLIENT_SECRET')
         self.refresh_interval = int(os.getenv('TOKEN_REFRESH_INTERVAL', '300'))  # 5 minutes default
         self.token_file = Path(os.getenv('TOKEN_FILE_PATH', '/tmp/keycloak-token/token.txt'))
+        # SSL verification - can be disabled for self-signed certs in dev environments
+        self.verify_ssl = os.getenv('VERIFY_SSL', 'true').lower() in ('true', '1', 'yes')
+        # Optional CA certificate path for custom certificate authorities
+        self.ca_cert_path = os.getenv('CA_CERT_PATH', '')
         
         if not self.client_secret:
             logger.error("KEYCLOAK_CLIENT_SECRET environment variable is required")
@@ -41,6 +45,11 @@ class TokenRefresher:
     def get_access_token(self):
         """Obtain an access token using client credentials flow."""
         try:
+            # Determine SSL verification setting
+            verify = self.verify_ssl
+            if self.ca_cert_path and os.path.exists(self.ca_cert_path):
+                verify = self.ca_cert_path
+            
             response = requests.post(
                 self.token_url,
                 data={
@@ -49,7 +58,8 @@ class TokenRefresher:
                     'client_secret': self.client_secret
                 },
                 headers={'Content-Type': 'application/x-www-form-urlencoded'},
-                timeout=10
+                timeout=10,
+                verify=verify
             )
             
             if response.status_code == 200:
@@ -91,6 +101,9 @@ class TokenRefresher:
         logger.info(f"Realm: {self.realm}")
         logger.info(f"Client ID: {self.client_id}")
         logger.info(f"Refresh interval: {self.refresh_interval}s")
+        logger.info(f"SSL verification: {self.verify_ssl}")
+        if self.ca_cert_path:
+            logger.info(f"CA certificate path: {self.ca_cert_path}")
         
         while True:
             token, expires_in = self.get_access_token()

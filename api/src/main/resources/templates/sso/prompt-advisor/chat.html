@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Prompt Advisor</title>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            --dark-bg: #0f0f1a;
+            --card-bg: #1a1a2e;
+            --border-color: #2d2d44;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --accent-color: #667eea;
+        }
+
+        .prompt-advisor-container {
+            max-width: 1100px;
+            margin: 20px auto;
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 0;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            height: 85vh;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border-color);
+        }
+        
+        .advisor-header {
+            background: var(--primary-gradient);
+            padding: 25px 30px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .advisor-header-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .advisor-header-content h2 {
+            color: var(--text-primary);
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .advisor-header-content p {
+            color: rgba(255, 255, 255, 0.8);
+            margin: 5px 0 0 0;
+            font-size: 0.9rem;
+        }
+        
+        .advisor-main {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--dark-bg);
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .message {
+            max-width: 80%;
+            padding: 16px 20px;
+            border-radius: 16px;
+            word-wrap: break-word;
+            animation: messageSlide 0.3s ease-out;
+        }
+        
+        .message.user {
+            background: var(--primary-gradient);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message.assistant {
+            background: var(--card-bg);
+            color: var(--text-primary);
+            align-self: flex-start;
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 4px;
+        }
+        
+        .message.system {
+            background: var(--secondary-gradient);
+            color: white;
+            align-self: center;
+            text-align: center;
+            font-size: 0.95rem;
+            padding: 12px 24px;
+            border-radius: 30px;
+        }
+        
+        .message-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+            margin-bottom: 8px;
+            opacity: 0.8;
+        }
+        
+        .message-content {
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        
+        .score-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 15px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .score-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .score-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .score-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        
+        .category-scores {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+        
+        .category-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        
+        .category-name {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .category-score {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .recommendations {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .recommendations-title {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .recommendation-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+        
+        .recommendation-item i {
+            color: var(--accent-color);
+            margin-top: 2px;
+        }
+        
+        .chat-input-area {
+            padding: 20px 25px;
+            background: var(--card-bg);
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        
+        .prompt-input-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        .prompt-input {
+            width: 100%;
+            min-height: 50px;
+            max-height: 150px;
+            padding: 14px 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 25px;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
+            resize: none;
+            transition: all 0.2s ease;
+        }
+        
+        .prompt-input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+        
+        .prompt-input::placeholder {
+            color: var(--text-secondary);
+        }
+        
+        .send-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .send-btn:disabled {
+            background: var(--border-color);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .quick-action-btn {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            color: var(--accent-color);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+        
+        .quick-action-btn:hover {
+            background: rgba(102, 126, 234, 0.2);
+            border-color: var(--accent-color);
+        }
+        
+        .sidebar-panel {
+            width: 300px;
+            background: var(--card-bg);
+            border-left: 1px solid var(--border-color);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .sidebar-section {
+            margin-bottom: 25px;
+        }
+        
+        .sidebar-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .history-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+        
+        .history-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+        
+        .history-prompt {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .history-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .history-score {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .typing-indicator {
+            display: none;
+            align-self: flex-start;
+            padding: 16px 20px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .typing-indicator.active {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-8px); }
+        }
+        
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 10px;
+        }
+        
+        .bottom-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--card-bg);
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+        }
+        
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .score-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .score-excellent {
+            background: rgba(56, 239, 125, 0.2);
+            color: #38ef7d;
+        }
+
+        .score-good {
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+        }
+
+        .score-needs-work {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        .score-poor {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+        }
+
+        @media (max-width: 992px) {
+            .sidebar-panel {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .prompt-advisor-container {
+                margin: 10px;
+                height: calc(100vh - 20px);
+                border-radius: 15px;
+            }
+            
+            .advisor-header {
+                padding: 15px 20px;
+            }
+            
+            .advisor-header-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+            
+            .chat-messages {
+                padding: 15px;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-3">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+                
+                <div class="prompt-advisor-container">
+                    <div class="advisor-header">
+                        <div class="advisor-header-icon">
+                            <i class="fas fa-magic"></i>
+                        </div>
+                        <div class="advisor-header-content">
+                            <h2>Prompt Advisor</h2>
+                            <p>Prompt refinement and validation</p>
+                        </div>
+                    </div>
+                    
+                    <div class="advisor-main">
+                        <div class="chat-area">
+                            <div class="chat-messages" id="chatMessages">
+                                <div class="message system">
+                                    <i class="fas fa-sparkles"></i> Welcome to Prompt Advisor! 
+                                    I'll help you create better, safer, and more effective prompts for your AI agents.
+                                    Enter a prompt below and I'll analyze it against ATPL criteria.
+                                </div>
+                            </div>
+                            
+                            <div class="typing-indicator" id="typingIndicator">
+                                <div class="typing-dots">
+                                    <div class="typing-dot"></div>
+                                    <div class="typing-dot"></div>
+                                    <div class="typing-dot"></div>
+                                </div>
+                                <span style="color: var(--text-secondary); font-size: 0.9rem;">Analyzing prompt...</span>
+                            </div>
+                            
+                            <div class="chat-input-area">
+                                <div class="quick-actions">
+                                    <button class="quick-action-btn" onclick="setQuickPrompt('security')">
+                                        <i class="fas fa-shield-alt"></i> Security Agent
+                                    </button>
+                                    <button class="quick-action-btn" onclick="setQuickPrompt('data')">
+                                        <i class="fas fa-database"></i> Data Analysis
+                                    </button>
+                                    <button class="quick-action-btn" onclick="setQuickPrompt('automation')">
+                                        <i class="fas fa-robot"></i> Automation
+                                    </button>
+                                    <button class="quick-action-btn" onclick="setQuickPrompt('compliance')">
+                                        <i class="fas fa-check-circle"></i> Compliance Check
+                                    </button>
+                                </div>
+                                
+                                <div class="input-wrapper">
+                                    <div class="prompt-input-container">
+                                        <textarea class="prompt-input" id="promptInput" 
+                                            placeholder="Enter your prompt here for analysis and refinement..."
+                                            rows="1"
+                                            onkeydown="handleKeyDown(event)"></textarea>
+                                    </div>
+                                    <button class="send-btn" id="sendBtn" onclick="analyzePrompt()">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="sidebar-panel">
+                            <div class="sidebar-section">
+                                <div class="sidebar-title">
+                                    <i class="fas fa-history"></i> Recent Sessions
+                                </div>
+                                <div id="sessionHistory">
+                                    <div class="text-center py-4" style="color: var(--text-secondary); font-size: 0.85rem;">
+                                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                                        No recent sessions yet.<br>Start analyzing prompts to see history.
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="sidebar-section">
+                                <div class="sidebar-title">
+                                    <i class="fas fa-info-circle"></i> Scoring Criteria
+                                </div>
+                                <div class="category-item" style="margin-bottom: 10px;">
+                                    <div class="category-name">Purpose</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Clarity of goals</div>
+                                </div>
+                                <div class="category-item" style="margin-bottom: 10px;">
+                                    <div class="category-name">Safety</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Prohibited content</div>
+                                </div>
+                                <div class="category-item" style="margin-bottom: 10px;">
+                                    <div class="category-name">Compliance</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Data sensitivity</div>
+                                </div>
+                                <div class="category-item" style="margin-bottom: 10px;">
+                                    <div class="category-name">Provenance</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Trust & source</div>
+                                </div>
+                                <div class="category-item">
+                                    <div class="category-name">Autonomy</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Agent bounds</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bottom-actions">
+                        <button class="action-btn" onclick="clearChat()">
+                            <i class="fas fa-trash"></i> Clear Chat
+                        </button>
+                        <button class="action-btn" onclick="exportSession()">
+                            <i class="fas fa-download"></i> Export Session
+                        </button>
+                        <button class="action-btn" onclick="startNewSession()">
+                            <i class="fas fa-plus"></i> New Session
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const csrfToken = document.getElementById('csrf-token').value;
+    
+    // UUID generation with fallback for older browsers
+    function generateUUID() {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+        // Fallback for older browsers
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+    
+    let sessionId = generateUUID();
+    let sessionHistory = [];
+    let currentAttempt = 0;
+
+    // Quick prompt templates
+    const quickPrompts = {
+        security: "You are a security monitoring agent. Analyze system logs and identify potential security threats. Alert on suspicious activities.",
+        data: "Analyze the provided dataset and generate a summary report with key insights, trends, and anomalies.",
+        automation: "Automate the deployment process by checking prerequisites, running tests, and deploying the application to staging.",
+        compliance: "Review the configuration files and verify they comply with our security policies and industry standards."
+    };
+
+    function setQuickPrompt(type) {
+        document.getElementById('promptInput').value = quickPrompts[type];
+        document.getElementById('promptInput').focus();
+    }
+
+    function handleKeyDown(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            analyzePrompt();
+        }
+    }
+
+    function addMessage(content, type, extra = null) {
+        const messagesContainer = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        
+        if (type === 'user') {
+            messageDiv.innerHTML = `
+                <div class="message-label">
+                    <i class="fas fa-user"></i> You
+                </div>
+                <div class="message-content">${escapeHtml(content)}</div>
+            `;
+        } else if (type === 'assistant') {
+            let html = `
+                <div class="message-label">
+                    <i class="fas fa-magic"></i> Prompt Advisor
+                </div>
+                <div class="message-content">${content}</div>
+            `;
+            
+            if (extra && extra.score !== undefined) {
+                html += buildScoreCard(extra);
+            }
+            
+            messageDiv.innerHTML = html;
+        } else {
+            messageDiv.innerHTML = content;
+        }
+        
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function buildScoreCard(data) {
+        const score = data.score || 0;
+        const ratings = data.ratings || {};
+        const recommendations = data.recommendations || [];
+        
+        let scoreClass = 'score-poor';
+        if (score >= 90) scoreClass = 'score-excellent';
+        else if (score >= 70) scoreClass = 'score-good';
+        else if (score >= 40) scoreClass = 'score-needs-work';
+        
+        let html = `
+            <div class="score-card">
+                <div class="score-header">
+                    <div>
+                        <div class="score-label">Overall Score</div>
+                        <div class="score-value">${score}</div>
+                    </div>
+                    <span class="score-badge ${scoreClass}">
+                        ${score >= 90 ? '<i class="fas fa-check-circle"></i> Excellent' :
+                          score >= 70 ? '<i class="fas fa-thumbs-up"></i> Good' :
+                          score >= 40 ? '<i class="fas fa-exclamation-circle"></i> Needs Work' : 
+                          '<i class="fas fa-times-circle"></i> Needs Improvement'}
+                    </span>
+                </div>
+                
+                <div class="category-scores">
+                    <div class="category-item">
+                        <div class="category-name">Purpose</div>
+                        <div class="category-score">${ratings.purpose || '-'}</div>
+                    </div>
+                    <div class="category-item">
+                        <div class="category-name">Safety</div>
+                        <div class="category-score">${ratings.safety || '-'}</div>
+                    </div>
+                    <div class="category-item">
+                        <div class="category-name">Compliance</div>
+                        <div class="category-score">${ratings.compliance || '-'}</div>
+                    </div>
+                    <div class="category-item">
+                        <div class="category-name">Provenance</div>
+                        <div class="category-score">${ratings.provenance || '-'}</div>
+                    </div>
+                    <div class="category-item">
+                        <div class="category-name">Autonomy</div>
+                        <div class="category-score">${ratings.autonomy || '-'}</div>
+                    </div>
+                </div>
+        `;
+        
+        if (recommendations.length > 0) {
+            html += `
+                <div class="recommendations">
+                    <div class="recommendations-title">
+                        <i class="fas fa-lightbulb"></i> Recommendations
+                    </div>
+            `;
+            
+            recommendations.forEach(rec => {
+                html += `
+                    <div class="recommendation-item">
+                        <i class="fas fa-arrow-right"></i>
+                        <span>${escapeHtml(rec)}</span>
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+        }
+        
+        html += `</div>`;
+        return html;
+    }
+
+    function showTyping() {
+        document.getElementById('typingIndicator').classList.add('active');
+        document.getElementById('sendBtn').disabled = true;
+    }
+
+    function hideTyping() {
+        document.getElementById('typingIndicator').classList.remove('active');
+        document.getElementById('sendBtn').disabled = false;
+    }
+
+    async function analyzePrompt() {
+        const input = document.getElementById('promptInput');
+        const prompt = input.value.trim();
+        
+        if (!prompt) return;
+        
+        currentAttempt++;
+        addMessage(prompt, 'user');
+        input.value = '';
+        
+        showTyping();
+        
+        try {
+            const response = await fetch('/api/v1/prompt-advisor/refine', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({
+                    prompt: prompt,
+                    sessionId: sessionId,
+                    attempt: currentAttempt
+                })
+            });
+            
+            const data = await response.json();
+            
+            hideTyping();
+            
+            if (data.status === 'error') {
+                addMessage(`<i class="fas fa-exclamation-triangle"></i> ${data.message}`, 'assistant');
+            } else {
+                const explanation = data.explanation || 'Analysis complete.';
+                addMessage(explanation, 'assistant', {
+                    score: data.score,
+                    ratings: data.ratings,
+                    recommendations: data.suggestions || data.recommendations || []
+                });
+                
+                // Save to session history
+                saveToHistory(prompt, data.score);
+            }
+        } catch (error) {
+            hideTyping();
+            console.error('Error analyzing prompt:', error);
+            addMessage(`<i class="fas fa-exclamation-triangle"></i> Failed to analyze prompt. The Prompt Advisor service may be unavailable. Please try again later.`, 'assistant');
+        }
+    }
+
+    function saveToHistory(prompt, score) {
+        sessionHistory.unshift({
+            prompt: prompt,
+            score: score,
+            timestamp: new Date().toISOString()
+        });
+        
+        // Keep only last 10 items
+        if (sessionHistory.length > 10) {
+            sessionHistory.pop();
+        }
+        
+        updateHistoryUI();
+        
+        // Save to localStorage
+        try {
+            localStorage.setItem('promptAdvisorHistory', JSON.stringify(sessionHistory));
+        } catch (e) {
+            console.warn('Could not save to localStorage:', e);
+        }
+    }
+
+    function updateHistoryUI() {
+        const container = document.getElementById('sessionHistory');
+        
+        if (sessionHistory.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-4" style="color: var(--text-secondary); font-size: 0.85rem;">
+                    <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                    No recent sessions yet.<br>Start analyzing prompts to see history.
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        sessionHistory.forEach((item, index) => {
+            const scoreClass = item.score >= 90 ? 'score-excellent' :
+                              item.score >= 70 ? 'score-good' :
+                              item.score >= 40 ? 'score-needs-work' : 'score-poor';
+            
+            const date = new Date(item.timestamp);
+            const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            html += `
+                <div class="history-item" onclick="loadHistoryItem(${index})">
+                    <div class="history-prompt">${escapeHtml(item.prompt)}</div>
+                    <div class="history-meta">
+                        <span>${timeStr}</span>
+                        <span class="history-score score-badge ${scoreClass}">
+                            <i class="fas fa-chart-line"></i> ${item.score}
+                        </span>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+
+    function loadHistoryItem(index) {
+        const item = sessionHistory[index];
+        if (item) {
+            document.getElementById('promptInput').value = item.prompt;
+            document.getElementById('promptInput').focus();
+        }
+    }
+
+    function clearChat() {
+        const messagesContainer = document.getElementById('chatMessages');
+        messagesContainer.innerHTML = `
+            <div class="message system">
+                <i class="fas fa-sparkles"></i> Chat cleared. Ready for a new prompt analysis!
+            </div>
+        `;
+        currentAttempt = 0;
+    }
+
+    function startNewSession() {
+        sessionId = generateUUID();
+        currentAttempt = 0;
+        clearChat();
+        addMessage(`<i class="fas fa-sparkles"></i> New session started. Enter a prompt to analyze.`, 'system');
+    }
+
+    function exportSession() {
+        const messages = document.getElementById('chatMessages').innerText;
+        const exportData = {
+            sessionId: sessionId,
+            timestamp: new Date().toISOString(),
+            history: sessionHistory,
+            messages: messages
+        };
+        
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `prompt-advisor-session-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Load history from localStorage on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            const saved = localStorage.getItem('promptAdvisorHistory');
+            if (saved) {
+                sessionHistory = JSON.parse(saved);
+                updateHistoryUI();
+            }
+        } catch (e) {
+            console.warn('Could not load from localStorage:', e);
+        }
+        
+        // Auto-resize textarea
+        const textarea = document.getElementById('promptInput');
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+        });
+    });
+</script>
+</body>
+</html>

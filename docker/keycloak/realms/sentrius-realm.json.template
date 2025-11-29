@@ -875,7 +875,58 @@
           },
           "notBefore": 0,
           "groups": []
-        }
+        },
+        {
+              "username": "service-account-prompt-advisor",
+              "emailVerified": false,
+              "createdTimestamp": 1745090850622,
+              "enabled": true,
+              "totp": false,
+              "serviceAccountClientId": "prompt-advisor",
+              "disableableCredentialTypes": [],
+              "requiredActions": [],
+              "realmRoles": [
+                "default-roles-sentrius"
+              ],
+              "clientRoles": {
+                "realm-management": [
+                  "query-groups",
+                  "view-clients",
+                  "manage-users",
+                  "manage-authorization",
+                  "view-authorization",
+                  "manage-identity-providers",
+                  "impersonation",
+                  "manage-realm",
+                  "view-identity-providers",
+                  "view-users",
+                  "manage-clients",
+                  "view-realm",
+                  "create-client",
+                  "manage-events",
+                  "query-realms",
+                  "query-clients",
+                  "view-events",
+                  "query-users",
+                  "realm-admin"
+                ],
+                "broker": [
+                  "read-token"
+                ],
+                "account": [
+                  "delete-account",
+                  "manage-consent",
+                  "manage-account-links",
+                  "view-applications",
+                  "view-profile",
+                  "view-groups",
+                  "view-consent",
+                  "manage-account"
+                ]
+              },
+              "notBefore": 0,
+              "groups": []
+            }
   ],
   "identityProviders": [
     {

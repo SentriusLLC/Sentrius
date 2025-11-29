@@ -463,7 +463,12 @@ if $update_prompt_advisor; then
     else
         PROMPT_ADVISOR_VERSION="latest"
     fi
-    start_build "sentrius-prompt-advisor" "build_image 'sentrius-prompt-advisor' '$PROMPT_ADVISOR_VERSION' '${SCRIPT_DIR}/../../' -f Dockerfile-prompt-advisor --skip-dev-certs"
+
+    cp -R ${SCRIPT_DIR}/../../prompt-advisor ${SCRIPT_DIR}/../../docker/prompt-advisor/
+
+    start_build "sentrius-prompt-advisor" "build_image 'sentrius-prompt-advisor' '$PROMPT_ADVISOR_VERSION' '${SCRIPT_DIR}/../../docker/prompt-advisor'"
+
+    #rm -rf ${SCRIPT_DIR}/../../docker/prompt-advisor/prompt-advisor/
 fi
 
 # Wait for all builds to complete and collect results
@@ -530,6 +535,10 @@ fi
 
 if $update_sentrius_ssh_agent; then
     rm -f docker/ssh-agent/ssh-agent.jar
+fi
+
+if $update_prompt_advisor; then
+    rm -f ${SCRIPT_DIR}/../../docker/prompt-advisor/prompt-advisor
 fi
 
 # Print summary

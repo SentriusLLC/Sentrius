@@ -49,9 +49,14 @@ async def lifespan(app: FastAPI):
         api_key=settings.llm_api_key,
         model=settings.llm_model,
         enabled=settings.llm_enabled,
-        custom_headers=settings.llm_custom_headers
+        custom_headers=settings.llm_custom_headers,
+        keycloak_url=settings.keycloak_url,
+        keycloak_realm=settings.keycloak_realm,
+        keycloak_client_id=settings.keycloak_client_id,
+        keycloak_client_secret=settings.keycloak_client_secret,
+        keycloak_verify_ssl=settings.keycloak_verify_ssl
     )
-    logger.info(f"LLM evaluator initialized (enabled: {settings.llm_enabled})")
+    logger.info(f"LLM evaluator initialized (enabled: {settings.llm_enabled}, keycloak: {bool(settings.keycloak_url)})")
     
     # Initialize scoring engine
     scoring_engine = ScoringEngine(
@@ -199,7 +204,12 @@ async def validate_prompt(request: ValidatePromptRequest):
             endpoint=settings.llm_endpoint,
             api_key=settings.llm_api_key,
             model=settings.llm_model,
-            enabled=settings.llm_enabled
+            enabled=settings.llm_enabled,
+            keycloak_url=settings.keycloak_url,
+            keycloak_realm=settings.keycloak_realm,
+            keycloak_client_id=settings.keycloak_client_id,
+            keycloak_client_secret=settings.keycloak_client_secret,
+            keycloak_verify_ssl=settings.keycloak_verify_ssl
         )
     if scoring_engine is None:
         scoring_engine = ScoringEngine(

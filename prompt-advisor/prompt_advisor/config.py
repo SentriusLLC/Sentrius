@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     # Format: "Header-Name:header-value,Another-Header:another-value"
     llm_custom_headers: str = ""
     
+    # Keycloak configuration for native token management
+    keycloak_url: str = ""
+    keycloak_realm: str = "sentrius"
+    keycloak_client_id: str = "prompt-advisor"
+    keycloak_client_secret: str = ""
+    keycloak_verify_ssl: bool = True
+    
     # Scoring weights (must sum to 100)
     weight_purpose: int = 15
     weight_safety: int = 30

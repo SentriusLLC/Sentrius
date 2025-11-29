@@ -85,6 +85,11 @@
                         </a>
                     </li>
                     <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
+                        <a href="/sso/v1/prompt-advisor" class="nav-link px-0 align-middle">
+                            <i class="fas fa-magic"></i> <span class="ms-1 d-none d-sm-inline">Prompt Advisor</span>
+                        </a>
+                    </li>
+                    <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
                         <a href="/sso/v1/agent/memory/search" class="nav-link px-0 align-middle">
                             <i class="fas fa-search"></i> <span class="ms-1 d-none d-sm-inline">Agent Memory</span>
                         </a>

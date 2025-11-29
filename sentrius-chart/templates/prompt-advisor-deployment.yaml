@@ -17,41 +17,8 @@ spec:
         app: prompt-advisor
         release: {{ .Release.Name }}
     spec:
-      volumes:
-      - name: keycloak-token
-        emptyDir: {}
       containers:
-      # Token refresher sidecar - obtains and refreshes Keycloak access token
-      - name: token-refresher
-        image: "{{ .Values.promptAdvisor.tokenRefresher.repository }}:{{ .Values.promptAdvisor.tokenRefresher.tag | default "latest" }}"
-        imagePullPolicy: {{ .Values.promptAdvisor.image.pullPolicy }}
-        env:
-        - name: KEYCLOAK_URL
-          value: "{{ .Values.keycloakInternalDomain }}"
-        - name: KEYCLOAK_REALM
-          value: "sentrius"
-        - name: KEYCLOAK_CLIENT_ID
-          value: "prompt-advisor"
-        - name: KEYCLOAK_CLIENT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-oauth2-secrets
-              key: prompt-advisor-client-secret
-        - name: TOKEN_REFRESH_INTERVAL
-          value: "{{ .Values.promptAdvisor.tokenRefreshInterval | default "300" }}"
-        - name: TOKEN_FILE_PATH
-          value: "/tmp/keycloak-token/token.txt"
-        volumeMounts:
-        - name: keycloak-token
-          mountPath: /tmp/keycloak-token
-        resources:
-          requests:
-            memory: "32Mi"
-            cpu: "10m"
-          limits:
-            memory: "64Mi"
-            cpu: "50m"
-      # Main prompt-advisor service
+      # Main prompt-advisor service (uses native Keycloak library for auth)
       - name: prompt-advisor
         image: "{{ .Values.promptAdvisor.image.repository }}:{{ .Values.promptAdvisor.image.tag }}"
         imagePullPolicy: {{ .Values.promptAdvisor.image.pullPolicy }}
@@ -67,11 +34,25 @@ spec:
         - name: ATPL_SCHEMA_URL
           value: "https://raw.githubusercontent.com/SentriusLLC/atpl/main/atpl.schema.json"
         - name: LLM_ENDPOINT
-          value: "http://{{ .Release.Name }}-integrationproxy/api/v1/chat/completions"
+          value: "http://{{ .Release.Name }}-integrationproxy:8080/api/v1/chat/completions"
         - name: LLM_MODEL
           value: "{{ .Values.promptAdvisor.llmModel | default "gpt-4" }}"
         - name: LLM_ENABLED
           value: "{{ .Values.promptAdvisor.llmEnabled | default "true" }}"
+        # Keycloak configuration for native token management
+        - name: KEYCLOAK_URL
+          value: "{{ .Values.keycloakInternalDomain }}"
+        - name: KEYCLOAK_REALM
+          value: "sentrius"
+        - name: KEYCLOAK_CLIENT_ID
+          value: "prompt-advisor"
+        - name: KEYCLOAK_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-oauth2-secrets
+              key: prompt-advisor-client-secret
+        - name: KEYCLOAK_VERIFY_SSL
+          value: "{{ .Values.promptAdvisor.verifySsl | default "true" }}"
         - name: WEIGHT_PURPOSE
           value: "{{ .Values.promptAdvisor.weights.purpose | default "15" }}"
         - name: WEIGHT_SAFETY
@@ -82,12 +63,6 @@ spec:
           value: "{{ .Values.promptAdvisor.weights.provenance | default "15" }}"
         - name: WEIGHT_AUTONOMY
           value: "{{ .Values.promptAdvisor.weights.autonomy | default "15" }}"
-        - name: TOKEN_FILE_PATH
-          value: "/tmp/keycloak-token/token.txt"
-        volumeMounts:
-        - name: keycloak-token
-          mountPath: /tmp/keycloak-token
-          readOnly: true
         resources:
           {{- toYaml .Values.promptAdvisor.resources | nindent 10 }}
         livenessProbe:

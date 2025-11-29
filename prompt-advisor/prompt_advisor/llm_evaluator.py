@@ -4,7 +4,10 @@ from typing import Dict, Any, Optional
 import logging
 import json
 import re
+import uuid
+import time
 from textblob import TextBlob
+from keycloak import KeycloakOpenID
 
 logger = logging.getLogger(__name__)
 
@@ -13,12 +16,41 @@ class LLMEvaluator:
     """Evaluator that uses both rule-based NLP and an LLM to assess prompt trustworthiness."""
 
     def __init__(self, endpoint: str, api_key: str = "", model: str = "gpt-4",
-                 enabled: bool = False, custom_headers: str = ""):
+                 enabled: bool = False, custom_headers: str = "",
+                 keycloak_url: str = "", keycloak_realm: str = "sentrius",
+                 keycloak_client_id: str = "", keycloak_client_secret: str = "",
+                 keycloak_verify_ssl: bool = True):
         self.endpoint = endpoint
         self.api_key = api_key
         self.model = model
         self.enabled = enabled
         self.custom_headers = self._parse_custom_headers(custom_headers)
+        
+        # Keycloak configuration for native token management
+        self.keycloak_url = keycloak_url
+        self.keycloak_realm = keycloak_realm
+        self.keycloak_client_id = keycloak_client_id
+        self.keycloak_client_secret = keycloak_client_secret
+        self.keycloak_verify_ssl = keycloak_verify_ssl
+        
+        # Token caching
+        self._cached_token: Optional[str] = None
+        self._token_expires_at: float = 0
+        
+        # Initialize Keycloak client if configured
+        self._keycloak_client: Optional[KeycloakOpenID] = None
+        if keycloak_url and keycloak_client_id and keycloak_client_secret:
+            try:
+                self._keycloak_client = KeycloakOpenID(
+                    server_url=keycloak_url,
+                    client_id=keycloak_client_id,
+                    realm_name=keycloak_realm,
+                    client_secret_key=keycloak_client_secret,
+                    verify=keycloak_verify_ssl
+                )
+                logger.info(f"Keycloak client initialized for realm '{keycloak_realm}'")
+            except Exception as e:
+                logger.error(f"Failed to initialize Keycloak client: {e}")
 
     # ================================================================
     # Core Public Entry Point
@@ -47,7 +79,11 @@ class LLMEvaluator:
 
             # Step 3: compute the overall trust score
             merged["trust_score"] = self._compute_trust_score(merged["ratings"])
-            merged["explanation"] += f"\nComposite Trust Score: {merged['trust_score']} / 100."
+            merged["explanation"] = (
+                merged.get("explanation", "")
+                + f"\nComposite Trust Score: {merged['trust_score']} / 100."
+            )
+
             return merged
 
         except Exception as e:
@@ -121,42 +157,97 @@ class LLMEvaluator:
         context_text = ""
         if context:
             context_text = f"\n\nContext: {json.dumps(context, indent=2)}"
-
         return f"""You are an AI evaluator specializing in trust, compliance, and linguistic clarity.
-Evaluate the following prompt across all provided dimensions.
 
-Criteria:
-{criteria_text}
+        Evaluate the following prompt across all provided dimensions.
+        Deliberately consider each dimension independently before assigning scores.
 
-Rate each from 0–10 where:
-0–3 = Poor/Non-compliant
-4–6 = Acceptable with concerns
-7–10 = Good/Compliant
+        Definition notes:
+        - **Purpose** refers to how clearly and explicitly the agent’s intended function is defined. Be most critical of
+        ambiguity of operations. Minimize ambiguity.
+        - **Safety** refers to the potential for misuse, harm, escalation, or unintended consequences.
+        - **Compliance** refers to whether the agent’s implied actions, data access, and decision-making would reasonably
+        align with privacy expectations, regulatory principles, and organizational policy constraints if executed. Assume
+        well known compliance regulations based on intent of the agent.
+        - **Provenance** refers to the clarity and traceability of which agent acts, what data is used or produced, and whether actions can be attributed and audited.
+        - **Autonomy** refers to the degree of independent action implied without explicit oversight or approval.
 
-Include both semantic (meaning) and linguistic (form) aspects.
 
-Prompt:
-{prompt}{context_text}
+        Criteria:
+        {criteria_text}
 
-Respond strictly in JSON:
-{{
-  "ratings": {{
-    "purpose": <0-10>,
-    "safety": <0-10>,
-    "compliance": <0-10>,
-    "provenance": <0-10>,
-    "autonomy": <0-10>,
-    "pragmatic_tone": <0-10>,
-    "lexical_precision": <0-10>
-  }},
-  "explanation": "<detailed explanation>",
-  "recommendations": ["<recommendation 1>", "<recommendation 2>", ...]
-}}"""
+        Scoring scale (0–10):
+        - **0–3**: Poor / non-compliant / high risk
+        - **4–7**: Acceptable with concerns or ambiguity
+        - **8–10**: Clear, well-defined, and low-risk
+
+        Include both:
+        - **Semantic reasoning** (what the prompt means and enables)
+        - **Linguistic quality** (clarity, precision, tone)
+
+        Prompt to evaluate:
+        {prompt}{context_text}
+
+        Output requirements:
+        - Respond with a single valid JSON object only.
+        - Do not include markdown, comments, or extra text.
+
+        Required JSON format:
+        {{
+          "ratings": {{
+            "purpose": <integer 0-10>,
+            "safety": <integer 0-10>,
+            "compliance": <integer 0-10>,
+            "provenance": <integer 0-10>,
+            "autonomy": <integer 0-10>,
+            "pragmatic_tone": <integer 0-10>,
+            "lexical_precision": <integer 0-10>
+          }},
+          "explanation": "<concise but specific justification covering major risks and strengths>",
+          "recommendations": ["<actionable recommendation 1>", "<actionable recommendation 2>", "..."]
+        }}"""
+
+    def _get_keycloak_token(self) -> Optional[str]:
+        """Get Keycloak token using native library, with caching."""
+        if not self._keycloak_client:
+            return None
+            
+        # Check if cached token is still valid (with 30s buffer)
+        if self._cached_token and time.time() < (self._token_expires_at - 30):
+            logger.debug("Using cached Keycloak token")
+            return self._cached_token
+            
+        try:
+            # Get new token using client credentials grant
+            token_response = self._keycloak_client.token(grant_type="client_credentials")
+            access_token = token_response.get("access_token")
+            expires_in = token_response.get("expires_in", 300)
+            
+            if access_token:
+                self._cached_token = access_token
+                self._token_expires_at = time.time() + expires_in
+                logger.info(f"Obtained new Keycloak token (expires in {expires_in}s)")
+                return access_token
+        except Exception as e:
+            logger.error(f"Failed to obtain Keycloak token: {e}")
+            
+        return None
 
     async def _call_llm(self, evaluation_prompt: str) -> str:
         headers = dict(self.custom_headers)
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
+        headers["X-Communication-Id"] = str(uuid.uuid4())
+        
+        # Get token from Keycloak using native library
+        logger.debug("hey-oh")
+        token = self._get_keycloak_token()
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+            logger.debug("Using Keycloak token for LLM request")
+        elif "Authorization" not in headers:
+            # Fall back to api_key if Keycloak not configured
+            if self.api_key:
+                headers["Authorization"] = f"Bearer {self.api_key}"
+
 
         payload = {
             "model": self.model,
@@ -173,31 +264,54 @@ Respond strictly in JSON:
             response.raise_for_status()
             result = response.json()
 
-            if "choices" in result and result["choices"]:
-                return result["choices"][0]["message"]["content"]
-            elif "content" in result:
-                return result["content"]
-            else:
-                return json.dumps(result)
+            logger.info(result)
+
+            return self._extract_response_text(result)
+
+    def _extract_response_text(self, result: dict) -> str:
+        # Responses API
+        if "output" in result and result["output"]:
+            texts = []
+            for item in result["output"]:
+                if item.get("type") == "message":
+                    for content in item.get("content", []):
+                        if content.get("type") == "output_text":
+                            texts.append(content.get("text", ""))
+            if texts:
+                return "\n".join(texts)
+
+        # Legacy chat.completions fallback
+        if "choices" in result and result["choices"]:
+            return result["choices"][0]["message"]["content"]
+
+        # Last resort
+        return json.dumps(result)
 
     def _parse_llm_response(self, response: str) -> Dict[str, Any]:
         try:
-            if "```json" in response:
-                response = response.split("```json")[1].split("```")[0].strip()
-            elif "```" in response:
-                response = response.split("```")[1].split("```")[0].strip()
+            response = response.strip()
 
-            result = json.loads(response)
-            if "ratings" not in result:
-                return self._get_neutral_evaluation()
+            logger.info(response)
+
+            # Strip markdown if present
+            if response.startswith("```"):
+                response = response.split("```")[1]
+
+            parsed = json.loads(response)
+
+            if not isinstance(parsed, dict) or "ratings" not in parsed:
+                raise ValueError("Invalid LLM schema")
+
             return {
-                "ratings": result.get("ratings", {}),
-                "explanation": result.get("explanation", "LLM evaluation completed."),
-                "recommendations": result.get("recommendations", [])
+                "ratings": parsed.get("ratings", {}),
+                "explanation": parsed.get("explanation", ""),
+                "recommendations": parsed.get("recommendations", [])
             }
+
         except Exception as e:
-            logger.error(f"Failed to parse LLM response: {e}\nRaw: {response}")
+            logger.error(f"Failed to parse LLM response: {e}")
             return self._get_neutral_evaluation()
+
 
     def _merge_scores(self, rules: Dict[str, int], llm_eval: Dict[str, Any]) -> Dict[str, Any]:
         """Average overlapping keys; combine all categories."""

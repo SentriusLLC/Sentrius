@@ -403,13 +403,3 @@ if $update_prompt_advisor; then
     fi
     build_image "sentrius-prompt-advisor" "$PROMPT_ADVISOR_VERSION" "${SCRIPT_DIR}/../../" -f Dockerfile-prompt-advisor --skip-dev-certs
 fi
-
-if $update_prompt_advisor_token_refresher; then
-    if [[ "$ENV_TARGET" == "gcp" ]]; then
-        PROMPT_ADVISOR_TOKEN_REFRESHER_VERSION=$(increment_patch_version $PROMPT_ADVISOR_TOKEN_REFRESHER_VERSION)
-        update_env_var "PROMPT_ADVISOR_TOKEN_REFRESHER_VERSION" "$PROMPT_ADVISOR_TOKEN_REFRESHER_VERSION"
-    else
-        PROMPT_ADVISOR_TOKEN_REFRESHER_VERSION="latest"
-    fi
-    build_image "sentrius-prompt-advisor-token-refresher" "$PROMPT_ADVISOR_TOKEN_REFRESHER_VERSION" "${SCRIPT_DIR}/../../docker/prompt-advisor-token-refresher" --skip-dev-certs
-fi
