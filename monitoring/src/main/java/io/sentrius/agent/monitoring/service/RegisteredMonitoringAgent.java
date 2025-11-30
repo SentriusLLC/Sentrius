@@ -6,9 +6,11 @@ import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.dto.agents.AgentExecution;
 import io.sentrius.sso.core.dto.capabilities.EndpointDescriptor;
 import io.sentrius.sso.core.exceptions.ZtatException;
+import io.sentrius.sso.core.model.security.Ztat;
 import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.AgentExecutionService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
+import io.sentrius.sso.core.utils.JsonUtil;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +21,7 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Monitoring Agent - A registered NPE (Non-Person Entity) agent
@@ -85,6 +88,10 @@ public class RegisteredMonitoringAgent implements ApplicationListener<Applicatio
         while (running) {
             try {
                 var register = zeroTrustClientService.registerAgent(agentExecution);
+                var ztat = JsonUtil.MAPPER.readValue(register, Ztat.class);
+                agentExecution.setZtatToken(ztat.getZtatToken());
+                agentExecution.setCommunicationId(ztat.getCommunicationId());
+
                 log.info("Monitoring Agent registered response: {}", register);
                 break;
             } catch (Exception | ZtatException e) {
@@ -167,6 +174,7 @@ public class RegisteredMonitoringAgent implements ApplicationListener<Applicatio
             try {
                 UserDTO user = UserDTO.builder().username(agentName).build();
                 AgentExecution execution = agentExecutionService.getAgentExecution(user);
+                execution.setCommunicationId(UUID.randomUUID().toString());
                 
                 log.info("Loading endpoints via AgentClientService...");
                 List<EndpointDescriptor> endpoints = agentClientService.getAvailableEndpoints(execution);
@@ -175,9 +183,9 @@ public class RegisteredMonitoringAgent implements ApplicationListener<Applicatio
                 if (endpoints != null && !endpoints.isEmpty()) {
                     // Register monitoring for discovered endpoints
                     for (EndpointDescriptor endpoint : endpoints) {
-                        if ("HEALTH".equalsIgnoreCase(endpoint.getType()) || 
+                        if ("HEALTH".equalsIgnoreCase(endpoint.getType()) || (endpoint.getPath() != null &&
                             endpoint.getPath().contains("/health") ||
-                            endpoint.getPath().contains("/actuator")) {
+                            endpoint.getPath().contains("/actuator"))) {
                             
                             String endpointUrl = endpoint.getPath();
                             if (!endpointUrl.startsWith("http")) {
