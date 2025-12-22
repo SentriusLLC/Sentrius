@@ -42,6 +42,7 @@ public class AutomationSuggestionAnalyzer {
     private final AutomationSuggestionRepository suggestionRepository;
     private final IntegrationSecurityTokenService integrationSecurityTokenService;
     private final LLMService llmService;
+    private final io.sentrius.sso.core.config.SystemOptions systemOptions;
 
     private static final int MIN_PATTERN_FREQUENCY = 3;
     private static final int MIN_COMMAND_SEQUENCE_LENGTH = 2;
@@ -186,8 +187,8 @@ public class AutomationSuggestionAnalyzer {
         int frequency
     ) throws JsonProcessingException, ZtatException {
         var token = integrationSecurityTokenService
-            .findByConnectionType("openai")
-            .stream().findFirst().orElse(null);
+            .selectToken(systemOptions.getDefaultLlmProvider())
+            .orElse(null);
 
         if (token == null) return;
 
@@ -218,8 +219,8 @@ public class AutomationSuggestionAnalyzer {
         int frequency
     ) throws JsonProcessingException, ZtatException {
         var token = integrationSecurityTokenService
-            .findByConnectionType("openai")
-            .stream().findFirst().orElse(null);
+            .selectToken(systemOptions.getDefaultLlmProvider())
+            .orElse(null);
 
         if (token == null) return;
 
@@ -448,7 +449,7 @@ public class AutomationSuggestionAnalyzer {
 
     private boolean isLLMAvailable() {
         return integrationSecurityTokenService
-            .findByConnectionType("openai")
-            .stream().findFirst().isPresent();
+            .selectToken(systemOptions.getDefaultLlmProvider())
+            .isPresent();
     }
 }

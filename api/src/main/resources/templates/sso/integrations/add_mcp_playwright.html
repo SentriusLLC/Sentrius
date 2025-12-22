@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Add Playwright MCP Server</title>
+
+    <style>
+        .integration-form {
+            max-width: 600px;
+            margin: 2rem auto;
+            background: var(--bs-dark);
+            border: 1px solid #404040;
+            border-radius: 12px;
+            padding: 2rem;
+        }
+
+        .integration-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .integration-icon {
+            font-size: 3rem;
+            color: #2eac6d;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+
+        .form-control {
+            background: var(--bs-dark);
+            border: 1px solid #404040;
+            color: #fff;
+        }
+
+        .form-control:focus {
+            background: var(--bs-dark);
+            border-color: #2eac6d;
+            color: #fff;
+            box-shadow: 0 0 0 0.2rem rgba(46, 172, 109, 0.25);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2eac6d, #1f8a52);
+            border: none;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid #404040;
+            color: #adb5bd;
+        }
+
+        .help-text {
+            font-size: 0.875rem;
+            color: #adb5bd;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+                
+                <div class="integration-form">
+                    <div class="integration-header">
+                        <i class="fa-solid fa-globe integration-icon"></i>
+                        <h1>Connect Playwright MCP Server</h1>
+                        <p class="text-muted">Enable browser automation and web scraping through the Model Context Protocol.</p>
+                    </div>
+
+                    <form th:action="@{/api/v1/integrations/mcp/playwright/add}" th:object="${mcpIntegration}" method="post">
+                        <div class="form-group">
+                            <label for="name" class="form-label">Integration Name</label>
+                            <input type="text" id="name" name="name" class="form-control"
+                                   th:field="*{name}" placeholder="My Playwright MCP Server" required>
+                            <div class="help-text">Choose a name to identify this MCP server</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="baseUrl" class="form-label">Playwright Server URL (Optional)</label>
+                            <input type="text" id="baseUrl" name="baseUrl" class="form-control"
+                                   th:field="*{baseUrl}" placeholder="http://localhost:3000">
+                            <div class="help-text">URL of remote Playwright server (leave empty for local)</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="description" class="form-label">Description (Optional)</label>
+                            <textarea id="description" name="description" class="form-control" rows="3"
+                                      th:field="*{description}" placeholder="Describe this MCP server..."></textarea>
+                            <div class="help-text">Optional description for this MCP server</div>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="/sso/v1/integrations" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-plug me-2"></i>Connect MCP Server
+                            </button>
+                        </div>
+
+                        <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

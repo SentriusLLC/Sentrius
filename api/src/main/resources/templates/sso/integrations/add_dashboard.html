@@ -224,6 +224,28 @@
                             </div>
                         </a>
                     </div>
+
+                    <div class="section-header" style="margin-top: 3rem;">
+                        <h2 class="section-title" style="font-size: 2rem;">MCP Servers</h2>
+                        <p class="section-subtitle">Connect to Model Context Protocol servers for advanced AI integrations.</p>
+                    </div>
+
+                    <div class="integrations-grid">
+                        <a th:each="mcpServer : ${mcpServers}" 
+                           th:href="${mcpServer.href}" 
+                           class="integration-card">
+                            <div th:if="${mcpServer.badge}" class="card-badge" th:classappend="${mcpServer.badgeType}" th:text="${mcpServer.badge}"></div>
+                            <div class="card-header-modern">
+                                <div class="card-icon">
+                                    <i th:class="${mcpServer.icon}"></i>
+                                </div>
+                                <div class="card-content">
+                                    <h3 class="card-title-modern" th:text="${mcpServer.name}"></h3>
+                                    <p class="card-description-modern" th:text="${mcpServer.description}"></p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
                 </div>
                 <div class="existing-integrations" th:if="${!#lists.isEmpty(existingIntegrations)}">
                     <h3><i class="fas fa-plug me-2"></i>Active Integrations</h3>
@@ -244,7 +266,16 @@
                                     <div class="d-flex align-items-center">
                                         <i th:class="${s.connectionType == 'github' ? 'fa-brands fa-github me-2' : 
                                                      s.connectionType == 'openai' ? 'fa-solid fa-robot me-2' :
-                                                     s.connectionType == 'jira' ? 'fa-brands fa-jira me-2' : 'fa-solid fa-plug me-2'}"
+                                                     s.connectionType == 'jira' ? 'fa-brands fa-jira me-2' :
+                                                     s.connectionType == 'slack' ? 'fa-brands fa-slack me-2' :
+                                                     s.connectionType == 'database' ? 'fa-solid fa-database me-2' :
+                                                     s.connectionType == 'teams' ? 'fa-brands fa-microsoft me-2' :
+                                                     s.connectionType == 'mcp-filesystem' ? 'fa-solid fa-folder me-2' :
+                                                     s.connectionType == 'mcp-postgresql' ? 'fa-solid fa-database me-2' :
+                                                     s.connectionType == 'mcp-slack' ? 'fa-brands fa-slack me-2' :
+                                                     s.connectionType == 'mcp-playwright' ? 'fa-solid fa-globe me-2' :
+                                                     s.connectionType == 'mcp-fetch' ? 'fa-solid fa-download me-2' :
+                                                     'fa-solid fa-plug me-2'}"
                                            style="color: #0d6efd;"></i>
                                         <span th:text="${s.name}"></span>
                                     </div>
@@ -253,7 +284,16 @@
                                     <span class="badge bg-primary"
                                           th:text="${s.connectionType == 'github' ? 'GitHub' : 
                                                    s.connectionType == 'openai' ? 'OpenAI' :
-                                                   s.connectionType == 'jira' ? 'JIRA' : s.connectionType}">
+                                                   s.connectionType == 'jira' ? 'JIRA' :
+                                                   s.connectionType == 'slack' ? 'Slack' :
+                                                   s.connectionType == 'database' ? 'Database' :
+                                                   s.connectionType == 'teams' ? 'Microsoft Teams' :
+                                                   s.connectionType == 'mcp-filesystem' ? 'Filesystem MCP' :
+                                                   s.connectionType == 'mcp-postgresql' ? 'PostgreSQL MCP' :
+                                                   s.connectionType == 'mcp-slack' ? 'Slack MCP' :
+                                                   s.connectionType == 'mcp-playwright' ? 'Playwright MCP' :
+                                                   s.connectionType == 'mcp-fetch' ? 'Fetch MCP' :
+                                                   s.connectionType}">
                                     </span>
                                 </td>
                                 <td>

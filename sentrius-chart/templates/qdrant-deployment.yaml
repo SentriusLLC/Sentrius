@@ -1,3 +1,4 @@
+{{- if .Values.qdrant.enabled }}
 # qdrant-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -46,3 +47,4 @@ spec:
           port: {{ .Values.qdrant.port }}
   policyTypes:
     - Ingress
+{{- end }}

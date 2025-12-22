@@ -43,6 +43,36 @@ public class MemoryAccessControlService {
             return false;
         }
 
+        // CRITICAL: Check USER markings first - memories marked with USER:<userId> are private to that user
+        // This enforces user privacy for chat session memories
+        if (memory.getMarkings() != null && memory.getMarkings().contains("USER:")) {
+            String[] markingsArray = memory.getMarkingsArray();
+            boolean hasUserMarking = false;
+            boolean userMarkingMatched = false;
+            
+            for (String marking : markingsArray) {
+                if (marking.trim().startsWith("USER:")) {
+                    hasUserMarking = true;
+                    String markedUserId = marking.trim().substring(5);
+                    if (userId != null && userId.equals(markedUserId)) {
+                        userMarkingMatched = true;
+                        log.debug("USER marking matched - access granted to owning user: {}", userId);
+                        break;
+                    }
+                }
+            }
+            
+            // If there are USER markings, access is only allowed if one matched
+            if (hasUserMarking) {
+                if (userMarkingMatched) {
+                    return true;
+                } else {
+                    log.debug("USER marking(s) present but user {} does not match any marked user, denying access", userId);
+                    return false;
+                }
+            }
+        }
+
         // If memory is public and access type is READ, allow
         if ("PUBLIC".equalsIgnoreCase(memory.getClassification()) && "READ".equalsIgnoreCase(accessType)) {
             log.debug("Public memory read access granted");
@@ -54,12 +84,6 @@ public class MemoryAccessControlService {
             log.debug("Creator access granted");
             return true;
         }
-
-        // If agent is accessing its own memory, allow based on access level
-        /*
-        if (agentId != null && agentId.equals(memory.getAgentId())) {
-            return evaluateAgentAccess(memory, accessType);
-        }*/
 
         // Check if memory can be shared with the agent
         if (agentId != null && memory.canBeSharedWith(agentId)) {

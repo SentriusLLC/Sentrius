@@ -1,0 +1,20 @@
+{{- if eq .Values.environment "gke" }}
+# sentrius-backend-config.yaml
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  # This name MUST match the name used in your Service annotation
+  name: sentrius-backend-config
+  namespace: {{ .Values.tenant }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  # Health check is required for GKE Ingress to work
+  healthCheck:
+    type: HTTP
+    port: {{ .Values.sentrius.port }} # Match the Service port
+    requestPath: {{ .Values.healthCheck.readinessProbe.path }}
+    checkIntervalSec: 10
+    timeoutSec: 5
+    healthyThreshold: 2
+{{- end }}

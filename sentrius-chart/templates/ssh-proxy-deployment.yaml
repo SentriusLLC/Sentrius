@@ -59,6 +59,13 @@ spec:
                   key: ssh-proxy-client-secret
             - name: AGENT_LAUNCHER_URL
               value: "http://sentrius-launcher-service:8082"
+            # Database URL switches based on Cloud SQL mode
+            - name: SPRING_DATASOURCE_URL
+              value: {{- if .Values.cloudsql.enabled }}
+                  "jdbc:postgresql://127.0.0.1:5432/{{ .Values.database.name }}"
+                {{- else }}
+                    "{{ .Values.postgres.jdbcUrl }}"
+                {{- end }}
           resources:
             {{- toYaml .Values.sshproxy.resources | nindent 12 }}
           volumeMounts:

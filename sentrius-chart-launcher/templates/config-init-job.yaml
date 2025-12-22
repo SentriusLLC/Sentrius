@@ -3,13 +3,8 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ .Release.Name }}-config-init
-  namespace: {{ .Values.tenant }}
   labels:
     {{- include "sentrius.labels" . | nindent 4 }}
-  annotations:
-    "helm.sh/hook": pre-install,pre-upgrade
-    "helm.sh/hook-weight": "-5"
-    "helm.sh/hook-delete-policy": before-hook-creation
 spec:
   template:
     metadata:
@@ -17,33 +12,31 @@ spec:
     spec:
       restartPolicy: OnFailure
       containers:
-      - name: config-init
-        image: busybox
-        command:
-        - sh
-        - -c
-        - |
-          set -e
-          echo "Copying configuration files from ConfigMap to PVC..."
-          if [ "$(ls -A /configmap-data)" ]; then
-            cp -v /configmap-data/* /config/
-            echo "Configuration files copied successfully"
-          else
-            echo "Warning: No files found in ConfigMap"
-          fi
-          echo "Current files in PVC:"
-          ls -la /config/
-        volumeMounts:
-        - name: configmap-volume
-          mountPath: /configmap-data
-          readOnly: true
-        - name: config-pvc
-          mountPath: /config
+        - name: config-init
+          image: busybox
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "Copying configuration files from ConfigMap to PVC..."
+              if [ "$(ls -A /configmap-data)" ]; then
+                cp -v /configmap-data/* /config/
+                echo "Configuration files copied successfully"
+              else
+                echo "Warning: No files found in ConfigMap"
+              fi
+              ls -la /config/
+          volumeMounts:
+            - name: configmap-volume
+              mountPath: /configmap-data
+            - name: config-pvc
+              mountPath: /config
       volumes:
-      - name: configmap-volume
-        configMap:
-          name: {{ .Release.Name }}-config
-      - name: config-pvc
-        persistentVolumeClaim:
-          claimName: {{ .Release.Name }}-config-pvc
+        - name: configmap-volume
+          configMap:
+            name: {{ .Release.Name }}-config
+        - name: config-pvc
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-config-pvc
 {{- end }}

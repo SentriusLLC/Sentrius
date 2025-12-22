@@ -19,6 +19,8 @@ AGENTPROXY_VERSION="${AGENTPROXY_VERSION:-latest}"
 SSHPROXY_VERSION="${SSHPROXY_VERSION:-latest}"
 RDPPROXY_VERSION="${RDPPROXY_VERSION:-latest}"
 GITHUB_MCP_VERSION="${GITHUB_MCP_VERSION:-latest}"
+MONITORING_AGENT_VERSION="${MONITORING_AGENT_VERSION:-latest}"
+SSH_AGENT_VERSION="${SSH_AGENT_VERSION:-latest}"
 
 TENANT=""
 ENV_TARGET="gke"
@@ -26,7 +28,7 @@ CERTIFICATES_ENABLED="true"
 INGRESS_TLS_ENABLED="true"
 ENVIRONMENT="gke"
 DEPLOY_ADMINER=${DEPLOY_ADMINER:-false}
-ENABLE_RDP_CONTAINER=${ENABLE_RDP_CONTAINER:-false}
+ENABLE_RDP_CONTAINER=${ENABLE_RDP_CONTAINER:-true}
 
 # GCP Container Registry
 GCP_REGISTRY="us-central1-docker.pkg.dev/sentrius-project/sentrius-repo"
@@ -74,10 +76,11 @@ KEYCLOAK_SUBDOMAIN="keycloak.${TENANT}.sentrius.cloud"
 RDPPROXY_SUBDOMAIN="rdpproxy.${TENANT}.sentrius.cloud"
 KEYCLOAK_HOSTNAME="${KEYCLOAK_SUBDOMAIN}"
 KEYCLOAK_DOMAIN="https://${KEYCLOAK_SUBDOMAIN}"
-KEYCLOAK_INTERNAL_DOMAIN="http://sentrius-keycloak:8081"
+KEYCLOAK_INTERNAL_DOMAIN="${KEYCLOAK_DOMAIN}"
 SENTRIUS_DOMAIN="https://${SUBDOMAIN}"
 APROXY_DOMAIN="https://${APROXY_SUBDOMAIN}"
 RDPPROXY_DOMAIN="https://${RDPPROXY_SUBDOMAIN}"
+STORAGE_CLASS_NAME="premium-rwo"
 
 # Check if namespace exists
 kubectl get namespace ${TENANT} >/dev/null 2>&1
@@ -101,7 +104,7 @@ if kubectl get validatingwebhookconfigurations 2>/dev/null | grep -q "ingress"; 
     for i in {1..30}; do
         if kubectl get validatingwebhookconfigurations 2>/dev/null | grep -q "ingress.*admission"; then
             echo "✅ Ingress admission webhook is configured"
-            sleep 2  # Brief pause to ensure webhook is fully operational
+            sleep 2
             break
         fi
         echo "Waiting for ingress webhook configuration... ($i/30)"
@@ -109,18 +112,38 @@ if kubectl get validatingwebhookconfigurations 2>/dev/null | grep -q "ingress"; 
     done
 fi
 
-# Check for cert-manager webhook (if TLS is enabled)
+# Check for cert-manager webhook (only if TLS is enabled)
 if [[ "$CERTIFICATES_ENABLED" == "true" ]]; then
     if kubectl get validatingwebhookconfigurations cert-manager-webhook >/dev/null 2>&1; then
         echo "⏳ Waiting for cert-manager webhook to be fully operational..."
-        # Wait for cert-manager webhook pods to be ready
         if kubectl get pods -n cert-manager -l app.kubernetes.io/name=webhook >/dev/null 2>&1; then
-            kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=webhook -n cert-manager --timeout=60s 2>/dev/null || echo "⚠️ cert-manager webhook may not be fully ready"
+            kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=webhook \
+                -n cert-manager \
+                -l app.kubernetes.io/name=webhook \
+                --timeout=60s 2>/dev/null || \
+                echo "⚠️ cert-manager webhook may not be fully ready"
         fi
         echo "✅ cert-manager webhook check complete"
-        sleep 2  # Brief pause to ensure webhook is fully operational
+        sleep 2
     fi
 fi
+
+# ---------------------------------------------------
+# Create placeholder TLS secret (GKE requirement only)
+# ---------------------------------------------------
+#if [[ "$ENVIRONMENT" == "gke" ]] && [[ "$CERTIFICATES_ENABLED" == "true" ]]; then
+#    if ! kubectl get secret placeholder-tls-secret -n ${TENANT} >/dev/null 2>&1; then
+#        echo "🔐 Creating placeholder TLS secret for GKE..."
+#        kubectl create secret tls placeholder-tls-secret \
+#            --namespace ${TENANT} \
+#            --cert=/dev/null \
+#            --key=/dev/null
+#        echo "✅ placeholder-tls-secret created"
+#        INGRESS_TLS_ENABLED="false"
+#    else
+#        echo "🔐 placeholder-tls-secret already exists — skipping"
+#    fi
+#fi
 
 # Generate Keycloak DB password if not set and secret doesn't exist
 if [[ -z "$KEYCLOAK_DB_PASSWORD" ]]; then
@@ -128,7 +151,6 @@ if [[ -z "$KEYCLOAK_DB_PASSWORD" ]]; then
     if kubectl get secret "${TENANT}-keycloak-secrets" --namespace "${TENANT}" >/dev/null 2>&1; then
         echo "✅ Found existing keycloak secret; extracting DB password..."
         KEYCLOAK_DB_PASSWORD=$(kubectl get secret "${TENANT}-keycloak-secrets" --namespace "${TENANT}" -o jsonpath="{.data.db-password}" | base64 --decode)
-
         if [[ -z "$KEYCLOAK_DB_PASSWORD" ]]; then
             echo "❌ Secret exists but db-password is empty; exiting for safety"
             exit 1
@@ -151,13 +173,64 @@ if [[ -z "$KEYCLOAK_CLIENT_SECRET" ]]; then
     fi
 fi
 
-echo "Deploying Sentrius main chart to namespace ${TENANT}..."
+# ==========================================
+# 🔍 Render Helm Output for Validation
+# ==========================================
+RENDER_PATH="${SCRIPT_DIR}/rendered-${TENANT}.yaml"
+
+echo "📄 Rendering Helm chart (dry run) for validation..."
+helm template sentrius ./sentrius-chart \
+    --namespace ${TENANT} \
+    --set adminer.enabled=${DEPLOY_ADMINER} \
+    --set tenant=${TENANT} \
+    --set environment=${ENVIRONMENT} \
+    --set ingress.class="gce" \
+    --set subdomain="${SUBDOMAIN}" \
+    --set metrics.enabled=true \
+    --set healthCheck.backendConfig.enabled=true \
+    --set config.storageClassName="${STORAGE_CLASS_NAME}" \
+    --set agentproxySubdomain="${APROXY_SUBDOMAIN}" \
+    --set rdpproxySubdomain="${RDPPROXY_SUBDOMAIN}" \
+    --set keycloakSubdomain="${KEYCLOAK_SUBDOMAIN}" \
+    --set keycloakHostname="${KEYCLOAK_HOSTNAME}" \
+    --set keycloakDomain="${KEYCLOAK_DOMAIN}" \
+    --set keycloakInternalDomain="${KEYCLOAK_DOMAIN}" \
+    --set sentriusDomain="${SENTRIUS_DOMAIN}" \
+    --set agentproxyDomain="${APROXY_DOMAIN}" \
+    --set rdpproxyDomain="${RDPPROXY_DOMAIN}" \
+    --set certificates.enabled=${CERTIFICATES_ENABLED} \
+    --set ingress.tlsEnabled=${INGRESS_TLS_ENABLED} \
+    > "${RENDER_PATH}"
+
+if [[ $? -ne 0 ]]; then
+    echo "❌ Helm rendering failed — check your templates!"
+    exit 1
+fi
+
+echo "✅ Rendered output saved to ${RENDER_PATH}"
+
+# Validate YAML
+echo "🔍 Validating Kubernetes YAML with kubeval (if installed)..."
+if command -v kubeval >/dev/null 2>&1; then
+    kubeval --strict "${RENDER_PATH}"
+else
+    echo "⚠️ kubeval not installed — skipping schema validation."
+fi
+
+echo "======================================"
+echo "🚀 Deploying Sentrius (Two-Stage Ingress)"
+echo "======================================"
+
+echo "📦 Deploying Sentrius main chart to namespace ${TENANT}..."
 helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set adminer.enabled=${DEPLOY_ADMINER} \
     --set tenant=${TENANT} \
     --set environment=${ENVIRONMENT} \
+    --set ingress.class="gce" \
     --set subdomain="${SUBDOMAIN}" \
     --set metrics.enabled=true \
+    --set healthCheck.backendConfig.enabled=true \
+    --set config.storageClassName="${STORAGE_CLASS_NAME}" \
     --set agentproxySubdomain="${APROXY_SUBDOMAIN}" \
     --set rdpproxySubdomain="${RDPPROXY_SUBDOMAIN}" \
     --set keycloakSubdomain="${KEYCLOAK_SUBDOMAIN}" \
@@ -189,7 +262,9 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set keycloak.realm.clients.sentriusLauncher.client_secret="${SENTRIUS_LAUNCHER_CLIENT_SECRET}" \
     --set keycloak.realm.clients.javaAgents.client_secret="${JAVA_AGENTS_CLIENT_SECRET}" \
     --set keycloak.realm.clients.aiAgentAssessor.client_secret="${MONITORING_AGENT_CLIENT_SECRET}" \
+    --set keycloak.realm.clients.sshagent.client_secret="${SSH_AGENT_CLIENT_SECRET}" \
     --set keycloak.realm.clients.agentProxy.client_secret="${SENTRIUS_APROXY_CLIENT_SECRET}" \
+    --set keycloak.realm.clients.promptAdvisor.client_secret="${PROMPT_ADVISOR_CLIENT_SECRET}" \
     --set keycloak.image.repository="${GCP_REGISTRY}/sentrius-keycloak" \
     --set keycloak.image.pullPolicy="IfNotPresent" \
     --set keycloak.image.tag=${SENTRIUS_KEYCLOAK_VERSION} \
@@ -205,6 +280,11 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set sshproxy.image.repository="${GCP_REGISTRY}/sentrius-ssh-proxy" \
     --set sshproxy.image.pullPolicy="IfNotPresent" \
     --set sshproxy.image.tag=${SSHPROXY_VERSION} \
+    --set monitoringagent.image.tag=${MONITORING_AGENT_VERSION} \
+    --set monitoringagent.image.repository="${GCP_REGISTRY}/sentrius-monitoring-agent" \
+    --set monitoringagent.image.pullPolicy="IfNotPresent" \
+    --set sshagent.image.tag=${SSH_AGENT_VERSION} \
+    --set sshagent.image.repository="${GCP_REGISTRY}/sentrius-ssh-agent" \
     --set rdpproxy.image.repository="${GCP_REGISTRY}/sentrius-rdp-proxy" \
     --set rdpproxy.image.pullPolicy="IfNotPresent" \
     --set rdpproxy.image.tag=${RDPPROXY_VERSION} \
@@ -214,11 +294,159 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set sentriusagent.image.pullPolicy="IfNotPresent" \
     --set sentriusagent.image.tag=${SENTRIUS_AGENT_VERSION} || { echo "Failed to deploy Sentrius with Helm"; exit 1; }
 
+echo ""
+echo "======================================"
+echo "⏳ STAGE 1: Waiting for Keycloak Ingress"
+echo "======================================"
+
+# Wait for Keycloak ingress to get an IP
+KEYCLOAK_INGRESS_TIMEOUT=600
+ELAPSED=0
+KEYCLOAK_INGRESS_IP=""
+
+echo "Waiting for Keycloak ingress IP (timeout: ${KEYCLOAK_INGRESS_TIMEOUT}s)..."
+while [ $ELAPSED -lt $KEYCLOAK_INGRESS_TIMEOUT ]; do
+    KEYCLOAK_INGRESS_IP=$(kubectl get ingress "keycloak-ingress-${TENANT}" -n ${TENANT} -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+
+    if [[ -n "$KEYCLOAK_INGRESS_IP" ]]; then
+        echo "✅ Keycloak ingress has IP: $KEYCLOAK_INGRESS_IP"
+        break
+    fi
+
+    if [ $((ELAPSED % 30)) -eq 0 ]; then
+        echo "  Still waiting for Keycloak ingress IP... ($ELAPSED seconds elapsed)"
+    fi
+    sleep 10
+    ELAPSED=$((ELAPSED + 10))
+done
+
+if [[ -z "$KEYCLOAK_INGRESS_IP" ]]; then
+    echo "❌ ERROR: Keycloak ingress did not get an IP within ${KEYCLOAK_INGRESS_TIMEOUT} seconds"
+    echo ""
+    echo "Checking ingress status:"
+    kubectl describe ingress "keycloak-ingress-${TENANT}" -n ${TENANT}
+    exit 1
+fi
+
+# Create/Update DNS for Keycloak immediately
+echo ""
+echo "🌐 Configuring DNS for Keycloak..."
+if gcloud dns record-sets list --zone=${ZONE} --name=${KEYCLOAK_SUBDOMAIN}. 2>/dev/null | grep -q ${KEYCLOAK_SUBDOMAIN}.; then
+    echo "  Updating existing DNS record for ${KEYCLOAK_SUBDOMAIN}..."
+    gcloud dns record-sets delete ${KEYCLOAK_SUBDOMAIN}. --type=A --zone=${ZONE} --quiet 2>/dev/null || true
+fi
+
+gcloud dns record-sets create ${KEYCLOAK_SUBDOMAIN}. \
+    --zone=${ZONE} \
+    --type=A \
+    --ttl=300 \
+    --rrdatas=$KEYCLOAK_INGRESS_IP || {
+    echo "⚠️ Failed to create DNS record, it may already exist"
+}
+
+# Wait for Keycloak pod to be ready
+echo ""
+echo "⏳ Waiting for Keycloak pod to be ready..."
+kubectl wait --for=condition=ready pod \
+    -l "app.kubernetes.io/name=keycloak" \
+    -n ${TENANT} \
+    --timeout=10m || {
+    echo "⚠️ Keycloak pod not ready yet, but continuing..."
+}
+
+# Wait for Keycloak to respond
+echo ""
+echo "⏳ Waiting for Keycloak to be healthy..."
+echo "  Checking: https://${KEYCLOAK_SUBDOMAIN}/"
+KEYCLOAK_HEALTH_TIMEOUT=300
+ELAPSED=0
+
+while [ $ELAPSED -lt $KEYCLOAK_HEALTH_TIMEOUT ]; do
+    # Try HTTPS (with DNS), then HTTP with IP
+    if curl -sf -k --connect-timeout 5 "https://${KEYCLOAK_SUBDOMAIN}/" >/dev/null 2>&1; then
+        echo "✅ Keycloak is healthy via HTTPS"
+        break
+    elif curl -sf --connect-timeout 5 "http://${KEYCLOAK_INGRESS_IP}/" >/dev/null 2>&1; then
+        echo "✅ Keycloak is responding (certificate may still be provisioning)"
+        break
+    fi
+
+    if [ $((ELAPSED % 30)) -eq 0 ]; then
+        echo "  Waiting for Keycloak to respond... ($ELAPSED seconds elapsed)"
+    fi
+    sleep 10
+    ELAPSED=$((ELAPSED + 10))
+done
+
+if [ $ELAPSED -ge $KEYCLOAK_HEALTH_TIMEOUT ]; then
+    echo "⚠️ WARNING: Keycloak did not respond within ${KEYCLOAK_HEALTH_TIMEOUT} seconds"
+    echo "  Continuing anyway - apps will retry connection..."
+fi
+
+echo ""
+echo "======================================"
+echo "⏳ STAGE 2: Waiting for Apps Ingress"
+echo "======================================"
+
+# Wait for apps ingress to get an IP
+APPS_INGRESS_TIMEOUT=600
+ELAPSED=0
+APPS_INGRESS_IP=""
+
+echo "Waiting for apps ingress IP (timeout: ${APPS_INGRESS_TIMEOUT}s)..."
+while [ $ELAPSED -lt $APPS_INGRESS_TIMEOUT ]; do
+    APPS_INGRESS_IP=$(kubectl get ingress "apps-ingress-${TENANT}" -n ${TENANT} -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+
+    if [[ -n "$APPS_INGRESS_IP" ]]; then
+        echo "✅ Apps ingress has IP: $APPS_INGRESS_IP"
+        break
+    fi
+
+    if [ $((ELAPSED % 30)) -eq 0 ]; then
+        echo "  Still waiting for apps ingress IP... ($ELAPSED seconds elapsed)"
+    fi
+    sleep 10
+    ELAPSED=$((ELAPSED + 10))
+done
+
+if [[ -z "$APPS_INGRESS_IP" ]]; then
+    echo "⚠️ WARNING: Apps ingress did not get an IP within ${APPS_INGRESS_TIMEOUT} seconds"
+    echo "  Application pods may still be starting up..."
+else
+    # Configure DNS for apps
+    echo ""
+    echo "🌐 Configuring DNS for application services..."
+
+    # Check and create/update DNS records
+    for SUBDOMAIN_NAME in "${SUBDOMAIN}" "${APROXY_SUBDOMAIN}" "${RDPPROXY_SUBDOMAIN}"; do
+        if gcloud dns record-sets list --zone=${ZONE} --name=${SUBDOMAIN_NAME}. 2>/dev/null | grep -q ${SUBDOMAIN_NAME}.; then
+            echo "  Updating ${SUBDOMAIN_NAME}..."
+            gcloud dns record-sets delete ${SUBDOMAIN_NAME}. --type=A --zone=${ZONE} --quiet 2>/dev/null || true
+        fi
+
+        gcloud dns record-sets create ${SUBDOMAIN_NAME}. \
+            --zone=${ZONE} \
+            --type=A \
+            --ttl=300 \
+            --rrdatas=$APPS_INGRESS_IP || {
+            echo "⚠️ Failed to create DNS record for ${SUBDOMAIN_NAME}"
+        }
+    done
+fi
+
+# Deploy launcher service
+echo ""
+echo "======================================"
+echo "📦 Deploying Launcher Service"
+echo "======================================"
+
 echo "Deploying Sentrius launcher chart to namespace ${TENANT}-agents..."
 helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${TENANT}-agents \
     --set tenant=${TENANT}-agents \
     --set baseRelease=sentrius \
     --set sentriusNamespace=${TENANT} \
+    --set ingress.class="gce" \
+    --set healthCheck.backendConfig.enabled=true \
     --set keycloakFQDN=sentrius-keycloak.${TENANT}.svc.cluster.local \
     --set sentriusFQDN=sentrius-sentrius.${TENANT}.svc.cluster.local \
     --set integrationproxyFQDN=sentrius-integrationproxy.${TENANT}.svc.cluster.local \
@@ -258,65 +486,28 @@ helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${T
     --set sentriusagent.image.pullPolicy="IfNotPresent" \
     --set sentriusagent.image.tag=${SENTRIUS_AGENT_VERSION} || { echo "Failed to deploy Sentrius launcher with Helm"; exit 1; }
 
-# Wait for LoadBalancer IPs to be ready
-echo "Waiting for LoadBalancer IPs to be assigned..."
-RETRIES=60
-SLEEP_INTERVAL=10
+# Wait for application pods
+echo ""
+echo "⏳ Waiting for application pods to be ready..."
+kubectl wait --for=condition=ready pod \
+    -l "app.kubernetes.io/instance=sentrius" \
+    -n ${TENANT} \
+    --timeout=10m 2>&1 | grep -v "error: no matching resources found" || true
 
-for ((i=1; i<=RETRIES; i++)); do
-    # Retrieve LoadBalancer IP
-    INGRESS_IP=$(kubectl get ingress managed-cert-ingress-${TENANT} -n ${TENANT} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-
-    if [[ -n "$INGRESS_IP" ]]; then
-        echo "INGRESS_IP: $INGRESS_IP"
-        break
-    fi
-
-    echo "Attempt $i: Waiting for IPs to be assigned..."
-    sleep $SLEEP_INTERVAL
-done
-
-if [[ -z "$INGRESS_IP" ]]; then
-    echo "Failed to retrieve LoadBalancer IPs after $((RETRIES * SLEEP_INTERVAL)) seconds."
-    exit 1
-fi
-
-# Check if subdomain exists
-if gcloud dns record-sets list --zone=${ZONE} --name=${TENANT}.sentrius.cloud. | grep -q ${TENANT}.sentrius.cloud.; then
-    echo "Subdomain ${TENANT}.sentrius.cloud already exists. Skipping creation."
-else
-    echo "Creating subdomain ${TENANT}.sentrius.cloud..."
-    gcloud dns record-sets transaction start --zone=${ZONE}
-
-    gcloud dns record-sets transaction add --zone=${ZONE} \
-          --name=${TENANT}.sentrius.cloud. \
-          --type=A \
-          --ttl=300 \
-          $INGRESS_IP
-
-    gcloud dns record-sets transaction add --zone=${ZONE} \
-      --name=keycloak.${TENANT}.sentrius.cloud. \
-      --type=A \
-      --ttl=300 \
-      $INGRESS_IP
-
-    gcloud dns record-sets transaction add --zone=${ZONE} \
-      --name=agentproxy.${TENANT}.sentrius.cloud. \
-      --type=A \
-      --ttl=300 \
-      $INGRESS_IP
-
-    gcloud dns record-sets transaction add --zone=${ZONE} \
-      --name=rdpproxy.${TENANT}.sentrius.cloud. \
-      --type=A \
-      --ttl=300 \
-      $INGRESS_IP
-
-    gcloud dns record-sets transaction execute --zone=${ZONE}
-fi
-
-echo "✅ Deployment complete!"
-echo "Sentrius Domain: ${SENTRIUS_DOMAIN}"
-echo "Keycloak Domain: ${KEYCLOAK_DOMAIN}"
-echo "Agent Proxy Domain: ${APROXY_DOMAIN}"
-echo "RDP Proxy Domain: ${RDPPROXY_DOMAIN}"
+echo ""
+echo "======================================"
+echo "✅ Deployment Complete!"
+echo "======================================"
+echo ""
+echo "Keycloak Ingress IP: ${KEYCLOAK_INGRESS_IP}"
+echo "Apps Ingress IP:     ${APPS_INGRESS_IP:-<pending>}"
+echo ""
+echo "Services:"
+echo "  Keycloak:    ${KEYCLOAK_DOMAIN}"
+echo "  Sentrius:    ${SENTRIUS_DOMAIN}"
+echo "  Agent Proxy: ${APROXY_DOMAIN}"
+echo "  RDP Proxy:   ${RDPPROXY_DOMAIN}"
+echo ""
+echo "Check status with:"
+echo "  kubectl get ingress -n ${TENANT}"
+echo "  kubectl get pods -n ${TENANT}"

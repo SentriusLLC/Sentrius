@@ -1,0 +1,12 @@
+{{- if .Values.config.createStorageClass }}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.config.storageClassName }}
+provisioner: pd.csi.storage.gke.io
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+parameters:
+  type: pd-ssd
+{{- end }}

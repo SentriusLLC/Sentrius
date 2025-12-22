@@ -6,6 +6,11 @@ description: >
 trust_score:
   minimum: 80
   marginal_threshold: 50
+  weightings:
+    identity: 0.3
+    provenance: 0.2
+    runtime: 0.3
+    behavior: 0.2
 
 capabilities:
   - id: terminal-log-access

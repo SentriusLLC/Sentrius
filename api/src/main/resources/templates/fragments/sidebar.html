@@ -79,9 +79,24 @@
                     <i class="fas fa-caret-down ms-1 d-none d-sm-inline"></i>
                 </a>
                 <ul class="collapse nav flex-column ms-3" id="aiSubmenu">
+                    <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
+                        <a href="/sso/v1/ai/services" class="nav-link px-0 align-middle">
+                            <i class="fas fa-cogs"></i> <span class="ms-1 d-none d-sm-inline">Services</span>
+                        </a>
+                    </li>
                     <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_USERS')}">
                         <a href="/sso/v1/users/list" class="nav-link px-0 align-middle">
                             <i class="fa-solid fa-user"></i> <span class="ms-1 d-none d-sm-inline">Manage Users</span>
+                        </a>
+                    </li>
+                    <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
+                        <a href="/sso/v1/agent/list" class="nav-link px-0 align-middle">
+                            <i class="fas fa-robot"></i> <span class="ms-1 d-none d-sm-inline">Agents</span>
+                        </a>
+                    </li>
+                    <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
+                        <a href="/sso/v1/agent/templates" class="nav-link px-0 align-middle">
+                            <i class="fas fa-clipboard-list"></i> <span class="ms-1 d-none d-sm-inline">Agent Templates</span>
                         </a>
                     </li>
                     <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">

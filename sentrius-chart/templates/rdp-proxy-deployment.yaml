@@ -59,6 +59,13 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-db-secret
                   key: keystore-password
+            # Database URL switches based on Cloud SQL mode
+            - name: SPRING_DATASOURCE_URL
+              value: {{- if .Values.cloudsql.enabled }}
+                  "jdbc:postgresql://127.0.0.1:5432/{{ .Values.database.name }}"
+                {{- else }}
+                    "{{ .Values.postgres.jdbcUrl }}"
+                {{- end }}
           resources:
             {{- toYaml .Values.rdpproxy.resources | nindent 12 }}
           volumeMounts:

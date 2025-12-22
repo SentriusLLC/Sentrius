@@ -1,23 +1,35 @@
 {{- if and (ne .Values.environment "local") (.Values.certificates.enabled) }}
----
 {{- if eq .Values.environment "gke" }}
-# GKE Managed Certificate
+---
+# GKE Managed Certificate - Keycloak Only (provisions first)
 apiVersion: networking.gke.io/v1
 kind: ManagedCertificate
 metadata:
-  name: wildcard-cert-{{ .Values.tenant }}
+  name: keycloak-cert-{{ .Values.tenant }}
+  namespace: {{ .Values.tenant }}
+spec:
+  domains:
+    - "{{ .Values.keycloakSubdomain }}"
+---
+# GKE Managed Certificate - Apps (provisions after apps are ready)
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: apps-cert-{{ .Values.tenant }}
+  namespace: {{ .Values.tenant }}
 spec:
   domains:
     - "{{ .Values.subdomain }}"
-    - "{{ .Values.keycloakSubdomain }}"
     - "{{ .Values.agentproxySubdomain }}"
     - "{{ .Values.rdpproxySubdomain }}"
 {{- else if or (eq .Values.environment "aws") (eq .Values.environment "azure") }}
+---
 # Cert-Manager Certificate for AWS or Azure
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: wildcard-cert-{{ .Values.tenant }}
+  namespace: {{ .Values.tenant }}
 spec:
   secretName: wildcard-cert-{{ .Values.tenant }}
   issuerRef:

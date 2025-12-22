@@ -95,7 +95,8 @@ public class OpenAIProxyController extends BaseController {
     }
 
     @PostMapping("/completions")
-    @Endpoint(description = "Proxy for OpenAI completions endpoint")
+    @Endpoint(description = "Proxy for OpenAI completions endpoint (deprecated, use /api/v1/llm/proxy)")
+    @Deprecated
     // require a registered user with an active ztat
     //@LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<?> chat(@RequestHeader("Authorization") String token,
@@ -137,7 +138,7 @@ public class OpenAIProxyController extends BaseController {
         // we've reached this point, so we can assume the user is allowed to access OpenAI
 
         var openAiToken =
-            integrationSecurityTokenService.findByConnectionType("openai").stream().findFirst().orElse(null);
+            integrationSecurityTokenService.selectToken("openai").orElse(null);
         if (openAiToken == null) {
             log.info("no integration");
             return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("No OpenAI integration found");
@@ -162,6 +163,23 @@ public class OpenAIProxyController extends BaseController {
         log.info("Chat request: {}", rawBody);
         LLMRequest chatRequest = JsonUtil.MAPPER.readValue(rawBody, LLMRequest.class);
 
+        // Handle both old completions API format (messages) and new responses API format (input)
+        if (chatRequest.getMessages() == null) {
+            // Try to extract messages from 'input' field (new responses API format)
+            var jsonNode = JsonUtil.MAPPER.readTree(rawBody);
+            if (jsonNode.has("input")) {
+                var inputNode = jsonNode.get("input");
+                if (inputNode.isArray() && inputNode.size() > 0) {
+                    // Convert input array to messages list
+                    var messagesList = new ArrayList<io.sentrius.sso.genai.Message>();
+                    for (var item : inputNode) {
+                        var message = JsonUtil.MAPPER.treeToValue(item, io.sentrius.sso.genai.Message.class);
+                        messagesList.add(message);
+                    }
+                    chatRequest.setMessages(messagesList);
+                }
+            }
+        }
 
         var comm = agentService.saveCommunication(communicationId,
             operatingUser.getUsername(),
@@ -177,7 +195,9 @@ public class OpenAIProxyController extends BaseController {
             .actor(operatingUser.getUsername())
             .triggeringUser("LLM")
             .eventType(ProvenanceEvent.EventType.KNOWLEDGE_REQUESTED)
-            .outputSummary("prompt LLM" + chatRequest.getMessages().get(0).getContentAsString())
+            .outputSummary("prompt LLM" + (chatRequest.getMessages() != null && !chatRequest.getMessages().isEmpty() 
+                ? chatRequest.getMessages().get(0).getContentAsString() 
+                : ""))
             .timestamp(LocalDateTime.now().toInstant(java.time.ZoneOffset.UTC))
             .build();
         provenanceKafkaProducer.send(event);
@@ -266,7 +286,7 @@ public class OpenAIProxyController extends BaseController {
         // we've reached this point, so we can assume the user is allowed to access OpenAI
 
         var openAiToken =
-            integrationSecurityTokenService.findByConnectionType("openai").stream().findFirst().orElse(null);
+            integrationSecurityTokenService.selectToken("openai").orElse(null);
         if (openAiToken == null) {
             log.info("no integration");
             return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("No OpenAI integration found");
@@ -354,7 +374,7 @@ public class OpenAIProxyController extends BaseController {
             operatingUser = userService.getUserByUsername(username);
         }
 
-        var openAiToken = integrationSecurityTokenService.findByConnectionType("openai").stream().findFirst().orElse(null);
+        var openAiToken = integrationSecurityTokenService.selectToken("openai").orElse(null);
         if (openAiToken == null) {
             return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("No OpenAI integration found");
         }

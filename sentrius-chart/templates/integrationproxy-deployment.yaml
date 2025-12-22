@@ -64,6 +64,12 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-oauth2-secrets
                   key: integrationproxy-client-secret
+            - name: SPRING_DATASOURCE_URL
+              value: {{- if .Values.cloudsql.enabled }}
+                  "jdbc:postgresql://127.0.0.1:5432/{{ .Values.database.name }}"
+                            {{- else }}
+                  "{{ .Values.postgres.jdbcUrl }}"
+                            {{- end }}
 
       volumes:
         - name: config-volume

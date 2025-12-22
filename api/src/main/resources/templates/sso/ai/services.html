@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta th:replace="~{fragments/header}" />
+    <title>[[${systemOptions.systemLogoName}]] - AI Services Configuration</title>
+
+    <style>
+        body { background-color: #121212; color: #eaeaea; }
+        .container { margin-top: 20px; }
+        .toast-header { font-size: 1.5rem; font-weight: bold; margin-bottom: 15px; }
+        .card { background-color: #1e1e1e; color: #eaeaea; border: 1px solid #333; margin-bottom: 20px; }
+        .card-header { background-color: #2b2b2b; border-bottom: 1px solid #333; font-weight: bold; }
+        .form-select, .form-control { background-color: #2b2b2b; color: #eaeaea; border: 1px solid #444; }
+        .form-select:focus, .form-control:focus { background-color: #333; color: #eaeaea; border-color: #0d6efd; }
+        .btn-primary { background-color: #0d6efd; border-color: #0d6efd; }
+        .btn-primary:hover { background-color: #0a58ca; border-color: #0a58ca; }
+        .alert-info { background-color: #1a3a52; border-color: #1e4976; color: #a3c6e8; }
+        .provider-info { padding: 15px; margin-top: 10px; background-color: #2b2b2b; border-radius: 5px; }
+        .badge { font-size: 0.9rem; }
+    </style>
+
+</head>
+<body>
+<div id="csrf-token" style="display: none;" th:text="${_csrf.token}"></div>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
+                <h2 class="toast-header">AI Services Configuration</h2>
+
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle"></i>
+                    Configure the default LLM provider for AI-powered features including automation suggestions,
+                    prompt advisor, and agent interactions. The selected provider will be used across all AI services.
+                </div>
+
+                <!-- LLM Provider Selection Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-brain"></i> Default LLM Provider
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <form id="llm-provider-form">
+                                    <div class="mb-3">
+                                        <label for="llm-provider-select" class="form-label">
+                                            Select LLM Provider Type
+                                        </label>
+                                        <select class="form-select" id="llm-provider-select" name="provider">
+                                            <option value="openai" th:selected="${currentProvider == 'openai'}">
+                                                OpenAI (GPT-4, GPT-3.5)
+                                            </option>
+                                            <option value="claude" th:selected="${currentProvider == 'claude'}">
+                                                Anthropic Claude
+                                            </option>
+                                        </select>
+                                        <div class="form-text text-light">
+                                            Current provider: <span class="badge bg-primary" id="current-provider-badge" th:text="${currentProvider}"></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save"></i> Save Provider Configuration
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <div id="save-status" class="mt-3" style="display: none;">
+                                    <!-- Status messages will appear here -->
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="provider-info">
+                                    <h6><i class="fas fa-plug"></i> Available Integrations</h6>
+                                    <div th:if="${#lists.isEmpty(availableProviders)}">
+                                        <p class="text-warning">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            No LLM integrations configured. Please add an integration first.
+                                        </p>
+                                        <a href="/sso/v1/integrations" class="btn btn-sm btn-outline-primary">
+                                            <i class="fa-solid fa-ticket"></i> Configure Integrations
+                                        </a>
+                                    </div>
+                                    <div th:unless="${#lists.isEmpty(availableProviders)}">
+                                        <ul class="list-unstyled">
+                                            <li th:each="provider : ${availableProviders}">
+                                                <i class="fas fa-check-circle text-success"></i>
+                                                <span th:text="${provider}" class="text-capitalize"></span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="provider-info mt-3">
+                                    <h6><i class="fas fa-cogs"></i> Affected Services</h6>
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-robot"></i> Automation Suggestions</li>
+                                        <li><i class="fas fa-magic"></i> Prompt Advisor</li>
+                                        <li><i class="fas fa-comments"></i> Agent Chat</li>
+                                        <li><i class="fas fa-brain"></i> Agent Memory</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Integration Selection Card -->
+                <div class="card" th:if="${!#lists.isEmpty(availableProviders)}">
+                    <div class="card-header">
+                        <i class="fas fa-link"></i> Specific Integration Selection
+                    </div>
+                    <div class="card-body">
+                        <p class="text-light mb-3">
+                            <i class="fas fa-info-circle"></i>
+                            If you have multiple integrations of the same provider type, select which one to use for each provider.
+                        </p>
+                        
+                        <!-- OpenAI Integration Selection -->
+                        <div class="mb-4" th:if="${integrationsByProvider.containsKey('openai')}">
+                            <form class="integration-selection-form" data-provider="openai">
+                                <div class="row align-items-end">
+                                    <div class="col-md-8">
+                                        <label class="form-label">
+                                            <i class="fas fa-robot"></i> OpenAI Integration
+                                        </label>
+                                        <select class="form-select integration-select" name="integrationId">
+                                            <option value="">Auto-select (most recently updated)</option>
+                                            <option th:each="integration : ${integrationsByProvider.get('openai')}"
+                                                    th:value="${integration.id}"
+                                                    th:text="${integration.name}"
+                                                    th:selected="${preferredOpenAiIntegrationId != null && preferredOpenAiIntegrationId.equals(integration.id)}">
+                                            </option>
+                                        </select>
+                                        <div class="form-text text-light">
+                                            <span th:if="${preferredOpenAiIntegrationId != null}">
+                                                Currently using integration ID: <span class="badge bg-info" th:text="${preferredOpenAiIntegrationId}"></span>
+                                            </span>
+                                            <span th:unless="${preferredOpenAiIntegrationId != null}">
+                                                Currently auto-selecting most recent integration
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            <i class="fas fa-save"></i> Save
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                            <div class="integration-status mt-2" data-provider="openai" style="display: none;">
+                                <!-- Status messages -->
+                            </div>
+                        </div>
+
+                        <!-- Claude Integration Selection -->
+                        <div class="mb-3" th:if="${integrationsByProvider.containsKey('claude')}">
+                            <form class="integration-selection-form" data-provider="claude">
+                                <div class="row align-items-end">
+                                    <div class="col-md-8">
+                                        <label class="form-label">
+                                            <i class="fas fa-brain"></i> Claude Integration
+                                        </label>
+                                        <select class="form-select integration-select" name="integrationId">
+                                            <option value="">Auto-select (most recently updated)</option>
+                                            <option th:each="integration : ${integrationsByProvider.get('claude')}"
+                                                    th:value="${integration.id}"
+                                                    th:text="${integration.name}"
+                                                    th:selected="${preferredClaudeIntegrationId != null && preferredClaudeIntegrationId.equals(integration.id)}">
+                                            </option>
+                                        </select>
+                                        <div class="form-text text-light">
+                                            <span th:if="${preferredClaudeIntegrationId != null}">
+                                                Currently using integration ID: <span class="badge bg-info" th:text="${preferredClaudeIntegrationId}"></span>
+                                            </span>
+                                            <span th:unless="${preferredClaudeIntegrationId != null}">
+                                                Currently auto-selecting most recent integration
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            <i class="fas fa-save"></i> Save
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                            <div class="integration-status mt-2" data-provider="claude" style="display: none;">
+                                <!-- Status messages -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Future Extensions Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-shield-alt"></i> Access Control (ABAC)
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">
+                            <i class="fas fa-info-circle"></i>
+                            Fine-grained access control for LLM services based on user attributes will be available in a future release.
+                            This will allow you to limit which users can access specific LLM providers based on ABAC policies.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('llm-provider-form');
+        const statusDiv = document.getElementById('save-status');
+        const currentBadge = document.getElementById('current-provider-badge');
+        const csrfToken = document.getElementById('csrf-token').textContent;
+
+        // Handle provider type selection form
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const provider = document.getElementById('llm-provider-select').value;
+
+            try {
+                const response = await fetch('/api/v1/ai/llm-provider', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify({ provider: provider })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-success" role="alert">
+                            <i class="fas fa-check-circle"></i> ${data.message}
+                        </div>
+                    `;
+                    currentBadge.textContent = data.provider;
+                } else {
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-circle"></i> ${data.error || 'Failed to update provider'}
+                        </div>
+                    `;
+                }
+
+                statusDiv.style.display = 'block';
+
+                // Hide status after 5 seconds
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+
+            } catch (error) {
+                console.error('Error updating LLM provider:', error);
+                statusDiv.innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fas fa-exclamation-circle"></i> Network error: ${error.message}
+                    </div>
+                `;
+                statusDiv.style.display = 'block';
+            }
+        });
+
+        // Handle integration selection forms
+        const integrationForms = document.querySelectorAll('.integration-selection-form');
+        
+        integrationForms.forEach(form => {
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const provider = form.getAttribute('data-provider');
+                const integrationSelect = form.querySelector('.integration-select');
+                const integrationId = integrationSelect.value;
+                const statusDiv = document.querySelector(`.integration-status[data-provider="${provider}"]`);
+                
+                try {
+                    const response = await fetch('/api/v1/ai/preferred-integration', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken
+                        },
+                        body: JSON.stringify({ 
+                            provider: provider,
+                            integrationId: integrationId || null
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        statusDiv.innerHTML = `
+                            <div class="alert alert-success" role="alert">
+                                <i class="fas fa-check-circle"></i> ${data.message}
+                            </div>
+                        `;
+                        
+                        // Update the status text
+                        const formTextDiv = form.querySelector('.form-text');
+                        formTextDiv.textContent = '';
+                        if (integrationId) {
+                            const textNode = document.createTextNode('Currently using integration ID: ');
+                            const badgeSpan = document.createElement('span');
+                            badgeSpan.className = 'badge bg-info';
+                            badgeSpan.textContent = integrationId;
+                            formTextDiv.appendChild(textNode);
+                            formTextDiv.appendChild(badgeSpan);
+                        } else {
+                            formTextDiv.textContent = 'Currently auto-selecting most recent integration';
+                        }
+                    } else {
+                        statusDiv.innerHTML = `
+                            <div class="alert alert-danger" role="alert">
+                                <i class="fas fa-exclamation-circle"></i> ${data.error || 'Failed to update integration'}
+                            </div>
+                        `;
+                    }
+
+                    statusDiv.style.display = 'block';
+
+                    // Hide status after 5 seconds
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 5000);
+
+                } catch (error) {
+                    console.error('Error updating preferred integration:', error);
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-circle"></i> Network error: ${error.message}
+                        </div>
+                    `;
+                    statusDiv.style.display = 'block';
+                }
+            });
+        });
+    });
+</script>
+
+</body>
+</html>

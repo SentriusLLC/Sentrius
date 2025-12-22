@@ -52,6 +52,10 @@ public class AgentCommunication {
     @Column(name = "payload", columnDefinition = "TEXT", nullable = false)
     private String payload;
 
+    @Basic(fetch = FetchType.EAGER)
+    @Column(name = "sag_message", columnDefinition = "TEXT")
+    private String sagMessage;
+
     @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
     @Builder.Default
     private java.time.Instant createdAt = java.time.Instant.now();
@@ -68,6 +72,7 @@ public class AgentCommunication {
                 .messageType(this.messageType)
                 .communicationId(this.communicationId)
                 .payload(this.payload)
+                .sagMessage(this.sagMessage)
                 .createdAt(this.createdAt)
                 .linkedRequests(linkedRequests.stream().map(RequestCommunicationLink::getId).toList())
                 .build();

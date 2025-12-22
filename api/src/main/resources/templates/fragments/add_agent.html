@@ -11,9 +11,14 @@
                     <div class="mb-3">
                         <label class="form-label">Service Type</label>
                         <div class="btn-group w-100" role="group" aria-label="Service Type">
-                            <input type="radio" class="btn-check" name="serviceType" id="serviceTypeAgent" value="agent" checked autocomplete="off">
+                            <input type="radio" class="btn-check" name="serviceType" id="serviceTypeTemplate" value="template" checked autocomplete="off">
+                            <label class="btn btn-outline-primary" for="serviceTypeTemplate" title="Launch from pre-configured template">
+                                <i class="fas fa-clipboard-list"></i> Template
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="serviceType" id="serviceTypeAgent" value="agent" autocomplete="off">
                             <label class="btn btn-outline-primary" for="serviceTypeAgent" title="Traditional agent with custom callback URL">
-                                <i class="fas fa-robot"></i> Agent
+                                <i class="fas fa-robot"></i> Custom Agent
                             </label>
                             
                             <input type="radio" class="btn-check" name="serviceType" id="serviceTypeCodingMCP" value="coding-mcp" autocomplete="off">
@@ -25,6 +30,25 @@
                             <label class="btn btn-outline-primary" for="serviceTypeGitHubMCP" title="GitHub repository access and automation through MCP">
                                 <i class="fab fa-github"></i> GitHub MCP
                             </label>
+                        </div>
+                    </div>
+
+                    <!-- Template Selection -->
+                    <div id="templateConfig" class="service-config">
+                        <h6 class="mb-3">Select Agent Template</h6>
+                        <div class="alert alert-info" role="alert">
+                            <i class="fas fa-info-circle"></i> 
+                            Launch an agent from a pre-configured template with standard settings.
+                        </div>
+                        <div class="mb-3">
+                            <label for="agentTemplateSelect" class="form-label">Template <span class="text-danger">*</span></label>
+                            <select class="form-select" id="agentTemplateSelect" required>
+                                <option value="">Loading templates...</option>
+                            </select>
+                        </div>
+                        <div id="selectedTemplateInfo" class="alert alert-secondary" style="display: none;">
+                            <h6 id="selectedTemplateName"></h6>
+                            <p id="selectedTemplateDescription" class="mb-0"></p>
                         </div>
                     </div>
 
@@ -127,18 +151,43 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const serviceTypeRadios = document.querySelectorAll('input[name="serviceType"]');
+    const templateConfig = document.getElementById('templateConfig');
     const agentConfig = document.getElementById('agentConfig');
     const codingMCPConfig = document.getElementById('codingMCPConfig');
     const githubMCPConfig = document.getElementById('githubMCPConfig');
     const launchBtn = document.getElementById('launchServiceBtn');
+    const agentTemplateSelect = document.getElementById('agentTemplateSelect');
+    const selectedTemplateInfo = document.getElementById('selectedTemplateInfo');
+    
+    // Load templates when modal opens
+    loadAgentTemplates();
+    
+    // Handle template selection
+    if (agentTemplateSelect) {
+        agentTemplateSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption && selectedOption.value) {
+                const templateName = selectedOption.text;
+                const templateDesc = selectedOption.getAttribute('data-description');
+                document.getElementById('selectedTemplateName').textContent = templateName;
+                document.getElementById('selectedTemplateDescription').textContent = templateDesc;
+                selectedTemplateInfo.style.display = 'block';
+            } else {
+                selectedTemplateInfo.style.display = 'none';
+            }
+        });
+    }
     
     serviceTypeRadios.forEach(radio => {
         radio.addEventListener('change', function() {
+            templateConfig.style.display = 'none';
             agentConfig.style.display = 'none';
             codingMCPConfig.style.display = 'none';
             githubMCPConfig.style.display = 'none';
             
-            if (this.value === 'agent') {
+            if (this.value === 'template') {
+                templateConfig.style.display = 'block';
+            } else if (this.value === 'agent') {
                 agentConfig.style.display = 'block';
             } else if (this.value === 'coding-mcp') {
                 codingMCPConfig.style.display = 'block';
@@ -153,7 +202,9 @@ document.addEventListener('DOMContentLoaded', function() {
     launchBtn.addEventListener('click', function() {
         const selectedType = document.querySelector('input[name="serviceType"]:checked').value;
         
-        if (selectedType === 'agent') {
+        if (selectedType === 'template') {
+            launchFromTemplate();
+        } else if (selectedType === 'agent') {
             // Submit the original agent form
             document.getElementById('agentForm').submit();
         } else if (selectedType === 'coding-mcp') {
@@ -162,6 +213,66 @@ document.addEventListener('DOMContentLoaded', function() {
             launchGitHubMCP();
         }
     });
+    
+    function loadAgentTemplates() {
+        if (!agentTemplateSelect) return;
+        
+        agentTemplateSelect.innerHTML = '<option value="">Loading templates...</option>';
+        
+        fetch('/api/v1/agent/templates')
+            .then(response => response.json())
+            .then(templates => {
+                if (templates && templates.length > 0) {
+                    agentTemplateSelect.innerHTML = '<option value="">Select a template...</option>';
+                    templates.forEach(template => {
+                        const option = document.createElement('option');
+                        option.value = template.id;
+                        option.textContent = template.name;
+                        option.setAttribute('data-description', template.description);
+                        option.setAttribute('data-type', template.agentType);
+                        agentTemplateSelect.appendChild(option);
+                    });
+                } else {
+                    agentTemplateSelect.innerHTML = '<option value="">No templates available</option>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading templates:', error);
+                agentTemplateSelect.innerHTML = '<option value="">Error loading templates</option>';
+            });
+    }
+    
+    function launchFromTemplate() {
+        const templateId = agentTemplateSelect.value;
+        
+        if (!templateId || templateId.trim() === '') {
+            alert('Please select a template');
+            return;
+        }
+        
+        const launchInfo = document.getElementById('launchInfo');
+        const launchInfoText = document.getElementById('launchInfoText');
+        launchInfo.style.display = 'block';
+        launchInfoText.textContent = 'Launching agent from template...';
+        
+        const csrfToken = document.getElementById('csrf-token') ? document.getElementById('csrf-token').value : '';
+        
+        // Retrieve template details for user confirmation
+        // Note: Actual agent launch integration will be implemented when 
+        // the agent launcher service API is enhanced to support template-based launches
+        fetch(`/api/v1/agent/templates/${templateId}`)
+            .then(response => response.json())
+            .then(template => {
+                launchInfoText.textContent = `Template "${template.name}" validated. Agent launch integration is pending - will be connected to agent launcher service in a future update.`;
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('agentFormModal'));
+                    if (modal) modal.hide();
+                }, 2000);
+            })
+            .catch(error => {
+                launchInfoText.textContent = 'Error loading template: ' + error;
+            });
+    }
     
     function loadGitHubTokens() {
         const select = document.getElementById('githubTokenId');
