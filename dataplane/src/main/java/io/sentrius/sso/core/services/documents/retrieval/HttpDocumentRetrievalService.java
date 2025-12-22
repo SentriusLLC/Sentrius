@@ -46,6 +46,9 @@ public class HttpDocumentRetrievalService implements DocumentRetrievalService {
         
         log.info("Retrieving document from HTTP(S) source: {}", sourceUrl);
 
+        // Validate URL to prevent SSRF attacks
+        UrlValidator.validateUrl(sourceUrl);
+
         try {
             // Build headers from options
             HttpHeaders headers = new HttpHeaders();
