@@ -80,16 +80,7 @@ public class DatabaseProxyController extends BaseController {
                 return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("User not authenticated");
             }
 
-            List<IntegrationSecurityToken> databaseIntegrations = integrationSecurityTokenService
-                .findByConnectionType("database");
-
-            if (databaseIntegrations.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.SC_NOT_FOUND).body("No database integration configured");
-            }
-
-            IntegrationSecurityToken databaseIntegration = databaseIntegrations.get(0);
-            ExternalIntegrationDTO integrationDTO = new ExternalIntegrationDTO(databaseIntegration, true);
-
+            // Validate query input first before checking database integration
             String query = (String) queryPayload.get("query");
             if (query == null || query.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Query parameter is required"));
@@ -100,39 +91,54 @@ public class DatabaseProxyController extends BaseController {
                     .body(Map.of("error", "Only SELECT queries are allowed"));
             }
 
-            if (!isSafeSelectQuery(query)) {
-                return ResponseEntity.status(HttpStatus.SC_FORBIDDEN)
-                    .body(Map.of("error", "Query is not allowed"));
+            List<IntegrationSecurityToken> databaseIntegrations = integrationSecurityTokenService
+                .findByConnectionType("database");
+
+            if (databaseIntegrations.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.SC_NOT_FOUND).body("No database integration configured");
             }
+
+            IntegrationSecurityToken databaseIntegration = databaseIntegrations.get(0);
+            ExternalIntegrationDTO integrationDTO = new ExternalIntegrationDTO(databaseIntegration, true);
 
             String jdbcUrl = buildJdbcUrl(integrationDTO);
             List<Map<String, Object>> results = new ArrayList<>();
+
+            // Set a maximum row limit to prevent resource exhaustion
+            final int MAX_ROWS = 1000;
 
             try (Connection conn = DriverManager.getConnection(
                 jdbcUrl,
                 integrationDTO.getUsername(),
                 integrationDTO.getApiToken()
-            );
-                 Statement stmt = conn.createStatement();
-                 ResultSet rs = stmt.executeQuery(query)) {
+            )) {
+                // Set connection to read-only mode to prevent any data modification
+                conn.setReadOnly(true);
 
-                ResultSetMetaData metaData = rs.getMetaData();
-                int columnCount = metaData.getColumnCount();
+                try (Statement stmt = conn.createStatement()) {
+                    // Set max rows to prevent excessive memory usage
+                    stmt.setMaxRows(MAX_ROWS);
 
-                while (rs.next()) {
-                    Map<String, Object> row = new LinkedHashMap<>();
-                    for (int i = 1; i <= columnCount; i++) {
-                        row.put(metaData.getColumnName(i), rs.getObject(i));
+                    try (ResultSet rs = stmt.executeQuery(query)) {
+                        ResultSetMetaData metaData = rs.getMetaData();
+                        int columnCount = metaData.getColumnCount();
+
+                        while (rs.next()) {
+                            Map<String, Object> row = new LinkedHashMap<>();
+                            for (int i = 1; i <= columnCount; i++) {
+                                row.put(metaData.getColumnName(i), rs.getObject(i));
+                            }
+                            results.add(row);
+                        }
+
+                        return ResponseEntity.ok(Map.of(
+                            "success", true,
+                            "rowCount", results.size(),
+                            "data", results,
+                            "maxRows", MAX_ROWS
+                        ));
                     }
-                    results.add(row);
                 }
-
-                return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "rowCount", results.size(),
-                    "data", results
-                ));
-
             } catch (SQLException e) {
                 log.error("Database query failed", e);
                 return ResponseEntity.status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
@@ -146,48 +152,6 @@ public class DatabaseProxyController extends BaseController {
         } finally {
             span.end();
         }
-    }
-
-    /**
-     * Performs basic validation to ensure that only reasonably safe SELECT queries are executed.
-     * This method is intentionally conservative and will reject queries containing
-     * multiple statements, comments, or obvious DDL/DML keywords.
-     */
-    private boolean isSafeSelectQuery(String query) {
-        if (query == null) {
-            return false;
-        }
-
-        String trimmed = query.trim();
-        if (trimmed.isEmpty()) {
-            return false;
-        }
-
-        // Must start with SELECT (case-insensitive)
-        String upper = trimmed.toUpperCase(Locale.ROOT);
-        if (!upper.startsWith("SELECT")) {
-            return false;
-        }
-
-        // Disallow multiple statements and common comment syntaxes
-        if (upper.contains(";") || upper.contains("--") || upper.contains("/*") || upper.contains("*/") || upper.contains("#")) {
-            return false;
-        }
-
-        // Disallow obviously dangerous keywords that should not appear in a simple read-only query
-        String[] forbiddenKeywords = {
-            " INSERT ", " UPDATE ", " DELETE ", " DROP ", " ALTER ", " TRUNCATE ",
-            " CREATE ", " MERGE ", " GRANT ", " REVOKE ", " EXEC ", " EXECUTE ",
-            " INTO OUTFILE ", " INTO DUMPFILE "
-        };
-
-        for (String keyword : forbiddenKeywords) {
-            if (upper.contains(keyword)) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     @GetMapping("/tables")
@@ -282,6 +246,13 @@ public class DatabaseProxyController extends BaseController {
                 return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("User not authenticated");
             }
 
+            // Validate table name to prevent SQL injection
+            if (!isValidTableName(tableName)) {
+                log.warn("Invalid table name format: {}", tableName);
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid table name format. Only alphanumeric characters, underscores, and dots are allowed."));
+            }
+
             List<IntegrationSecurityToken> databaseIntegrations = integrationSecurityTokenService
                 .findByConnectionType("database");
 
@@ -350,6 +321,42 @@ public class DatabaseProxyController extends BaseController {
 
     private boolean isSelectQuery(String query) {
         String trimmedQuery = query.trim().toLowerCase();
-        return trimmedQuery.startsWith("select");
+
+        // Remove SQL comments to prevent bypass attempts
+        String cleanedQuery = trimmedQuery
+            .replaceAll("--[^\r\n]*", "")  // Remove single-line comments (handles both \n and \r\n)
+            .replaceAll("(?s)/\\*.*?\\*/", "")  // Remove multi-line comments (DOTALL flag for newlines)
+            .replaceAll("\\s+", " ")  // Normalize whitespace
+            .trim();
+
+        // Check if query starts with SELECT
+        if (!cleanedQuery.startsWith("select")) {
+            return false;
+        }
+
+        // Block dangerous keywords that could be used for SQL injection
+        String[] dangerousKeywords = {
+            ";", "exec", "execute", "drop", "delete", "insert", "update",
+            "create", "alter", "truncate", "grant", "revoke", "xp_"
+        };
+
+        for (String keyword : dangerousKeywords) {
+            if (cleanedQuery.contains(keyword)) {
+                log.warn("Blocked query containing dangerous keyword: {}", keyword);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private boolean isValidTableName(String tableName) {
+        if (tableName == null || tableName.trim().isEmpty()) {
+            return false;
+        }
+
+        // Allow only alphanumeric characters, underscores, and dots (for schema.table format)
+        // This prevents SQL injection via table name parameter
+        return tableName.matches("^[a-zA-Z0-9_.]+$");
     }
 }
