@@ -62,26 +62,70 @@ public class IntegrationController extends BaseController {
                 "description", "Enable team communication and notification workflows",
                 "icon", "fa-brands fa-slack",
                 "href", "/sso/v1/integrations/slack",
-                "badge", "Coming Soon",
-                "badgeType", ""
+                "badge", "New",
+                "badgeType", "new"
             ),
             Map.of(
                 "name", "Database",
                 "description", "Connect to databases for data integration and analytics",
                 "icon", "fa-solid fa-database",
                 "href", "/sso/v1/integrations/database",
-                "badge", "Coming Soon",
-                "badgeType", ""
+                "badge", "New",
+                "badgeType", "new"
             ),
             Map.of(
                 "name", "Microsoft Teams",
                 "description", "Integrate with Microsoft Teams for collaboration workflows",
                 "icon", "fa-brands fa-microsoft",
                 "href", "/sso/v1/integrations/teams",
-                "badge", "Coming Soon",
-                "badgeType", ""
+                "badge", "New",
+                "badgeType", "new"
             )
         );
+        
+        List<Map<String, String>> mcpServers = List.of(
+            Map.of(
+                "name", "Filesystem MCP",
+                "description", "Secure file operations and directory management via MCP",
+                "icon", "fa-solid fa-folder",
+                "href", "/sso/v1/integrations/mcp/filesystem",
+                "badge", "MCP",
+                "badgeType", "popular"
+            ),
+            Map.of(
+                "name", "PostgreSQL MCP",
+                "description", "Database queries and schema management via MCP",
+                "icon", "fa-solid fa-database",
+                "href", "/sso/v1/integrations/mcp/postgresql",
+                "badge", "MCP",
+                "badgeType", "popular"
+            ),
+            Map.of(
+                "name", "Slack MCP",
+                "description", "Messaging and channel management via MCP protocol",
+                "icon", "fa-brands fa-slack",
+                "href", "/sso/v1/integrations/mcp/slack",
+                "badge", "MCP",
+                "badgeType", "popular"
+            ),
+            Map.of(
+                "name", "Playwright MCP",
+                "description", "Browser automation and web scraping via MCP",
+                "icon", "fa-solid fa-globe",
+                "href", "/sso/v1/integrations/mcp/playwright",
+                "badge", "MCP",
+                "badgeType", "popular"
+            ),
+            Map.of(
+                "name", "Fetch MCP",
+                "description", "Web content fetching and conversion via MCP",
+                "icon", "fa-solid fa-download",
+                "href", "/sso/v1/integrations/mcp/fetch",
+                "badge", "MCP",
+                "badgeType", "popular"
+            )
+        );
+        
         List<ExternalIntegrationDTO> existingIntegrations = new ArrayList<>();
         integrationService.findAll().forEach(token -> {
             try {
@@ -92,6 +136,7 @@ public class IntegrationController extends BaseController {
         });
         model.addAttribute("existingIntegrations", existingIntegrations);
         model.addAttribute("integrations", integrations);
+        model.addAttribute("mcpServers", mcpServers);
         return "sso/integrations/add_dashboard";
     }
 
@@ -117,18 +162,59 @@ public class IntegrationController extends BaseController {
     }
 
     @GetMapping("/slack")
-    public String createSlackIntegration(Model model) {
-        return getIntegrationDashboard(model);
+    public String createSlackIntegration(Model model, @RequestParam(name = "id", required = false) Long id) {
+        ExternalIntegrationDTO integration = new ExternalIntegrationDTO();
+        model.addAttribute("slackIntegration", integration);
+        return "sso/integrations/add_slack";
     }
 
     @GetMapping("/database")
-    public String createDatabaseIntegration(Model model) {
-        return getIntegrationDashboard(model);
+    public String createDatabaseIntegration(Model model, @RequestParam(name = "id", required = false) Long id) {
+        ExternalIntegrationDTO integration = new ExternalIntegrationDTO();
+        model.addAttribute("databaseIntegration", integration);
+        return "sso/integrations/add_database";
     }
 
     @GetMapping("/teams")
-    public String createTeamsIntegration(Model model) {
-        return getIntegrationDashboard(model);
+    public String createTeamsIntegration(Model model, @RequestParam(name = "id", required = false) Long id) {
+        ExternalIntegrationDTO integration = new ExternalIntegrationDTO();
+        model.addAttribute("teamsIntegration", integration);
+        return "sso/integrations/add_teams";
+    }
+
+    @GetMapping("/mcp/filesystem")
+    public String createFilesystemMCPIntegration(Model model, @RequestParam(name = "id", required = false) Long id) {
+        ExternalIntegrationDTO integration = new ExternalIntegrationDTO();
+        model.addAttribute("mcpIntegration", integration);
+        return "sso/integrations/add_mcp_filesystem";
+    }
+
+    @GetMapping("/mcp/postgresql")
+    public String createPostgresqlMCPIntegration(Model model, @RequestParam(name = "id", required = false) Long id) {
+        ExternalIntegrationDTO integration = new ExternalIntegrationDTO();
+        model.addAttribute("mcpIntegration", integration);
+        return "sso/integrations/add_mcp_postgresql";
+    }
+
+    @GetMapping("/mcp/slack")
+    public String createSlackMCPIntegration(Model model, @RequestParam(name = "id", required = false) Long id) {
+        ExternalIntegrationDTO integration = new ExternalIntegrationDTO();
+        model.addAttribute("mcpIntegration", integration);
+        return "sso/integrations/add_mcp_slack";
+    }
+
+    @GetMapping("/mcp/playwright")
+    public String createPlaywrightMCPIntegration(Model model, @RequestParam(name = "id", required = false) Long id) {
+        ExternalIntegrationDTO integration = new ExternalIntegrationDTO();
+        model.addAttribute("mcpIntegration", integration);
+        return "sso/integrations/add_mcp_playwright";
+    }
+
+    @GetMapping("/mcp/fetch")
+    public String createFetchMCPIntegration(Model model, @RequestParam(name = "id", required = false) Long id) {
+        ExternalIntegrationDTO integration = new ExternalIntegrationDTO();
+        model.addAttribute("mcpIntegration", integration);
+        return "sso/integrations/add_mcp_fetch";
     }
 
 }

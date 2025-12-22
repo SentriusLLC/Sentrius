@@ -87,8 +87,8 @@ public class EmbeddingProxyController extends BaseController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
         }
 
-        var openAiToken = integrationSecurityTokenService.findByConnectionType("openai")
-            .stream().findFirst().orElse(null);
+        var openAiToken = integrationSecurityTokenService.selectToken("openai")
+            .orElse(null);
 
         if (openAiToken == null) {
             log.warn("No OpenAI integration found for embedding generation");
@@ -265,8 +265,8 @@ public class EmbeddingProxyController extends BaseController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Keycloak token");
         }
 
-        var openAiToken = integrationSecurityTokenService.findByConnectionType("openai")
-                .stream().findFirst().orElse(null);
+        var openAiToken = integrationSecurityTokenService.selectToken("openai")
+                .orElse(null);
 
         Map<String, Object> status = new HashMap<>();
         status.put("available", openAiToken != null);

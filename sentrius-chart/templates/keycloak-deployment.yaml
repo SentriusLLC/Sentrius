@@ -41,6 +41,8 @@ spec:
             initialDelaySeconds: 60
             periodSeconds: 10
             timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.keycloak.resources | nindent 12 }}
           env:
             - name: KC_HTTP_PORT
               value: "8081"

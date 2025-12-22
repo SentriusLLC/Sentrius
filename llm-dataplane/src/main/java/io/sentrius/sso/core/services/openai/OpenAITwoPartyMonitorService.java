@@ -39,7 +39,7 @@ public class OpenAITwoPartyMonitorService implements io.sentrius.sso.core.servic
             synchronized (this) {
                 if (null == openAiToken) {
                     log.info("setting open ai token");
-                    openAiToken = integrationSecurityTokenService.findByConnectionType("openai").stream().findFirst().orElse(null);
+                    openAiToken = integrationSecurityTokenService.selectToken("openai").orElse(null);
                     if (openAiToken == null) {
                         log.info("no integration");
                         return false;

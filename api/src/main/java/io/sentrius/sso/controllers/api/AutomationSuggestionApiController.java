@@ -2,14 +2,19 @@ package io.sentrius.sso.controllers.api;
 
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.dto.automation.AutomationSuggestionDTO;
+import io.sentrius.sso.core.model.HostSystem;
 import io.sentrius.sso.core.model.automation.Automation;
+import io.sentrius.sso.core.model.automation.AutomationAssignment;
 import io.sentrius.sso.core.model.automation.AutomationSuggestion;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
 import io.sentrius.sso.core.model.users.User;
+import io.sentrius.sso.core.repository.SystemRepository;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.automation.AutomationSuggestionService;
 import io.sentrius.sso.core.services.automation.AutomationAgentService;
+import io.sentrius.sso.core.services.automation.AutomationAssignmentService;
 import io.sentrius.sso.core.services.automation.AutomationTestService;
+import io.sentrius.sso.core.services.automation.FileTransferService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +41,9 @@ public class AutomationSuggestionApiController {
     private final UserService userService;
     private final AutomationAgentService agentService;
     private final AutomationTestService testService;
+    private final AutomationAssignmentService assignmentService;
+    private final FileTransferService fileTransferService;
+    private final SystemRepository systemRepository;
 
     /**
      * Get all pending automation suggestions
@@ -406,6 +415,215 @@ public class AutomationSuggestionApiController {
             return ResponseEntity.ok(testResult);
         } catch (Exception e) {
             log.error("Error testing automation for suggestion {}", id, e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Assign automation to one or more systems
+     */
+    @PostMapping("/{id}/assign")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<Map<String, Object>> assignToSystems(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> requestBody) {
+        try {
+            AutomationSuggestion suggestion = suggestionService.getSuggestionById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Suggestion not found: " + id));
+            
+            if (suggestion.getAutomation() == null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Suggestion must be converted to automation before assignment");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            @SuppressWarnings("unchecked")
+            List<Long> systemIds = null;
+            try {
+                Object systemIdsObj = requestBody.get("systemIds");
+                if (systemIdsObj instanceof List) {
+                    systemIds = (List<Long>) systemIdsObj;
+                }
+            } catch (ClassCastException e) {
+                log.error("Invalid systemIds format in request", e);
+            }
+            
+            Boolean transferFile = (Boolean) requestBody.getOrDefault("transferFile", true);
+            String remotePath = (String) requestBody.getOrDefault("remotePath", "/tmp/automation_" + suggestion.getAutomation().getId() + ".sh");
+            
+            if (systemIds == null || systemIds.isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "At least one system ID is required");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            List<Map<String, Object>> assignmentResults = new ArrayList<>();
+            
+            for (Long systemId : systemIds) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("systemId", systemId);
+                
+                try {
+                    AutomationAssignment assignment = assignmentService.assignAutomationToSystem(
+                        suggestion.getAutomation().getId(),
+                        systemId,
+                        0
+                    );
+                    
+                    result.put("assignmentId", assignment.getId());
+                    result.put("assignmentStatus", "success");
+                    
+                    if (transferFile) {
+                        HostSystem system = systemRepository.findById(systemId).orElse(null);
+                        if (system != null) {
+                            Map<String, Object> transferResult = fileTransferService.transferScriptToSystem(
+                                system,
+                                suggestion.getAutomation().getScript(),
+                                remotePath
+                            );
+                            result.put("transferResult", transferResult);
+                        }
+                    }
+                    
+                } catch (Exception e) {
+                    log.error("Error assigning automation to system {}", systemId, e);
+                    result.put("assignmentStatus", "error");
+                    result.put("error", e.getMessage());
+                }
+                
+                assignmentResults.add(result);
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "Assignment process completed");
+            response.put("results", assignmentResults);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("Error assigning automation {}", id, e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Unassign automation from a system
+     */
+    @DeleteMapping("/{id}/assign/{systemId}")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<Map<String, Object>> unassignFromSystem(
+            @PathVariable Long id,
+            @PathVariable Long systemId) {
+        try {
+            AutomationSuggestion suggestion = suggestionService.getSuggestionById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Suggestion not found: " + id));
+            
+            if (suggestion.getAutomation() == null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Suggestion is not converted to automation");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            assignmentService.unassignAutomationFromSystem(suggestion.getAutomation().getId(), systemId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "Automation unassigned successfully");
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("Error unassigning automation {} from system {}", id, systemId, e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Get all assignments for an automation
+     */
+    @GetMapping("/{id}/assignments")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<Map<String, Object>> getAssignments(@PathVariable Long id) {
+        try {
+            AutomationSuggestion suggestion = suggestionService.getSuggestionById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Suggestion not found: " + id));
+            
+            if (suggestion.getAutomation() == null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "success");
+                response.put("assignments", new ArrayList<>());
+                response.put("message", "Suggestion is not converted to automation yet");
+                return ResponseEntity.ok(response);
+            }
+            
+            List<AutomationAssignment> assignments = assignmentService.getAssignmentsForAutomation(
+                suggestion.getAutomation().getId()
+            );
+            
+            List<Map<String, Object>> assignmentDTOs = new ArrayList<>();
+            for (AutomationAssignment assignment : assignments) {
+                Map<String, Object> dto = new HashMap<>();
+                dto.put("id", assignment.getId());
+                dto.put("systemId", assignment.getSystem().getId());
+                dto.put("systemName", assignment.getSystem().getDisplayName());
+                dto.put("systemHost", assignment.getSystem().getHost());
+                dto.put("numberExecs", assignment.getNumberExecs());
+                assignmentDTOs.add(dto);
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("assignments", assignmentDTOs);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("Error getting assignments for automation {}", id, e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Get all available systems for assignment
+     */
+    @GetMapping("/systems")
+    @LimitAccess(sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<Map<String, Object>> getAvailableSystems() {
+        try {
+            List<HostSystem> systems = systemRepository.findAll();
+            
+            List<Map<String, Object>> systemDTOs = new ArrayList<>();
+            for (HostSystem system : systems) {
+                Map<String, Object> dto = new HashMap<>();
+                dto.put("id", system.getId());
+                dto.put("displayName", system.getDisplayName());
+                dto.put("host", system.getHost());
+                dto.put("port", system.getPort());
+                dto.put("sshUser", system.getSshUser());
+                dto.put("statusCd", system.getStatusCd());
+                systemDTOs.add(dto);
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("systems", systemDTOs);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("Error getting available systems", e);
             Map<String, Object> response = new HashMap<>();
             response.put("status", "error");
             response.put("message", e.getMessage());

@@ -131,7 +131,7 @@ public class MemoryController extends BaseController {
         // we've reached this point, so we can assume the user is allowed to access OpenAI
 
         var openAiToken =
-            integrationSecurityTokenService.findByConnectionType("openai").stream().findFirst().orElse(null);
+            integrationSecurityTokenService.selectToken("openai").orElse(null);
         if (openAiToken == null) {
             log.info("no integration");
             return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("No OpenAI integration found");
@@ -260,7 +260,7 @@ public class MemoryController extends BaseController {
         // we've reached this point, so we can assume the user is allowed to access OpenAI
 
         var openAiToken =
-            integrationSecurityTokenService.findByConnectionType("openai").stream().findFirst().orElse(null);
+            integrationSecurityTokenService.selectToken("openai").orElse(null);
         if (openAiToken == null) {
             log.info("no integration");
             return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("No OpenAI integration found");
@@ -348,7 +348,7 @@ public class MemoryController extends BaseController {
             operatingUser = userService.getUserByUsername(username);
         }
 
-        var openAiToken = integrationSecurityTokenService.findByConnectionType("openai").stream().findFirst().orElse(null);
+        var openAiToken = integrationSecurityTokenService.selectToken("openai").orElse(null);
         if (openAiToken == null) {
             return ResponseEntity.status(HttpStatus.SC_UNAUTHORIZED).body("No OpenAI integration found");
         }

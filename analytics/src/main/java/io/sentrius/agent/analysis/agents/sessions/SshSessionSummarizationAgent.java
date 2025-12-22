@@ -230,9 +230,8 @@ public class SshSessionSummarizationAgent {
      */
     private boolean isLLMAvailable() {
         try {
-            var token = integrationSecurityTokenService.findByConnectionType("openai")
-                .stream().findFirst().orElse(null);
-            return token != null;
+            return integrationSecurityTokenService.selectToken("openai")
+                .isPresent();
         } catch (Exception e) {
             log.debug("Error checking LLM availability", e);
             return false;

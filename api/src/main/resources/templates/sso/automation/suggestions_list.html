@@ -379,6 +379,62 @@
     </div>
 </div>
 
+<!-- Assignment Modal -->
+<div class="modal fade" id="assignModal" tabindex="-1" aria-labelledby="assignModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignModalLabel">Assign Automation to Systems</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="assign-suggestion-id">
+                
+                <h6>Currently Assigned Systems</h6>
+                <div id="assigned-systems-list" class="mb-3">
+                    <p class="text-muted">Loading...</p>
+                </div>
+                
+                <hr>
+                
+                <h6>Assign to New Systems</h6>
+                <div class="mb-3">
+                    <label for="system-select" class="form-label">Select Systems</label>
+                    <select class="form-select" id="system-select" multiple size="5">
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                    <small class="text-muted">Hold Ctrl/Cmd to select multiple systems</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="remote-path" class="form-label">Remote File Path</label>
+                    <input type="text" class="form-control" id="remote-path" placeholder="/tmp/automation_script.sh">
+                    <small class="text-muted">Path where the script will be saved on target systems</small>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="transfer-file-checkbox" checked>
+                        <label class="form-check-label" for="transfer-file-checkbox">
+                            Transfer script file to systems via SCP
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="assignment-results" style="display:none;" class="alert alert-info">
+                    <!-- Results will be shown here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="submitAssignment()">
+                    <i class="fas fa-plus"></i> Assign
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script th:inline="none">
 $(document).ready(function() {
     // Initialize DataTable
@@ -454,6 +510,10 @@ $(document).ready(function() {
                     
                     if (row.status === 'APPROVED') {
                         buttons += '<button class="btn btn-sm btn-primary" onclick="convertToAutomation(' + row.id + ')"><i class="fas fa-cog"></i> Convert</button>';
+                    }
+                    
+                    if (row.automationId) {
+                        buttons += '<button class="btn btn-sm btn-success" onclick="assignAutomation(' + row.id + ')"><i class="fas fa-server"></i> Assign</button>';
                     }
                     
                     buttons += '<button class="btn btn-sm btn-secondary" onclick="deleteSuggestion(' + row.id + ')"><i class="fas fa-trash"></i></button>';
@@ -1082,6 +1142,161 @@ $('#chat-input').keypress(function(e) {
         return false;
     }
 });
+
+// Assignment functions
+function assignAutomation(id) {
+    $('#assign-suggestion-id').val(id);
+    $('#assignment-results').hide();
+    
+    loadAvailableSystems();
+    loadCurrentAssignments(id);
+    
+    $.get('/api/v1/automation/suggestions/' + id, function(data) {
+        var defaultPath = '/tmp/automation_' + (data.automationId || id) + '.sh';
+        $('#remote-path').val(defaultPath);
+    });
+    
+    $('#assignModal').modal('show');
+}
+
+function loadAvailableSystems() {
+    $.get('/api/v1/automation/suggestions/systems', function(response) {
+        var select = $('#system-select');
+        select.empty();
+        
+        if (response.status === 'success' && response.systems) {
+            response.systems.forEach(function(system) {
+                var option = $('<option></option>')
+                    .val(system.id)
+                    .text(system.displayName + ' (' + system.host + ')');
+                select.append(option);
+            });
+        }
+    }).fail(function(xhr) {
+        console.error('Error loading systems:', xhr);
+        alert('Failed to load available systems');
+    });
+}
+
+function loadCurrentAssignments(suggestionId) {
+    $.get('/api/v1/automation/suggestions/' + suggestionId + '/assignments', function(response) {
+        var container = $('#assigned-systems-list');
+        container.empty();
+        
+        if (response.status === 'success' && response.assignments && response.assignments.length > 0) {
+            var html = '<ul class="list-group">';
+            response.assignments.forEach(function(assignment) {
+                html += '<li class="list-group-item d-flex justify-content-between align-items-center bg-secondary">';
+                html += '<div>';
+                html += '<strong>' + assignment.systemName + '</strong><br>';
+                html += '<small>' + assignment.systemHost + ' (Executions: ' + assignment.numberExecs + ')</small>';
+                html += '</div>';
+                html += '<button class="btn btn-sm btn-danger" onclick="unassignSystem(' + suggestionId + ', ' + assignment.systemId + ')">';
+                html += '<i class="fas fa-times"></i> Remove';
+                html += '</button>';
+                html += '</li>';
+            });
+            html += '</ul>';
+            container.html(html);
+        } else {
+            container.html('<p class="text-muted">No systems assigned yet.</p>');
+        }
+    }).fail(function(xhr) {
+        console.error('Error loading assignments:', xhr);
+        $('#assigned-systems-list').html('<p class="text-danger">Error loading assignments</p>');
+    });
+}
+
+function submitAssignment() {
+    var suggestionId = $('#assign-suggestion-id').val();
+    var selectedSystems = $('#system-select').val();
+    var remotePath = $('#remote-path').val();
+    var transferFile = $('#transfer-file-checkbox').is(':checked');
+    
+    if (!selectedSystems || selectedSystems.length === 0) {
+        alert('Please select at least one system');
+        return;
+    }
+    
+    if (!remotePath || remotePath.trim() === '') {
+        alert('Please provide a remote file path');
+        return;
+    }
+    
+    const csrfToken = document.getElementById("csrf-token").value;
+    
+    $.ajax({
+        url: '/api/v1/automation/suggestions/' + suggestionId + '/assign',
+        type: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            "X-CSRF-TOKEN": csrfToken
+        },
+        contentType: 'application/json',
+        data: JSON.stringify({
+            systemIds: selectedSystems.map(Number),
+            remotePath: remotePath,
+            transferFile: transferFile
+        }),
+        success: function(response) {
+            var resultsHtml = '<strong>Assignment Results:</strong><ul>';
+            
+            if (response.results) {
+                response.results.forEach(function(result) {
+                    var status = result.assignmentStatus === 'success' ? 'success' : 'danger';
+                    resultsHtml += '<li class="text-' + status + '">';
+                    resultsHtml += 'System ID ' + result.systemId + ': ' + result.assignmentStatus;
+                    
+                    if (result.transferResult) {
+                        var transferStatus = result.transferResult.status === 'success' ? 'success' : 'warning';
+                        resultsHtml += ' | Transfer: <span class="text-' + transferStatus + '">' + result.transferResult.message + '</span>';
+                    }
+                    
+                    if (result.error) {
+                        resultsHtml += ' | Error: ' + result.error;
+                    }
+                    resultsHtml += '</li>';
+                });
+            }
+            
+            resultsHtml += '</ul>';
+            $('#assignment-results').html(resultsHtml).show();
+            
+            loadCurrentAssignments(suggestionId);
+            
+            $('#system-select').val([]);
+        },
+        error: function(xhr) {
+            var errorMsg = xhr.responseJSON ? xhr.responseJSON.message : 'Failed to assign automation';
+            $('#assignment-results')
+                .html('<strong class="text-danger">Error:</strong> ' + errorMsg)
+                .show();
+        }
+    });
+}
+
+function unassignSystem(suggestionId, systemId) {
+    if (!confirm('Remove this system assignment?')) {
+        return;
+    }
+    
+    const csrfToken = document.getElementById("csrf-token").value;
+    
+    $.ajax({
+        url: '/api/v1/automation/suggestions/' + suggestionId + '/assign/' + systemId,
+        type: 'DELETE',
+        headers: {
+            "X-CSRF-TOKEN": csrfToken
+        },
+        success: function(response) {
+            loadCurrentAssignments(suggestionId);
+            alert('System unassigned successfully');
+        },
+        error: function(xhr) {
+            alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Failed to unassign system'));
+        }
+    });
+}
 
 </script>
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-NAMESPACE=sentrius
-CLUSTER=sentrius-autopilot-cluster-1
-REGION=us-east1
+NAMESPACE=august
+CLUSTER=sentrius-autopilot-1
+REGION=us-central1
 ZONE=sentrius-cloud

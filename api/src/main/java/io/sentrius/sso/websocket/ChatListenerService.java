@@ -137,7 +137,7 @@ public class ChatListenerService {
     public void processMessage(
         String sessionId,
         WebSocketSession session, ConnectedSystem terminalSessionId, Session.ChatMessage chatMessage) {
-        var openaiService = integrationSecurityTokenService.findByConnectionType("openai").stream().findFirst().orElse(null);
+        var openaiService = integrationSecurityTokenService.selectToken("openai").orElse(null);
 
         if (null != openaiService) {
             log.info("OpenAI service is available");

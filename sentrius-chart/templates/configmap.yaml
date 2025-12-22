@@ -30,7 +30,7 @@ data:
     #flyway configuration
     spring.main.web-application-type=reactive
     spring.flyway.enabled=false
-    spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
+    spring.datasource.url=${SPRING_DATASOURCE_URL}
     spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
     spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
     spring.datasource.driver-class-name=org.postgresql.Driver
@@ -98,11 +98,12 @@ data:
     spring.main.web-application-type=servlet
     spring.thymeleaf.enabled=true
     spring.freemarker.enabled=false
+    sentrius.tenant={{ .Values.tenant }}
     management.metrics.enable.system.processor={{ .Values.metrics.enabled }}
     spring.autoconfigure.exclude={{ .Values.metrics.class.exclusion }}
     #flyway configuration
     spring.flyway.enabled=false
-    spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
+    spring.datasource.url=${SPRING_DATASOURCE_URL}
     spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
     spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
     spring.datasource.driver-class-name=org.postgresql.Driver
@@ -237,7 +238,7 @@ data:
     spring.autoconfigure.exclude={{ .Values.metrics.class.exclusion }}
     #flyway configuration
     spring.flyway.enabled=true
-    spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
+    spring.datasource.url=${SPRING_DATASOURCE_URL}
     spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
     spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
     spring.datasource.driver-class-name=org.postgresql.Driver
@@ -322,7 +323,7 @@ data:
     spring.flyway.enabled=false
     spring.flyway.baseline-on-migrate=true
     ## PostgreSQL database
-    spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
+    spring.datasource.url=${SPRING_DATASOURCE_URL}
     spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
     spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
     spring.datasource.driver-class-name=org.postgresql.Driver
@@ -396,7 +397,7 @@ data:
     spring.autoconfigure.exclude={{ .Values.metrics.class.exclusion }}
     #flyway configuration
     spring.flyway.enabled=true
-    spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
+    spring.datasource.url=${SPRING_DATASOURCE_URL}
     spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
     spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
     spring.datasource.driver-class-name=org.postgresql.Driver
@@ -564,7 +565,7 @@ data:
       minimum: 80
       marginalThreshold: 50
       weightings:
-        identity: 0.5
+        identity: 0.3
         provenance: 0.2
         runtime: 0.3
         behavior: 0.2
@@ -663,7 +664,7 @@ data:
     sentrius.ssh-proxy.max-concurrent-sessions=100
     management.endpoints.web.exposure.include=health
     management.endpoint.health.show-details=always
-    spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
+    spring.datasource.url=${SPRING_DATASOURCE_URL}
     spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
     spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
     sentrius.agent.launcher.service=http://sentrius-agents-launcherservice:8080/
@@ -735,7 +736,7 @@ data:
     sentrius.ssh-proxy.max-concurrent-sessions=100
     management.endpoints.web.exposure.include=health
     management.endpoint.health.show-details=always
-    spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
+    spring.datasource.url=${SPRING_DATASOURCE_URL}
     spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
     spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
     sentrius.agent.launcher.service=http://sentrius-agents-launcherservice:8080/
@@ -764,6 +765,7 @@ data:
     dynamic.properties.path=/config/dynamic.properties
     keycloak.realm=sentrius
     keycloak.base-url={{ .Values.keycloakInternalDomain | default .Values.keycloakDomain }}
+    sentrius.ztat.base-url={{ .Values.sentriusDomain }}
     agent.api.url={{ .Values.sentriusDomain }}
     # Keycloak configuration
     spring.security.oauth2.client.registration.keycloak.client-id={{ .Values.rdpproxy.oauth2.client_id }}
@@ -804,7 +806,7 @@ data:
     sentrius.rdp-proxy.security.require-server-authentication=true
     management.endpoints.web.exposure.include=health
     management.endpoint.health.show-details=always
-    spring.datasource.url=jdbc:postgresql://sentrius-postgres:5432/sentrius
+    spring.datasource.url=${SPRING_DATASOURCE_URL}
     spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
     spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
     sentrius.rdp-proxy.security.jwt.algorithm=RS256

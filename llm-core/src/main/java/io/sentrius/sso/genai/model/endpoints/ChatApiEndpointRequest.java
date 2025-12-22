@@ -4,8 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.sentrius.sso.genai.model.ApiEndPointRequest;
-import io.sentrius.sso.genai.model.LLMRequest;
-import io.sentrius.sso.genai.Message;
+import io.sentrius.sso.genai.model.ResponsesApiRequest;
+import io.sentrius.sso.genai.model.ResponsesApiInputItem;
+import io.sentrius.sso.genai.model.ResponsesApiContentItem;
 import lombok.Builder;
 import lombok.Data;
 import lombok.experimental.SuperBuilder;
@@ -48,6 +49,12 @@ public class ChatApiEndpointRequest extends ApiEndPointRequest {
      * required to send requests to the OpenAI Chat API endpoint. If the API key is invalid or not provided, an
      * IllegalArgumentException will be thrown.
      *
+     * This method now uses the Responses API format instead of the deprecated Chat Completions format.
+     * The main changes:
+     * - messages → input (array of InputItems)
+     * - max_tokens → max_output_tokens
+     * - Each message is converted to an InputItem with content array
+     *
      * Example usage:
      *
      * <pre>{@code
@@ -55,25 +62,42 @@ public class ChatApiEndpointRequest extends ApiEndPointRequest {
      * }</pre>
      *
      *
-     * @return A new instance of the ChatApiEndpoint.
+     * @return A ResponsesApiRequest instance ready for the Responses API.
      *
      * @throws IllegalArgumentException
      *             If the API key is null or empty.
      */
     @Override
     public Object create() {
-        List<Message> messages = new ArrayList<>();
+        List<ResponsesApiInputItem> input = new ArrayList<>();
         String role = null == user || user.isEmpty() ? "user" : user;
-        messages.add(Message.builder().role(role).content(userInput).build());
+        
+        // Add system message first if provided
         if (null != systemInput && !systemInput.isEmpty()) {
-            messages.add(Message.builder().role("system").content(systemInput).build());
+            input.add(ResponsesApiInputItem.builder()
+                .role("system")
+                .content(List.of(ResponsesApiContentItem.builder()
+                    .type("input_text")
+                    .text(systemInput)
+                    .build()))
+                .build());
         }
-        var requestBody = LLMRequest.builder().model("gpt-3.5-turbo").user(role).messages(messages);
+        
+        // Add user message
+        input.add(ResponsesApiInputItem.builder()
+            .role(role)
+            .content(List.of(ResponsesApiContentItem.builder()
+                .type("input_text")
+                .text(userInput != null ? userInput : "")
+                .build()))
+            .build());
+        
+        var requestBody = ResponsesApiRequest.builder().model("gpt-3.5-turbo").input(input);
         if (temperature != 1.0F) {
             requestBody.temperature(temperature);
         }
         if (maxTokens != 4096) {
-            requestBody.maxTokens(maxTokens);
+            requestBody.maxOutputTokens(maxTokens);
         }
         return requestBody.build();
     }

@@ -7,6 +7,9 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
+  {{- if .Values.config.storageClassName }}
+  storageClassName: {{ .Values.config.storageClassName }}
+  {{- end }}
   resources:
     requests:
       storage: {{ .Values.qdrant.storageSize | default "10Gi" }}

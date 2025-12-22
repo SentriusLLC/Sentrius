@@ -14,16 +14,22 @@ spec:
       labels:
         app: sentrius
     spec:
+
+      {{- if not .Values.cloudsql.enabled }}
+      # Only needed when using in-cluster Postgres (Minikube, local dev)
       initContainers:
         - name: wait-for-postgres
           image: busybox
-          command: [ 'sh', '-c', 'until nc -z {{ .Release.Name }}-postgres 5432; do echo waiting for postgres; sleep 2; done;' ]
+          command: [ "sh", "-c", "until nc -z {{ .Release.Name }}-postgres 5432; do echo waiting for postgres; sleep 2; done;" ]
+      {{- end }}
+
       containers:
         - name: sentrius
           image: "{{ .Values.sentrius.image.repository }}:{{ .Values.sentrius.image.tag }}"
           imagePullPolicy: {{ .Values.sentrius.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.sentrius.port }}
+
           {{- if not (eq .Values.environment "gke") }}
           readinessProbe:
             httpGet:
@@ -38,32 +44,64 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
           {{- end }}
+
           volumeMounts:
             - name: config-volume
               mountPath: /config
+
           env:
             - name: KEYCLOAK_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-oauth2-secrets
                   key: sentrius-api-client-secret
+
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-db-secret
                   key: db-username
+
             - name: SPRING_DATASOURCE_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-db-secret
                   key: db-password
+
             - name: KEYSTORE_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-db-secret
                   key: keystore-password
-#           - name: OTEL_EXPORTER_OTLP_ENDPOINT
-#              value: http://{{ .Release.Name }}-jaeger:4317
+
+            # Database URL switches based on Cloud SQL mode
+            - name: SPRING_DATASOURCE_URL
+              value: {{- if .Values.cloudsql.enabled }}
+                  "jdbc:postgresql://127.0.0.1:5432/{{ .Values.database.name }}"
+                {{- else }}
+                    "{{ .Values.postgres.jdbcUrl }}"
+                {{- end }}
+
+      {{- if .Values.cloudsql.enabled }}
+        # -------------------------------------------------------------------
+        # Cloud SQL Auth Proxy Sidecar (ONLY in GKE when cloudsql.enabled=true)
+        # -------------------------------------------------------------------
+        - name: cloud-sql-proxy
+          image: gcr.io/cloudsql-docker/gce-proxy:1.37.0
+          command:
+            - "/cloud_sql_proxy"
+            - "-instances={{ .Values.cloudsql.instanceConnectionName }}=tcp:5432"
+            - "-structured-logs"
+          securityContext:
+            runAsNonRoot: true
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+      {{- end }}
 
       volumes:
         - name: config-volume

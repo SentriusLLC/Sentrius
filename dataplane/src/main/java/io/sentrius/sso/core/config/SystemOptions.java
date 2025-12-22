@@ -146,6 +146,9 @@ public class SystemOptions {
   @Updatable(description = "Prompt advisor service endpoint URL")
   @Builder.Default public String promptAdvisorEndpoint = "http://sentrius-prompt-advisor/validate_prompt";
 
+  @Updatable(description = "Default LLM provider for automation and AI services (openai, claude, etc.)")
+  @Builder.Default public String defaultLlmProvider = "openai";
+
   public Boolean lockdownEnabled = false;
 
   @Updatable(description = "AI risk score before user sessions are halted. Changes won't apply to currently running " +

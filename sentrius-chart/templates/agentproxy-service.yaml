@@ -5,7 +5,13 @@ metadata:
   namespace: {{ .Values.tenant }}
   annotations:
     {{- if eq .Values.environment "gke" }}
-    cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
+    cloud.google.com/neg: '{"ingress": true}'
+    cloud.google.com/backend-config: |
+      {
+        "ports": {
+          "http": "agentproxy-backend-config"
+        }
+      }
     {{- else if eq .Values.environment "aws" }}
     {{- range $key, $value := .Values.sentrius.annotations.aws }}
     {{ $key }}: "{{ $value }}"

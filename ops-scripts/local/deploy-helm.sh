@@ -108,7 +108,7 @@ fi
 # Function to check if cert-manager is installed and ready
 check_cert_manager() {
     echo "Checking if cert-manager is installed..."
-    
+
     # Check if cert-manager deployments are present
 if ! kubectl get deployment cert-manager -n cert-manager >/dev/null 2>&1 || \
    ! kubectl get deployment cert-manager-webhook -n cert-manager >/dev/null 2>&1 || \
@@ -129,7 +129,7 @@ if ! kubectl get deployment cert-manager -n cert-manager >/dev/null 2>&1 || \
         echo "Waiting for cert-manager to be ready..."
         kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=cert-manager -n cert-manager --timeout=300s
         kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=webhook -n cert-manager --timeout=300s
-        
+
         echo "⏳ Waiting for cert-manager webhook to be fully operational..."
         for i in {1..30}; do
           if kubectl get validatingwebhookconfigurations cert-manager-webhook >/dev/null 2>&1; then
@@ -153,13 +153,13 @@ fi
 if ! kubectl get pods -n ingress-nginx 2>/dev/null | grep -q ingress-nginx-controller; then
     echo "🔧 Enabling ingress controller in Minikube..."
     minikube addons enable ingress
-    
+
     echo "⏳ Waiting for ingress controller to be ready..."
     kubectl wait --namespace ingress-nginx \
       --for=condition=ready pod \
       --selector=app.kubernetes.io/component=controller \
       --timeout=300s 2>/dev/null || echo "⚠️ Ingress controller may not be fully ready yet"
-    
+
     # Wait for webhook to be ready
     echo "⏳ Waiting for ingress admission webhook to be ready..."
     for i in {1..30}; do
@@ -267,6 +267,7 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set environment=${ENVIRONMENT} \
     --set subdomain="${SUBDOMAIN}" \
     --set metrics.enabled=false \
+    --set config.storageClassName="" \
     --set metrics.class.exclusion="org.springframework.boot.actuate.autoconfigure.metrics.SystemMetricsAutoConfiguration" \
     --set agentproxySubdomain="${APROXY_SUBDOMAIN}" \
     --set rdpproxySubdomain="${RDPPROXY_SUBDOMAIN}" \

@@ -79,6 +79,12 @@ public class AgentController extends BaseController {
         return "sso/agents/memory_search";
     }
 
+    @GetMapping("/templates")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public String listAgentTemplates(Model m) {
+        return "sso/agents/agent_templates";
+    }
+
     @GetMapping("/context/{agentName}/lineage")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<List<AgentContextDTO>> getContextLineageByName(@PathVariable("agentName") String agentName) {

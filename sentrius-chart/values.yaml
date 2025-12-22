@@ -33,9 +33,10 @@ certificates:
 
 # Configuration storage
 config:
-  usePVC: true  # Use PVC for config storage. Set to false for local dev without ReadWriteMany storage
+  usePVC: false  # Use PVC for config storage. Set to false for local dev without ReadWriteMany storage
   storageSize: "1Gi"  # Size of PVC for configuration files
-  # storageClassName: ""  # Optional: Specify storage class (must support ReadWriteMany). If not set, uses cluster default.
+  storageClassName: ""  # Optional: Specify storage class (must support ReadWriteMany). If not set, uses cluster default.
+  volumeBindingMode: WaitForFirstConsumer
   # Examples: "nfs", "azurefile", "efs.csi.aws.com", "filestore.csi.storage.gke.io"
 
 # Sentrius configuration
@@ -106,7 +107,7 @@ agentproxy:
     issuer_uri: http://keycloak.{{ .Values.subdomain }}/realms/sentrius
   annotations:
     gke:
-      cloud.google.com/backend-config: '{"default": "sentrius-backend-config"}'
+      cloud.google.com/backend-config: '{"default": "agentproxy-backend-config"}'
     aws:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
     azure:
@@ -219,16 +220,20 @@ launcherservice:
       service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
 qdrant:
-    image:
-        repository: qdrant/qdrant
-        tag: v1.9.0
-        pullPolicy: IfNotPresent
-    port: 6333
-    storageSize: 10Gi
-    resources: {}
+  enabled: false
+  image:
+      repository: qdrant/qdrant
+      tag: v1.9.0
+      pullPolicy: IfNotPresent
+  port: 6333
+  storageSize: 10Gi
+  resources: {}
 
 # PostgreSQL configuration
 postgres:
+  enabled: true
+  name: sentrius
+  jdbcUrl: "jdbc:postgresql://sentrius-postgres:5432/sentrius"
   image:
     repository: pgvector/pgvector
     tag: pg15
@@ -286,6 +291,12 @@ keycloak:
     database: keycloak
     storageSize: 10Gi
   replicas: 1
+  requests:
+    cpu: 500m
+    memory: 2Gi
+  limits:
+    cpu: 1500m
+    memory: 2Gi
   # Realm client secrets - used for Keycloak realm template processing
   realm:
     clients:
@@ -315,38 +326,27 @@ keycloak:
 
 ingress:
   enabled: true
-  class: "nginx"  # Default for local; override for GKE/AWS (uses spec.ingressClassName)
-  tlsEnabled: true  # Enable TLS when supported
-  annotations:
-    nginx.ingress.kubernetes.io/backend-protocol: HTTP
-  # Nginx resource management settings to prevent memory leaks
-  nginx:
-    proxyBufferSize: "8k"
-    proxyBuffersNumber: "4"
-    clientBodyBufferSize: "8k"
-    proxyReadTimeout: "3600"  # Keep high for websockets and long-running requests
-    proxySendTimeout: "3600"  # Keep high for websockets and long-running requests
-    proxyConnectTimeout: "60"
-    upstreamKeepaliveConnections: "32"
-    upstreamKeepaliveTimeout: "60"
-    upstreamKeepaliveRequests: "100"
-    proxyBodySize: "10m"
-    limitConnections: "50"  # Increased to support concurrent UI requests
-    # Upstream health check settings to prevent premature backend marking as down
-    upstreamMaxFails: "5"  # Allow 5 failures before marking backend as down
-    upstreamFailTimeout: "30s"  # Time window for counting failures
-  # Environment-specific annotation sets (use via --set-file or values override)
+
+  # Default; overwritten via --set ingress.class=gce
+  class: "nginx"
+
+  # Must be false for GKE (managed certificates handle TLS)
+  tlsEnabled: false
+
   annotationSets:
-    gke:  # GKE-specific annotations
-      networking.gke.io/managed-certificates: wildcard-cert
-      kubernetes.io/ingress.allow-http: "false"
-      ingress.kubernetes.io/force-ssl-redirect: "true"
-    aws:  # AWS-specific annotations for ALB
-      alb.ingress.kubernetes.io/scheme: internet-facing
-      alb.ingress.kubernetes.io/ssl-redirect: "443"
-    local:  # Local environment annotations (e.g., Minikube)
+    gke:
+      kubernetes.io/ingress.class: "gce"
+      kubernetes.io/ingress.allow-http: "true"
+
+    local:
+      kubernetes.io/ingress.class: "nginx"
       nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
       nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
+
+    aws:
+      alb.ingress.kubernetes.io/scheme: "internet-facing"
+      alb.ingress.kubernetes.io/ssl-redirect: "443"
+
 
 
 
@@ -404,12 +404,12 @@ jaeger:
     annotations: {}
 
   resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
     limits:
       cpu: 500m
       memory: 512Mi
-    requests:
-      cpu: 250m
-      memory: 256Mi
 
 
 kafka:
@@ -423,14 +423,16 @@ kafka:
   # Remove or comment out the zookeeper section
   # zookeeper:
   #   enabled: false
-  resources: {}
+  resources:
+    cpu: 500m
+    memory: 1Gi
   kraft:
     enabled: true
     clusterId: "my-cluster-id"  # Use a unique base64-encoded string
     controllerQuorumVoters: "0@localhost:9093"
 
 neo4j:
-  enabled: true
+  enabled: false
   image:
     repository: neo4j
     tag: 5.15
@@ -486,6 +488,13 @@ rdpproxy:
     keepAliveInterval: 60000
     maxRetries: 3
   # Guacd sidecar configuration
+  annotations:
+    gke:
+      cloud.google.com/backend-config: '{"default": "rdpproxy-backend-config"}'
+    aws:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    azure:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
   guacd:
     image:
       repository: guacamole/guacd
@@ -572,3 +581,7 @@ promptAdvisor:
       memory: "512Mi"
       cpu: "500m"
   affinity: {}
+
+cloudsql:
+  enabled: false
+  instanceConnectionName: "my-gcp-project:us-central1:sentrius-postgres"

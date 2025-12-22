@@ -194,8 +194,8 @@ public class RdpSessionSummarizationAgent {
     private String getLLMAnalysis(List<RdpSessionScreenshot> screenshots) {
         try {
             // Get a token for LLM service
-            var token = integrationSecurityTokenService.findByConnectionType("openai")
-                .stream().findFirst().orElse(null);
+            var token = integrationSecurityTokenService.selectToken("openai")
+                .orElse(null);
             if (token == null) {
                 log.debug("No OpenAI token available for vision analysis");
                 return null;

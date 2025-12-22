@@ -1,49 +1,31 @@
 {{- if .Values.ingress.enabled }}
+{{- $env := default "local" .Values.environment }}
+
+{{- /*
+  For GKE: Deploy separate ingresses for staged deployment
+  For Local: Deploy single combined ingress (or skip Keycloak if deployed separately)
+*/ -}}
+
+{{- if eq $env "gke" }}
+---
+# Keycloak Ingress - Deploy this first in GKE
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: managed-cert-ingress-{{ .Values.tenant }}
+  name: keycloak-ingress-{{ .Values.tenant }}
   namespace: {{ .Values.tenant }}
   annotations:
-    {{- range $key, $value := .Values.ingress.annotationSets.local }}
-    {{- if ne $key "kubernetes.io/ingress.class" }}
-    {{ $key }}: {{ $value | quote }}
+    {{- range $key, $value := .Values.ingress.annotationSets.gke }}
+    {{- if ne $key "networking.gke.io/managed-certificates" }}
+    {{ $key }}: {{ quote $value }}
     {{- end }}
     {{- end }}
-    nginx.ingress.kubernetes.io/ssl-redirect: "{{ .Values.certificates.enabled }}"
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "{{ .Values.certificates.enabled }}"
-    # Buffer size configurations to prevent memory bloat
-    nginx.ingress.kubernetes.io/proxy-buffer-size: "{{ .Values.ingress.nginx.proxyBufferSize }}"
-    nginx.ingress.kubernetes.io/proxy-buffers-number: "{{ .Values.ingress.nginx.proxyBuffersNumber }}"
-    nginx.ingress.kubernetes.io/client-body-buffer-size: "{{ .Values.ingress.nginx.clientBodyBufferSize }}"
-    # Connection and timeout settings to prevent resource exhaustion
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "{{ .Values.ingress.nginx.proxyReadTimeout }}"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "{{ .Values.ingress.nginx.proxySendTimeout }}"
-    nginx.ingress.kubernetes.io/proxy-connect-timeout: "{{ .Values.ingress.nginx.proxyConnectTimeout }}"
-    # Keepalive settings to manage connections efficiently
-    nginx.ingress.kubernetes.io/upstream-keepalive-connections: "{{ .Values.ingress.nginx.upstreamKeepaliveConnections }}"
-    nginx.ingress.kubernetes.io/upstream-keepalive-timeout: "{{ .Values.ingress.nginx.upstreamKeepaliveTimeout }}"
-    nginx.ingress.kubernetes.io/upstream-keepalive-requests: "{{ .Values.ingress.nginx.upstreamKeepaliveRequests }}"
-    # Request size limits
-    nginx.ingress.kubernetes.io/proxy-body-size: "{{ .Values.ingress.nginx.proxyBodySize }}"
-    # Connection limit per IP to prevent resource exhaustion
-    nginx.ingress.kubernetes.io/limit-connections: "{{ .Values.ingress.nginx.limitConnections }}"
-    # Upstream health check settings to prevent premature backend marking as unavailable
-    nginx.ingress.kubernetes.io/upstream-max-fails: "{{ .Values.ingress.nginx.upstreamMaxFails }}"
-    nginx.ingress.kubernetes.io/upstream-fail-timeout: "{{ .Values.ingress.nginx.upstreamFailTimeout }}"
+    networking.gke.io/managed-certificates: "keycloak-cert-{{ .Values.tenant }}"
+    kubernetes.io/ingress.allow-http: "true"
+
 spec:
-  {{- if .Values.ingress.class }}
   ingressClassName: {{ .Values.ingress.class }}
-  {{- end }}
-  {{- if .Values.ingress.tlsEnabled }}
-  tls:
-    - hosts:
-        - "{{ .Values.keycloakSubdomain }}"
-        - "{{ .Values.subdomain }}"
-        - "{{ .Values.agentproxySubdomain }}"
-        - "{{ .Values.rdpproxySubdomain }}"
-      secretName: wildcard-cert-{{ .Values.tenant }}
-  {{- end }}
+
   rules:
     - host: "{{ .Values.keycloakSubdomain }}"
       http:
@@ -55,6 +37,27 @@ spec:
                 name: {{ .Release.Name }}-keycloak
                 port:
                   number: 8081
+
+---
+# Apps Ingress - Deploy this second in GKE, after Keycloak is healthy
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: apps-ingress-{{ .Values.tenant }}
+  namespace: {{ .Values.tenant }}
+  annotations:
+    {{- range $key, $value := .Values.ingress.annotationSets.gke }}
+    {{- if ne $key "networking.gke.io/managed-certificates" }}
+    {{ $key }}: {{ quote $value }}
+    {{- end }}
+    {{- end }}
+    networking.gke.io/managed-certificates: "apps-cert-{{ .Values.tenant }}"
+    kubernetes.io/ingress.allow-http: "true"
+
+spec:
+  ingressClassName: {{ .Values.ingress.class }}
+
+  rules:
     - host: "{{ .Values.subdomain }}"
       http:
         paths:
@@ -65,6 +68,7 @@ spec:
                 name: {{ .Release.Name }}-sentrius
                 port:
                   number: 8080
+
     - host: "{{ .Values.agentproxySubdomain }}"
       http:
         paths:
@@ -75,6 +79,7 @@ spec:
                 name: {{ .Release.Name }}-agentproxy
                 port:
                   number: 8080
+
     - host: "{{ .Values.rdpproxySubdomain }}"
       http:
         paths:
@@ -85,4 +90,123 @@ spec:
                 name: {{ .Release.Name }}-rdp-proxy
                 port:
                   number: 8080
+
+{{- else }}
+{{- /*
+  LOCAL/AWS/AZURE: Single combined ingress
+  Set .Values.ingress.includeKeycloak to false if Keycloak is deployed separately
+*/ -}}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: managed-cert-ingress-{{ .Values.tenant }}
+  namespace: {{ .Values.tenant }}
+  annotations:
+    {{- /* LOCAL (NGINX ingress in Minikube) */}}
+    {{- if eq $env "local" }}
+    {{- range $key, $value := .Values.ingress.annotationSets.local }}
+    {{ $key }}: {{ quote $value }}
+    {{- end }}
+    {{- end }}
+
+    {{- /* AWS */}}
+    {{- if eq $env "aws" }}
+    {{- range $key, $value := .Values.ingress.annotationSets.aws }}
+    {{ $key }}: {{ quote $value }}
+    {{- end }}
+    {{- end }}
+
+    {{- /* Azure */}}
+    {{- if eq $env "azure" }}
+    {{- range $key, $value := .Values.ingress.annotationSets.azure }}
+    {{ $key }}: {{ quote $value }}
+    {{- end }}
+    {{- end }}
+
+    {{- /* NGINX specific (only if using nginx ingressClass) */}}
+    {{- if eq .Values.ingress.class "nginx" }}
+    {{- with .Values.ingress.nginx }}
+      nginx.ingress.kubernetes.io/ssl-redirect: "{{ $.Values.certificates.enabled }}"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "{{ $.Values.certificates.enabled }}"
+      nginx.ingress.kubernetes.io/proxy-buffer-size: "{{ .proxyBufferSize | default "16k" }}"
+      nginx.ingress.kubernetes.io/proxy-buffers-number: "{{ .proxyBuffersNumber | default "4" }}"
+      nginx.ingress.kubernetes.io/client-body-buffer-size: "{{ .clientBodyBufferSize | default "8m" }}"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "{{ .proxyReadTimeout | default "3600" }}"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "{{ .proxySendTimeout | default "3600" }}"
+      nginx.ingress.kubernetes.io/proxy-connect-timeout: "{{ .proxyConnectTimeout | default "60" }}"
+      nginx.ingress.kubernetes.io/upstream-keepalive-connections: "{{ .upstreamKeepaliveConnections | default "32" }}"
+      nginx.ingress.kubernetes.io/upstream-keepalive-timeout: "{{ .upstreamKeepaliveTimeout | default "60" }}"
+      nginx.ingress.kubernetes.io/upstream-keepalive-requests: "{{ .upstreamKeepaliveRequests | default "1000" }}"
+      nginx.ingress.kubernetes.io/proxy-body-size: "{{ .proxyBodySize | default "100m" }}"
+      nginx.ingress.kubernetes.io/limit-connections: "{{ .limitConnections | default "200" }}"
+      nginx.ingress.kubernetes.io/upstream-max-fails: "{{ .upstreamMaxFails | default "3" }}"
+      nginx.ingress.kubernetes.io/upstream-fail-timeout: "{{ .upstreamFailTimeout | default "10s" }}"
+    {{- end }}
+    {{- end }}
+
+spec:
+  ingressClassName: {{ .Values.ingress.class }}
+
+  {{- /* TLS for NGINX */}}
+  {{- if and .Values.ingress.tlsEnabled (eq .Values.ingress.class "nginx") }}
+  tls:
+    - hosts:
+        {{- if .Values.ingress.includeKeycloak | default true }}
+        - "{{ .Values.keycloakSubdomain }}"
+        {{- end }}
+        - "{{ .Values.subdomain }}"
+        - "{{ .Values.agentproxySubdomain }}"
+        - "{{ .Values.rdpproxySubdomain }}"
+      secretName: wildcard-cert-{{ .Values.tenant }}
+  {{- end }}
+
+  rules:
+    {{- /* Only include Keycloak rule if not deployed separately */}}
+    {{- if .Values.ingress.includeKeycloak | default true }}
+    - host: "{{ .Values.keycloakSubdomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-keycloak
+                port:
+                  number: 8081
+    {{- end }}
+
+    - host: "{{ .Values.subdomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-sentrius
+                port:
+                  number: 8080
+
+    - host: "{{ .Values.agentproxySubdomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-agentproxy
+                port:
+                  number: 8080
+
+    - host: "{{ .Values.rdpproxySubdomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-rdp-proxy
+                port:
+                  number: 8080
+{{- end }}
 {{- end }}

@@ -36,5 +36,7 @@ spec:
               port: {{ .Values.rdpTest.port }}
             initialDelaySeconds: 60
             periodSeconds: 60
+          resources:
+            {{- toYaml .Values.rdpTest.resources | nindent 12 }}
 {{- end }}
 

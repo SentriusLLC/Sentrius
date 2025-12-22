@@ -15,6 +15,7 @@
     <module>provenance-ingestor</module>
     <module>api</module>
     <module>agent-proxy</module>
+    <module>sag</module>
     <module>integration-proxy</module>
     <module>analytics</module>
     <module>enterprise-agent</module>

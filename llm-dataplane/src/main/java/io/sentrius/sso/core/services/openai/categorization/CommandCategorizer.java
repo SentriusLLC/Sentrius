@@ -70,13 +70,14 @@ public class CommandCategorizer {
 
     @Transactional
     protected CommandCategoryDTO categorizeWithRulesOrML(String command) {
-        CommandCategoryDTO category = fetchFromDatabase(command).toDTO();
-        if (category != null) {
+        CommandCategory commandCategory = fetchFromDatabase(command);
+        if (commandCategory != null) {
+            CommandCategoryDTO category = commandCategory.toDTO();
             log.info("Found command category {} for {} ", category, command);
             return category;
         }
         
-        var openaiService = integrationSecurityTokenService.findByConnectionType("openai").stream().findFirst().orElse(null);
+        var openaiService = integrationSecurityTokenService.selectToken("openai").orElse(null);
 
         if (null != openaiService){
             log.info("OpenAI service is available");
@@ -93,7 +94,7 @@ public class CommandCategorizer {
             var commandCategorizer = new LLMCommandCategorizer(key, new GenerativeAPI(key), GeneratorConfiguration.builder().build());
 
             try {
-                category = commandCategorizer.generate(command);
+                CommandCategoryDTO category = commandCategorizer.generate(command);
 
                 if (isValidRegex(category.getPattern())) {
                     addCommandCategory(category.getPattern(), category);

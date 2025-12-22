@@ -27,6 +27,7 @@ public class ExternalIntegrationDTO {
     private String baseUrl;
     private String projectKey;
     private String apiToken;
+    private String databaseType;
 
     public ExternalIntegrationDTO(IntegrationSecurityToken token) throws JsonProcessingException {
         this(token, false);
@@ -43,6 +44,7 @@ public class ExternalIntegrationDTO {
         this.icon = dto.getIcon();
         this.baseUrl = dto.getBaseUrl();
         this.projectKey = dto.getProjectKey();
+        this.databaseType = dto.getDatabaseType();
         if (includeToken) {
             this.apiToken = dto.getApiToken();
         }

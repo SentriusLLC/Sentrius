@@ -26,6 +26,7 @@ public class AgentCommunicationDTO {
     private UUID communicationId = UUID.randomUUID();
 
     private String payload;
+    private String sagMessage;
 
     @Builder.Default
     private java.time.Instant createdAt = java.time.Instant.now();
@@ -42,6 +43,7 @@ public class AgentCommunicationDTO {
                 .messageType(this.messageType)
                 .communicationId(this.communicationId)
                 .payload(this.payload)
+                .sagMessage(this.sagMessage)
                 .createdAt(this.createdAt)
                 .linkedRequests(new ArrayList<>(this.linkedRequests))
                 .build();
@@ -56,6 +58,7 @@ public class AgentCommunicationDTO {
       .messageType(this.messageType)
       .communicationId(this.communicationId)
       .payload(this.payload)
+      .sagMessage(this.sagMessage)
       .createdAt(this.createdAt)
       .linkedRequests(new ArrayList<>(this.linkedRequests))
       .build();
