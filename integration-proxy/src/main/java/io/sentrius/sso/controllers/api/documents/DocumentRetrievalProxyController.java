@@ -17,6 +17,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +63,12 @@ public class DocumentRetrievalProxyController extends BaseController {
             if (sourceUrl == null || sourceUrl.trim().isEmpty()) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "sourceUrl is required"));
+            }
+
+            if (!isAllowedSourceUrl(sourceUrl)) {
+                log.warn("Rejected document retrieval request to disallowed URL: {}", sourceUrl);
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Invalid or disallowed sourceUrl"));
             }
 
             @SuppressWarnings("unchecked")
@@ -135,6 +144,60 @@ public class DocumentRetrievalProxyController extends BaseController {
             log.error("Error getting supported sources", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to get supported sources"));
+        }
+    }
+
+    /**
+     * Validate that the provided sourceUrl is safe to use for outbound HTTP(S) requests.
+     * This helps protect against server-side request forgery (SSRF).
+     */
+    private boolean isAllowedSourceUrl(String sourceUrl) {
+        try {
+            URI uri = new URI(sourceUrl);
+
+            String scheme = uri.getScheme();
+            if (scheme == null || (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme))) {
+                return false;
+            }
+
+            String host = uri.getHost();
+            if (host == null || host.isEmpty()) {
+                return false;
+            }
+
+            InetAddress address = InetAddress.getByName(host);
+            if (address.isAnyLocalAddress() || address.isLoopbackAddress()) {
+                return false;
+            }
+
+            byte[] ip = address.getAddress();
+            int firstOctet = ip[0] & 0xFF;
+            int secondOctet = ip[1] & 0xFF;
+
+            // 10.0.0.0/8
+            if (firstOctet == 10) {
+                return false;
+            }
+            // 172.16.0.0 – 172.31.255.255
+            if (firstOctet == 172 && secondOctet >= 16 && secondOctet <= 31) {
+                return false;
+            }
+            // 192.168.0.0/16
+            if (firstOctet == 192 && secondOctet == 168) {
+                return false;
+            }
+            // 169.254.0.0/16 (link-local)
+            if (firstOctet == 169 && secondOctet == 254) {
+                return false;
+            }
+
+            return true;
+        } catch (URISyntaxException e) {
+            log.warn("Invalid sourceUrl syntax: {}", sourceUrl, e);
+            return false;
+        } catch (Exception e) {
+            log.warn("Failed to validate sourceUrl: {}", sourceUrl, e);
+            return false;
         }
     }
 }
