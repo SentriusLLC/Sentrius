@@ -100,6 +100,11 @@ public class DatabaseProxyController extends BaseController {
                     .body(Map.of("error", "Only SELECT queries are allowed"));
             }
 
+            if (!isSafeSelectQuery(query)) {
+                return ResponseEntity.status(HttpStatus.SC_FORBIDDEN)
+                    .body(Map.of("error", "Query is not allowed"));
+            }
+
             String jdbcUrl = buildJdbcUrl(integrationDTO);
             List<Map<String, Object>> results = new ArrayList<>();
 
@@ -141,6 +146,48 @@ public class DatabaseProxyController extends BaseController {
         } finally {
             span.end();
         }
+    }
+
+    /**
+     * Performs basic validation to ensure that only reasonably safe SELECT queries are executed.
+     * This method is intentionally conservative and will reject queries containing
+     * multiple statements, comments, or obvious DDL/DML keywords.
+     */
+    private boolean isSafeSelectQuery(String query) {
+        if (query == null) {
+            return false;
+        }
+
+        String trimmed = query.trim();
+        if (trimmed.isEmpty()) {
+            return false;
+        }
+
+        // Must start with SELECT (case-insensitive)
+        String upper = trimmed.toUpperCase(Locale.ROOT);
+        if (!upper.startsWith("SELECT")) {
+            return false;
+        }
+
+        // Disallow multiple statements and common comment syntaxes
+        if (upper.contains(";") || upper.contains("--") || upper.contains("/*") || upper.contains("*/") || upper.contains("#")) {
+            return false;
+        }
+
+        // Disallow obviously dangerous keywords that should not appear in a simple read-only query
+        String[] forbiddenKeywords = {
+            " INSERT ", " UPDATE ", " DELETE ", " DROP ", " ALTER ", " TRUNCATE ",
+            " CREATE ", " MERGE ", " GRANT ", " REVOKE ", " EXEC ", " EXECUTE ",
+            " INTO OUTFILE ", " INTO DUMPFILE "
+        };
+
+        for (String keyword : forbiddenKeywords) {
+            if (upper.contains(keyword)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     @GetMapping("/tables")
