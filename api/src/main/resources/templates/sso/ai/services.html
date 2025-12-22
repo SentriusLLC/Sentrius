@@ -311,14 +311,16 @@
                         
                         // Update the status text
                         const formTextDiv = form.querySelector('.form-text');
+                        formTextDiv.textContent = '';
                         if (integrationId) {
-                            formTextDiv.innerHTML = `
-                                Currently using integration ID: <span class="badge bg-info">${integrationId}</span>
-                            `;
+                            const textNode = document.createTextNode('Currently using integration ID: ');
+                            const badgeSpan = document.createElement('span');
+                            badgeSpan.className = 'badge bg-info';
+                            badgeSpan.textContent = integrationId;
+                            formTextDiv.appendChild(textNode);
+                            formTextDiv.appendChild(badgeSpan);
                         } else {
-                            formTextDiv.innerHTML = `
-                                Currently auto-selecting most recent integration
-                            `;
+                            formTextDiv.textContent = 'Currently auto-selecting most recent integration';
                         }
                     } else {
                         statusDiv.innerHTML = `
