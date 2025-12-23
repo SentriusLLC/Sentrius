@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -64,8 +66,8 @@ public class AgentTemplate {
     /**
      * Agent identity definition (issuer, subject prefix, certificate authority)
      */
-    @Lob
-    @Column(columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
     private String identity;
 
     /**
@@ -83,9 +85,10 @@ public class AgentTemplate {
     /**
      * JSON object defining constraints, limits, and safety boundaries
      */
-    @Lob
-    @Column(columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
     private String guardrails;
+
 
     /**
      * Reference to ATPL trust policy ID that should be applied
@@ -95,8 +98,8 @@ public class AgentTemplate {
     /**
      * Launch-specific configuration (resources, environment variables, etc.)
      */
-    @Lob
-    @Column(columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
     private String launchConfiguration;
 
     /**
