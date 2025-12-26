@@ -314,6 +314,13 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Show loading indicator
+        const launchBtn = document.querySelector(`button[data-template-id="${templateId}"]`);
+        if (launchBtn) {
+            launchBtn.disabled = true;
+            launchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Launching...';
+        }
+
         fetch(`/api/v1/agent/templates/${templateId}/launch?agentName=${encodeURIComponent(agentName)}`, {
             method: 'POST',
             headers: {
@@ -322,8 +329,12 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
-            if (data.status === 'prepared') {
-                alert(`Agent launch prepared!\n\nAgent: ${data.agentName}\nTemplate: ${data.templateName}\nType: ${data.agentType}\n\n${data.message}`);
+            if (data.status === 'success') {
+                alert(`Agent launched successfully!\n\nAgent: ${data.agentName}\nTemplate: ${data.templateName}\nType: ${data.agentType}\n\nThe agent is being deployed. Check the agent list for status.`);
+            } else if (data.status === 'already_exists') {
+                alert(`Agent already exists!\n\nAgent: ${data.agentName}\n\n${data.message}`);
+            } else if (data.error) {
+                alert(`Failed to launch agent: ${data.error}`);
             } else {
                 alert('Agent launch initiated. Check the agent list for status.');
             }
@@ -331,6 +342,13 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Error launching agent:', error);
             alert('Failed to launch agent. Please check the logs for details.');
+        })
+        .finally(() => {
+            // Restore button state
+            if (launchBtn) {
+                launchBtn.disabled = false;
+                launchBtn.innerHTML = '<i class="fas fa-rocket"></i> Launch';
+            }
         });
     }
 
