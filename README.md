@@ -112,7 +112,7 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development guidelines.
 
 ## 📄 License
 
-Sentrius is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+Sentrius is licensed under the Apache License v2. See the [LICENSE](LICENSE) file for details.
 
 ## 📧 Contact
 
