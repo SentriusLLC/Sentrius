@@ -458,8 +458,8 @@ fi
 if $update_sentrius_ssh_agent; then
     cp ssh-agent/target/ssh-agent-*.jar docker/ssh-agent/ssh-agent.jar
     if [[ "$ENV_TARGET" == "gcp" || "$ENV_TARGET" == "azure" ]]; then
-        $SSH_AGENT_VERSION=$(increment_patch_version $SSH_AGENT_VERSION)
-        update_env_var "$SSH_AGENT_VERSION" "$SSH_AGENT_VERSION"
+        SSH_AGENT_VERSION=$(increment_patch_version $SSH_AGENT_VERSION)
+        update_env_var "SSH_AGENT_VERSION" "$SSH_AGENT_VERSION"
     else
         SSH_AGENT_VERSION="latest"
     fi
