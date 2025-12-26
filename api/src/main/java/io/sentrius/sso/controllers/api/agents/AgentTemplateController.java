@@ -1,15 +1,22 @@
 package io.sentrius.sso.controllers.api.agents;
 
 import io.sentrius.sso.config.ApiPaths;
+import io.sentrius.sso.config.AppConfig;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.AgentRegistrationDTO;
 import io.sentrius.sso.core.dto.agents.AgentTemplateDTO;
+import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
+import io.sentrius.sso.core.services.agents.AgentClientService;
+import io.sentrius.sso.core.services.agents.AgentContextService;
+import io.sentrius.sso.core.services.agents.AgentLaunchService;
 import io.sentrius.sso.core.services.agents.AgentTemplateService;
+import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -26,15 +33,33 @@ import java.util.UUID;
 public class AgentTemplateController extends BaseController {
 
     private final AgentTemplateService templateService;
+    private final ZeroTrustClientService zeroTrustClientService;
+    private final AppConfig appConfig;
+    private final ATPLPolicyService atplPolicyService;
+    private final AgentLaunchService agentLaunchService;
+    private final AgentContextService agentContextService;
+    private final AgentClientService agentClientService;
 
     public AgentTemplateController(
         UserService userService,
         SystemOptions systemOptions,
         ErrorOutputService errorOutputService,
-        AgentTemplateService templateService
+        AgentTemplateService templateService,
+        ZeroTrustClientService zeroTrustClientService,
+        AppConfig appConfig,
+        ATPLPolicyService atplPolicyService,
+        AgentLaunchService agentLaunchService,
+        AgentContextService agentContextService,
+        AgentClientService agentClientService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.templateService = templateService;
+        this.zeroTrustClientService = zeroTrustClientService;
+        this.appConfig = appConfig;
+        this.atplPolicyService = atplPolicyService;
+        this.agentLaunchService = agentLaunchService;
+        this.agentContextService = agentContextService;
+        this.agentClientService = agentClientService;
     }
 
     /**
@@ -241,7 +266,7 @@ public class AgentTemplateController extends BaseController {
     
     /**
      * Launch an agent from a template
-     * This endpoint creates an agent registration and triggers the launcher service
+     * This endpoint creates an agent registration and triggers the launcher service automatically
      * 
      * @param id Template ID
      * @param agentName Name for the new agent
@@ -269,22 +294,105 @@ public class AgentTemplateController extends BaseController {
             log.info("User {} launching agent '{}' from template '{}'", 
                 operatingUser.getUsername(), agentName, template.getName());
             
-            // Build launch response with template information
-            // The actual launcher integration will be handled by the frontend calling the launcher service
-            Map<String, Object> launchInfo = Map.of(
-                "status", "prepared",
+            // Check if agent is already running
+            try {
+                String status = agentClientService.getAgentPodStatus(
+                    appConfig.getSentriusLauncherService(), 
+                    agentName
+                );
+                if ("Running".equals(status) || "Pending".equals(status)) {
+                    log.info("Agent {} is already running or pending", agentName);
+                    return ResponseEntity.ok(Map.of(
+                        "status", "already_exists",
+                        "message", "Agent is already running or pending",
+                        "agentName", agentName
+                    ));
+                }
+            } catch (Exception e) {
+                log.debug("Agent status check failed (agent may not exist yet): {}", e.getMessage());
+            }
+            
+            // Build AgentRegistrationDTO with full template configuration
+            AgentRegistrationDTO agentDto = AgentRegistrationDTO.builder()
+                .agentName(agentName)
+                .agentType(template.getAgentType())
+                .agentCallbackUrl("")
+                .clientId(agentName)  // Set clientId to match agentName for policy caching
+                .agentTemplateId(id.toString())
+                .agentContextId(agentContextId)
+                .templateConfiguration(template.getDefaultConfiguration())
+                .templateIdentity(template.getIdentity())
+                .templatePurpose(template.getPurpose())
+                .templateGoals(template.getGoals())
+                .templateGuardrails(template.getGuardrails())
+                .templateTrustPolicyId(template.getTrustPolicyId())
+                .templateLaunchConfiguration(template.getLaunchConfiguration())
+                .agentPolicyId(template.getTrustPolicyId() != null ? template.getTrustPolicyId() : "")
+                .build();
+            
+            // Cache the policy if it exists
+            if (template.getTrustPolicyId() != null && !template.getTrustPolicyId().isEmpty()) {
+                var latest = atplPolicyService.getLatestPolicyEntity(template.getTrustPolicyId());
+                if (latest.isPresent()) {
+                    log.info("Caching policy {} for agent {}", template.getTrustPolicyId(), agentName);
+                    atplPolicyService.cachePolicy(agentDto.getClientId(), template.getTrustPolicyId());
+                } else {
+                    log.warn("Policy {} not found, skipping cache", template.getTrustPolicyId());
+                }
+            }
+            
+            // Call the launcher service
+            zeroTrustClientService.callAuthenticatedPostOnApi(
+                appConfig.getSentriusLauncherService(),
+                "agent/launcher/create",
+                agentDto
+            );
+            
+            // Record the agent launch if agentContextId is provided
+            if (agentContextId != null && !agentContextId.isEmpty()) {
+                try {
+                    UUID contextId = UUID.fromString(agentContextId);
+                    String launchedBy = operatingUser.getUserId();
+                    String parameters = String.format(
+                        "agentType=%s,templateId=%s,policyId=%s",
+                        template.getAgentType(),
+                        id.toString(),
+                        template.getTrustPolicyId() != null ? template.getTrustPolicyId() : "none"
+                    );
+                    
+                    UUID launchId = agentLaunchService.recordLaunch(
+                        agentName,
+                        contextId,
+                        launchedBy,
+                        parameters
+                    );
+                    
+                    log.info("Recorded agent launch: launchId={}, contextId={}, agentName={}",
+                        launchId, contextId, agentName);
+                } catch (IllegalArgumentException e) {
+                    log.warn("Invalid agentContextId '{}', skipping launch record: {}", agentContextId, e.getMessage());
+                } catch (Exception e) {
+                    log.warn("Failed to record agent launch (non-critical): {}", e.getMessage());
+                }
+            }
+            
+            log.info("Successfully launched agent '{}' from template '{}'", agentName, template.getName());
+            
+            return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "message", "Agent launched successfully",
                 "agentName", agentName,
                 "templateId", id.toString(),
                 "templateName", template.getName(),
-                "agentType", template.getAgentType(),
-                "trustPolicyId", template.getTrustPolicyId() != null ? template.getTrustPolicyId() : "",
-                "message", "Agent launch prepared. Use the prepare-launch endpoint to get full configuration for launcher service.",
-                "nextStep", String.format("/api/v1/agent/templates/%s/prepare-launch?agentName=%s", id, agentName)
-            );
+                "agentType", template.getAgentType()
+            ));
             
-            return ResponseEntity.ok(launchInfo);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
+        } catch (ZtatException e) {
+            log.error("Error calling launcher service", e);
+            return ResponseEntity.status(503)
+                .body(Map.of("error", "Failed to contact launcher service: " + e.getMessage()));
         } catch (Exception e) {
             log.error("Error launching agent from template", e);
             return ResponseEntity.badRequest()
