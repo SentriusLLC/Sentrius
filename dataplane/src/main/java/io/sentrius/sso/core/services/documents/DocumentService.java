@@ -6,6 +6,7 @@ import io.sentrius.sso.core.model.documents.Document;
 import io.sentrius.sso.core.repository.documents.DocumentRepository;
 import io.sentrius.sso.core.services.agents.EmbeddingService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -40,7 +41,7 @@ public class DocumentService {
     private String integrationProxyUrl;
 
     public DocumentService(DocumentRepository documentRepository, 
-                          EmbeddingService embeddingService) {
+                          @Autowired(required = false) EmbeddingService embeddingService) {
         this.documentRepository = documentRepository;
         this.embeddingService = embeddingService;
         this.restTemplate = new RestTemplate();

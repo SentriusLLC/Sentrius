@@ -10,7 +10,7 @@ metadata:
     description: "Configuration storage - requires ReadWriteMany storage class"
 spec:
   accessModes:
-    - ReadWriteMany  # Required: Storage class must support ReadWriteMany (e.g., NFS, EFS, Azure Files, GCS Filestore)
+    - ReadWriteOnce
   {{- if .Values.config.storageClassName }}
   storageClassName: {{ .Values.config.storageClassName }}
   {{- end }}

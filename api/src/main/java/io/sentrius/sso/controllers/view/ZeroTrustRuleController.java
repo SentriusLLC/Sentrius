@@ -94,6 +94,10 @@ public class ZeroTrustRuleController extends BaseController {
         return "sso/rules/rule_designer";
     }
 
+    @GetMapping("/custom-chat")
+    public String customRuleChat() {
+        return "sso/rules/custom_rule_chat";
+    }
 
 
 }
