@@ -1,0 +1,2644 @@
+---
+# Source: sentrius-chart/templates/integrationproxy-serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sentrius-integrationproxy
+  namespace: december
+---
+# Source: sentrius-chart/templates/keycloak-secrets.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sentrius-keycloak-secrets
+type: Opaque
+data:
+  admin-password: 
+  client-secret: 
+  db-password:
+---
+# Source: sentrius-chart/templates/oauth2-secrets.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sentrius-oauth2-secrets
+  annotations:
+    "helm.sh/resource-policy": keep
+type: Opaque
+data:
+  # Sentrius OAuth2 Client Secret
+  sentrius-client-secret: WTJxNFd0NVNESTFNZVd0WU5McEE3OUxvWTB1WkJvbnA=
+
+  # Integration Proxy OAuth2 Client Secret
+  integrationproxy-client-secret: U3ZVNHRlUElDUDBqRnRpQVJuZGVqQmg0aU1Qbm5sa1g=
+
+  # Sentrius Agent OAuth2 Client Secret
+  sentriusagent-client-secret: MWk4cWpUUkRudFUyYTd4OXlPYmJIb3M1UmxOWmlIczY=
+
+  # Sentrius AI Agent OAuth2 Client Secret
+  sentriusaiagent-client-secret: VldHeDBoWVJlNk5lQ2gzUkF4VEcyeVg5UmpDQ3hKZDQ=
+
+  # Launcher Service OAuth2 Client Secret
+  launcherservice-client-secret: N2NDYzVITjFHM25sM0ZXQTdEQXVFM2Y0NWZhaXcwems=
+
+  # Keycloak Realm Client Secrets - These are used by Keycloak realm configuration
+  sentrius-api-client-secret: UUVWYzBNOEpFVlZ0M0lxaXNnSlhOcUd0d25Wb1NwcWY=
+  sentrius-launcher-service-client-secret: V1h5aUVtSGMyU1FaQjNZYzcxc01xTUh5TnZaZ1VIZnA=
+  ssh-proxy-client-secret: QnR2UVdoanZxR2Q0WVp0SG1VaEdweHhWejJaaUpzUTQ=
+  java-agents-client-secret: cEtkUk8xbWo4RHhGRXVZOXBCYlF1Y0JubEpvZnczR20=
+  monitoring-agent-client-secret: Z3cwWUQwOHdGTXJXY3I0NU45bHMybHNLWDE0bEt6a3I=
+
+  # Agent Proxy OAuth2 Client Secret
+  agentproxy-client-secret: UGYzaGRJaEs2amVUSkl1NnhpaEcxaTc4aUVVT2FOdUs=
+
+
+
+  # RDP Proxy OAuth2 Client Secret
+  rdpproxy-client-secret: b0Z3dUE2VUtyVlQ0a1FIRkhpRHpHdWhuMEpUa1hXUk4=
+  # Prompt Advisor OAuth2 Client Secret
+  prompt-advisor-client-secret: ckNsOWxyNFJIVVdCSGdiU0ZRNHJJdXdrVGRJWTJwYzY=
+  ssh-agent-client-secret: b1lrd3prZzVOZEFHS3R1QUxmRnhuM3EzZEhkTnYzcEY=
+---
+# Source: sentrius-chart/templates/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sentrius-db-secret
+  annotations:
+    "helm.sh/resource-policy": keep
+type: Opaque
+data:
+  db-username: YWRtaW4=
+  db-password: ancyb0pqWEpxbExqMGpab0RrdDFqZUVEZmJCdE1pUDI=
+  keystore-password: dTlXV3NhRDdXV2NoUnRYSnZvN0lOeGox
+---
+# Source: sentrius-chart/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sentrius-config
+  labels:
+    app.kubernetes.io/name: sentrius
+    app.kubernetes.io/instance: sentrius
+    app.kubernetes.io/managed-by: Helm
+data:
+  assessor-config.yaml: |
+    description: "Agent that handles logs and OpenAI access."
+    context: |
+      Your job is to fetch logs for currently open terminals and assess if the user is performing risky behavior.
+      Risk should be defined in a json response of the form:
+      {
+        "assessments": [
+            {
+            "sessionId": "<id>",
+            "risk": "<low|medium|high>",
+            "description": "<why they received the risk>"
+            }
+        ]
+      }
+  agentproxy-application.properties: |
+    keystore.file=sso.jceks
+    keystore.password=${KEYSTORE_PASSWORD}
+    keystore.alias=KEYBOX-ENCRYPTION_KEY
+    spring.thymeleaf.enabled=true
+    spring.freemarker.enabled=false
+    management.metrics.enable.system.processor=true
+    spring.autoconfigure.exclude=
+    #flyway configuration
+    spring.main.web-application-type=reactive
+    spring.flyway.enabled=false
+    spring.datasource.url=${SPRING_DATASOURCE_URL}
+    spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
+    spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+    spring.datasource.driver-class-name=org.postgresql.Driver
+    # Connection pool settings
+    spring.datasource.hikari.maximum-pool-size=10
+    spring.datasource.hikari.minimum-idle=5
+    spring.datasource.hikari.idle-timeout=30000
+    spring.datasource.hikari.max-lifetime=1800000
+    # Hibernate settings (optional, for JPA)
+    spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+    # Disable automatic schema generation in production
+    spring.jpa.hibernate.ddl-auto=none
+    # Ensure this path matches your project structure
+    #spring.flyway.locations=classpath:db/migration/
+    spring.flyway.baseline-on-migrate=true
+    logging.level.org.springframework.web=INFO
+    logging.level.org.springframework.security=INFO
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    dynamic.properties.path=/config/dynamic.properties
+    keycloak.realm=sentrius
+    keycloak.base-url=https://keycloak.december.trustpolicy.ai
+    agent.api.url=https://december.trustpolicy.ai
+    # Keycloak configuration
+    spring.security.oauth2.client.registration.keycloak.client-id=sentrius-agent-proxy
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type=client_credentials
+    #spring.security.oauth2.client.registration.keycloak.redirect-uri=https://december.trustpolicy.ai/login/oauth2/code/keycloak
+    #spring.security.oauth2.client.registration.keycloak.scope=openid,profile,email
+    spring.security.oauth2.resourceserver.jwt.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.logs.exporter=none
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.resource.attributes.service.name=integration-proxy
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
+    provenance.kafka.topic=sentrius-provenance
+    # Serialization
+    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+    spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+    spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
+    # Reliability
+    spring.kafka.producer.retries=5
+    spring.kafka.producer.acks=all
+    # Timeout tuning
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
+  llmproxy-application.properties: |
+    keystore.file=sso.jceks
+    keystore.password=${KEYSTORE_PASSWORD}
+    keystore.alias=KEYBOX-ENCRYPTION_KEY
+    spring.main.web-application-type=servlet
+    spring.thymeleaf.enabled=true
+    spring.freemarker.enabled=false
+    sentrius.tenant=december
+    management.metrics.enable.system.processor=true
+    spring.autoconfigure.exclude=
+    #flyway configuration
+    spring.flyway.enabled=false
+    spring.datasource.url=${SPRING_DATASOURCE_URL}
+    spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
+    spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+    spring.datasource.driver-class-name=org.postgresql.Driver
+    # Connection pool settings
+    spring.datasource.hikari.maximum-pool-size=10
+    spring.datasource.hikari.minimum-idle=5
+    spring.datasource.hikari.idle-timeout=30000
+    spring.datasource.hikari.max-lifetime=1800000
+    # Hibernate settings (optional, for JPA)
+    spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+    # Disable automatic schema generation in production
+    spring.jpa.hibernate.ddl-auto=none
+    # Ensure this path matches your project structure
+    #spring.flyway.locations=classpath:db/migration/
+    spring.flyway.baseline-on-migrate=true
+    logging.level.org.springframework.web=INFO
+    logging.level.org.springframework.security=INFO
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    dynamic.properties.path=/config/dynamic.properties
+    keycloak.realm=sentrius
+    keycloak.base-url=https://keycloak.december.trustpolicy.ai
+    agent.api.url=https://december.trustpolicy.ai
+    # Keycloak configuration
+    spring.security.oauth2.client.registration.keycloak.client-id=java-agents
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type=client_credentials
+    spring.security.oauth2.client.registration.keycloak.redirect-uri=https://december.trustpolicy.ai/login/oauth2/code/keycloak
+    spring.security.oauth2.client.registration.keycloak.scope=openid,profile,email
+    spring.security.oauth2.resourceserver.jwt.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.logs.exporter=none
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.resource.attributes.service.name=integration-proxy
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
+    provenance.kafka.topic=sentrius-provenance
+    # Serialization
+    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+    spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+    spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
+
+    # Reliability
+    spring.kafka.producer.retries=5
+    spring.kafka.producer.acks=all
+
+    # Timeout tuning
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
+  ai-agent-application.properties: |
+    spring.main.web-application-type=servlet
+    spring.thymeleaf.enabled=true
+    spring.freemarker.enabled=false
+    management.metrics.enable.system.processor=true
+    spring.autoconfigure.exclude=
+    #flyway configuration
+    spring.flyway.enabled=false
+    logging.level.org.springframework.web=INFO
+    logging.level.org.springframework.security=INFO
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    dynamic.properties.path=/config/dynamic.properties
+    keycloak.realm=sentrius
+    keycloak.base-url=https://keycloak.december.trustpolicy.ai
+    agent.api.url=https://december.trustpolicy.ai
+    # Keycloak configuration
+    spring.security.oauth2.client.registration.keycloak.client-id=monitoring-agent
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type=client_credentials
+    spring.security.oauth2.client.registration.keycloak.redirect-uri=https://december.trustpolicy.ai/login/oauth2/code/keycloak
+    spring.security.oauth2.client.registration.keycloak.scope=openid,profile,email
+    spring.security.oauth2.resourceserver.jwt.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    agents.ai.registered.agent.enabled=true
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.resource.attributes.service.name=ai-agent
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
+    management.endpoints.web.exposure.include=health
+    management.endpoint.health.show-details=always
+    agent.open.ai.endpoint=http://sentrius-integrationproxy:8080/
+    agent.ai.config=assessor-config.yaml
+    provenance.kafka.topic=sentrius-provenance
+    # Serialization
+    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+    spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+    spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
+
+    # Reliability
+    spring.kafka.producer.retries=5
+    spring.kafka.producer.acks=all
+
+    # Timeout tuning
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
+
+  analysis-agent-application.properties: |
+    keystore.file=sso.jceks
+    keystore.password=${KEYSTORE_PASSWORD}
+    keystore.alias=KEYBOX-ENCRYPTION_KEY
+    keystore.algorithm=AES
+    spring.main.web-application-type=servlet
+    spring.thymeleaf.enabled=true
+    spring.freemarker.enabled=false
+    management.metrics.enable.system.processor=true
+    spring.autoconfigure.exclude=
+    #flyway configuration
+    spring.flyway.enabled=true
+    spring.datasource.url=${SPRING_DATASOURCE_URL}
+    spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
+    spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+    spring.datasource.driver-class-name=org.postgresql.Driver
+    # Connection pool settings
+    spring.datasource.hikari.maximum-pool-size=10
+    spring.datasource.hikari.minimum-idle=5
+    spring.datasource.hikari.idle-timeout=30000
+    agent.open.ai.endpoint=http://sentrius-integrationproxy:8080/
+    spring.datasource.hikari.max-lifetime=1800000
+    # Hibernate settings (optional, for JPA)
+    spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+    # Disable automatic schema generation in production
+    spring.jpa.hibernate.ddl-auto=none
+    # Ensure this path matches your project structure
+    #spring.flyway.locations=classpath:db/migration/
+    spring.flyway.baseline-on-migrate=true
+    # Thymeleaf settings
+    spring.thymeleaf.prefix=classpath:/templates/
+    spring.thymeleaf.suffix=.html
+    logging.level.org.springframework.web=INFO
+    logging.level.org.springframework.security=INFO
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    dynamic.properties.path=/config/dynamic.properties
+    keycloak.realm=sentrius
+    keycloak.base-url=https://keycloak.december.trustpolicy.ai
+    agent.api.url=https://december.trustpolicy.ai
+    # Keycloak configuration
+    spring.security.oauth2.client.registration.keycloak.client-id=java-agents
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type=client_credentials
+    spring.security.oauth2.client.registration.keycloak.redirect-uri=https://december.trustpolicy.ai/login/oauth2/code/keycloak
+    spring.security.oauth2.client.registration.keycloak.scope=openid,profile,email
+    spring.security.oauth2.resourceserver.jwt.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    agents.session-analytics.enabled=true
+    agents.rdp-session-analytics.enabled=true
+    agents.ssh-session-analytics.enabled=true
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.resource.attributes.service.name=analysis-agent
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
+    provenance.kafka.topic=sentrius-provenance
+    # Serialization
+    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+    spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+    spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
+
+    # Reliability
+    spring.kafka.producer.retries=5
+    spring.kafka.producer.acks=all
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
+
+    # Timeout tuning
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+    agents.automation-suggestion.enabled=true
+    # RLHF Feedback System Configuration
+    sentrius.rlhf.enabled=true
+    sentrius.rlhf.feedback.api.url=https://december.trustpolicy.ai
+  monitoring-agent-application.properties: |
+    keystore.file=sso.jceks
+    keystore.password=${KEYSTORE_PASSWORD}
+    keystore.alias=KEYBOX-ENCRYPTION_KEY
+    keystore.algorithm=AES
+    spring.main.web-application-type=servlet
+    spring.thymeleaf.enabled=true
+    spring.freemarker.enabled=false
+    #flyway configuration
+    spring.flyway.enabled=false
+    spring.flyway.baseline-on-migrate=true
+    ## PostgreSQL database
+    spring.datasource.url=${SPRING_DATASOURCE_URL}
+    spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
+    spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+    spring.datasource.driver-class-name=org.postgresql.Driver
+    # Connection pool settings
+    spring.datasource.hikari.maximum-pool-size=10
+    spring.datasource.hikari.minimum-idle=5
+    spring.datasource.hikari.idle-timeout=30000
+    spring.datasource.hikari.max-lifetime=1800000
+    # Hibernate settings
+    spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+    ## Logging
+    logging.level.org.springframework.web=INFO
+    logging.level.org.springframework.security=INFO
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    # Keycloak Configuration
+    keycloak.realm=sentrius
+    keycloak.base-url=https://keycloak.december.trustpolicy.ai
+    spring.security.oauth2.client.registration.keycloak.client-id=monitoring-agent
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type=authorization_code
+    spring.security.oauth2.client.registration.keycloak.redirect-uri=https://december.trustpolicy.ai/login/oauth2/code/keycloak
+    spring.security.oauth2.client.registration.keycloak.scope=openid,profile,email
+    spring.security.oauth2.resourceserver.jwt.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    # Monitoring Agent Configuration
+    agents.monitoring.enabled=true
+    agents.monitoring.chat.enabled=true
+    agent.listen.websocket=true
+    agents.monitoring.name=monitoring-agent
+    agents.monitoring.check-interval=60000
+    agents.monitoring.auto-discover-endpoints=true
+    # OpenTelemetry Configuration
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    jaeger.query.url=http://sentrius-jaeger:16686
+    otel.resource.attributes.service.name=monitoring-agent
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
+    # Health and Actuator
+    management.endpoints.web.exposure.include=health,metrics
+    management.endpoint.health.show-details=always
+    # Agent API Configuration
+    agent.api.url=https://december.trustpolicy.ai
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
+    # RLHF Feedback System Configuration
+    sentrius.rlhf.enabled=true
+    sentrius.rlhf.feedback.api.url=https://december.trustpolicy.ai
+  api-application.properties: |
+    org.springframework.context.ApplicationListener=your.package.DbEnvPrinter
+    keystore.file=sso.jceks
+    keystore.password=${KEYSTORE_PASSWORD}
+    keystore.alias=KEYBOX-ENCRYPTION_KEY
+    keystore.algorithm=AES
+    spring.main.web-application-type=servlet
+    spring.thymeleaf.enabled=true
+    spring.freemarker.enabled=false
+    management.metrics.enable.system.processor=true
+    spring.autoconfigure.exclude=
+    #flyway configuration
+    spring.flyway.enabled=true
+    spring.datasource.url=${SPRING_DATASOURCE_URL}
+    spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
+    spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+    spring.datasource.driver-class-name=org.postgresql.Driver
+    # Connection pool settings
+    spring.datasource.hikari.maximum-pool-size=10
+    spring.datasource.hikari.minimum-idle=5
+    spring.datasource.hikari.idle-timeout=30000
+    spring.datasource.hikari.max-lifetime=1800000
+    # Hibernate settings (optional, for JPA)
+    spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+    # Disable automatic schema generation in production
+    spring.jpa.hibernate.ddl-auto=none
+    # Ensure this path matches your project structure
+    #spring.flyway.locations=classpath:db/migration/
+    spring.flyway.baseline-on-migrate=true
+    # Thymeleaf settings
+    spring.thymeleaf.prefix=classpath:/templates/
+    spring.thymeleaf.suffix=.html
+    logging.level.org.springframework.web=INFO
+    logging.level.org.springframework.security=INFO
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    dynamic.properties.path=/config/dynamic.properties
+    keycloak.realm=sentrius
+    keycloak.base-url=https://keycloak.december.trustpolicy.ai
+    management.endpoints.web.exposure.include=health
+    management.endpoint.health.show-details=always
+    # Keycloak configuration
+    spring.security.oauth2.client.registration.keycloak.client-id=sentrius-api
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type=authorization_code
+    spring.security.oauth2.client.registration.keycloak.redirect-uri=https://december.trustpolicy.ai/login/oauth2/code/keycloak
+    spring.security.oauth2.client.registration.keycloak.scope=openid,profile,email
+    spring.security.oauth2.resourceserver.jwt.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    server.forward-headers-strategy=framework
+    https.redirect.enabled=true
+    https.required=true
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    jaeger.query.url=http://sentrius-jaeger:16686
+    otel.resource.attributes.service.name=sentrius-api
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
+    # Serialization
+    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+    spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+    spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
+
+    # Reliability
+    spring.kafka.producer.retries=5
+    spring.kafka.producer.acks=all
+
+    # Timeout tuning
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+    provenance.kafka.topic=sentrius-provenance
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
+    sentrius.agent.launcher.service=http://sentrius-agents-launcherservice:8080/
+    sentrius.agent.register.bootstrap.allow=true
+    sentrius.agent.bootstrap.policy=/config/default-policy.yaml
+    agentproxy.externalUrl=https://agentproxy.december.trustpolicy.ai
+    integrationproxy.externalUrl=http://sentrius-integrationproxy:8080/
+    sentrius.integration.proxyUrl=http://sentrius-integrationproxy:8080/
+    sentrius.abac.keycloak-sync.enabled=true
+    # Self-Healing configuration
+    self-healing.enabled=true
+    self-healing.off-hours.start=22
+    self-healing.off-hours.end=6
+    self-healing.agent-launcher.url=http://sentrius-agents-launcherservice:8080
+    self-healing.coding-agent.client-id=coding-agents
+    self-healing.coding-agent.client-secret=
+    self-healing.auto-build-image=true
+    self-healing.builder.namespace=dev
+    self-healing.builder.image=gcr.io/kaniko-project/executor:latest
+    self-healing.builder.timeout-seconds=1800
+    self-healing.docker.registry=
+    self-healing.github.enabled=false
+    self-healing.github.api-url=https://api.github.com
+    self-healing.github.owner=
+    self-healing.github.repo=
+  default-policy.yaml: |
+    ---
+    version: "v0"
+    description: "Default Policy For Unregistered Agents ( if configured )"
+    match:
+      agent_tags:
+        - "env:prod"
+        - "classification:observer"
+    behavior:
+      minimum_positive_runs: 5
+      max_incidents: 1
+      incident_types:
+        denylist:
+          - "policy_violation"
+    actions:
+      on_success: "allow"
+      on_failure: "deny"
+      on_marginal:
+        action: "require_ztat"
+        ztat_provider: "ztat-service.internal"
+    capabilities:
+      primitives:
+        - id: "accessLLM"
+          description: "access llm"
+          endpoints:
+            - "/api/v1/chat/completions"
+        - id: "endpoints"
+          description: "endpoints "
+          endpoints:
+            - "/api/v1/capabilities/endpoints"
+        - id: "registration"
+          description: "registration "
+          endpoints:
+            - "/api/v1/agent/bootstrap/register"
+        - id: "verbs"
+          description: "verb endpoint "
+          endpoints:
+            - "/api/v1/capabilities/verbs"
+        - id: "createAgent"
+          description: "Create agent  "
+          endpoints:
+            - "/api/v1/agent/context"
+            - "/api/v1/agent/bootstrap/launcher/create"
+            - "/api/v1/agent/bootstrap/launcher/status"
+            - "/api/v1/capabilities/endpoints"
+            - "/api/v1/agents/memory/search"
+            - "/api/v1/agents/memory/store"
+      composed:
+    ztat:
+      provider: "ztat-service.internal"
+      ttl: "5m"
+      approved_issuers:
+        - "http://localhost:8080/"
+      key_binding: "RSA2048"
+      approval_required: true
+    policy_id: "f3326ce2-f46f-405d-94b6-bda2b26db423"
+    identity:
+      issuer: "https://keycloak.test.sentrius.cloud"
+      subject_prefix: "agent-"
+      mfa_required: true
+      certificate_authority: "Sentrius-CA"
+    provenance:
+      source: "https://test.sentrius.cloud"
+      signature_required: true
+      approved_committers:
+        - "alice@example.com"
+    runtime:
+      enclave_required: true
+      attestation_type: "aws-nitro"
+      verified_at_boot: true
+      allow_drift: true
+    trust_score:
+      minimum: 80
+      marginalThreshold: 50
+      weightings:
+        identity: 0.3
+        provenance: 0.2
+        runtime: 0.3
+        behavior: 0.2
+
+  dynamic.properties: |
+    auditorClass=io.sentrius.sso.automation.auditing.AccessTokenAuditor
+    twopartyapproval.option.LOCKING_SYSTEMS=true
+    requireProfileForLogin=true
+    maxJitDurationMs=1440000
+    sshEnabled=true
+    systemLogoName=december
+    AccessTokenAuditor.rule.4=io.sentrius.sso.automation.auditing.rules.OpenAISessionRule;Malicious AI Monitoring
+    AccessTokenAuditor.rule.5=io.sentrius.sso.automation.auditing.rules.TwoPartyAIMonitor;AI Second Party Monitor
+    AccessTokenAuditor.rule.6=io.sentrius.sso.automation.auditing.rules.SudoApproval;Sudo Approval
+    allowProxies=true
+    AccessTokenAuditor.rule.2=io.sentrius.sso.automation.auditing.rules.DeletePrevention;Delete Prevention
+    AccessTokenAuditor.rule.3=io.sentrius.sso.automation.auditing.rules.TwoPartySessionRule;Require Second Party Monitoring
+    AccessTokenAuditor.rule.0=io.sentrius.sso.automation.auditing.rules.CommandEvaluator;Restricted Commands
+    terminalsInNewTab=false
+    auditFlushIntervalMs=5000
+    AccessTokenAuditor.rule.1=io.sentrius.sso.automation.auditing.rules.AllowedCommandsRule;Approved Commands
+    knownHostsPath=/home/marc/.ssh/known_hosts
+    systemLogoPathLarge=/images/sentrius_large.jpg
+    maxJitUses=1
+    systemLogoPathSmall=/images/sentrius_small.png
+    enableInternalAudit=true
+    twopartyapproval.require.explanation.LOCKING_SYSTEMS=false
+    canApproveOwnJITs=false
+    yamlConfiguration=/app/demoInstaller.yml
+  ssh-agent-application.properties: |
+    keystore.file=sso.jceks
+    keystore.password=${KEYSTORE_PASSWORD}
+    keystore.alias=KEYBOX-ENCRYPTION_KEY
+    spring.thymeleaf.enabled=true
+    spring.freemarker.enabled=false
+    management.metrics.enable.system.processor=true
+    spring.autoconfigure.exclude=
+    #flyway configuration
+    #spring.main.web-application-type=reactive
+    spring.flyway.enabled=false
+    logging.level.org.springframework.web=INFO
+    logging.level.org.springframework.security=INFO
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.main.web-application-type=servlet
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    dynamic.properties.path=/config/dynamic.properties
+    keycloak.realm=sentrius
+    keycloak.base-url=https://keycloak.december.trustpolicy.ai
+    agent.api.url=http://sshagent.sentrius-demo.sentrius.cloud:30088
+    agent.open.ai.endpoint=http://sentrius-integrationproxy:8080/
+    # Keycloak configuration
+    spring.security.oauth2.client.registration.keycloak.client-id=ssh-agent
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type=authorization_code
+    #spring.security.oauth2.client.registration.keycloak.redirect-uri=https://december.trustpolicy.ai/login/oauth2/code/keycloak
+    #spring.security.oauth2.client.registration.keycloak.scope=openid,profile,email
+    spring.security.oauth2.resourceserver.jwt.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.logs.exporter=none
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.resource.attributes.service.name=integration-proxy
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
+    provenance.kafka.topic=sentrius-provenance
+    # Serialization
+    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+    spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+    spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
+    spring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+    spring.kafka.consumer.value-deserializer=org.springframework.kafka.support.serializer.JsonDeserializer
+    spring.kafka.consumer.properties.spring.json.value.default.type=io.sentrius.sso.core.dto.agents.SshAgentQueryMessage
+
+    # Reliability
+    spring.kafka.producer.retries=5
+    spring.kafka.producer.acks=all
+    # Timeout tuning
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
+    # SSH Proxy settings
+    sentrius.ssh-proxy.enabled=true
+    sentrius.ssh-proxy.port=2222
+    sentrius.ssh-proxy.host-key-path=/tmp/ssh-proxy-hostkey.ser
+    sentrius.ssh-proxy.max-concurrent-sessions=100
+    management.endpoints.web.exposure.include=health
+    management.endpoint.health.show-details=always
+    spring.datasource.url=${SPRING_DATASOURCE_URL}
+    spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
+    spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+    sentrius.agent.launcher.service=http://sentrius-agents-launcherservice:8080/
+    agent.chat.enabled=true
+  sshproxy-application.properties: |
+    keystore.file=sso.jceks
+    keystore.password=${KEYSTORE_PASSWORD}
+    keystore.alias=KEYBOX-ENCRYPTION_KEY
+    spring.thymeleaf.enabled=true
+    spring.freemarker.enabled=false
+    management.metrics.enable.system.processor=true
+    spring.autoconfigure.exclude=
+    #flyway configuration
+    #spring.main.web-application-type=reactive
+    spring.flyway.enabled=false
+    logging.level.org.springframework.web=INFO
+    logging.level.org.springframework.security=INFO
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.main.web-application-type=servlet
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    dynamic.properties.path=/config/dynamic.properties
+    keycloak.realm=sentrius
+    keycloak.base-url=https://keycloak.december.trustpolicy.ai
+    agent.api.url=https://december.trustpolicy.ai
+    # Keycloak configuration
+    spring.security.oauth2.client.registration.keycloak.client-id=sentrius-agent-proxy
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type=authorization_code
+    #spring.security.oauth2.client.registration.keycloak.redirect-uri=https://december.trustpolicy.ai/login/oauth2/code/keycloak
+    #spring.security.oauth2.client.registration.keycloak.scope=openid,profile,email
+    spring.security.oauth2.resourceserver.jwt.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.logs.exporter=none
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.resource.attributes.service.name=integration-proxy
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
+    provenance.kafka.topic=sentrius-provenance
+    # Serialization
+    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+    spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+    spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
+    spring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+    spring.kafka.consumer.value-deserializer=org.springframework.kafka.support.serializer.JsonDeserializer
+    spring.kafka.consumer.properties.spring.json.value.default.type=io.sentrius.sso.core.dto.agents.SshAgentQueryMessage
+    # Reliability
+    spring.kafka.producer.retries=5
+    spring.kafka.producer.acks=all
+    # Timeout tuning
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
+    # SSH Proxy settings
+    sentrius.ssh-proxy.enabled=true
+    sentrius.ssh-proxy.port=2222
+    sentrius.ssh-proxy.host-key-path=/tmp/ssh-proxy-hostkey.ser
+    sentrius.ssh-proxy.max-concurrent-sessions=100
+    management.endpoints.web.exposure.include=health
+    management.endpoint.health.show-details=always
+    spring.datasource.url=${SPRING_DATASOURCE_URL}
+    spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
+    spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+    sentrius.agent.launcher.service=http://sentrius-agents-launcherservice:8080/
+    agent.chat.enabled=true
+    ssh.agent.kafka.enabled=true
+  rdpproxy-application.properties: |
+    keystore.file=sso.jceks
+    keystore.password=${KEYSTORE_PASSWORD}
+    keystore.alias=KEYBOX-ENCRYPTION_KEY
+    spring.thymeleaf.enabled=true
+    spring.freemarker.enabled=false
+    management.metrics.enable.system.processor=true
+    spring.autoconfigure.exclude=
+    #flyway configuration
+    spring.flyway.enabled=false
+    logging.level.org.springframework.web=DEBUG
+    logging.level.org.springframework.security=DEBUG
+    logging.level.io.sentrius=DEBUG
+    logging.level.org.thymeleaf=INFO
+    spring.main.web-application-type=servlet
+    spring.thymeleaf.servlet.produce-partial-output-while-processing=false
+    spring.servlet.multipart.enabled=true
+    spring.servlet.multipart.max-file-size=10MB
+    spring.servlet.multipart.max-request-size=10MB
+    server.error.whitelabel.enabled=false
+    dynamic.properties.path=/config/dynamic.properties
+    keycloak.realm=sentrius
+    keycloak.base-url=https://keycloak.december.trustpolicy.ai
+    sentrius.ztat.base-url=https://december.trustpolicy.ai
+    agent.api.url=https://december.trustpolicy.ai
+    # Keycloak configuration
+    spring.security.oauth2.client.registration.keycloak.client-id=sentrius-rdp-proxy
+    spring.security.oauth2.client.registration.keycloak.client-secret=${KEYCLOAK_CLIENT_SECRET}
+    spring.security.oauth2.client.registration.keycloak.authorization-grant-type=authorization_code
+    #spring.security.oauth2.client.registration.keycloak.redirect-uri=https://december.trustpolicy.ai/login/oauth2/code/keycloak
+    #spring.security.oauth2.client.registration.keycloak.scope=openid,profile,email
+    spring.security.oauth2.resourceserver.jwt.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    spring.security.oauth2.client.provider.keycloak.issuer-uri=https://keycloak.december.trustpolicy.ai/realms/sentrius
+    # OTEL settings
+    otel.traces.exporter=otlp
+    otel.metrics.exporter=none
+    otel.logs.exporter=none
+    otel.exporter.otlp.endpoint=http://sentrius-jaeger:4317
+    otel.resource.attributes.service.name=rdp-proxy
+    otel.traces.sampler=always_on
+    otel.exporter.otlp.timeout=10s
+    otel.exporter.otlp.protocol=grpc
+    provenance.kafka.topic=sentrius-provenance
+    # Serialization
+    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+    spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+    spring.kafka.producer.properties.spring.json.trusted.packages=io.sentrius.*
+    # Reliability
+    spring.kafka.producer.retries=5
+    spring.kafka.producer.acks=all
+    # Timeout tuning
+    spring.kafka.producer.request-timeout-ms=10000
+    spring.kafka.producer.delivery-timeout-ms=30000
+    spring.kafka.properties.max.block.ms=500
+    spring.kafka.properties.metadata.max.age.ms=10000
+    spring.kafka.properties.retry.backoff.ms=1000
+    spring.kafka.bootstrap-servers=sentrius-kafka:9092
+    # RDP Proxy settings
+    sentrius.rdp-proxy.enabled=true
+    sentrius.rdp-proxy.port=3389
+    sentrius.rdp-proxy.max-concurrent-sessions=100
+    sentrius.rdp-proxy.security.require-server-authentication=true
+    management.endpoints.web.exposure.include=health
+    management.endpoint.health.show-details=always
+    spring.datasource.url=${SPRING_DATASOURCE_URL}
+    spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
+    spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+    sentrius.rdp-proxy.security.jwt.algorithm=RS256
+    sentrius.rdp-proxy.security.jwt.keySize=2048
+    sentrius.rdp-proxy.security.jwt.keyRotationDays=30
+    sentrius.rdp-proxy.security.jwt.issuer=sentrius-api
+    sentrius.rdp-proxy.security.jwt.audience=rdp-proxy
+    sentrius.rdp-proxy.security.jwt.tokenTtlMinutes=30
+    # RSA Key Management Configuration
+    sentrius.rdp-proxy.security.rsa.keyStorePath=${user.home}/.sentrius/keys/
+    sentrius.rdp-proxy.security.rsa.publicKeyEndpoint=/api/v1/rdp-proxy/public-key
+    sentrius.rdp-proxy.security.rsa.keyRotationEnabled=true
+    sentrius.rdp-proxy.security.rsa.multipleKeySupport=true
+    # WebSocket Security Configuration
+    sentrius.rdp-proxy.security.websocket.allowedOrigins=*
+    sentrius.rdp-proxy.security.websocket.maxSessions=100
+    sentrius.rdp-proxy.security.websocket.connectionTimeout=30000
+    sentrius.rdp-proxy.security.websocket.requireAuthentication=true
+---
+# Source: sentrius-chart/templates/keycloak-db-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: keycloak-db-pvc
+  labels:
+    app: keycloak-db
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: managed-premium
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Source: sentrius-chart/templates/postgres-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  labels:
+    app: postgres
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: managed-premium
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Source: sentrius-chart/templates/qdrant-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qdrant-pvc
+  labels:
+    app: qdrant
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: managed-premium
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Source: sentrius-chart/templates/integrationproxy-agents-role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sentrius-integrationproxy-agents-role
+  namespace: december-agents
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+---
+# Source: sentrius-chart/templates/integrationproxy-role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sentrius-integrationproxy-role
+  namespace: december
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services"]
+    verbs: ["create", "get", "list", "watch", "delete", "update"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+---
+# Source: sentrius-chart/templates/integrationproxy-agents-rolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sentrius-integrationproxy-agents-binding
+  namespace: december-agents
+subjects:
+  - kind: ServiceAccount
+    name: sentrius-integrationproxy
+    namespace: december
+roleRef:
+  kind: Role
+  name: sentrius-integrationproxy-agents-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: sentrius-chart/templates/integrationproxy-rolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sentrius-integrationproxy-binding
+  namespace: december
+subjects:
+  - kind: ServiceAccount
+    name: sentrius-integrationproxy
+roleRef:
+  kind: Role
+  name: sentrius-integrationproxy-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: sentrius-chart/templates/agent-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-sentriusagent
+  namespace: december
+spec:
+  type: NodePort
+  selector:
+    app: sentriusagent
+  ports:
+    - protocol: TCP
+      port: 80        # Port exposed to the outside world
+      targetPort: 8080 # Port used inside the container
+      nodePort: 30083 # NodePort range: 30000-32767
+---
+# Source: sentrius-chart/templates/agentproxy-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-agentproxy
+  namespace: december
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+  labels:
+    app: agentproxy
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080 # Port used inside the container
+  selector:
+    app: agentproxy
+---
+# Source: sentrius-chart/templates/bad-ssh-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-bad-ssh
+spec:
+  selector:
+    app: sentrius-bad-ssh # Remove release label from selector
+  ports:
+    - protocol: TCP
+      port: 22
+      targetPort: 22
+  type: ClusterIP
+---
+# Source: sentrius-chart/templates/integrationproxy-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-integrationproxy
+  namespace: december
+  annotations:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+  labels:
+    app: integrationproxy
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080 # Port used inside the container
+  selector:
+    app: integrationproxy
+---
+# Source: sentrius-chart/templates/jaeger-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-jaeger
+  namespace: december
+  labels:
+    app: jaeger
+spec:
+  selector:
+    app: jaeger
+  ports:
+    - name: http-query
+      port: 16686
+      targetPort: 16686
+    - name: grpc-otlp
+      port: 4317
+      targetPort: 4317
+    - name: http-otlp
+      port: 4318
+      targetPort: 4318
+---
+# Source: sentrius-chart/templates/kafka-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-kafka
+  namespace: december
+spec:
+  type: ClusterIP
+  selector:
+    app: kafka
+  ports:
+    - name: kafka
+      port: 9092
+      targetPort: 9092
+---
+# Source: sentrius-chart/templates/keycloak-db-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-db
+  labels:
+    app: keycloak-db
+spec:
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+  selector:
+    app: keycloak-db
+---
+# Source: sentrius-chart/templates/keycloak-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-keycloak
+  namespace: december
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+  labels:
+    app: keycloak
+    release: sentrius
+
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081 # Replace with the internal port Keycloak listens to
+  selector:
+    app: keycloak
+    release: sentrius
+---
+# Source: sentrius-chart/templates/launcher-alias-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-agents-launcherservice
+  namespace: december
+spec:
+  type: ExternalName
+  externalName: sentrius-launcher-service.dev.svc.cluster.local
+---
+# Source: sentrius-chart/templates/monitoring-agent-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-monitoring-agent
+  namespace: december
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080 # Port used inside the container
+      nodePort: 30086
+  selector:
+    app: monitoring-agent
+---
+# Source: sentrius-chart/templates/postgres-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-postgres
+  labels:
+    app: postgres
+    release: sentrius
+spec:
+  selector:
+    app: postgres
+    release: sentrius
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP
+---
+# Source: sentrius-chart/templates/prompt-advisor-deployment.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-prompt-advisor
+  labels:
+    app: prompt-advisor
+    release: sentrius
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: prompt-advisor
+    release: sentrius
+---
+# Source: sentrius-chart/templates/qdrant-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: qdrant
+spec:
+  type: ClusterIP
+  selector:
+    app: qdrant
+  ports:
+    - port: 6333
+      targetPort: 6333
+---
+# Source: sentrius-chart/templates/rdp-proxy-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-rdp-proxy
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+  labels:
+    app: sentrius-rdp-proxy
+    release: sentrius
+spec:
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app: sentrius-rdp-proxy
+---
+# Source: sentrius-chart/templates/rdp-test-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-rdp-test
+  labels:
+    app: rdp-test
+    release: sentrius
+spec:
+  selector:
+    app: rdp-test
+  ports:
+    - protocol: TCP
+      port: 3389
+      targetPort: 3389
+      name: rdp
+  type: NodePort
+---
+# Source: sentrius-chart/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-sentrius
+  namespace: december
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+  labels:
+    app: sentrius
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080 # Port used inside the container
+  selector:
+    app: sentrius
+---
+# Source: sentrius-chart/templates/ssh-agent-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-ssh-agent
+  namespace: december
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080 # Port used inside the container
+      nodePort: 30088
+  selector:
+    app: ssh-agent
+---
+# Source: sentrius-chart/templates/ssh-proxy-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-ssh-proxy
+  labels:
+    app: sentrius-ssh-proxy
+    release: sentrius
+spec:
+  type: NodePort
+  ports:
+    - port: 2222
+      targetPort: 2222
+      protocol: TCP
+      name: ssh
+      nodePort: 30022
+  selector:
+    app: sentrius-ssh-proxy
+---
+# Source: sentrius-chart/templates/ssh-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentrius-ssh
+spec:
+  selector:
+    app: sentrius-ssh # Remove release label from selector
+  ports:
+    - protocol: TCP
+      port: 22
+      targetPort: 22
+  type: ClusterIP
+---
+# Source: sentrius-chart/templates/agent-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-sentriusagent
+  labels:
+    app.kubernetes.io/name: sentrius-agent
+    app.kubernetes.io/instance: sentrius
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sentriusagent
+  template:
+    metadata:
+      labels:
+        app: sentriusagent
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: [ 'sh', '-c', 'until nc -z sentrius-postgres 5432; do echo waiting for postgres; sleep 2; done;' ]
+      containers:
+        - name: sentrius-agent
+          image: "sentrius-agent:"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+          env:
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-password
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: keystore-password
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-oauth2-secrets
+                  key: java-agents-client-secret
+            # Database URL switches based on Cloud SQL mode
+            - name: SPRING_DATASOURCE_URL
+              value:
+                    "jdbc:postgresql://sentrius-postgres:5432/sentrius"
+      volumes:
+        - name: config-volume
+          configMap:
+            name: sentrius-config
+---
+# Source: sentrius-chart/templates/agentproxy-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-agentproxy
+  labels:
+    app.kubernetes.io/name: sentrius
+    app.kubernetes.io/instance: sentrius
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agentproxy
+  template:
+    metadata:
+      labels:
+        app: agentproxy
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: [ 'sh', '-c', 'until nc -z sentrius-sentrius 8080; do echo waiting for postgres; sleep 2;
+          done;' ]
+      containers:
+        - name: agentproxy
+          image: "sentrius-agent-proxy:tag"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+          env:
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-password
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: keystore-password
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-oauth2-secrets
+                  key: agentproxy-client-secret
+            - name: SPRING_DATASOURCE_URL
+              value:
+                "jdbc:postgresql://sentrius-postgres:5432/sentrius"
+
+      volumes:
+        - name: config-volume
+          configMap:
+            name: sentrius-config
+---
+# Source: sentrius-chart/templates/bad-ssh-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-bad-ssh
+  labels:
+    app: sentrius-bad-ssh
+    release: sentrius
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sentrius-bad-ssh
+  template:
+    metadata:
+      labels:
+        app: sentrius-bad-ssh
+    spec:
+      containers:
+        - name: sentrius-bad-ssh
+          image: "sentrius-ssh:"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 22
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+          env:
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-password
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: keystore-password
+            - name: SPRING_DATASOURCE_URL
+              value:
+                "jdbc:postgresql://sentrius-postgres:5432/sentrius"
+      volumes:
+        - name: config-volume
+          configMap:
+            name: sentrius-config
+---
+# Source: sentrius-chart/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-sentrius
+  labels:
+    app.kubernetes.io/name: sentrius
+    app.kubernetes.io/instance: sentrius
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sentrius
+  template:
+    metadata:
+      labels:
+        app: sentrius
+    spec:
+      # Only needed when using in-cluster Postgres (Minikube, local dev)
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: [ "sh", "-c", "until nc -z sentrius-postgres 5432; do echo waiting for postgres; sleep 2; done;" ]
+
+      containers:
+        - name: sentrius
+          image: "us-central1-docker.pkg.dev/sentrius-project/sentrius-repo:tag"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+
+          env:
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-oauth2-secrets
+                  key: sentrius-api-client-secret
+
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-username
+
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-password
+
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: keystore-password
+
+            # Database URL switches based on Cloud SQL mode
+            - name: SPRING_DATASOURCE_URL
+              value:
+                    "jdbc:postgresql://sentrius-postgres:5432/sentrius"
+
+      volumes:
+        - name: config-volume
+          configMap:
+            name: sentrius-config
+---
+# Source: sentrius-chart/templates/integrationproxy-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-integrationproxy
+  labels:
+    app.kubernetes.io/name: sentrius
+    app.kubernetes.io/instance: sentrius
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: integrationproxy
+  template:
+    metadata:
+      labels:
+        app: integrationproxy
+    spec:
+      serviceAccountName: sentrius-integrationproxy
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: [ 'sh', '-c', 'until nc -z sentrius-sentrius 8080; do echo waiting for postgres; sleep 2;
+          done;' ]
+      containers:
+        - name: integrationproxy
+          image: "sentrius-integration-proxy:tag"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+          env:
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-password
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: keystore-password
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-oauth2-secrets
+                  key: integrationproxy-client-secret
+            - name: SPRING_DATASOURCE_URL
+              value:
+                  "jdbc:postgresql://sentrius-postgres:5432/sentrius"
+
+      volumes:
+        - name: config-volume
+          configMap:
+            name: sentrius-config
+---
+# Source: sentrius-chart/templates/jeager-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-jaeger
+  namespace: december
+  labels:
+    app: jaeger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger
+
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      containers:
+        - name: jaeger
+          image: jaegertracing/all-in-one:1.52  # <- latest all-in-one image
+          ports:
+            - containerPort: 16686 # Jaeger Query UI
+            - containerPort: 4317  # OTLP gRPC
+            - containerPort: 4318  # OTLP HTTP
+          env:
+            - name: COLLECTOR_OTLP_ENABLED
+              value: "true"
+            - name: COLLECTOR_OTLP_HTTP_ENABLED
+              value: "true"
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 200m
+              memory: 256Mi
+---
+# Source: sentrius-chart/templates/kafka-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-kafka
+  namespace: december
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+        - name: kafka
+          image: "apache/kafka:4.1.0"
+          ports:
+            - containerPort: 9092
+          env:
+            - name: KAFKA_PROCESS_ROLES
+              value: "broker,controller"
+            - name: KAFKA_NODE_ID
+              value: "1"
+            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+              value: "1@localhost:9093"
+            - name: KAFKA_LISTENERS
+              value: "PLAINTEXT://:9092,CONTROLLER://:9093"
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
+            - name: KAFKA_CONTROLLER_LISTENER_NAMES
+              value: "CONTROLLER"
+            - name: KAFKA_INTER_BROKER_LISTENER_NAME
+              value: "PLAINTEXT"
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: "PLAINTEXT://sentrius-kafka.december.svc.cluster.local:9092"
+            - name: KAFKA_LOG_DIRS
+              value: "/tmp/kraft-combined-logs"
+            - name: KAFKA_CLUSTER_ID
+              value: "my-cluster-id"
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+
+          resources:
+            cpu: 500m
+            memory: 1Gi
+---
+# Source: sentrius-chart/templates/keycloak-db-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak-db
+  labels:
+    app: keycloak-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak-db
+  template:
+    metadata:
+      labels:
+        app: keycloak-db
+    spec:
+      containers:
+        - name: keycloak-db
+          image: postgres:15
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: keycloak
+            - name: POSTGRES_PASSWORD
+              value: 
+            - name: POSTGRES_DB
+              value: keycloak
+            - name: PGDATA
+              value: /mnt/keycloak-db/data
+          volumeMounts:
+            - name: keycloak-db-data
+              mountPath: /mnt/keycloak-db
+      volumes:
+        - name: keycloak-db-data
+          persistentVolumeClaim:
+            claimName: keycloak-db-pvc
+---
+# Source: sentrius-chart/templates/keycloak-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-keycloak
+  labels:
+    app: keycloak
+    release: sentrius
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+      release: sentrius
+  template:
+    metadata:
+      labels:
+        app: keycloak
+        release: sentrius
+    spec:
+      initContainers:
+        - name: wait-for-keycloak-db
+          image: busybox
+          command: ['sh', '-c', 'until nc -z keycloak-db 5432; do echo waiting for keycloak-db; sleep 2; done;']
+      containers:
+        - name: keycloak
+          image: "sentrius-keycloak:"
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: 8081
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8081
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            null
+          env:
+            - name: KC_HTTP_PORT
+              value: "8081"
+            - name: KEYCLOAK_ADMIN
+              value: admin
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-keycloak-secrets
+                  key: admin-password
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL_HOST
+              value: keycloak-db
+            - name: KC_DB_DATABASE
+              value: keycloak
+            - name: KC_DB_USERNAME
+              value: keycloak
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-keycloak-secrets
+                  key: db-password
+            - name: KC_HOSTNAME
+              value: keycloak.december.trustpolicy.ai
+            - name: KC_HOSTNAME_STRICT
+              value: "false"
+            - name: KEYCLOAK_LOGLEVEL
+              value: DEBUG
+            - name: ROOT_LOGLEVEL
+              value: DEBUG
+            - name: ROOT_URL
+              value: https://december.trustpolicy.ai
+            - name: REDIRECT_URIS
+              value: https://december.trustpolicy.ai
+            - name: PROXY_ADDRESS_FORWARDING
+              value: "true"
+            - name: KC_HOSTNAME_STRICT_HTTPS
+              value: "false"
+            - name: KEYCLOAK_FRONTEND_URL
+              value: https://keycloak.december.trustpolicy.ai
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: GOOGLE_CLIENT_ID
+              value: google-sentrius-api
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-keycloak-secrets
+                  key: client-secret
+            - name: SENTRIUS_APROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-oauth2-secrets
+                  key: agentproxy-client-secret
+            - name: SENTRIUS_API_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-oauth2-secrets
+                  key: sentrius-api-client-secret
+            - name: SENTRIUS_LAUNCHER_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-oauth2-secrets
+                  key: sentrius-launcher-service-client-secret
+            - name: SSH_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-oauth2-secrets
+                  key: ssh-proxy-client-secret
+            - name: JAVA_AGENTS_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-oauth2-secrets
+                  key: java-agents-client-secret
+            - name: MONITORING_AGENT_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-oauth2-secrets
+                  key: monitoring-agent-client-secret
+            - name: SENTRIUS_RDPPROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-oauth2-secrets
+                  key: rdpproxy-client-secret
+            - name: PROMPT_ADVISOR_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-oauth2-secrets
+                  key: prompt-advisor-client-secret
+            - name: SSH_AGENT_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-oauth2-secrets
+                  key: ssh-agent-client-secret
+---
+# Source: sentrius-chart/templates/monitoring-agent-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-monitoring-agent
+  labels:
+    app.kubernetes.io/name: sentrius-monitoring-agent
+    app.kubernetes.io/instance: sentrius
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monitoring-agent
+  template:
+    metadata:
+      labels:
+        app: monitoring-agent
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: [ 'sh', '-c', 'until nc -z sentrius-postgres 5432; do echo waiting for postgres; sleep 2; done;' ]
+      containers:
+        - name: sentrius-agent
+          image: "sentrius-monitoring-agent:"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+          env:
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-password
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: keystore-password
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-oauth2-secrets
+                  key: monitoring-agent-client-secret
+            - name: SPRING_DATASOURCE_URL
+              value:
+                "jdbc:postgresql://sentrius-postgres:5432/sentrius"
+      volumes:
+        - name: config-volume
+          configMap:
+            name: sentrius-config
+---
+# Source: sentrius-chart/templates/postgres-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-postgres
+  labels:
+    app: postgres
+    release: sentrius
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+      release: sentrius
+  template:
+    metadata:
+      labels:
+        app: postgres
+        release: sentrius
+    spec:
+      containers:
+        - name: postgres
+          image: "pgvector/pgvector:pg15"
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-password
+            - name: POSTGRES_DB
+              value: sentrius
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+---
+# Source: sentrius-chart/templates/prompt-advisor-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-prompt-advisor
+  labels:
+    app: prompt-advisor
+    release: sentrius
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prompt-advisor
+      release: sentrius
+  template:
+    metadata:
+      labels:
+        app: prompt-advisor
+        release: sentrius
+    spec:
+      containers:
+      # Main prompt-advisor service (uses native Keycloak library for auth)
+      - name: prompt-advisor
+        image: "sentrius-prompt-advisor:latest"
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        env:
+        - name: HOST
+          value: "0.0.0.0"
+        - name: PORT
+          value: "8000"
+        - name: ATPL_SCHEMA_URL
+          value: "https://raw.githubusercontent.com/SentriusLLC/atpl/main/atpl.schema.json"
+        - name: LLM_ENDPOINT
+          value: "http://sentrius-integrationproxy:8080/api/v1/chat/completions"
+        - name: LLM_MODEL
+          value: "gpt-4"
+        - name: LLM_ENABLED
+          value: "true"
+        # Keycloak configuration for native token management
+        - name: KEYCLOAK_URL
+          value: "https://keycloak.december.trustpolicy.ai"
+        - name: KEYCLOAK_REALM
+          value: "sentrius"
+        - name: KEYCLOAK_CLIENT_ID
+          value: "prompt-advisor"
+        - name: KEYCLOAK_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: sentrius-oauth2-secrets
+              key: prompt-advisor-client-secret
+        - name: KEYCLOAK_VERIFY_SSL
+          value: "true"
+        - name: WEIGHT_PURPOSE
+          value: "15"
+        - name: WEIGHT_SAFETY
+          value: "30"
+        - name: WEIGHT_COMPLIANCE
+          value: "25"
+        - name: WEIGHT_PROVENANCE
+          value: "15"
+        - name: WEIGHT_AUTONOMY
+          value: "15"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+# Source: sentrius-chart/templates/rdp-proxy-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+# deployment.yaml (pod template)
+metadata:
+  name: sentrius-rdp-proxy
+  labels:
+    app: sentrius-rdp-proxy
+    release: sentrius
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sentrius-rdp-proxy
+  template:
+    metadata:
+      labels:
+        app: sentrius-rdp-proxy
+    spec:
+      containers:
+        - name: sentrius-rdp-proxy
+          image: "sentrius-rdp-proxy:tag"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: GUACD_HOST
+              value: "localhost"
+            - name: GUACD_PORT
+              value: "4822"
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-oauth2-secrets
+                  key: rdpproxy-client-secret
+            - name: SENTRIUS_RDP_PROXY_ENABLED
+              value: "true"
+            - name: SENTRIUS_RDP_PROXY_PORT
+              value: "8080"
+            - name: SENTRIUS_RDP_PROXY_CONNECTION_CONNECTION_TIMEOUT
+              value: "30000"
+            - name: SENTRIUS_RDP_PROXY_CONNECTION_KEEP_ALIVE_INTERVAL
+              value: "60000"
+            - name: SENTRIUS_RDP_PROXY_CONNECTION_MAX_RETRIES
+              value: "3"
+            
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-password
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: keystore-password
+            # Database URL switches based on Cloud SQL mode
+            - name: SPRING_DATASOURCE_URL
+              value:
+                    "jdbc:postgresql://sentrius-postgres:5432/sentrius"
+          resources:
+            {}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+        
+        # Guacd sidecar container using official Apache Guacamole image
+        - name: guacd
+          image: "guacamole/guacd:1.5.5"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4822
+              name: guacd
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          livenessProbe:
+            tcpSocket:
+              port: 4822
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 4822
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: config-volume
+          configMap:
+            name: sentrius-config
+---
+# Source: sentrius-chart/templates/rdp-test-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-rdp-test
+  labels:
+    app: rdp-test
+    release: sentrius
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rdp-test
+  template:
+    metadata:
+      labels:
+        app: rdp-test
+    spec:
+      containers:
+        - name: rdp-test
+          image: "scottyhardy/docker-remote-desktop:latest"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3389
+              protocol: TCP
+          env:
+            - name: PASSWORD
+              value: "ubuntu"
+          readinessProbe:
+            tcpSocket:
+              port: 3389
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          livenessProbe:
+            tcpSocket:
+              port: 3389
+            initialDelaySeconds: 60
+            periodSeconds: 60
+          resources:
+            limits:
+              cpu: 1
+              memory: 1Gi
+            requests:
+              cpu: 500m
+              memory: 512Mi
+---
+# Source: sentrius-chart/templates/ssh-agent-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-ssh-agent
+  labels:
+    app.kubernetes.io/name: sentrius-ssh-agent
+    app.kubernetes.io/instance: sentrius
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ssh-agent
+  template:
+    metadata:
+      labels:
+        app: ssh-agent
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: [ 'sh', '-c', 'until nc -z sentrius-postgres 5432; do echo waiting for postgres; sleep 2; done;' ]
+      containers:
+        - name: sentrius-ssh-agent
+          image: "sentrius-ssh-agent:tag"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+          env:
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: keystore-password
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-password
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-oauth2-secrets
+                  key: ssh-agent-client-secret
+            - name: SPRING_DATASOURCE_URL
+              value:
+                "jdbc:postgresql://sentrius-postgres:5432/sentrius"
+      volumes:
+        - name: config-volume
+          configMap:
+            name: sentrius-config
+---
+# Source: sentrius-chart/templates/ssh-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-ssh
+  labels:
+    app: sentrius-ssh
+    release: sentrius
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sentrius-ssh
+  template:
+    metadata:
+      labels:
+        app: sentrius-ssh
+    spec:
+      containers:
+        - name: sentrius-ssh
+          image: "sentrius-ssh:"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 22
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+          env:
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-password
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: keystore-password
+            - name: SPRING_DATASOURCE_URL
+              value:
+                "jdbc:postgresql://sentrius-postgres:5432/sentrius"
+      volumes:
+        - name: config-volume
+          configMap:
+            name: sentrius-config
+---
+# Source: sentrius-chart/templates/ssh-proxy-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentrius-ssh-proxy
+  labels:
+    app: sentrius-ssh-proxy
+    release: sentrius
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sentrius-ssh-proxy
+  template:
+    metadata:
+      labels:
+        app: sentrius-ssh-proxy
+    spec:
+      containers:
+        - name: sentrius-ssh-proxy
+          image: "sentrius-ssh-proxy:tag"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 2222
+              name: ssh
+            - containerPort: 8080
+              name: http
+          env:
+            - name: SENTRIUS_SSH_PROXY_ENABLED
+              value: "true"
+            - name: SENTRIUS_SSH_PROXY_PORT
+              value: "2222"
+            - name: SENTRIUS_SSH_PROXY_CONNECTION_CONNECTION_TIMEOUT
+              value: "30000"
+            - name: SENTRIUS_SSH_PROXY_CONNECTION_KEEP_ALIVE_INTERVAL
+              value: "60000"
+            - name: SENTRIUS_SSH_PROXY_CONNECTION_MAX_RETRIES
+              value: "3"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: db-password
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-db-secret
+                  key: keystore-password
+            - name: KEYCLOAK_BASE_URL
+              value: https://keycloak.december.trustpolicy.ai
+            - name: SSH_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sentrius-oauth2-secrets
+                  key: ssh-proxy-client-secret
+            - name: AGENT_LAUNCHER_URL
+              value: "http://sentrius-launcher-service:8082"
+            # Database URL switches based on Cloud SQL mode
+            - name: SPRING_DATASOURCE_URL
+              value:
+                    "jdbc:postgresql://sentrius-postgres:5432/sentrius"
+          resources:
+            {}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: config-volume
+          configMap:
+            name: sentrius-config
+---
+# Source: sentrius-chart/templates/kafka-topic-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kafka-topic-init-1766933418
+  namespace: december
+  labels:
+    app: kafka-topic-init
+spec:
+  ttlSecondsAfterFinished: 60
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: kafka-init
+          image: apache/kafka:4.1.0
+          command:
+            - /bin/bash
+            - -c
+            - |
+              /opt/kafka/bin/kafka-topics.sh \
+                --bootstrap-server sentrius-kafka:9092 \
+                --create \
+                --if-not-exists \
+                --topic sentrius-provenance \
+                --partitions 1 \
+                --replication-factor 1
+              /opt/kafka/bin/kafka-topics.sh \
+                --bootstrap-server sentrius-kafka:9092 \
+                --create --if-not-exists \
+                --topic ssh-agent-queries \
+                --partitions 1 \
+                --replication-factor 1
+              /opt/kafka/bin/kafka-topics.sh \
+                --bootstrap-server sentrius-kafka:9092 \
+                --create --if-not-exists \
+                --topic ssh-agent-responses \
+                --partitions 1 \
+                --replication-factor 1
+---
+# Source: sentrius-chart/templates/ingress.yaml
+# Keycloak Ingress - Deploy this first in Azure
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keycloak-ingress-december
+  namespace: december
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    kubernetes.io/ingress.allow-http: "true"
+
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - "keycloak.december.trustpolicy.ai"
+      secretName: wildcard-cert-december
+
+  rules:
+    - host: "keycloak.december.trustpolicy.ai"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sentrius-keycloak
+                port:
+                  number: 8081
+---
+# Source: sentrius-chart/templates/ingress.yaml
+# Apps Ingress - Deploy this second in Azure, after Keycloak is healthy
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: apps-ingress-december
+  namespace: december
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    kubernetes.io/ingress.allow-http: "true"
+
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - "december.trustpolicy.ai"
+        - "agentproxy.december.trustpolicy.ai"
+        - "rdpproxy.december.trustpolicy.ai"
+      secretName: wildcard-cert-december
+
+  rules:
+    - host: "december.trustpolicy.ai"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sentrius-sentrius
+                port:
+                  number: 8080
+
+    - host: "agentproxy.december.trustpolicy.ai"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sentrius-agentproxy
+                port:
+                  number: 8080
+
+    - host: "rdpproxy.december.trustpolicy.ai"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sentrius-rdp-proxy
+                port:
+                  number: 8080
+---
+# Source: sentrius-chart/templates/managed-cert.yaml
+# Cert-Manager Certificate for AWS or Azure
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-cert-december
+  namespace: december
+spec:
+  secretName: wildcard-cert-december
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - "december.trustpolicy.ai"
+    - "keycloak.december.trustpolicy.ai"
+    - "agentproxy.december.trustpolicy.ai"
+    - "rdpproxy.december.trustpolicy.ai"

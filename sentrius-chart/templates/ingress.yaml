@@ -90,6 +90,102 @@ spec:
                 name: {{ .Release.Name }}-rdp-proxy
                 port:
                   number: 8080
+{{- else if eq $env "azure" }}
+---
+# Keycloak Ingress - Deploy this first in Azure
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keycloak-ingress-{{ .Values.tenant }}
+  namespace: {{ .Values.tenant }}
+  annotations:
+    {{- range $key, $value := .Values.ingress.annotationSets.azure }}
+    {{ $key }}: {{ quote $value }}
+    {{- end }}
+    kubernetes.io/ingress.allow-http: "true"
+
+spec:
+  ingressClassName: {{ .Values.ingress.class }}
+
+  {{- /* TLS for Azure if enabled */}}
+  {{- if .Values.ingress.tlsEnabled }}
+  tls:
+    - hosts:
+        - "{{ .Values.keycloakSubdomain }}"
+      secretName: wildcard-cert-{{ .Values.tenant }}
+  {{- end }}
+
+  rules:
+    - host: "{{ .Values.keycloakSubdomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-keycloak
+                port:
+                  number: 8081
+
+---
+# Apps Ingress - Deploy this second in Azure, after Keycloak is healthy
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: apps-ingress-{{ .Values.tenant }}
+  namespace: {{ .Values.tenant }}
+  annotations:
+    {{- range $key, $value := .Values.ingress.annotationSets.azure }}
+    {{ $key }}: {{ quote $value }}
+    {{- end }}
+    kubernetes.io/ingress.allow-http: "true"
+
+spec:
+  ingressClassName: {{ .Values.ingress.class }}
+
+  {{- /* TLS for Azure if enabled */}}
+  {{- if .Values.ingress.tlsEnabled }}
+  tls:
+    - hosts:
+        - "{{ .Values.subdomain }}"
+        - "{{ .Values.agentproxySubdomain }}"
+        - "{{ .Values.rdpproxySubdomain }}"
+      secretName: wildcard-cert-{{ .Values.tenant }}
+  {{- end }}
+
+  rules:
+    - host: "{{ .Values.subdomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-sentrius
+                port:
+                  number: 8080
+
+    - host: "{{ .Values.agentproxySubdomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-agentproxy
+                port:
+                  number: 8080
+
+    - host: "{{ .Values.rdpproxySubdomain }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-rdp-proxy
+                port:
+                  number: 8080
 
 {{- else }}
 {{- /*

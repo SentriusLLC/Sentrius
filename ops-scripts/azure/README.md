@@ -475,7 +475,7 @@ For AKS, use Application Gateway Ingress Controller:
 
 ```yaml
 ingress:
-  class: "azure/application-gateway"
+  class: "azure-application-gateway"
 ```
 
 ### Load Balancer Annotations

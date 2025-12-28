@@ -22,7 +22,7 @@ kubectl scale deployment --all --replicas=1 -n ${TENANT}
 echo "Upgrading Sentrius deployment with latest configuration..."
 helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set tenant=${TENANT} \
-    --set environment=aks \
+    --set environment=azure \
     --set sentrius.image.repository=${AZURE_REGISTRY}/sentrius \
     --set sentrius.image.tag=${SENTRIUS_VERSION} \
     --set ssh.image.repository=${AZURE_REGISTRY}/sentrius-ssh \

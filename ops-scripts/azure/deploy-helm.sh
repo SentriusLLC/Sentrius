@@ -21,12 +21,17 @@ RDPPROXY_VERSION="${RDPPROXY_VERSION:-latest}"
 GITHUB_MCP_VERSION="${GITHUB_MCP_VERSION:-latest}"
 MONITORING_AGENT_VERSION="${MONITORING_AGENT_VERSION:-latest}"
 SSH_AGENT_VERSION="${SSH_AGENT_VERSION:-latest}"
+AZURE_REGISTRY="${AZURE_REGISTRY:-sentriusacr.azurecr.io}"
+
+# Azure DNS Configuration
+RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-sentrius-rg}" #change this for your deployment
+DNS_ZONE="trustpolicy.ai"  # Your DNS zone name
 
 TENANT=""
-ENV_TARGET="aks"
+ENV_TARGET="azure"
 CERTIFICATES_ENABLED="true"
 INGRESS_TLS_ENABLED="true"
-ENVIRONMENT="aks"
+ENVIRONMENT="azure"
 DEPLOY_ADMINER=${DEPLOY_ADMINER:-false}
 ENABLE_RDP_CONTAINER=${ENABLE_RDP_CONTAINER:-true}
 
@@ -52,6 +57,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --domain)
             DOMAIN_NAME="$2"
+            shift 2
+            ;;
+        --resource_group)
+            RESOURCE_GROUP="$2"
             shift 2
             ;;
         --no-tls)
@@ -131,6 +140,27 @@ if [[ "$CERTIFICATES_ENABLED" == "true" ]]; then
                 echo "⚠️ cert-manager webhook may not be fully ready"
         fi
         echo "✅ cert-manager webhook check complete"
+        kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.3/cert-manager.yaml
+
+        kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=300s
+
+cat <<EOF | kubectl apply -f -
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: marc@sentrius.io  # CHANGE THIS
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+EOF
+
         sleep 2
     fi
 fi
@@ -174,7 +204,7 @@ helm template sentrius ./sentrius-chart \
     --set adminer.enabled=${DEPLOY_ADMINER} \
     --set tenant=${TENANT} \
     --set environment=${ENVIRONMENT} \
-    --set ingress.class="azure/application-gateway" \
+    --set ingress.class="nginx" \
     --set subdomain="${SUBDOMAIN}" \
     --set metrics.enabled=true \
     --set healthCheck.backendConfig.enabled=false \
@@ -215,8 +245,8 @@ echo "📦 Deploying Sentrius main chart to namespace ${TENANT}..."
 helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set adminer.enabled=${DEPLOY_ADMINER} \
     --set tenant=${TENANT} \
-    --set environment=${ENVIRONMENT} \
-    --set ingress.class="azure/application-gateway" \
+    --set environment="${ENVIRONMENT}" \
+    --set ingress.class="nginx" \
     --set subdomain="${SUBDOMAIN}" \
     --set metrics.enabled=true \
     --set healthCheck.backendConfig.enabled=false \
@@ -436,7 +466,7 @@ helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${T
     --set tenant=${TENANT}-agents \
     --set baseRelease=sentrius \
     --set sentriusNamespace=${TENANT} \
-    --set ingress.class="azure/application-gateway" \
+    --set ingress.class="nginx" \
     --set healthCheck.backendConfig.enabled=false \
     --set keycloakFQDN=sentrius-keycloak.${TENANT}.svc.cluster.local \
     --set sentriusFQDN=sentrius-sentrius.${TENANT}.svc.cluster.local \

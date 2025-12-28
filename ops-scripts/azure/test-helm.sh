@@ -24,7 +24,7 @@ helm template sentrius ./sentrius-chart \
     --namespace ${TENANT} \
     --set tenant=${TENANT} \
     --set environment=aks \
-    --set ingress.class="azure/application-gateway" \
+    --set ingress.class="azure-application-gateway" \
     --set subdomain="${TENANT}.${DOMAIN_NAME}" \
     --set agentproxySubdomain="agentproxy.${TENANT}.${DOMAIN_NAME}" \
     --set keycloakSubdomain="keycloak.${TENANT}.${DOMAIN_NAME}" \
@@ -74,7 +74,7 @@ helm template sentrius-agents ./sentrius-chart-launcher \
     --set tenant=${TENANT}-agents \
     --set baseRelease=sentrius \
     --set sentriusNamespace=${TENANT} \
-    --set ingress.class="azure/application-gateway" \
+    --set ingress.class="azure-application-gateway" \
     --set keycloakFQDN=sentrius-keycloak.${TENANT}.svc.cluster.local \
     --set sentriusFQDN=sentrius-sentrius.${TENANT}.svc.cluster.local \
     --set integrationproxyFQDN=sentrius-integrationproxy.${TENANT}.svc.cluster.local \
