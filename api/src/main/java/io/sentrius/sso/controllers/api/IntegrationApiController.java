@@ -23,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -58,7 +59,7 @@ public class IntegrationApiController extends BaseController {
     @Endpoint(description = "Adding a github integration so github can be used as an external data provider")
     public ResponseEntity<ExternalIntegrationDTO> addGitHubIntegration(HttpServletRequest request, 
                                                                        HttpServletResponse response,
-                                                                       ExternalIntegrationDTO integrationDTO)
+                                                                       @RequestBody ExternalIntegrationDTO integrationDTO)
         throws JsonProcessingException, GeneralSecurityException {
 
         var json = JsonUtil.MAPPER.writeValueAsString(integrationDTO);
@@ -77,7 +78,7 @@ public class IntegrationApiController extends BaseController {
     @PostMapping("/jira/add")
     @Endpoint(description = "Adding a jira integration so jira can be used as an external data provider")
     public ResponseEntity<ExternalIntegrationDTO> addJiraIntegration(HttpServletRequest request, HttpServletResponse response,
-                                                   ExternalIntegrationDTO integrationDTO)
+                                                   @RequestBody ExternalIntegrationDTO integrationDTO)
         throws JsonProcessingException, GeneralSecurityException {
 
 
@@ -98,7 +99,7 @@ public class IntegrationApiController extends BaseController {
     @Endpoint(description = "Adding an OpenAI integration so OpenAI can be used as an external data provider")
     public ResponseEntity<ExternalIntegrationDTO> addOpenaiIntegration(HttpServletRequest request,
                                                                   HttpServletResponse response,
-                                                                  ExternalIntegrationDTO integrationDTO)
+                                                                  @RequestBody ExternalIntegrationDTO integrationDTO)
         throws JsonProcessingException, GeneralSecurityException {
 
         var json = JsonUtil.MAPPER.writeValueAsString(integrationDTO);
@@ -154,7 +155,7 @@ public class IntegrationApiController extends BaseController {
     @Endpoint(description = "Adding a Slack integration for team communication workflows")
     public ResponseEntity<ExternalIntegrationDTO> addSlackIntegration(HttpServletRequest request,
                                                                       HttpServletResponse response,
-                                                                      ExternalIntegrationDTO integrationDTO)
+                                                                      @RequestBody ExternalIntegrationDTO integrationDTO)
         throws JsonProcessingException, GeneralSecurityException {
 
         var json = JsonUtil.MAPPER.writeValueAsString(integrationDTO);
@@ -173,7 +174,7 @@ public class IntegrationApiController extends BaseController {
     @Endpoint(description = "Adding a database integration for data integration and analytics")
     public ResponseEntity<ExternalIntegrationDTO> addDatabaseIntegration(HttpServletRequest request,
                                                                          HttpServletResponse response,
-                                                                         ExternalIntegrationDTO integrationDTO)
+                                                                         @RequestBody ExternalIntegrationDTO integrationDTO)
         throws JsonProcessingException, GeneralSecurityException {
 
         var json = JsonUtil.MAPPER.writeValueAsString(integrationDTO);
@@ -192,7 +193,7 @@ public class IntegrationApiController extends BaseController {
     @Endpoint(description = "Adding a Microsoft Teams integration for collaboration workflows")
     public ResponseEntity<ExternalIntegrationDTO> addTeamsIntegration(HttpServletRequest request,
                                                                       HttpServletResponse response,
-                                                                      ExternalIntegrationDTO integrationDTO)
+                                                                      @RequestBody ExternalIntegrationDTO integrationDTO)
         throws JsonProcessingException, GeneralSecurityException {
 
         var json = JsonUtil.MAPPER.writeValueAsString(integrationDTO);
@@ -211,7 +212,7 @@ public class IntegrationApiController extends BaseController {
     @Endpoint(description = "Adding a Filesystem MCP server for file operations via MCP")
     public ResponseEntity<ExternalIntegrationDTO> addFilesystemMCPIntegration(HttpServletRequest request,
                                                                               HttpServletResponse response,
-                                                                              ExternalIntegrationDTO integrationDTO)
+                                                                              @RequestBody ExternalIntegrationDTO integrationDTO)
         throws JsonProcessingException, GeneralSecurityException {
 
         var json = JsonUtil.MAPPER.writeValueAsString(integrationDTO);
@@ -230,7 +231,7 @@ public class IntegrationApiController extends BaseController {
     @Endpoint(description = "Adding a PostgreSQL MCP server for database operations via MCP")
     public ResponseEntity<ExternalIntegrationDTO> addPostgresqlMCPIntegration(HttpServletRequest request,
                                                                               HttpServletResponse response,
-                                                                              ExternalIntegrationDTO integrationDTO)
+                                                                              @RequestBody ExternalIntegrationDTO integrationDTO)
         throws JsonProcessingException, GeneralSecurityException {
 
         var json = JsonUtil.MAPPER.writeValueAsString(integrationDTO);
@@ -249,7 +250,7 @@ public class IntegrationApiController extends BaseController {
     @Endpoint(description = "Adding a Slack MCP server for messaging operations via MCP")
     public ResponseEntity<ExternalIntegrationDTO> addSlackMCPIntegration(HttpServletRequest request,
                                                                          HttpServletResponse response,
-                                                                         ExternalIntegrationDTO integrationDTO)
+                                                                         @RequestBody ExternalIntegrationDTO integrationDTO)
         throws JsonProcessingException, GeneralSecurityException {
 
         var json = JsonUtil.MAPPER.writeValueAsString(integrationDTO);
@@ -268,7 +269,7 @@ public class IntegrationApiController extends BaseController {
     @Endpoint(description = "Adding a Playwright MCP server for browser automation via MCP")
     public ResponseEntity<ExternalIntegrationDTO> addPlaywrightMCPIntegration(HttpServletRequest request,
                                                                               HttpServletResponse response,
-                                                                              ExternalIntegrationDTO integrationDTO)
+                                                                              @RequestBody ExternalIntegrationDTO integrationDTO)
         throws JsonProcessingException, GeneralSecurityException {
 
         var json = JsonUtil.MAPPER.writeValueAsString(integrationDTO);
@@ -287,7 +288,7 @@ public class IntegrationApiController extends BaseController {
     @Endpoint(description = "Adding a Fetch MCP server for web content fetching via MCP")
     public ResponseEntity<ExternalIntegrationDTO> addFetchMCPIntegration(HttpServletRequest request,
                                                                          HttpServletResponse response,
-                                                                         ExternalIntegrationDTO integrationDTO)
+                                                                         @RequestBody ExternalIntegrationDTO integrationDTO)
         throws JsonProcessingException, GeneralSecurityException {
 
         var json = JsonUtil.MAPPER.writeValueAsString(integrationDTO);
