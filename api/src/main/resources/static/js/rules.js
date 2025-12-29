@@ -57,6 +57,60 @@ function assignRule(ruleId) {
         modal.show();
     }
 
+/**
+ * Gets the configuration URL for a rule based on its rule class.
+ * 
+ * @param {string} ruleClass - The rule class name
+ * @param {string} ruleName - The rule name
+ * @returns {string|null} The configuration URL with rule name parameter, or null if unsupported
+ */
+function getRuleConfigurationUrl(ruleClass, ruleName) {
+    // Map rule classes to their configuration pages
+    const ruleClassToUrl = {
+        'CommandEvaluator': '/sso/v1/zerotrust/rules/config/forbidden_commands_rule',
+        'AllowedCommandsRule': '/sso/v1/zerotrust/rules/config/allowed_commands_rule',
+        'PluggableRuleEvaluator': '/sso/v1/zerotrust/rules/config/pluggable_rule'
+    };
+    
+    // Find the matching configuration URL using Array.find() for idiomatic JavaScript
+    const matchingKey = Object.keys(ruleClassToUrl).find(key => ruleClass.includes(key));
+    
+    if (matchingKey) {
+        return ruleClassToUrl[matchingKey] + "?ruleName=" + encodeURIComponent(ruleName);
+    }
+    
+    return null;
+}
+
+/**
+ * Edits an existing rule by redirecting to the appropriate configuration page.
+ * Fetches the rule details from the API and determines the correct configuration
+ * page based on the rule class.
+ * 
+ * @param {number} ruleId - The ID of the rule to edit
+ */
+function editRule(ruleId) {
+    console.log("Editing rule:", ruleId);
+    
+    // Fetch rule details to determine the rule class
+    fetchRule(ruleId).then((rule) => {
+        console.log("Fetched rule for editing:", rule);
+        
+        const url = getRuleConfigurationUrl(rule.ruleClass, rule.ruleName);
+        
+        if (url) {
+            // Redirect to the configuration page
+            window.location.href = url;
+        } else {
+            // Handle unsupported rule types
+            alert("This rule type does not support editing through the UI.");
+        }
+    }).catch((error) => {
+        console.error("Error fetching rule:", error);
+        alert("Failed to load rule details for editing.");
+    });
+}
+
 function deleteRule(ruleId) {
         const csrfToken = document.getElementById("assignCsrf").value;
         var url = '/api/v1/zerotrust/rules/delete/' + ruleId
@@ -110,7 +164,7 @@ $(document).ready(function () {
 
                     if (row.canEdit) {
                         buttons +=
-                            `<button class="btn btn-secondary spacer spacer-middle" data-bs-toggle="modal" data-bs-target="#edit_dialog_${data}" onclick="editRule(${data})">Edit</button><button id="role_btn_${data}" onclick="assignRule(${data})" class="btn btn-secondary assign_btn spacer spacer-right">Assign Host Enclaves</button>
+                            `<button class="btn btn-secondary spacer spacer-middle" onclick="editRule(${data})">Edit</button><button id="role_btn_${data}" onclick="assignRule(${data})" class="btn btn-secondary assign_btn spacer spacer-right">Assign Host Enclaves</button>
          `;
                     }
 
@@ -184,17 +238,12 @@ $(document).ready(function () {
         // Get the value from the ruleName input field
         const ruleName = document.getElementById('ruleName').value;
 
-
-        // Construct the URL based on the selected rule class and rule name
-        let url = "";
-        if (ruleClass.includes("CommandEvaluator")) {
-            url = "/sso/v1/zerotrust/rules/config/forbidden_commands_rule?ruleName=" + encodeURIComponent(ruleName);
-        } else if (ruleClass.includes("AllowedCommandsRule")) {
-            url = "/sso/v1/zerotrust/rules/config/allowed_commands_rule?ruleName=" + encodeURIComponent(ruleName);
-        } else if (ruleClass.includes("PluggableRuleEvaluator")) {
-            // Redirect to pluggable rule configuration form
-            url = "/sso/v1/zerotrust/rules/config/pluggable_rule?ruleName=" + encodeURIComponent(ruleName);
-            window.location.href = url;
+        // Try to get standard configuration URL
+        const configUrl = getRuleConfigurationUrl(ruleClass, ruleName);
+        
+        if (configUrl) {
+            // Redirect to the configuration page for standard rule types
+            window.location.href = configUrl;
             return;
         } else if (ruleClass.includes("DeletePrevention")) {
 
@@ -244,15 +293,9 @@ $(document).ready(function () {
             })();
             return;
         }
-
-        // Redirect to the constructed URL if ruleName and ruleClass are valid
-        if (ruleClass && ruleName) {
-            window.location.href = url;
-        } else {
-            alert("Please select a Rule Class and enter a Rule Name.");
-        }
     });
 });
 
 window.assignRule = assignRule;
 window.deleteRule = deleteRule;
+window.editRule = editRule;
