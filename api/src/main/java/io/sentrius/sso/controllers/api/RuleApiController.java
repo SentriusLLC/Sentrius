@@ -137,7 +137,30 @@ public class RuleApiController extends BaseController {
         if (null == ruleName || null == ruleClass) {
             return ResponseEntity.badRequest().body("Invalid rule name or class");
         }
-        var rule = ProfileRule.builder().ruleClass(ruleClass).ruleName(ruleName).build();
+
+        // Check if we're editing an existing rule
+        ProfileRule rule;
+        String ruleIdStr = payload.get("ruleId");
+        if (ruleIdStr != null && !ruleIdStr.isEmpty()) {
+            // Editing existing rule
+            try {
+                Long ruleId = Long.parseLong(ruleIdStr);
+                rule = ruleService.getRuleById(ruleId);
+                if (rule == null) {
+                    return ResponseEntity.badRequest().body("Rule not found");
+                }
+                // Update the rule properties
+                rule.setRuleClass(ruleClass);
+                rule.setRuleName(ruleName);
+            } catch (NumberFormatException e) {
+                log.error("Invalid rule ID format: {}", ruleIdStr, e);
+                return ResponseEntity.badRequest().body("Invalid rule ID format");
+            }
+        } else {
+            // Creating new rule
+            rule = ProfileRule.builder().ruleClass(ruleClass).ruleName(ruleName).build();
+        }
+
         StringBuilder ruleConfig = new StringBuilder();
         var globalDescription = payload.get("description_global");
         var globalAction = payload.get("action_global");

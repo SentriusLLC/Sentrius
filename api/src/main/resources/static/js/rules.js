@@ -62,9 +62,10 @@ function assignRule(ruleId) {
  * 
  * @param {string} ruleClass - The rule class name
  * @param {string} ruleName - The rule name
+ * @param {number} ruleId - The rule ID (optional, used for editing)
  * @returns {string|null} The configuration URL with rule name parameter, or null if unsupported
  */
-function getRuleConfigurationUrl(ruleClass, ruleName) {
+function getRuleConfigurationUrl(ruleClass, ruleName, ruleId) {
     // Map rule classes to their configuration pages
     const ruleClassToUrl = {
         'CommandEvaluator': '/sso/v1/zerotrust/rules/config/forbidden_commands_rule',
@@ -76,7 +77,11 @@ function getRuleConfigurationUrl(ruleClass, ruleName) {
     const matchingKey = Object.keys(ruleClassToUrl).find(key => ruleClass.includes(key));
     
     if (matchingKey) {
-        return ruleClassToUrl[matchingKey] + "?ruleName=" + encodeURIComponent(ruleName);
+        let url = ruleClassToUrl[matchingKey] + "?ruleName=" + encodeURIComponent(ruleName);
+        if (ruleId) {
+            url += "&ruleId=" + encodeURIComponent(ruleId);
+        }
+        return url;
     }
     
     return null;
@@ -95,8 +100,8 @@ function editRule(ruleId) {
     // Fetch rule details to determine the rule class
     fetchRule(ruleId).then((rule) => {
         console.log("Fetched rule for editing:", rule);
-        
-        const url = getRuleConfigurationUrl(rule.ruleClass, rule.ruleName);
+
+        const url = getRuleConfigurationUrl(rule.ruleClass, rule.ruleName, rule.id);
         
         if (url) {
             // Redirect to the configuration page

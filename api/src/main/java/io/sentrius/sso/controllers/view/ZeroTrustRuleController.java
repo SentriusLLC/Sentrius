@@ -9,6 +9,7 @@ import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.ProfileRuleDTO;
 import io.sentrius.sso.core.dto.TopBarLinks;
+import io.sentrius.sso.core.model.hostgroup.ProfileRule;
 import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.RuleService;
@@ -101,9 +102,25 @@ public class ZeroTrustRuleController extends BaseController {
     }
 
     @GetMapping("/config/pluggable_rule")
-    public String configurePluggableRule(@RequestParam("ruleName") String ruleName, Model model) {
+    public String configurePluggableRule(@RequestParam("ruleName") String ruleName,
+                                         @RequestParam(value = "ruleId", required = false) Long ruleId,
+                                         Model model) {
         model.addAttribute("ruleName", ruleName);
         model.addAttribute("ruleClass", PluggableRuleEvaluator.class.getCanonicalName());
+        // If ruleId is provided, fetch the rule and pass its configuration to the template
+        if (ruleId != null) {
+            try {
+                ProfileRule rule = ruleService.getRuleById(ruleId);
+                if (rule != null) {
+                    model.addAttribute("ruleId", ruleId);
+                    model.addAttribute("ruleConfig", rule.getRuleConfig());
+                } else {
+                    log.warn("Rule not found with ID: {}", ruleId);
+                }
+            } catch (Exception e) {
+                log.error("Error fetching rule with ID: {}", ruleId, e);
+            }
+        }
         return "sso/rules/pluggable_rule";
     }
 

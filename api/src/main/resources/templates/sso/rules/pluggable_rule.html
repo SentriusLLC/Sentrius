@@ -232,6 +232,26 @@
             }
             const csrf = csrfElement.value;
 
+            // Parse and populate existing rule configuration if editing
+            const ruleConfig = /*[[${ruleConfig}]]*/ null;
+            if (ruleConfig) {
+                // Parse the ruleConfig format: expression:action:description[:sanitized]
+                // Split with a limit to handle colons within field values
+                const parts = ruleConfig.split(':', 4);
+                if (parts.length >= 3) {
+                    const expression = parts[0];
+                    const action = parts[1];
+                    const description = parts[2];
+                    const sanitized = parts.length >= 4 ? parts[3] : 'true';
+
+                    // Populate form fields
+                    document.getElementById('expression').value = expression;
+                    document.getElementById('action').value = action;
+                    document.getElementById('description').value = description;
+                    document.getElementById('sanitized').value = sanitized;
+                }
+            }
+
             // Use the button click event listener
             const submitBtn = document.querySelector('.submit_btn');
             if (submitBtn) {
