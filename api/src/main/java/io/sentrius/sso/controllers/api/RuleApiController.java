@@ -23,6 +23,7 @@ import io.sentrius.sso.core.services.HostGroupService;
 import io.sentrius.sso.core.services.RuleService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.agents.LLMService;
+import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
 import io.sentrius.sso.core.utils.AccessUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -48,17 +49,19 @@ public class RuleApiController extends BaseController {
     final HostGroupService hostGroupService;
     final RuleService ruleService;
     final LLMService llmService;
+    private final IntegrationSecurityTokenService integrationSecurityTokenService;
     final ObjectMapper objectMapper;
 
     protected RuleApiController(
         UserService userService, SystemOptions systemOptions,
         ErrorOutputService errorOutputService,
-        HostGroupService hostGroupService, RuleService ruleService, 
-        LLMService llmService, ObjectMapper objectMapper) {
+        HostGroupService hostGroupService, RuleService ruleService,
+        LLMService llmService, IntegrationSecurityTokenService integrationSecurityTokenService, ObjectMapper objectMapper) {
         super(userService, systemOptions, errorOutputService);
         this.hostGroupService = hostGroupService;
         this.ruleService = ruleService;
         this.llmService = llmService;
+        this.integrationSecurityTokenService = integrationSecurityTokenService;
         this.objectMapper = objectMapper;
     }
 
@@ -294,9 +297,16 @@ public class RuleApiController extends BaseController {
                 // Note: Using empty builder as LLM service will use system authentication
                 // If LLM requires user-specific tokens, this would need to be enhanced
                 TokenDTO token = TokenDTO.builder().build();
-                
+
+                var authToken = integrationSecurityTokenService
+                    .selectToken(systemOptions.getDefaultLlmProvider())
+                    .orElse(null);
+
+                if (authToken == null) throw new RuntimeException("Authentication required");
+
                 try {
-                    String llmResponse = llmService.askQuestion(token, llmRequest);
+                    String llmResponse = llmService.askQuestion(token, systemOptions.getIntegrationProxyUrl(),
+                        llmRequest);
                     log.info("LLM response: {}", llmResponse);
                     
                     // Parse the response

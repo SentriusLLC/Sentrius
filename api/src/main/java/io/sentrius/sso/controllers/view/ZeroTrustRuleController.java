@@ -3,6 +3,7 @@ package io.sentrius.sso.controllers.view;
 import java.util.ArrayList;
 import java.util.List;
 import io.sentrius.sso.automation.auditing.rules.CommandEvaluator;
+import io.sentrius.sso.automation.auditing.rules.PluggableRuleEvaluator;
 import io.sentrius.sso.automation.auditing.rules.RuleConfiguration;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
@@ -97,6 +98,13 @@ public class ZeroTrustRuleController extends BaseController {
     @GetMapping("/custom-chat")
     public String customRuleChat() {
         return "sso/rules/custom_rule_chat";
+    }
+
+    @GetMapping("/config/pluggable_rule")
+    public String configurePluggableRule(@RequestParam("ruleName") String ruleName, Model model) {
+        model.addAttribute("ruleName", ruleName);
+        model.addAttribute("ruleClass", PluggableRuleEvaluator.class.getCanonicalName());
+        return "sso/rules/pluggable_rule";
     }
 
 

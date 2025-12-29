@@ -31,6 +31,10 @@ public class LLMService implements EmbeddingServiceIfc {
     public <T> String askQuestion(TokenDTO dto, T body) throws ZtatException {
         return zeroTrustClientService.callPostOnApi(dto, openAiEndpoint, "/chat/completions", body);
     }
+
+    public <T> String askQuestion(TokenDTO dto, String serverUrl, T body) throws ZtatException {
+        return zeroTrustClientService.callPostOnApi(dto, serverUrl, "/chat/completions", body);
+    }
     
     /**
      * Analyze an image using the Vision API

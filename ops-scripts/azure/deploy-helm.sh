@@ -26,7 +26,6 @@ AZURE_REGISTRY="${AZURE_REGISTRY:-sentriusacr.azurecr.io}"
 # Azure DNS Configuration
 RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-sentrius-rg}" #change this for your deployment
 DNS_ZONE="trustpolicy.ai"  # Your DNS zone name
-LAUNCHER_CONFIG_STORAGE_CLASS="azurefile-csi"
 
 TENANT=""
 ENV_TARGET="azure"

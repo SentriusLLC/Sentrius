@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Configure Pluggable Rule</title>
+</head>
+
+<body>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+<div class="container">
+    <h2>Pluggable Rule Configuration</h2>
+    <h6>Configure "[[${ruleName}]]". Define a custom rule using Spring Expression Language (SpEL).</h6>
+    <h6>This rule will evaluate commands in SSH/RDP sessions based on your expression.</h6>
+
+    <!-- Validation alert container -->
+    <div id="validation-alert" class="alert alert-danger alert-dismissible fade" role="alert" style="display: none;">
+        <span id="validation-message"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <div class="alert alert-info" role="alert">
+        <strong>Available Variables:</strong>
+        <ul class="mb-0">
+            <li><code>#text</code> - The command/input text being evaluated</li>
+            <li><code>#length</code> - Length of the text</li>
+            <li><code>#isEmpty</code> - Boolean indicating if text is empty</li>
+            <li><code>#isBlank</code> - Boolean indicating if text is blank</li>
+        </ul>
+        <strong>Available Methods on #text:</strong>
+        <ul class="mb-0">
+            <li><code>#text.contains('string')</code> - Check if text contains substring</li>
+            <li><code>#text.startsWith('string')</code> - Check if text starts with string</li>
+            <li><code>#text.endsWith('string')</code> - Check if text ends with string</li>
+            <li><code>#text.toLowerCase()</code>, <code>#text.toUpperCase()</code> - Convert case</li>
+            <li><code>#text.matches('regex')</code> - Match against regular expression</li>
+        </ul>
+        <strong>Operators:</strong> <code>and</code>, <code>or</code>, <code>!</code>, <code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code>, <code>==</code>, <code>!=</code>
+    </div>
+
+    <div class="row">
+        <form id="rule_form" action="javascript:void(0);" class="save_sys_form_add" autocomplete="off">
+
+        <input type="hidden" id="_csrf" name="_csrf" th:value="${_csrf.token}"/>
+            <input type="hidden" name="ruleClass" th:value="${ruleClass}">
+            <input type="hidden" name="ruleName" th:value="${ruleName}">
+            
+            <div class="mb-3">
+                <h5>Rule Configuration</h5>
+                <table class="table table-borderless">
+                    <tr>
+                        <td style="width: 200px;">
+                            <label for="expression" class="form-label">Expression <span class="text-danger">*</span></label>
+                        </td>
+                        <td>
+                            <input type="text" 
+                                   id="expression" 
+                                   name="expression" 
+                                   class="form-control" 
+                                   placeholder="e.g., #text.contains('sudo')" 
+                                   required 
+                                   size="50">
+                            <small class="form-text text-muted">
+                                Enter a SpEL expression that evaluates to true when the rule should trigger.
+                            </small>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label for="action" class="form-label">Action <span class="text-danger">*</span></label>
+                        </td>
+                        <td>
+                            <select id="action" name="action" class="form-select" required>
+                                <option value="">- Select Action -</option>
+                                <option value="DENY">DENY - Block the command</option>
+                                <option value="JIT">JIT - Require just-in-time approval</option>
+                                <option value="WARN">WARN - Log a warning but allow execution</option>
+                                <option value="ALERT">ALERT - Generate an alert but allow execution</option>
+                                <option value="LOG">LOG - Log the event for audit</option>
+                                <option value="PROMPT">PROMPT - Prompt user for confirmation</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                Select what action should be taken when the rule triggers.
+                            </small>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                        </td>
+                        <td>
+                            <input type="text" 
+                                   id="description" 
+                                   name="description" 
+                                   class="form-control" 
+                                   placeholder="e.g., Sudo commands are not allowed" 
+                                   required 
+                                   size="50">
+                            <small class="form-text text-muted">
+                                This message will be shown to users when the rule triggers.
+                            </small>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label for="sanitized" class="form-label">Sanitized Mode</label>
+                        </td>
+                        <td>
+                            <select id="sanitized" name="sanitized" class="form-select">
+                                <option value="true" selected>Yes - Enable sanitization</option>
+                                <option value="false">No - Disable sanitization</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                Enable sanitization for sensitive pattern matching (recommended).
+                            </small>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="mb-3">
+                <h5>Examples</h5>
+                <div class="accordion" id="examplesAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingOne">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                Block sudo commands
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#examplesAccordion">
+                            <div class="accordion-body">
+                                <strong>Expression:</strong> <code>#text.toLowerCase().contains('sudo')</code><br>
+                                <strong>Action:</strong> DENY<br>
+                                <strong>Description:</strong> Sudo commands are not allowed
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingTwo">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                Warn on delete operations
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#examplesAccordion">
+                            <div class="accordion-body">
+                                <strong>Expression:</strong> <code>#text.startsWith('rm ') or #text.contains(' rm ') or #text.contains('rmdir')</code><br>
+                                <strong>Action:</strong> WARN<br>
+                                <strong>Description:</strong> Delete operation detected<br>
+                                <small class="text-muted">This matches rm at the start or as a separate word</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingThree">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                Require approval for password changes
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#examplesAccordion">
+                            <div class="accordion-body">
+                                <strong>Expression:</strong> <code>#text.contains('passwd') or #text.contains('password')</code><br>
+                                <strong>Action:</strong> JIT<br>
+                                <strong>Description:</strong> Password changes require approval
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingFour">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                                Block long commands
+                            </button>
+                        </h2>
+                        <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#examplesAccordion">
+                            <div class="accordion-body">
+                                <strong>Expression:</strong> <code>#length > 100</code><br>
+                                <strong>Action:</strong> DENY<br>
+                                <strong>Description:</strong> Commands exceeding length limit are not allowed
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-secondary submit_btn">Save Rule</button>
+                <a href="/sso/v1/zerotrust/rules/custom-chat" class="btn btn-outline-primary">Use AI Assistant Instead</a>
+                <a href="/sso/v1/zerotrust/rules/list" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+
+        </form>
+
+    </div>
+</div>
+            </div>
+        </div>
+    </div>
+</div>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+
+    function showValidationError(message) {
+        const alertElement = document.getElementById('validation-alert');
+        const messageElement = document.getElementById('validation-message');
+        messageElement.textContent = message;
+        alertElement.style.display = 'block';
+        alertElement.classList.add('show');
+        
+        // Scroll to the alert
+        alertElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            alertElement.classList.remove('show');
+            setTimeout(() => {
+                alertElement.style.display = 'none';
+            }, 150);
+        }, 5000);
+    }
+
+    $(document).ready(function () {
+        const ruleForm = document.getElementById("rule_form");
+        if (ruleForm) {
+            const csrfElement = document.getElementById("_csrf");
+            if (!csrfElement) {
+                console.log("CSRF token element not found.");
+                return;
+            }
+            const csrf = csrfElement.value;
+
+            // Use the button click event listener
+            const submitBtn = document.querySelector('.submit_btn');
+            if (submitBtn) {
+                submitBtn.addEventListener('click', function(event) {
+                    event.preventDefault(); // Prevent default form submission
+                    
+                    // Validate required fields
+                    const expression = document.getElementById('expression').value.trim();
+                    const action = document.getElementById('action').value;
+                    const description = document.getElementById('description').value.trim();
+                    
+                    if (!expression) {
+                        showValidationError('Please enter an expression');
+                        return;
+                    }
+                    
+                    if (!action) {
+                        showValidationError('Please select an action');
+                        return;
+                    }
+                    
+                    if (!description) {
+                        showValidationError('Please enter a description');
+                        return;
+                    }
+
+                    const formData = new FormData(ruleForm);
+                    const payload = Object.fromEntries(formData);
+                    
+                    console.log("Submitting pluggable rule:", payload);
+
+                    // Disable the button during submission
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Saving...';
+
+                    fetch('/api/v1/zerotrust/rules/save', {
+                        method: 'POST',
+                        body: JSON.stringify(payload),
+                        headers: {
+                            'content-type': 'application/json',
+                            'X-CSRF-TOKEN': csrf
+                        }
+                    })
+                        .then(response => {
+                            if (response.ok) {
+                                console.log("Rule saved successfully");
+                                // Show success and redirect
+                                window.location.href = "/sso/v1/zerotrust/rules/list";
+                            } else {
+                                return response.text().then(text => {
+                                    throw new Error(text || 'Failed to save rule');
+                                });
+                            }
+                        })
+                        .catch((error) => {
+                            console.error("Error:", error);
+                            showValidationError("Failed to save rule: " + error.message);
+                            // Re-enable the button
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = 'Save Rule';
+                        });
+                });
+            }
+            else {
+                console.log("Submit button not found.");
+            }
+        }
+    });
+
+    /*]]>*/
+
+</script>
+</body>
+
+</html>

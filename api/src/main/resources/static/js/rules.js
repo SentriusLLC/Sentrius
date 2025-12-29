@@ -192,8 +192,8 @@ $(document).ready(function () {
         } else if (ruleClass.includes("AllowedCommandsRule")) {
             url = "/sso/v1/zerotrust/rules/config/allowed_commands_rule?ruleName=" + encodeURIComponent(ruleName);
         } else if (ruleClass.includes("PluggableRuleEvaluator")) {
-            // Redirect to custom rule chat interface for PluggableRuleEvaluator
-            url = "/sso/v1/zerotrust/rules/custom-chat";
+            // Redirect to pluggable rule configuration form
+            url = "/sso/v1/zerotrust/rules/config/pluggable_rule?ruleName=" + encodeURIComponent(ruleName);
             window.location.href = url;
             return;
         } else if (ruleClass.includes("DeletePrevention")) {
