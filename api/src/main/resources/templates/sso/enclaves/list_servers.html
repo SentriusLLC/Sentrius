@@ -175,6 +175,7 @@
             </tbody>
         </table>
         <h3>Available Agents</h3>
+        <li th:if="${#sets.contains(operatingUser.authorizationType.accessSet, 'CAN_MANAGE_APPLICATION')}">
         <table id="agent-table" class="display" style="width:100%">
             <thead>
             <tr>
@@ -187,6 +188,7 @@
             <!-- Data will be dynamically loaded here -->
             </tbody>
         </table>
+        </li>
     </div>
     <div id="textarea" style="display: none;"></div>
 </div>
