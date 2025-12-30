@@ -100,8 +100,8 @@ data:
     spring.kafka.properties.metadata.max.age.ms=10000
     spring.kafka.properties.retry.backoff.ms=1000
 
-    sentrius.agent.registry=local
-    sentrius.agent.registry.version=latest
+    sentrius.agent.registry={{ .Values.sentriusaiagent.image.repository }}
+    sentrius.agent.registry.version={{ .Values.sentriusaiagent.image.tag }}
     sentrius.agent.namespace={{ .Values.tenant }}
   agent.properties: |
     spring.main.web-application-type=servlet

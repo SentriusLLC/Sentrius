@@ -164,8 +164,11 @@ public class PodLauncherService {
         if (agentRegistry != null) {
             if ("local".equalsIgnoreCase(agentRegistry)) {
                 myAgentRegistry = "";
-            } else if (!agentRegistry.endsWith("/")) {
-                myAgentRegistry += "/";
+            } else {
+                myAgentRegistry = agentRegistry;
+                if (!myAgentRegistry.endsWith("/")) {
+                    myAgentRegistry += "/";
+                }
             }
         }
         String agentId = agent.getAgentName().toLowerCase();
