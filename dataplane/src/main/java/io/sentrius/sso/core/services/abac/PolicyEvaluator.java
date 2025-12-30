@@ -41,6 +41,14 @@ public class PolicyEvaluator {
      */
     @Transactional(readOnly = true)
     public PolicyDecision evaluate(EvaluationContext context, String resourceId, String action) {
+        return evaluate(context, resourceId, action, true);
+    }
+
+            /**
+             * Evaluate access for a subject attempting an action on a resource
+             */
+    @Transactional(readOnly = true)
+    public PolicyDecision evaluate(EvaluationContext context, String resourceId, String action, boolean allowOnNoPolicies) {
         log.info("Evaluating access for resource: {}, action: {}", resourceId, action);
 
         try {
@@ -49,7 +57,11 @@ public class PolicyEvaluator {
             
             if (policies.isEmpty()) {
                 log.info("No policies found for resource: {}", resourceId);
-                return PolicyDecision.defaultAllow("No applicable policies");
+                if (allowOnNoPolicies) {
+                    return PolicyDecision.defaultAllow("No applicable policies");
+                } else {
+                    return PolicyDecision.defaultDeny("No applicable policies");
+                }
             }
 
             // Evaluate policies in priority order
@@ -168,7 +180,9 @@ public class PolicyEvaluator {
     public List<AccessPolicy> findApplicablePolicies(String resourceId, String action) {
         // Determine resource type from resource ID pattern
         AccessPolicy.ResourceType resourceType = determineResourceType(resourceId);
-        
+
+        log.info("Finding policies for resourceId: {}, resourceType: {}, action: {}",
+            resourceId, resourceType, action);
         // Get all policies for this resource type
         List<AccessPolicy> allPolicies = policyRepository.findActivePoliciesForResourceType(resourceType);
 
@@ -239,7 +253,7 @@ public class PolicyEvaluator {
      * Determine resource type from resource identifier
      */
     private AccessPolicy.ResourceType determineResourceType(String resourceId) {
-        if (resourceId.startsWith("/api/") || resourceId.startsWith("http")) {
+        if (resourceId.startsWith("/sso/")  || resourceId.startsWith("/ui/")  || resourceId.startsWith("/api/") || resourceId.startsWith("http")) {
             return AccessPolicy.ResourceType.ENDPOINT;
         } else if (resourceId.contains(".") && Character.isUpperCase(resourceId.charAt(0))) {
             return AccessPolicy.ResourceType.DATA_ENTITY;

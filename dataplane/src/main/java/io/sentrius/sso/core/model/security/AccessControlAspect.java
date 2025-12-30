@@ -10,6 +10,8 @@ import io.opentelemetry.context.Scope;
 import io.sentrius.sso.config.ApplicationEnvironmentConfig;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.data.attributes.UIResourceConfig;
+import io.sentrius.sso.core.data.attributes.UIResourceMappings;
 import io.sentrius.sso.core.dto.ztat.EndpointRequest;
 import io.sentrius.sso.core.model.security.enums.IdentityType;
 import io.sentrius.sso.core.model.users.User;
@@ -43,6 +45,7 @@ import org.aspectj.lang.annotation.Before;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -309,7 +312,8 @@ public class AccessControlAspect {
                 }
                 for (var appAccess : accessAnnotation.applicationAccess()) {
                     if (!canAccess(operatingUser, appAccess)) {
-                        log.debug("Access Denied to {} at {}, {}", operatingUser, appAccess, operatingUser.getAuthorizationType());
+                        log.debug("Access Denied to {} at {} for {}, {}", operatingUser, endpoint, appAccess,
+                            operatingUser.getAuthorizationType());
                         canAccess = false;
                         break;
                     }
@@ -325,9 +329,21 @@ public class AccessControlAspect {
                 }
                 
                 // Check custom attributes defined in database for this endpoint
-                if (canAccess && !checkDatabaseEndpointAttributes(operatingUser, endpoint)) {
+                if (canAccess && !checkDatabaseEndpointAttributes(operatingUser, endpoint, false)) {
                     log.debug("Access Denied to {} at {} due to database endpoint attributes", operatingUser, endpoint);
                     canAccess = false;
+                }
+
+
+                if (!canAccess && systemOptions.getEnableAbacUiControl()){
+                    // let's check for overrides in access policies.
+                    log.info("Checking for access overrides via database-defined endpoint attributes for {} at {}",
+                        operatingUser, endpoint);
+                    if (checkDatabaseEndpointAttributes(operatingUser, endpoint, true)) {
+                        log.debug("Access override found for {} at {}", operatingUser, endpoint);
+                        canAccess = true;
+                    }
+
                 }
 
                 if (!canAccess) {
@@ -486,29 +502,73 @@ public class AccessControlAspect {
      * Uses PolicyEvaluator to evaluate access policies and rules configured via the ABAC management UI.
      * @param operatingUser The user to check
      * @param endpoint The endpoint being accessed
+     * @param requireExistence If true, requires at least one policy to be defined for access to be granted
      * @return true if user satisfies all access policies, false otherwise
      */
-    protected boolean checkDatabaseEndpointAttributes(User operatingUser, String endpoint) {
+    protected boolean checkDatabaseEndpointAttributes(User operatingUser, String endpoint, boolean requireExistence) {
         if (customAttributeMappingService == null) {
-            log.debug("CustomAttributeMappingService not available, skipping database endpoint attribute checks");
-            return true; // Allow access if service is not available
+            log.info("CustomAttributeMappingService not available, skipping database endpoint attribute checks");
+            return requireExistence? false : true; // Allow access if service is not available
         }
+
         
         try {
+            log.info("Checking database-defined custom attribute mappings for endpoint: {} and user: {}",
+                endpoint, operatingUser.getUsername());
             // Get custom attribute mappings for this endpoint from the database
             List<CustomAttributeMapping> mappings = customAttributeMappingService.getMappingsByEndpoint(endpoint);
             
             if (mappings == null || mappings.isEmpty()) {
-                log.debug("No custom attribute mappings found for endpoint: {}", endpoint);
-                return true; // No mappings defined, allow access
+                log.info("No custom attribute mappings found for endpoint: {}", endpoint);
+
+
+                UIResourceConfig config = UIResourceMappings.getByUIResourceKey(endpoint);
+                if (config == null) {
+                    log.info("No UIResourceConfig found for endpoint: {}", endpoint);
+                    return requireExistence ? false : true; // No mappings defined, allow access
+                } else {
+                    log.info("Found UIResourceConfig {} for endpoint: {}", config, endpoint);
+                }
+
+                boolean hasAccess = false;
+                String grantedBy = "none";
+
+                // Check ABAC if enabled and no standard access
+                if (systemOptions.enableAbacUiControl && policyEvaluator != null && config.getAbacResource() != null) {
+                    try {
+                        EvaluationContext context = policyEvaluator.buildContext(
+                            operatingUser.getUsername(),
+                            config.getAbacResource()
+                        );
+
+                        PolicyDecision decision = policyEvaluator.evaluate(
+                            context,
+                            config.getAbacResource(),
+                            "VIEW"
+                            ,false
+                        );
+
+                        if (decision.getEffect() == PolicyDecision.Effect.ALLOW) {
+                            hasAccess = true;
+                            grantedBy = "abac_policy";
+                            log.info("User {} granted access to {} via ABAC policy", operatingUser.getUsername(), endpoint);
+                            return true;
+                        }
+                    } catch (Exception e) {
+                        log.warn("Error evaluating ABAC policy for {}: {}", endpoint, e.getMessage());
+                    }
+                }
+
+                log.info("No database custom attribute mappings found for endpoint: {}", endpoint);
+                return requireExistence ? false : true; // No mappings defined, allow access
             }
             
-            log.debug("Found {} custom attribute mapping(s) for endpoint: {}", mappings.size(), endpoint);
+            log.info("Found {} custom attribute mapping(s) for endpoint: {}", mappings.size(), endpoint);
             
             // Check each mapping requirement
             for (CustomAttributeMapping mapping : mappings) {
                 String attributeString = mapping.toCustomAttributeString();
-                log.debug("Checking database-defined custom attribute: {}", attributeString);
+                log.info("Checking database-defined custom attribute: {}", attributeString);
                 
                 if (!checkCustomAttribute(operatingUser, attributeString, endpoint)) {
                     log.info("User {} does not satisfy database custom attribute requirement: {} for endpoint: {}", 
@@ -517,7 +577,7 @@ public class AccessControlAspect {
                 }
             }
             
-            log.debug("User {} satisfies all database custom attribute requirements for endpoint: {}", 
+            log.info("User {} satisfies all database custom attribute requirements for endpoint: {}",
                 operatingUser.getUsername(), endpoint);
             return true;
             

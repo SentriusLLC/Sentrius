@@ -468,6 +468,9 @@ helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${T
     --set sentriusNamespace=${TENANT} \
     --set ingress.class="nginx" \
     --set healthCheck.backendConfig.enabled=false \
+    --set config.usePVC=true \
+    --set config.storageClassName="${STORAGE_CLASS_NAME}" \
+    --set config.storageSize="1Gi" \
     --set keycloakFQDN=sentrius-keycloak.${TENANT}.svc.cluster.local \
     --set sentriusFQDN=sentrius-sentrius.${TENANT}.svc.cluster.local \
     --set integrationproxyFQDN=sentrius-integrationproxy.${TENANT}.svc.cluster.local \

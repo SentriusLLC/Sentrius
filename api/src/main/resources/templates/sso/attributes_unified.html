@@ -533,7 +533,7 @@
                     <h5>Understanding ABAC in Sentrius</h5>
                     <p>
                         <strong>Attribute-Based Access Control (ABAC)</strong> provides fine-grained access control by evaluating attributes 
-                        of users, resources, actions, and the environment. Sentrius implements ABAC through three key components:
+                        of users, resources, actions, and the environment. Sentrius implements ABAC through four key components:
                     </p>
                     <p>
                         <strong>1. Attribute Definitions:</strong> Define the schema for attributes (e.g., <span class="code">department</span>, 
@@ -544,8 +544,12 @@
                         <span class="code">department=engineering</span>). These can be synced from Keycloak or managed locally.
                     </p>
                     <p>
-                        <strong>3. Access Mappings:</strong> Define which attribute values are required to access specific endpoints 
+                        <strong>3. Access Mappings:</strong> Simple rules defining which attribute values are required to access specific endpoints 
                         (e.g., <span class="code">/api/v1/chat/**</span> requires <span class="code">department=engineering</span>).
+                    </p>
+                    <p>
+                        <strong>4. Access Policies:</strong> Advanced rule-based policies with complex conditions, operators, and UI control support. 
+                        Perfect for controlling menu visibility and sophisticated access scenarios.
                     </p>
                     
                     <div style="margin-top: 20px; padding: 15px; background: #2b2b2b; border-radius: 5px; border-left: 4px solid #28a745;">
@@ -557,10 +561,13 @@
                             <strong style="color: #f8f9fa;">Step 2:</strong> <span style="color: #adb5bd;">Go to <strong>User Assignments</strong> tab and assign values to users (e.g., assign <span class="code">department=engineering</span> to user "john.doe")</span>
                         </div>
                         <div style="margin-bottom: 12px;">
-                            <strong style="color: #f8f9fa;">Step 3:</strong> <span style="color: #adb5bd;">Go to <strong>Access Mappings</strong> tab and create access rules (e.g., require <span class="code">department=engineering</span> to access <span class="code">/api/v1/chat/**</span>)</span>
+                            <strong style="color: #f8f9fa;">Step 3a:</strong> <span style="color: #adb5bd;">For simple API access: Go to <strong>Access Mappings</strong> tab and create rules (e.g., require <span class="code">department=engineering</span> to access <span class="code">/api/v1/chat/**</span>)</span>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <strong style="color: #f8f9fa;">Step 3b:</strong> <span style="color: #adb5bd;">For UI control or advanced rules: Go to <strong>Access Policies</strong> tab and create policies with complex conditions (e.g., control who sees AI Services menu)</span>
                         </div>
                         <div style="margin-top: 15px; padding: 10px; background: rgba(0, 123, 255, 0.1); border-radius: 5px;">
-                            <strong style="color: #007bff;">💡 Example Use Case:</strong> <span style="color: #adb5bd;">Restrict sensitive API endpoints to users with <span class="code">clearance_level=high</span>, ensuring only authorized personnel can access critical systems.</span>
+                            <strong style="color: #007bff;">💡 UI Control Example:</strong> <span style="color: #adb5bd;">Create a policy for <span class="code">/ui/ai/services</span> requiring <span class="code">team=ai</span>. Enable <span class="code">enableAbacUiControl</span> in System Settings to dynamically show/hide menu items based on user attributes.</span>
                         </div>
                     </div>
                 </div>
@@ -580,6 +587,11 @@
                         <li class="nav-item">
                             <a class="nav-link" id="mappings-tab" data-tab="mappings" role="tab">
                                 <i class="fas fa-user-tag"></i> Access Mappings
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="policies-tab" data-tab="policies" role="tab">
+                                <i class="fas fa-shield-alt"></i> Access Policies
                             </a>
                         </li>
                     </ul>
@@ -803,6 +815,60 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Access Policies Tab -->
+                        <div class="tab-content-section" id="policies" role="tabpanel">
+                            <div class="section-header">
+                                <div class="section-title">Access Policies</div>
+                                <button class="btn btn-primary" onclick="openCreatePolicyModal()">
+                                    <i class="fas fa-plus"></i> Add Policy
+                                </button>
+                            </div>
+
+                            <div class="info-card">
+                                <div class="info-card-title">🛡️ Step 4: About Access Policies (Advanced ABAC)</div>
+                                <div class="info-card-text">
+                                    Access Policies provide advanced, rule-based access control with support for complex conditions, 
+                                    multiple attributes, and logical operators. Use this for <strong>UI element control</strong> and sophisticated access scenarios.
+                                    <br><br>
+                                    <strong>Key Differences from Access Mappings:</strong>
+                                    <ul style="margin: 10px 0; padding-left: 20px; color: #adb5bd;">
+                                        <li><strong>Access Mappings</strong>: Simple endpoint + single attribute/value check</li>
+                                        <li><strong>Access Policies</strong>: Complex rules with AND/OR logic, operators (EQUALS, CONTAINS, GREATER_THAN, etc.), and UI control</li>
+                                    </ul>
+                                    <strong>UI Control Example:</strong> Create a policy for <span class="code">/ui/ai/services</span> with rule 
+                                    <span class="code">team EQUALS ai</span>. When <span class="code">enableAbacUiControl=true</span> in System Settings, 
+                                    only users with <span class="code">team=ai</span> will see the AI Services menu item.
+                                </div>
+                            </div>
+
+                            <div id="policyAlertContainer"></div>
+
+                            <div class="table-container">
+                                <table id="policiesTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Policy Name</th>
+                                            <th>Resource Pattern</th>
+                                            <th>Actions</th>
+                                            <th>Effect</th>
+                                            <th>Rules</th>
+                                            <th>Priority</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="policiesTableBody">
+                                        <!-- Populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                                <div id="emptyPoliciesState" class="empty-state" style="display: none;">
+                                    <div class="empty-state-icon">🛡️</div>
+                                    <div class="empty-state-text">No access policies defined yet</div>
+                                    <p>Click "Add Policy" to create your first access policy for advanced ABAC control</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -958,6 +1024,166 @@
     </div>
 </div>
 
+<!-- Create/Edit Policy Modal -->
+<div id="policyModal" class="modal">
+    <div class="modal-content" style="max-width: 700px;">
+        <div class="modal-header">
+            <h2 class="modal-title" id="policyModalTitle">Add Access Policy</h2>
+            <button class="close" onclick="closePolicyModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="policyForm">
+                <input type="hidden" id="policyId">
+                
+                <div class="form-group">
+                    <label for="policyName">Policy Name *</label>
+                    <input type="text" id="policyName" required placeholder="e.g., UI_AIServices_Access">
+                </div>
+
+                <div class="form-group">
+                    <label for="policyDescription">Description</label>
+                    <textarea id="policyDescription" placeholder="Describe what this policy controls"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="resourceType">Resource Type *</label>
+                    <select id="resourceType" required>
+                        <option value="ENDPOINT">ENDPOINT - API or UI path</option>
+                        <option value="DATA">DATA - Data entity</option>
+                        <option value="OPERATION">OPERATION - Specific action</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="resourcePattern">Resource Pattern *</label>
+                    <input type="text" id="resourcePattern" required placeholder="/ui/ai/services or /api/v1/**">
+                    <small style="color: #868e96;">
+                        Use ** for wildcards. UI paths start with /ui/, API paths with /api/
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="policyActions">Actions (comma-separated)</label>
+                    <input type="text" id="policyActions" placeholder="VIEW, CREATE, UPDATE, DELETE">
+                    <small style="color: #868e96;">Leave empty for all actions</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="policyEffect">Effect *</label>
+                    <select id="policyEffect" required>
+                        <option value="ALLOW">ALLOW - Grant access</option>
+                        <option value="DENY">DENY - Block access</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="policyPriority">Priority</label>
+                    <input type="number" id="policyPriority" value="100" min="0" max="1000">
+                    <small style="color: #868e96;">Higher numbers = higher priority (0-1000)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="ruleCombination">Rule Combination *</label>
+                    <select id="ruleCombination" required>
+                        <option value="AND">AND - All rules must match</option>
+                        <option value="OR">OR - Any rule can match</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="policyIsActive" checked>
+                        Active
+                    </label>
+                </div>
+            </form>
+
+            <div style="margin-top: 20px; padding: 15px; background: rgba(0, 123, 255, 0.1); border-radius: 5px;">
+                <strong style="color: #007bff;">💡 Next Step:</strong>
+                <p style="color: #adb5bd; margin: 5px 0 0 0;">After saving the policy, you'll need to add rules to define the actual access conditions (e.g., team=ai, role=admin).</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closePolicyModal()">Cancel</button>
+            <button class="btn btn-success" onclick="savePolicy()">Save Policy</button>
+        </div>
+    </div>
+</div>
+
+<!-- Policy Rules Modal -->
+<div id="policyRulesModal" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+            <h2 class="modal-title" id="rulesModalTitle">Manage Policy Rules</h2>
+            <button class="close" onclick="closePolicyRulesModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div style="margin-bottom: 20px;">
+                <strong>Policy: <span id="currentPolicyName"></span></strong>
+                <p style="color: #868e96; margin: 5px 0 0 0;">Add attribute conditions that users must satisfy to match this policy.</p>
+            </div>
+
+            <button class="btn btn-primary" onclick="openAddRuleForm()" style="margin-bottom: 15px;">
+                <i class="fas fa-plus"></i> Add Rule
+            </button>
+
+            <div id="addRuleForm" style="display: none; background: #1e1e1e; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                <h4>New Rule</h4>
+                <div class="form-group">
+                    <label>Attribute Name *</label>
+                    <input type="text" id="ruleAttributeName" required placeholder="e.g., team, role, department">
+                </div>
+                <div class="form-group">
+                    <label>Operator *</label>
+                    <select id="ruleOperator" required>
+                        <option value="EQUALS">EQUALS</option>
+                        <option value="NOT_EQUALS">NOT EQUALS</option>
+                        <option value="CONTAINS">CONTAINS</option>
+                        <option value="NOT_CONTAINS">NOT CONTAINS</option>
+                        <option value="GREATER_THAN">GREATER THAN</option>
+                        <option value="LESS_THAN">LESS THAN</option>
+                        <option value="IN">IN (list)</option>
+                        <option value="NOT_IN">NOT IN (list)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Expected Value *</label>
+                    <input type="text" id="ruleExpectedValue" required placeholder="e.g., ai, admin, engineering">
+                    <small style="color: #868e96;">For IN/NOT_IN operators, use comma-separated values</small>
+                </div>
+                <div>
+                    <button class="btn btn-secondary" onclick="cancelAddRule()">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveRule()">Add Rule</button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="rulesTable">
+                    <thead>
+                        <tr>
+                            <th>Attribute</th>
+                            <th>Operator</th>
+                            <th>Expected Value</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rulesTableBody">
+                        <!-- Populated by JavaScript -->
+                    </tbody>
+                </table>
+                <div id="emptyRulesState" class="empty-state" style="display: none;">
+                    <div class="empty-state-icon">📋</div>
+                    <div class="empty-state-text">No rules defined for this policy yet</div>
+                    <p>Add rules to define which users can access this resource</p>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closePolicyRulesModal()">Close</button>
+        </div>
+    </div>
+</div>
+
 <script>
     // State management
     let allDefinitions = [];
@@ -987,6 +1213,8 @@
             initialTab = 'assignments';
         } else if (tabParam === 'mappings') {
             initialTab = 'mappings';
+        } else if (tabParam === 'policies') {
+            initialTab = 'policies';
         }
 
         // Load initial tab
@@ -1029,6 +1257,8 @@
             loadUserAttributes();
         } else if (tabId === 'mappings') {
             loadMappings();
+        } else if (tabId === 'policies') {
+            loadPolicies();
         }
     }
 
@@ -1666,6 +1896,281 @@
             setupAttributeNameAutocomplete();
             window.autocompleteInitialized = true;
         }
+    }
+
+    // ===== ACCESS POLICIES =====
+    let currentPolicyIdForRules = null;
+    
+    function loadPolicies() {
+        fetch('/api/v1/abac/policies')
+            .then(response => response.json())
+            .then(policies => {
+                renderPoliciesTable(policies);
+            })
+            .catch(error => {
+                console.error('Error loading policies:', error);
+                showPolicyAlert('Error loading policies', 'danger');
+            });
+    }
+
+    function renderPoliciesTable(policies) {
+        const tbody = document.getElementById('policiesTableBody');
+        const emptyState = document.getElementById('emptyPoliciesState');
+        
+        if (policies.length === 0) {
+            tbody.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+        
+        emptyState.style.display = 'none';
+        tbody.innerHTML = policies.map(policy => `
+            <tr>
+                <td><strong>${escapeHtml(policy.policyName)}</strong></td>
+                <td><code>${escapeHtml(policy.resourcePattern)}</code></td>
+                <td>${policy.actions && Array.isArray(policy.actions) ? policy.actions.join(', ') : (policy.actions || 'ALL')}</td>
+                <td><span class="badge ${policy.effect === 'ALLOW' ? 'badge-success' : 'badge-danger'}">${policy.effect}</span></td>
+                <td>
+                    <button class="btn-action" onclick="managePolicyRules(${policy.id}, '${escapeHtml(policy.policyName)}')">
+                        <i class="fas fa-list"></i> ${ policy.ruleCount } Rules
+                    </button>
+                </td>
+                <td>${policy.priority || 100}</td>
+                <td><span class="badge ${policy.isActive ? 'badge-success' : 'badge-secondary'}">${policy.isActive ? 'Active' : 'Inactive'}</span></td>
+                <td>
+                    <button class="btn-action" onclick="editPolicy(${policy.id})" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-action btn-danger" onclick="deletePolicy(${policy.id}, '${escapeHtml(policy.policyName)}')" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function openCreatePolicyModal() {
+        document.getElementById('policyModalTitle').textContent = 'Add Access Policy';
+        document.getElementById('policyForm').reset();
+        document.getElementById('policyId').value = '';
+        document.getElementById('policyIsActive').checked = true;
+        document.getElementById('policyPriority').value = 100;
+        document.getElementById('policyModal').style.display = 'block';
+    }
+
+    function closePolicyModal() {
+        document.getElementById('policyModal').style.display = 'none';
+    }
+
+    function savePolicy() {
+        const policyId = document.getElementById('policyId').value;
+        const policyData = {
+            policyName: document.getElementById('policyName').value,
+            description: document.getElementById('policyDescription').value,
+            resourceType: document.getElementById('resourceType').value,
+            resourcePattern: document.getElementById('resourcePattern').value,
+            actions: document.getElementById('policyActions').value.split(',').map(a => a.trim()).filter(a => a),
+            effect: document.getElementById('policyEffect').value,
+            priority: parseInt(document.getElementById('policyPriority').value) || 100,
+            ruleCombination: document.getElementById('ruleCombination').value,
+            isActive: document.getElementById('policyIsActive').checked
+        };
+
+        const url = policyId ? `/api/v1/abac/policies/${policyId}` : '/api/v1/abac/policies';
+        const method = policyId ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify(policyData)
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to save policy');
+            return response.json();
+        })
+        .then(() => {
+            closePolicyModal();
+            loadPolicies();
+            showPolicyAlert(`Policy ${policyId ? 'updated' : 'created'} successfully`, 'success');
+        })
+        .catch(error => {
+            console.error('Error saving policy:', error);
+            showPolicyAlert('Error saving policy', 'danger');
+        });
+    }
+
+    function editPolicy(policyId) {
+        fetch(`/api/v1/abac/policies/${policyId}`)
+            .then(response => response.json())
+            .then(policy => {
+                document.getElementById('policyModalTitle').textContent = 'Edit Access Policy';
+                document.getElementById('policyId').value = policy.id;
+                document.getElementById('policyName').value = policy.policyName;
+                document.getElementById('policyDescription').value = policy.description || '';
+                document.getElementById('resourceType').value = policy.resourceType;
+                document.getElementById('resourcePattern').value = policy.resourcePattern;
+                document.getElementById('policyActions').value = policy.actions && Array.isArray(policy.actions) ? policy.actions.join(', ') : (policy.actions || '');
+                document.getElementById('policyEffect').value = policy.effect;
+                document.getElementById('policyPriority').value = policy.priority || 100;
+                document.getElementById('ruleCombination').value = policy.ruleCombination;
+                document.getElementById('policyIsActive').checked = policy.isActive;
+                document.getElementById('policyModal').style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error loading policy:', error);
+                showPolicyAlert('Error loading policy', 'danger');
+            });
+    }
+
+    function deletePolicy(policyId, policyName) {
+        if (!confirm(`Are you sure you want to delete the policy "${policyName}"? This will also delete all associated rules.`)) {
+            return;
+        }
+
+        fetch(`/api/v1/abac/policies/${policyId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to delete policy');
+            loadPolicies();
+            showPolicyAlert('Policy deleted successfully', 'success');
+        })
+        .catch(error => {
+            console.error('Error deleting policy:', error);
+            showPolicyAlert('Error deleting policy', 'danger');
+        });
+    }
+
+    function showPolicyAlert(message, type) {
+        const container = document.getElementById('policyAlertContainer');
+        container.innerHTML = `
+            <div class="alert alert-${type}">
+                ${escapeHtml(message)}
+            </div>
+        `;
+        setTimeout(() => {
+            container.innerHTML = '';
+        }, 5000);
+    }
+
+    // ===== POLICY RULES =====
+    function managePolicyRules(policyId, policyName) {
+        currentPolicyIdForRules = policyId;
+        document.getElementById('currentPolicyName').textContent = policyName;
+        document.getElementById('policyRulesModal').style.display = 'block';
+        document.getElementById('addRuleForm').style.display = 'none';
+        loadPolicyRules(policyId);
+    }
+
+    function closePolicyRulesModal() {
+        document.getElementById('policyRulesModal').style.display = 'none';
+        currentPolicyIdForRules = null;
+        loadPolicies(); // Refresh the policies table to update rule count
+    }
+
+    function loadPolicyRules(policyId) {
+        fetch(`/api/v1/abac/policies/${policyId}/rules`)
+            .then(response => response.json())
+            .then(rules => {
+                renderPolicyRulesTable(rules);
+            })
+            .catch(error => {
+                console.error('Error loading policy rules:', error);
+            });
+    }
+
+    function renderPolicyRulesTable(rules) {
+        const tbody = document.getElementById('rulesTableBody');
+        const emptyState = document.getElementById('emptyRulesState');
+        
+        if (rules.length === 0) {
+            tbody.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+        
+        emptyState.style.display = 'none';
+        tbody.innerHTML = rules.map(rule => `
+            <tr>
+                <td><strong>${escapeHtml(rule.attributeName)}</strong></td>
+                <td><span class="badge badge-info">${rule.operator}</span></td>
+                <td><code>${escapeHtml(rule.expectedValue)}</code></td>
+                <td>
+                    <button class="btn-action btn-danger" onclick="deletePolicyRule(${rule.id})" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function openAddRuleForm() {
+        document.getElementById('addRuleForm').style.display = 'block';
+        document.getElementById('ruleAttributeName').value = '';
+        document.getElementById('ruleOperator').value = 'EQUALS';
+        document.getElementById('ruleExpectedValue').value = '';
+    }
+
+    function cancelAddRule() {
+        document.getElementById('addRuleForm').style.display = 'none';
+    }
+
+    function saveRule() {
+        if (!currentPolicyIdForRules) return;
+
+        const ruleData = {
+            attributeName: document.getElementById('ruleAttributeName').value,
+            operator: document.getElementById('ruleOperator').value,
+            expectedValue: document.getElementById('ruleExpectedValue').value
+        };
+
+        fetch(`/api/v1/abac/policies/${currentPolicyIdForRules}/rules`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify(ruleData)
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to save rule');
+            return response.json();
+        })
+        .then(() => {
+            cancelAddRule();
+            loadPolicyRules(currentPolicyIdForRules);
+            loadPolicies(); // Refresh the policies table to update rule count
+        })
+        .catch(error => {
+            console.error('Error saving rule:', error);
+            alert('Error saving rule');
+        });
+    }
+
+    function deletePolicyRule(ruleId) {
+        if (!confirm('Are you sure you want to delete this rule?')) return;
+
+        fetch(`/api/v1/abac/policies/rules/${ruleId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to delete rule');
+            loadPolicyRules(currentPolicyIdForRules);
+            loadPolicies(); // Refresh the policies table to update rule count
+        })
+        .catch(error => {
+            console.error('Error deleting rule:', error);
+            alert('Error deleting rule');
+        });
     }
 
     // Close modals when clicking outside

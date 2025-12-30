@@ -57,35 +57,4 @@ public class CustomErrorHandler implements ErrorController {
         model.addAttribute("errorId", MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR));
         return "redirect:/sso/v1/dashboard?errorId=" + MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR);
     }
-    /*
-    @RequestMapping("/error")
-    public String handleError(HttpServletRequest request, Model model) {
-        // Retrieve error details
-        log.info("errror");
-        Integer statusCode = (Integer) request.getAttribute("jakarta.servlet.error.status_code");
-        Throwable ex = (Throwable) request.getAttribute("jakarta.servlet.error.exception");
-
-        // Log error details (optional)
-        if (ex != null) {
-            ex.printStackTrace();
-            for(StackTraceElement element : ex.getStackTrace()) {
-                log.info(element.toString());
-            }
-            String message = "Received Error Message: " + ex.getCause();
-            ErrorOutput errorOutput = ErrorOutput.builder()
-                .errorType(ex.getClass().getName())
-                .errorLocation(ex.getStackTrace()[0].toString())
-                .errorHash(createErrorHash(ex.getStackTrace(), ex.getMessage()))
-                .errorLogs(message)
-                .logTm(new java.sql.Timestamp(System.currentTimeMillis()))
-                .build();
-            errorOutputService.saveErrorOutput(errorOutput);
-
-        }
-
-        model.addAttribute("errorId", MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR));
-
-        // Redirect to "/mydashboard" with the messageId parameter
-        return "redirect:/sso/v1/dashboard?errorId=" + MessagingUtil.getMessageId(MessagingUtil.UNEXPECTED_ERROR);
-    }*/
 }

@@ -48,10 +48,12 @@ public class GlobalExceptionHandler {
             if (responseStatusException.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED ) {
                 // Handle precondition required
                 return ResponseEntity.status(428).body(responseStatusException.getReason());
+            } else if (responseStatusException.getStatusCode() == HttpStatus.FORBIDDEN ) {
+                // Handle forbidden
+                return ResponseEntity.status(403).body(responseStatusException.getReason());
             }
         }
         ex.printStackTrace();
-        log.info("ahhasldigjudaslkgj {}", ex.getMessage());
         log.error("asldkjgadlskgj " + ex.getCause(), ex);
         String message = "Received Error Message: " + ex.getCause();
         ErrorOutput errorOutput = ErrorOutput.builder()

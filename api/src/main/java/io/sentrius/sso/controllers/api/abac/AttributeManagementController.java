@@ -141,7 +141,7 @@ public class AttributeManagementController {
         AttributeDefinition definition = attributeManagementService.createAttributeDefinition(
                 dto.getAttributeName(),
                 AttributeDefinition.AttributeScope.valueOf(dto.getAttributeScope()),
-                dto.getAttributeType(),
+                dto.getDataType(),
                 dto.getDescription(),
                 dto.getKeycloakAttributeName()
         );
@@ -262,7 +262,7 @@ public class AttributeManagementController {
         dto.setId(definition.getId());
         dto.setAttributeName(definition.getAttributeName());
         dto.setAttributeScope(definition.getAttributeScope().name());
-        dto.setAttributeType(definition.getAttributeType().toString());
+        dto.setDataType(definition.getAttributeType().toString());
         dto.setDescription(definition.getDescription());
         dto.setKeycloakAttributeName(definition.getKeycloakAttributeName());
         dto.setIsRequired(definition.getIsRequired());

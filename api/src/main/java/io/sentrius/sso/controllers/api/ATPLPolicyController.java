@@ -48,6 +48,7 @@ public class ATPLPolicyController extends BaseController {
     }
 
     @PostMapping(consumes = {"application/x-yaml", "application/yaml", "text/yaml", "application/json"})
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<?> uploadPolicy(
         @RequestParam (name = "includeDefault" , required = false, defaultValue = "false") boolean includeDefault,
         @RequestBody String rawPolicy) {
@@ -285,6 +286,7 @@ public class ATPLPolicyController extends BaseController {
 
     @DeleteMapping("/delete")
     @ResponseBody
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<?> deletePolicy(@RequestParam String id) {
         boolean deleted = policyService.deletePolicyById(id);
         return deleted ? ResponseEntity.ok().build() : ResponseEntity.status(HttpStatus.NOT_FOUND).build();

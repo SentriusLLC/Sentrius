@@ -13,7 +13,7 @@ public class AttributeDefinitionDTO {
     private Long id;
     private String attributeName;
     private String attributeScope;
-    private String attributeType;
+    private String dataType;
     private String description;
     private String allowedValues;
     private Boolean syncedWithKeycloak;

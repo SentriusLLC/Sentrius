@@ -172,6 +172,9 @@ public class SystemOptions {
   @Updatable(description = "Allows admins to view and approve their own ZTAT ( Zero Trust Access Token) requests.")
   public Boolean canApproveOwnZtat = false;
 
+    @Updatable(description = "Enable ABAC-based UI control to dynamically show/hide menu items based on access policies. When enabled, ABAC policies will override default access set checks.")
+    @Builder.Default public Boolean enableAbacUiControl = false;
+
     @Updatable(description = "RDP Proxy domain.")
     public String rdpProxyDomain = "https://rdpproxy-dev.local";
 
@@ -203,7 +206,7 @@ public class SystemOptions {
       field.setAccessible(true); // Allow access to private fields
       // Only process fields with non-null defaults or initialize with a default if null
       String defaultValue = field.get(this) != null ? field.get(this).toString() : "";
-      String propertyValue = dynamicPropertiesService.getProperty(field.getName(), defaultValue);
+      String propertyValue = dynamicPropertiesService.getProperty("sentrius-sentrius",field.getName(), defaultValue);
 
       // Convert propertyValue to the field's actual \ if necessary
       if (field.getType() == Boolean.class || field.getType() == boolean.class) {
@@ -236,7 +239,7 @@ public class SystemOptions {
           field.set(this, fieldValue);
 
           // Update the AppConfig with the new field value
-          dynamicPropertiesService.updateProperty(fieldName, fieldValue.toString());
+          dynamicPropertiesService.updateProperty("sentrius-sentrius",fieldName, fieldValue.toString());
           log.trace("Set field {} to {}", fieldName, fieldValue);
           return true;
         } catch (IllegalAccessException e) {
@@ -338,7 +341,7 @@ public class SystemOptions {
       // During initialization, dynamicPropertiesService might not be injected yet
       return lockdownEnabled;
     }
-    String value = dynamicPropertiesService.getProperty("lockdownEnabled", 
+    String value = dynamicPropertiesService.getProperty("sentrius-sentrius","lockdownEnabled",
         lockdownEnabled != null ? lockdownEnabled.toString() : "false");
     return Boolean.parseBoolean(value);
   }

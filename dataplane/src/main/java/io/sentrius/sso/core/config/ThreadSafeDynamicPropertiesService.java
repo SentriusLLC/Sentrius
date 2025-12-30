@@ -88,6 +88,7 @@ public class ThreadSafeDynamicPropertiesService {
     public void updateProperty(String targetPodName, String key, String value) throws IOException {
         lock.writeLock().lock();
         try{
+            log.info("Updating property '{}' for pod '{}'", key, targetPodName != null ? targetPodName : "global");
             configurationOptionRepository.save(ConfigurationOption.builder()
                 .podName(targetPodName)
                 .configurationName(key)

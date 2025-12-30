@@ -34,7 +34,7 @@ public class CustomAttributeMappingService {
      * Get mappings for a specific endpoint
      */
     public List<CustomAttributeMapping> getMappingsByEndpoint(String endpoint) {
-        log.debug("Getting custom attribute mappings for endpoint: {}", endpoint);
+        log.info("Getting custom attribute mappings for endpoint: {}", endpoint);
         return repository.findByEndpointAndIsActiveTrue(endpoint);
     }
 
