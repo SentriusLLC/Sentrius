@@ -18,12 +18,14 @@ LAUNCHER_VERSION="${LAUNCHER_VERSION:-latest}"
 AGENTPROXY_VERSION="${AGENTPROXY_VERSION:-latest}"
 SSHPROXY_VERSION="${SSHPROXY_VERSION:-latest}"
 RDPPROXY_VERSION="${RDPPROXY_VERSION:-latest}"
+SENTRIUS_AI_AGENT_VERSION="${SENTRIUS_AI_AGENT_VERSION:-latest}"
+
 
 CERT_DIR="${SCRIPT_DIR}/../../docker/dev-certs"
 CERT_FILE="${CERT_DIR}/sentrius-ca.crt"
 KEY_FILE="${CERT_DIR}/sentrius-ca.key"
 TENANT=dev
-ENABLE_TLS=false
+ENABLE_TLS=true
 INSTALL_CERT_MANAGER=false
 ENV_TARGET="local"  # default mode
 CERT_DIR="${SCRIPT_DIR}/../../docker/dev-certs"
@@ -41,8 +43,8 @@ fi
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --tls)
-            ENABLE_TLS=true
+        --no-tls)
+            ENABLE_TLS=false
             shift
             ;;
         --install-cert-manager)
@@ -344,6 +346,9 @@ helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${T
     --set secrets.db.password="${DB_PASSWORD}" \
     --set secrets.db.keystorePassword="${KEYSTORE_PASSWORD}" \
     --set launcherservice.oauth2.client_secret="${SENTRIUS_LAUNCHER_CLIENT_SECRET}" \
+    --set sentriusaiagent.image.repository="local" \
+    --set sentriusaiagent.image.pullPolicy="IfNotPresent" \
+    --set sentriusaiagent.image.tag=${SENTRIUS_AI_AGENT_VERSION} \
     --set sentrius.image.repository="sentrius" \
     --set sentrius.image.pullPolicy="Never" \
     --set keycloak.image.pullPolicy="Never" \

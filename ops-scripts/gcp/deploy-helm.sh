@@ -466,6 +466,9 @@ helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${T
     --set secrets.db.password="${DB_PASSWORD}" \
     --set secrets.db.keystorePassword="${KEYSTORE_PASSWORD}" \
     --set launcherservice.oauth2.client_secret="${SENTRIUS_LAUNCHER_CLIENT_SECRET}" \
+    --set sentriusaiagent.image.repository="${AZURE_REGISTRY}/" \
+    --set sentriusaiagent.image.pullPolicy="IfNotPresent" \
+    --set sentriusaiagent.image.tag=${SENTRIUS_AI_AGENT_VERSION} \
     --set sentrius.image.repository="${GCP_REGISTRY}/sentrius" \
     --set sentrius.image.pullPolicy="IfNotPresent" \
     --set sentrius.image.tag=${SENTRIUS_VERSION} \
