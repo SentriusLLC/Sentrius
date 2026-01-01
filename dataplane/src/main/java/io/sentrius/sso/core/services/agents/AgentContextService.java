@@ -67,6 +67,13 @@ public class AgentContextService {
         context.setName(dto.getName());
         context.setDescription(dto.getDescription());
         context.setContext(refinedContext);
+
+        // Set policy ID if provided (handles null, empty string, and whitespace-only strings)
+        String policyId = dto.getPolicyId();
+        if (policyId != null && !policyId.trim().isEmpty()) {
+            context.setPolicyId(policyId);
+        }
+
         return contextRepo.save(context);
     }
 

@@ -13,11 +13,13 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 @Entity
 @Table(name = "agent_contexts")
 @Getter
 @Setter
+@ToString
 public class AgentContext {
 
     @Id

@@ -1,10 +1,12 @@
 package io.sentrius.sso.core.services.documents;
 
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.dto.documents.DocumentDTO;
 import io.sentrius.sso.core.dto.documents.DocumentSearchDTO;
 import io.sentrius.sso.core.model.documents.Document;
 import io.sentrius.sso.core.repository.documents.DocumentRepository;
 import io.sentrius.sso.core.services.agents.EmbeddingService;
+import io.sentrius.sso.core.services.security.KeycloakService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,9 +17,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.security.MessageDigest;
@@ -36,15 +41,21 @@ public class DocumentService {
     private final DocumentRepository documentRepository;
     private final EmbeddingService embeddingService;
     private final RestTemplate restTemplate;
-    
-    @Value("${integration.proxy.url:http://localhost:8082}")
-    private String integrationProxyUrl;
+    private final KeycloakService keycloakService;
 
-    public DocumentService(DocumentRepository documentRepository, 
-                          @Autowired(required = false) EmbeddingService embeddingService) {
+
+    private final SystemOptions  systemOptions;
+
+    public DocumentService(DocumentRepository documentRepository,
+                           @Autowired(required = false) EmbeddingService embeddingService,
+                           KeycloakService keycloakService, SystemOptions systemOptions
+    ) {
         this.documentRepository = documentRepository;
         this.embeddingService = embeddingService;
+        this.keycloakService = keycloakService;
+        this.systemOptions = systemOptions;
         this.restTemplate = new RestTemplate();
+
     }
 
     /**
@@ -492,15 +503,16 @@ public class DocumentService {
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
 
             // Call integration-proxy
-            String url = integrationProxyUrl + "/api/v1/integration-proxy/documents/retrieve";
+            String url = systemOptions.getIntegrationProxyUrl() + "/api/v1/integration-proxy/documents/retrieve";
             log.info("Calling integration-proxy at: {}", url);
 
-            ResponseEntity<Map> response = restTemplate.exchange(
+            ResponseEntity<Map> response = (ResponseEntity<Map>) forwardRequest(url,HttpMethod.POST, request,
+                Map.class); /*restTemplate.exchange(
                     url,
                     HttpMethod.POST,
                     entity,
                     Map.class
-            );
+            );*/
 
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
                 throw new RuntimeException("Failed to retrieve document from integration-proxy");
@@ -560,8 +572,10 @@ public class DocumentService {
      */
     public boolean isExternalSourceSupported(String sourceType) {
         try {
-            String url = integrationProxyUrl + "/api/v1/integration-proxy/documents/sources";
-            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+
+
+            String url = systemOptions.getIntegrationProxyUrl() + "/api/v1/integration-proxy/documents/sources";
+            ResponseEntity<Map> response = (ResponseEntity<Map>) forwardRequest(url, HttpMethod.GET, null, Map.class);
             
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 @SuppressWarnings("unchecked")
@@ -579,8 +593,8 @@ public class DocumentService {
      */
     public List<String> getSupportedExternalSources() {
         try {
-            String url = integrationProxyUrl + "/api/v1/integration-proxy/documents/sources";
-            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+            String url = systemOptions.getIntegrationProxyUrl() + "/api/v1/integration-proxy/documents/sources";
+            ResponseEntity<Map> response = (ResponseEntity<Map>) forwardRequest(url, HttpMethod.GET, null, Map.class);
             
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 @SuppressWarnings("unchecked")
@@ -591,5 +605,34 @@ public class DocumentService {
             log.warn("Failed to get supported sources from integration-proxy", e);
         }
         return Collections.emptyList();
+    }
+
+    /**
+     * Forward requests to integration-proxy using service principal authentication
+     */
+    private  ResponseEntity<?> forwardRequest(String url, HttpMethod method, Object body, Class<?> clazz) {
+        try {
+            // Get service principal JWT token from Keycloak
+            String keycloakJwt = keycloakService.getKeycloakToken();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(keycloakJwt);
+
+            HttpEntity<?> entity = new HttpEntity<>(body, headers);
+
+            log.info("Forwarding {} request to integration-proxy: {} with service principal auth", method, url);
+            ResponseEntity<?> httpResponse = restTemplate.exchange(url, method, entity, clazz);
+
+            return ResponseEntity.status(httpResponse.getStatusCode()).body(httpResponse.getBody());
+        } catch (HttpClientErrorException e) {
+            log.error("HTTP error forwarding request to integration-proxy: {} - {}", url, e.getMessage());
+            return ResponseEntity.status(e.getStatusCode())
+                .body(Map.of("error", "Integration proxy error: " + e.getResponseBodyAsString()));
+        } catch (Exception e) {
+            log.error("Error forwarding request to integration-proxy: {}", url, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to communicate with integration-proxy: " + e.getMessage()));
+        }
     }
 }

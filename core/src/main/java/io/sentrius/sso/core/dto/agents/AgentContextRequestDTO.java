@@ -18,6 +18,7 @@ public class AgentContextRequestDTO {
     private String name;
     private String description;
     private String context;
+    private String policyId;
 
 }
 

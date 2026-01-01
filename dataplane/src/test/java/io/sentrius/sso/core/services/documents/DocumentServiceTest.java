@@ -1,9 +1,11 @@
 package io.sentrius.sso.core.services.documents;
 
+import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.dto.documents.DocumentSearchDTO;
 import io.sentrius.sso.core.model.documents.Document;
 import io.sentrius.sso.core.repository.documents.DocumentRepository;
 import io.sentrius.sso.core.services.agents.EmbeddingService;
+import io.sentrius.sso.core.services.security.KeycloakService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,9 +32,14 @@ class DocumentServiceTest {
 
     private DocumentService documentService;
 
+    private SystemOptions systemOptions = new SystemOptions();
+
+    @Mock
+    private KeycloakService keycloakService;
+
     @BeforeEach
     void setUp() {
-        documentService = new DocumentService(documentRepository, embeddingService);
+        documentService = new DocumentService(documentRepository, embeddingService, keycloakService, systemOptions);
     }
 
     @Test
