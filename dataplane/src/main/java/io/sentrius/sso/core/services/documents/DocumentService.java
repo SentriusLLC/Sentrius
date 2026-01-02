@@ -252,6 +252,21 @@ public class DocumentService {
                 totalDocuments > 0 ? (documentsWithEmbeddings * 100.0 / totalDocuments) : 0.0);
         stats.put("embedding_service_available", embeddingService != null && embeddingService.isAvailable());
         
+        // Get unique document types
+        List<Document> allDocs = documentRepository.findAll();
+        long uniqueTypes = allDocs.stream()
+                .map(Document::getDocumentType)
+                .distinct()
+                .count();
+        stats.put("unique_types", uniqueTypes);
+        
+        // Count recent documents (last 7 days)
+        java.time.Instant oneWeekAgo = java.time.Instant.now().minus(7, java.time.temporal.ChronoUnit.DAYS);
+        long recentCount = allDocs.stream()
+                .filter(d -> d.getCreatedAt() != null && d.getCreatedAt().isAfter(oneWeekAgo))
+                .count();
+        stats.put("recent_count", recentCount);
+        
         return stats;
     }
 

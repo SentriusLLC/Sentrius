@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta th:replace="~{fragments/header}" />
+    <title>[[${systemOptions.systemLogoName}]] - Data Sources</title>
+
+    <style>
+        body { background-color: #121212; color: #eaeaea; }
+        .container { margin-top: 20px; }
+        .page-header { font-size: 1.5rem; font-weight: bold; margin-bottom: 15px; }
+        .modal-content { background-color: #1e1e1e; color: #eaeaea; }
+        .table-striped tbody tr:nth-of-type(odd) { background-color: #2b2b2b; }
+        .table-striped tbody tr:hover { background-color: #3a3a3a; cursor: pointer; }
+        .search-container { background-color: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .source-card { background-color: #1e1e1e; border: 1px solid #404040; border-radius: 8px; padding: 15px; margin-bottom: 15px; transition: all 0.2s; }
+        .source-card:hover { background-color: #2a2a2a; border-color: #555; }
+        .source-title { font-size: 1.2rem; font-weight: bold; color: #82ca9d; margin-bottom: 5px; }
+        .source-meta { font-size: 0.85rem; color: #888; margin-bottom: 10px; }
+        .source-summary { color: #ccc; margin-bottom: 10px; }
+        .source-tags { margin-top: 10px; }
+        .tag-badge { background-color: #404040; color: #82ca9d; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; margin-right: 5px; display: inline-block; margin-bottom: 5px; }
+        .marking-badge { padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; background-color: #555; color: #fff; }
+        .filter-section { margin-bottom: 15px; }
+        .stats-container { display: flex; gap: 20px; margin-bottom: 20px; }
+        .stat-box { background-color: #1e1e1e; padding: 15px; border-radius: 8px; text-align: center; flex: 1; }
+        .stat-number { font-size: 2rem; font-weight: bold; color: #82ca9d; }
+        .stat-label { font-size: 0.85rem; color: #888; }
+        .source-content-preview { background-color: #222; padding: 15px; border-radius: 5px; margin-top: 10px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; font-family: monospace; font-size: 0.85rem; line-height: 1.4; }
+        .action-btn { margin-left: 5px; }
+        .no-results { text-align: center; padding: 40px; color: #888; font-size: 1.1rem; }
+        #sourceList { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 15px; }
+    </style>
+</head>
+<body>
+<div id="csrf-token" style="display: none;" th:text="${_csrf.token}"></div>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
+                <h2 class="page-header">
+                    <i class="fas fa-database"></i> Data Sources
+                </h2>
+                <p class="text-muted mb-4">
+                    Manage and search across documents, PDFs, wikis, and other data sources
+                </p>
+
+                <!-- Statistics -->
+                <div class="stats-container">
+                    <div class="stat-box">
+                        <div class="stat-number" id="totalSources">0</div>
+                        <div class="stat-label">Total Data Sources</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="sourceTypes">0</div>
+                        <div class="stat-label">Source Types</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="recentSources">0</div>
+                        <div class="stat-label">Added This Week</div>
+                    </div>
+                </div>
+
+                <!-- Search and Filters -->
+                <div class="search-container">
+                    <div class="row">
+                        <div class="col-md-8 filter-section">
+                            <label for="searchQuery" class="form-label">
+                                <i class="fas fa-search"></i> Search Data Sources
+                            </label>
+                            <input type="text" class="form-control" id="searchQuery" placeholder="Search by name, content, or tags...">
+                        </div>
+                        <div class="col-md-4 filter-section">
+                            <label for="sourceTypeFilter" class="form-label">
+                                <i class="fas fa-filter"></i> Source Type
+                            </label>
+                            <select class="form-select" id="sourceTypeFilter">
+                                <option value="">All Types</option>
+                                <option value="TSG">TSG</option>
+                                <option value="MANUAL">Manual</option>
+                                <option value="GUIDE">Guide</option>
+                                <option value="POLICY">Policy</option>
+                                <option value="SPECIFICATION">Specification</option>
+                                <option value="PDF">PDF</option>
+                                <option value="WIKI">Wiki</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <button class="btn btn-primary" id="searchBtn">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                            <button class="btn btn-secondary" id="clearBtn">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                            <button class="btn btn-success" id="retrieveExternalBtn">
+                                <i class="fas fa-download"></i> Retrieve from External Source
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Source List -->
+                <div id="sourceList"></div>
+
+                <!-- No Results Message -->
+                <div id="noResults" class="no-results" style="display: none;">
+                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                    <p>No data sources found. Try adjusting your search criteria.</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Source Details Modal -->
+<div class="modal fade" id="sourceModal" tabindex="-1" aria-labelledby="sourceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sourceModalLabel">Data Source Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="sourceDetails">
+                    <h4 id="modalSourceTitle"></h4>
+                    <div id="modalSourceMeta" class="source-meta"></div>
+                    <div id="modalSourceTags" class="source-tags"></div>
+                    <hr>
+                    <div id="modalSourceSummary" class="source-summary"></div>
+                    <h5>Content:</h5>
+                    <div id="modalSourceContent" class="source-content-preview"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" id="deleteSourceBtn">
+                    <i class="fas fa-trash"></i> Delete Local Copy
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Retrieve External Data Source Modal -->
+<div class="modal fade" id="retrieveExternalModal" tabindex="-1" aria-labelledby="retrieveExternalModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="retrieveExternalModalLabel">Retrieve External Data Source</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="sourceUrl" class="form-label">Source URL</label>
+                    <input type="text" class="form-control" id="sourceUrl" placeholder="https://example.com/document.pdf" required>
+                    <small class="form-text text-muted">Supports HTTP, HTTPS, S3, and other protocols</small>
+                </div>
+                <div class="mb-3">
+                    <label for="externalSourceName" class="form-label">Source Name</label>
+                    <input type="text" class="form-control" id="externalSourceName" placeholder="My Data Source">
+                </div>
+                <div class="mb-3">
+                    <label for="externalSourceType" class="form-label">Source Type</label>
+                    <select class="form-select" id="externalSourceType">
+                        <option value="TSG">TSG</option>
+                        <option value="MANUAL">Manual</option>
+                        <option value="GUIDE">Guide</option>
+                        <option value="POLICY">Policy</option>
+                        <option value="SPECIFICATION">Specification</option>
+                        <option value="PDF">PDF</option>
+                        <option value="WIKI">Wiki</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="externalMarkings" class="form-label">Markings</label>
+                    <input type="text" class="form-control" id="externalMarkings" placeholder="e.g., ABC, DEF, etc">
+                    <small class="form-text text-muted">Security markings for access control</small>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="storeSource" checked>
+                    <label class="form-check-label" for="storeSource">
+                        Store data source locally after retrieval
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="retrieveBtn">
+                    <i class="fas fa-download"></i> Retrieve
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const csrfToken = document.getElementById('csrf-token').textContent;
+    let currentSourceId = null;
+
+    // Load statistics
+    loadStatistics();
+
+    // Load all data sources initially
+    searchSources();
+
+    // Search button click
+    document.getElementById('searchBtn').addEventListener('click', searchSources);
+
+    // Clear button click
+    document.getElementById('clearBtn').addEventListener('click', function() {
+        document.getElementById('searchQuery').value = '';
+        document.getElementById('sourceTypeFilter').value = '';
+        searchSources();
+    });
+
+    // Enter key in search
+    document.getElementById('searchQuery').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchSources();
+        }
+    });
+
+    // Retrieve external button
+    document.getElementById('retrieveExternalBtn').addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('retrieveExternalModal'));
+        modal.show();
+    });
+
+    // Retrieve from external source
+    document.getElementById('retrieveBtn').addEventListener('click', retrieveFromExternal);
+
+    // Delete data source button
+    document.getElementById('deleteSourceBtn').addEventListener('click', deleteSource);
+
+    function loadStatistics() {
+        fetch('/api/v1/documents/statistics', {
+            headers: {
+                'X-CSRF-TOKEN': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('totalSources').textContent = data.total_documents || 0;
+            document.getElementById('sourceTypes').textContent = data.unique_types || 0;
+            document.getElementById('recentSources').textContent = data.recent_count || 0;
+        })
+        .catch(err => {
+            console.error('Failed to load statistics:', err);
+        });
+    }
+
+    function searchSources() {
+        const query = document.getElementById('searchQuery').value;
+        const sourceType = document.getElementById('sourceTypeFilter').value;
+
+        const searchRequest = {
+            query: query || null,
+            documentType: sourceType || null
+        };
+
+        fetch('/api/v1/documents/search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify(searchRequest)
+        })
+        .then(response => response.json())
+        .then(data => {
+            displaySources(data);
+        })
+        .catch(err => {
+            console.error('Failed to search data sources:', err);
+            showNoResults();
+        });
+    }
+
+    function displaySources(sources) {
+        const sourceList = document.getElementById('sourceList');
+        const noResults = document.getElementById('noResults');
+        
+        sourceList.innerHTML = '';
+
+        if (!sources || sources.length === 0) {
+            showNoResults();
+            return;
+        }
+
+        noResults.style.display = 'none';
+        sourceList.style.display = 'grid';
+
+        sources.forEach(source => {
+            const card = createSourceCard(source);
+            sourceList.appendChild(card);
+        });
+    }
+
+    function createSourceCard(source) {
+        const card = document.createElement('div');
+        card.className = 'source-card';
+        card.onclick = () => showSourceDetails(source);
+        
+        card.innerHTML = `
+            <div class="source-title">
+                <i class="fas fa-database"></i> ${escapeHtml(source.documentName)}
+            </div>
+            <div class="source-meta">
+                <span class="tag-badge">${source.documentType}</span>
+                ${source.markings ? `<span class="marking-badge"><i class="fas fa-shield-alt"></i> ${escapeHtml(source.markings)}</span>` : ''}
+            </div>
+            ${source.summary ? `<div class="source-summary">${escapeHtml(source.summary)}</div>` : ''}
+            <div class="source-tags">
+                ${(source.tags || []).map(tag => `<span class="tag-badge"><i class="fas fa-tag"></i> ${escapeHtml(tag)}</span>`).join('')}
+            </div>
+            <div class="source-meta mt-2">
+                <i class="fas fa-user"></i> ${escapeHtml(source.createdBy)} | 
+                <i class="fas fa-clock"></i> ${formatDate(source.createdAt)}
+            </div>
+        `;
+
+        return card;
+    }
+
+    function showSourceDetails(source) {
+        currentSourceId = source.id;
+        
+        document.getElementById('modalSourceTitle').textContent = source.documentName;
+        
+        document.getElementById('modalSourceMeta').innerHTML = `
+            <span class="tag-badge">${source.documentType}</span>
+            ${source.markings ? `<span class="marking-badge"><i class="fas fa-shield-alt"></i> ${escapeHtml(source.markings)}</span>` : ''}
+            <br>
+            <i class="fas fa-user"></i> Created by: ${escapeHtml(source.createdBy)} | 
+            <i class="fas fa-clock"></i> ${formatDate(source.createdAt)}
+            ${source.updatedAt ? ` | Updated: ${formatDate(source.updatedAt)}` : ''}
+        `;
+        
+        document.getElementById('modalSourceTags').innerHTML = 
+            (source.tags || []).map(tag => `<span class="tag-badge"><i class="fas fa-tag"></i> ${escapeHtml(tag)}</span>`).join('');
+        
+        document.getElementById('modalSourceSummary').textContent = source.summary || 'No summary available.';
+        document.getElementById('modalSourceContent').textContent = source.content || 'No content available.';
+
+        const modal = new bootstrap.Modal(document.getElementById('sourceModal'));
+        modal.show();
+    }
+
+    function deleteSource() {
+        if (!currentSourceId) {
+            return;
+        }
+
+        if (!confirm('Are you sure you want to delete this data source from the local store? This will not affect the original source URL.')) {
+            return;
+        }
+
+        fetch(`/api/v1/documents/${currentSourceId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Data source deleted successfully');
+                bootstrap.Modal.getInstance(document.getElementById('sourceModal')).hide();
+                searchSources();
+                loadStatistics();
+            } else {
+                alert('Failed to delete data source');
+            }
+        })
+        .catch(err => {
+            console.error('Failed to delete data source:', err);
+            alert('Error deleting data source');
+        });
+    }
+
+    function retrieveFromExternal() {
+        const sourceUrl = document.getElementById('sourceUrl').value;
+        const sourceName = document.getElementById('externalSourceName').value;
+        const sourceType = document.getElementById('externalSourceType').value;
+        const markings = document.getElementById('externalMarkings').value;
+        const storeSource = document.getElementById('storeSource').checked;
+
+        if (!sourceUrl) {
+            alert('Please enter a source URL');
+            return;
+        }
+
+        const retrievalRequest = {
+            sourceUrl: sourceUrl,
+            documentName: sourceName || null,
+            documentType: sourceType,
+            classification: 'UNCLASSIFIED',  // Default, not displayed in UI
+            markings: markings || null,
+            storeDocument: storeSource
+        };
+
+        fetch('/api/v1/documents/retrieve/external', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify(retrievalRequest)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to retrieve data source');
+            }
+            return response.json();
+        })
+        .then(data => {
+            alert('Data source retrieved successfully');
+            bootstrap.Modal.getInstance(document.getElementById('retrieveExternalModal')).hide();
+            
+            // Clear form
+            document.getElementById('sourceUrl').value = '';
+            document.getElementById('externalSourceName').value = '';
+            document.getElementById('externalMarkings').value = '';
+            
+            // Refresh list
+            searchSources();
+            loadStatistics();
+        })
+        .catch(err => {
+            console.error('Failed to retrieve data source:', err);
+            alert('Error retrieving data source: ' + err.message);
+        });
+    }
+
+    function showNoResults() {
+        document.getElementById('sourceList').style.display = 'none';
+        document.getElementById('noResults').style.display = 'block';
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleString();
+    }
+});
+</script>
+
+</body>
+</html>

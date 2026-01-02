@@ -78,6 +78,21 @@
                 </ul>
             </li>
             
+            <!-- Data Section -->
+            <li class="nav-item mt-2" data-ui-resource="data">
+                <a href="#dataSubmenu" data-bs-toggle="collapse" class="nav-link px-0 align-middle">
+                    <i class="fas fa-database"></i> <span class="ms-1 d-none d-sm-inline">Data</span>
+                    <i class="fas fa-caret-down ms-1 d-none d-sm-inline"></i>
+                </a>
+                <ul class="collapse nav flex-column ms-3" id="dataSubmenu">
+                    <li data-ui-resource="data.sources">
+                        <a href="/sso/v1/data/sources" class="nav-link px-0 align-middle">
+                            <i class="fas fa-database"></i> <span class="ms-1 d-none d-sm-inline">Data Sources</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+            
             <!-- AI & Agents Section -->
             <li th:if="${uiAccessHelper.check(operatingUser, 'CAN_MANAGE_USERS', '/ui/ai') || uiAccessHelper.check(operatingUser, 'CAN_MANAGE_APPLICATION', '/ui/ai')}" 
                 class="nav-item mt-2" data-ui-resource="ai">
