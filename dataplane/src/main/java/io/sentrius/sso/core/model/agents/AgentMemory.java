@@ -76,7 +76,7 @@ public class AgentMemory {
     @Column(name = "shared_with_agents", columnDefinition = "TEXT")
     private String sharedWithAgents;
 
-    @Column(name = "metadata", columnDefinition = "jsonb")
+    @Column(name = "metadata")
     @JdbcTypeCode(SqlTypes.JSON)
     private JsonNode metadata;
 
@@ -84,7 +84,7 @@ public class AgentMemory {
     @Builder.Default
     private Integer version = 1;
 
-    @Column(name = "embedding", columnDefinition = "vector(1536)")
+    @Column(name = "embedding")
     @JdbcTypeCode(SqlTypes.VECTOR)
     private float[] embedding;
 

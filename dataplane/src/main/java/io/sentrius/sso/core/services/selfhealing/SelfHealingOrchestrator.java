@@ -245,9 +245,9 @@ public class SelfHealingOrchestrator {
         
         // Handle wrap-around (e.g., 22:00 to 06:00)
         if (offHoursStart > offHoursEnd) {
-            return currentHour >= offHoursStart || currentHour < offHoursEnd;
+            return currentHour >= offHoursStart || currentHour <= offHoursEnd;
         } else {
-            return currentHour >= offHoursStart && currentHour < offHoursEnd;
+            return currentHour >= offHoursStart && currentHour <= offHoursEnd;
         }
     }
 }

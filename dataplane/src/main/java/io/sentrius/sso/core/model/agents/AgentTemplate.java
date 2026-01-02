@@ -67,7 +67,7 @@ public class AgentTemplate {
      * Agent identity definition (issuer, subject prefix, certificate authority)
      */
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
+    @Column
     private String identity;
 
     /**
@@ -86,7 +86,7 @@ public class AgentTemplate {
      * JSON object defining constraints, limits, and safety boundaries
      */
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
+    @Column
     private String guardrails;
 
 
@@ -99,7 +99,7 @@ public class AgentTemplate {
      * Launch-specific configuration (resources, environment variables, etc.)
      */
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
+    @Column
     private String launchConfiguration;
 
     /**

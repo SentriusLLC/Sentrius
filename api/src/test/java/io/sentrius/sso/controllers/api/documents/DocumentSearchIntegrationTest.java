@@ -7,6 +7,7 @@ import io.sentrius.sso.core.model.users.User;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.documents.DocumentService;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,7 +22,13 @@ import static org.mockito.Mockito.when;
 
 /**
  * Integration test to verify document search returns empty results when no matches found.
+ * 
+ * NOTE: This test is disabled because it requires PostgreSQL with pgvector extension.
+ * The Document entity uses PostgreSQL-specific types (vector, jsonb) that cause ApplicationContext
+ * loading to fail when entities are scanned during Spring Boot startup.
+ * To run this test, use a PostgreSQL test database with pgvector installed.
  */
+@Disabled("Requires PostgreSQL with pgvector extension - ApplicationContext fails to load with H2")
 @SpringBootTest
 class DocumentSearchIntegrationTest {
 

@@ -69,11 +69,11 @@ public class Document {
     @Builder.Default
     private Integer version = 1;
 
-    @Column(name = "metadata", columnDefinition = "jsonb")
+    @Column(name = "metadata")
     @JdbcTypeCode(SqlTypes.JSON)
     private JsonNode metadata;
 
-    @Column(name = "embedding", columnDefinition = "vector(1536)")
+    @Column(name = "embedding")
     @JdbcTypeCode(SqlTypes.VECTOR)
     private float[] embedding;
 

@@ -62,11 +62,11 @@ public class MemoryAccessPolicy {
     private String targetMarkings;
 
 
-    @Column(name = "required_user_attributes", columnDefinition = "jsonb")
+    @Column(name = "required_user_attributes")
     @JdbcTypeCode(SqlTypes.JSON)
     private JsonNode requiredUserAttributes;
 
-    @Column(name = "required_agent_attributes", columnDefinition = "jsonb")
+    @Column(name = "required_agent_attributes")
     @JdbcTypeCode(SqlTypes.JSON)
     private JsonNode requiredAgentAttributes;
 
