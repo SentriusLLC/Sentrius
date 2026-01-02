@@ -106,6 +106,12 @@
                             <button class="btn btn-success" id="retrieveExternalBtn">
                                 <i class="fas fa-download"></i> Retrieve from External Source
                             </button>
+                            <div class="form-check form-check-inline ms-3">
+                                <input class="form-check-input" type="checkbox" id="useSemanticSearch" checked>
+                                <label class="form-check-label" for="useSemanticSearch">
+                                    Use AI-powered search (slower but finds similar content)
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -268,11 +274,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const query = document.getElementById('searchQuery').value;
         const sourceType = document.getElementById('sourceTypeFilter').value;
         const markings = document.getElementById('markingsFilter').value;
+        const useSemanticSearch = document.getElementById('useSemanticSearch').checked;
 
         const searchRequest = {
             query: query || null,
             documentType: sourceType || null,
-            markings: markings || null
+            markings: markings || null,
+            useSemanticSearch: useSemanticSearch
         };
 
         fetch('/api/v1/documents/search', {
@@ -283,9 +291,20 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             body: JSON.stringify(searchRequest)
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Search request failed');
+            }
+            return response.json();
+        })
         .then(data => {
-            displaySources(data);
+            // Ensure data is an array, even if API returns unexpected format
+            if (Array.isArray(data)) {
+                displaySources(data);
+            } else {
+                console.error('API returned unexpected format:', data);
+                displaySources([]);
+            }
         })
         .catch(err => {
             console.error('Failed to search data sources:', err);
@@ -297,16 +316,20 @@ document.addEventListener('DOMContentLoaded', function () {
         const sourceList = document.getElementById('sourceList');
         const noResults = document.getElementById('noResults');
         
+        // Always clear the source list first
         sourceList.innerHTML = '';
 
-        if (!sources || sources.length === 0) {
+        // Validate that sources is an array and has items
+        if (!sources || !Array.isArray(sources) || sources.length === 0) {
             showNoResults();
             return;
         }
 
+        // Hide no results message and show the grid
         noResults.style.display = 'none';
         sourceList.style.display = 'grid';
 
+        // Display each source card
         sources.forEach(source => {
             const card = createSourceCard(source);
             sourceList.appendChild(card);

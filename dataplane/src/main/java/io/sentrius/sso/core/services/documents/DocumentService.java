@@ -126,17 +126,21 @@ public class DocumentService {
      * Search documents using hybrid text and vector search
      */
     public List<Document> searchDocuments(DocumentSearchDTO searchDTO) {
-        log.info("Searching documents with query: {}, type: {}, markings: {}", 
-                searchDTO.getQuery(), searchDTO.getDocumentType(), searchDTO.getMarkings());
+        log.info("Searching documents with query: '{}', type: {}, markings: {}, useSemanticSearch: {}", 
+                searchDTO.getQuery(), searchDTO.getDocumentType(), searchDTO.getMarkings(), 
+                searchDTO.isUseSemanticSearch());
 
         if (searchDTO.getQuery() == null || searchDTO.getQuery().trim().isEmpty()) {
+            log.info("Query is null or empty, returning all documents with filters");
             return getAllDocuments(searchDTO);
         }
 
         if (!searchDTO.isUseSemanticSearch() || embeddingService == null || !embeddingService.isAvailable()) {
+            log.info("Using text search (semantic search disabled or unavailable)");
             return textSearchDocuments(searchDTO);
         }
 
+        log.info("Using hybrid search (semantic + text)");
         return hybridSearchDocuments(searchDTO);
     }
 
@@ -331,16 +335,20 @@ public class DocumentService {
     }
 
     private List<Document> textSearchDocuments(DocumentSearchDTO searchDTO) {
+        log.debug("Performing text search with query: '{}'", searchDTO.getQuery());
         List<Document> results = documentRepository.searchByContent(searchDTO.getQuery());
+        log.debug("Text search returned {} results before filtering", results.size());
         
         // Apply filters
         results = applySearchFilters(results, searchDTO);
+        log.debug("After filtering: {} results", results.size());
         
         // Apply limit
         if (searchDTO.getLimit() != null && searchDTO.getLimit() > 0) {
             results = results.stream().limit(searchDTO.getLimit()).collect(Collectors.toList());
         }
         
+        log.info("Text search final result count: {}", results.size());
         return results;
     }
 
@@ -396,13 +404,17 @@ public class DocumentService {
             
             // Merge and sort by score
             Set<Long> seenIds = new HashSet<>();
-            return Stream.concat(textResults.stream(), vectorResults.stream())
-                    .filter(doc -> seenIds.add(doc.getId()))
+            List<Document> finalResults = Stream.concat(textResults.stream(), vectorResults.stream())
+                    .filter(doc -> seenIds.add(doc.getId())) // Deduplicate
+                    .filter(doc -> scores.containsKey(doc.getId())) // Only include docs with scores
                     .sorted((a, b) -> Double.compare(
                             scores.getOrDefault(b.getId(), 0.0),
                             scores.getOrDefault(a.getId(), 0.0)))
                     .limit(limit)
                     .collect(Collectors.toList());
+            
+            log.info("Hybrid search final result count: {}", finalResults.size());
+            return finalResults;
                     
         } catch (Exception e) {
             log.error("Error in hybrid search, falling back to text search", e);

@@ -291,13 +291,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function displayResults(data) {
-        totalPages = data.totalPages;
+        totalPages = data.totalPages || 0;
         
         // Update stats
-        searchStats.textContent = `Found ${data.totalElements} memories (Page ${data.number + 1} of ${data.totalPages})`;
+        searchStats.textContent = `Found ${data.totalElements || 0} memories (Page ${(data.number || 0) + 1} of ${data.totalPages || 0})`;
         searchStats.style.display = 'block';
         
-        if (data.content && data.content.length > 0) {
+        // Validate that data.content is an array with items
+        if (data.content && Array.isArray(data.content) && data.content.length > 0) {
             // Display memory items
             memoryResults.innerHTML = data.content.map(memory => `
                 <div class="memory-item">
@@ -318,6 +319,7 @@ document.addEventListener('DOMContentLoaded', function() {
             paginationContainer.style.display = 'flex';
             noResults.style.display = 'none';
         } else {
+            // No results - clear and show message
             memoryResults.innerHTML = '';
             paginationContainer.style.display = 'none';
             noResults.style.display = 'block';
