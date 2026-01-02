@@ -66,13 +66,13 @@
                 <!-- Search and Filters -->
                 <div class="search-container">
                     <div class="row">
-                        <div class="col-md-8 filter-section">
+                        <div class="col-md-6 filter-section">
                             <label for="searchQuery" class="form-label">
                                 <i class="fas fa-search"></i> Search Data Sources
                             </label>
                             <input type="text" class="form-control" id="searchQuery" placeholder="Search by name, content, or tags...">
                         </div>
-                        <div class="col-md-4 filter-section">
+                        <div class="col-md-3 filter-section">
                             <label for="sourceTypeFilter" class="form-label">
                                 <i class="fas fa-filter"></i> Source Type
                             </label>
@@ -87,6 +87,12 @@
                                 <option value="WIKI">Wiki</option>
                                 <option value="OTHER">Other</option>
                             </select>
+                        </div>
+                        <div class="col-md-3 filter-section">
+                            <label for="markingsFilter" class="form-label">
+                                <i class="fas fa-shield-alt"></i> Markings
+                            </label>
+                            <input type="text" class="form-control" id="markingsFilter" placeholder="Filter by markings...">
                         </div>
                     </div>
                     <div class="row mt-3">
@@ -218,6 +224,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('clearBtn').addEventListener('click', function() {
         document.getElementById('searchQuery').value = '';
         document.getElementById('sourceTypeFilter').value = '';
+        document.getElementById('markingsFilter').value = '';
         searchSources();
     });
 
@@ -260,10 +267,12 @@ document.addEventListener('DOMContentLoaded', function () {
     function searchSources() {
         const query = document.getElementById('searchQuery').value;
         const sourceType = document.getElementById('sourceTypeFilter').value;
+        const markings = document.getElementById('markingsFilter').value;
 
         const searchRequest = {
             query: query || null,
-            documentType: sourceType || null
+            documentType: sourceType || null,
+            markings: markings || null
         };
 
         fetch('/api/v1/documents/search', {

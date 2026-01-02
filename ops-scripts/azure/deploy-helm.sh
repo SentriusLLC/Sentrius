@@ -111,6 +111,65 @@ if [[ $? -ne 0 ]]; then
     kubectl create namespace ${TENANT}-agents || { echo "Failed to create namespace ${TENANT}-agents"; exit 1; }
 fi
 
+# Check if namespace exists
+kubectl get namespace ${TENANT} >/dev/null 2>&1
+if [[ $? -ne 0 ]]; then
+    echo "Namespace ${TENANT} does not exist. Creating..."
+    kubectl create namespace ${TENANT} || { echo "Failed to create namespace ${TENANT}"; exit 1; }
+fi
+
+kubectl get namespace ${TENANT}-agents >/dev/null 2>&1
+if [[ $? -ne 0 ]]; then
+    echo "Namespace ${TENANT}-agents does not exist. Creating..."
+    kubectl create namespace ${TENANT}-agents || { echo "Failed to create namespace ${TENANT}-agents"; exit 1; }
+fi
+
+# ==========================================
+# 🔍 Check/Install NGINX Ingress Controller
+# ==========================================
+echo "🔍 Checking for NGINX Ingress Controller..."
+
+if ! kubectl get namespace ingress-nginx >/dev/null 2>&1; then
+    echo "📦 NGINX Ingress Controller not found. Installing..."
+
+    helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx >/dev/null 2>&1 || true
+    helm repo update ingress-nginx
+
+    helm install ingress-nginx ingress-nginx/ingress-nginx \
+        --create-namespace \
+        --namespace ingress-nginx \
+        --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-health-probe-request-path"=/healthz \
+        --wait \
+        --timeout=10m || { echo "❌ Failed to install NGINX Ingress Controller"; exit 1; }
+
+    echo "✅ NGINX Ingress Controller installed"
+else
+    echo "✅ NGINX Ingress Controller already installed"
+fi
+
+# Wait for ingress controller to get external IP
+echo "⏳ Waiting for NGINX Ingress Controller to get external IP..."
+INGRESS_IP=""
+for i in {1..60}; do
+    INGRESS_IP=$(kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+    if [[ -n "$INGRESS_IP" ]]; then
+        echo "✅ NGINX Ingress Controller has external IP: $INGRESS_IP"
+        break
+    fi
+    if [ $((i % 10)) -eq 0 ]; then
+        echo "  Still waiting for external IP... ($i/60)"
+    fi
+    sleep 5
+done
+
+if [[ -z "$INGRESS_IP" ]]; then
+    echo "⚠️ WARNING: NGINX Ingress Controller did not get an external IP within 5 minutes"
+    echo "  Continuing anyway, but ingresses may not work..."
+fi
+
+# Wait for admission webhooks to be ready (prevents validation failures during deployment)
+echo "🔍 Checking for admission webhooks..."
+
 # Wait for admission webhooks to be ready (prevents validation failures during deployment)
 echo "🔍 Checking for admission webhooks..."
 

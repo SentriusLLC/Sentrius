@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 
 import java.util.*;
 
@@ -178,6 +179,111 @@ class DocumentServiceTest {
 
         // Assert
         assertEquals(2, results.size());
+        verify(documentRepository).searchByContent("test query");
+    }
+
+    @Test
+    void testSearchDocuments_WithMarkingsFilter() {
+        // Arrange
+        DocumentSearchDTO searchDTO = DocumentSearchDTO.builder()
+                .query("test query")
+                .markings("ABC")
+                .useSemanticSearch(false)
+                .limit(10)
+                .build();
+
+        Document doc1 = Document.builder().id(1L).documentName("Doc1").markings("ABC//DEF").build();
+        Document doc2 = Document.builder().id(2L).documentName("Doc2").markings("XYZ").build();
+        Document doc3 = Document.builder().id(3L).documentName("Doc3").markings("ABC").build();
+        List<Document> allResults = Arrays.asList(doc1, doc2, doc3);
+
+        when(documentRepository.searchByContent("test query")).thenReturn(allResults);
+
+        // Act
+        List<Document> results = documentService.searchDocuments(searchDTO);
+
+        // Assert
+        assertEquals(2, results.size());
+        assertTrue(results.stream().anyMatch(d -> d.getId().equals(1L)));
+        assertTrue(results.stream().anyMatch(d -> d.getId().equals(3L)));
+        assertFalse(results.stream().anyMatch(d -> d.getId().equals(2L)));
+        verify(documentRepository).searchByContent("test query");
+    }
+
+    @Test
+    void testSearchDocuments_WithDocumentTypeFilter() {
+        // Arrange
+        DocumentSearchDTO searchDTO = DocumentSearchDTO.builder()
+                .query("test query")
+                .documentType("TSG")
+                .useSemanticSearch(false)
+                .limit(10)
+                .build();
+
+        Document doc1 = Document.builder().id(1L).documentName("Doc1").documentType("TSG").build();
+        Document doc2 = Document.builder().id(2L).documentName("Doc2").documentType("MANUAL").build();
+        List<Document> allResults = Arrays.asList(doc1, doc2);
+
+        when(documentRepository.searchByContent("test query")).thenReturn(allResults);
+
+        // Act
+        List<Document> results = documentService.searchDocuments(searchDTO);
+
+        // Assert
+        assertEquals(1, results.size());
+        assertEquals("TSG", results.get(0).getDocumentType());
+        verify(documentRepository).searchByContent("test query");
+    }
+
+    @Test
+    void testSearchDocuments_EmptyQueryWithFilters() {
+        // Arrange
+        DocumentSearchDTO searchDTO = DocumentSearchDTO.builder()
+                .query("")
+                .documentType("TSG")
+                .markings("ABC")
+                .page(0)
+                .size(20)
+                .build();
+
+        Document doc1 = Document.builder().id(1L).documentType("TSG").markings("ABC").build();
+        Document doc2 = Document.builder().id(2L).documentType("TSG").markings("XYZ").build();
+        Document doc3 = Document.builder().id(3L).documentType("MANUAL").markings("ABC").build();
+        
+        when(documentRepository.findAll(any(Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(Arrays.asList(doc1, doc2, doc3)));
+
+        // Act
+        List<Document> results = documentService.searchDocuments(searchDTO);
+
+        // Assert
+        assertEquals(1, results.size());
+        assertEquals(1L, results.get(0).getId());
+        assertEquals("TSG", results.get(0).getDocumentType());
+        assertEquals("ABC", results.get(0).getMarkings());
+    }
+
+    @Test
+    void testSearchDocuments_WithClassificationFilter() {
+        // Arrange
+        DocumentSearchDTO searchDTO = DocumentSearchDTO.builder()
+                .query("test query")
+                .classification("UNCLASSIFIED")
+                .useSemanticSearch(false)
+                .build();
+
+        Document doc1 = Document.builder().id(1L).documentName("Doc1").classification("UNCLASSIFIED").build();
+        Document doc2 = Document.builder().id(2L).documentName("Doc2").classification("SECRET").build();
+        List<Document> allResults = Arrays.asList(doc1, doc2);
+
+        when(documentRepository.searchByContent("test query")).thenReturn(allResults);
+
+        // Act
+        List<Document> results = documentService.searchDocuments(searchDTO);
+
+        // Assert
+        assertEquals(1, results.size());
+        assertEquals("UNCLASSIFIED", results.get(0).getClassification());
         verify(documentRepository).searchByContent("test query");
     }
 

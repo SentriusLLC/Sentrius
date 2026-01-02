@@ -126,10 +126,11 @@ public class DocumentService {
      * Search documents using hybrid text and vector search
      */
     public List<Document> searchDocuments(DocumentSearchDTO searchDTO) {
-        log.info("Searching documents with query: {}", searchDTO.getQuery());
+        log.info("Searching documents with query: {}, type: {}, markings: {}", 
+                searchDTO.getQuery(), searchDTO.getDocumentType(), searchDTO.getMarkings());
 
         if (searchDTO.getQuery() == null || searchDTO.getQuery().trim().isEmpty()) {
-            return getAllDocuments(searchDTO.getPage(), searchDTO.getSize());
+            return getAllDocuments(searchDTO);
         }
 
         if (!searchDTO.isUseSemanticSearch() || embeddingService == null || !embeddingService.isAvailable()) {
@@ -333,17 +334,7 @@ public class DocumentService {
         List<Document> results = documentRepository.searchByContent(searchDTO.getQuery());
         
         // Apply filters
-        if (searchDTO.getDocumentType() != null) {
-            results = results.stream()
-                    .filter(d -> d.getDocumentType().equals(searchDTO.getDocumentType()))
-                    .collect(Collectors.toList());
-        }
-        
-        if (searchDTO.getTags() != null && searchDTO.getTags().length > 0) {
-            results = results.stream()
-                    .filter(d -> containsAnyTag(d, searchDTO.getTags()))
-                    .collect(Collectors.toList());
-        }
+        results = applySearchFilters(results, searchDTO);
         
         // Apply limit
         if (searchDTO.getLimit() != null && searchDTO.getLimit() > 0) {
@@ -380,6 +371,10 @@ public class DocumentService {
                 vectorResults = documentRepository.findSimilarDocuments(embeddingString, limit * 2);
             }
             
+            // Apply filters to both text and vector results
+            textResults = applySearchFilters(textResults, searchDTO);
+            vectorResults = applySearchFilters(vectorResults, searchDTO);
+            
             // Score and combine results
             Map<Long, Double> scores = new HashMap<>();
             
@@ -415,10 +410,51 @@ public class DocumentService {
         }
     }
 
-    private List<Document> getAllDocuments(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    private List<Document> getAllDocuments(DocumentSearchDTO searchDTO) {
+        Pageable pageable = PageRequest.of(searchDTO.getPage(), searchDTO.getSize(), 
+                Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Document> documentPage = documentRepository.findAll(pageable);
-        return documentPage.getContent();
+        List<Document> results = documentPage.getContent();
+        
+        // Apply filters even when no query is provided
+        return applySearchFilters(results, searchDTO);
+    }
+    
+    /**
+     * Apply common filters to search results
+     */
+    private List<Document> applySearchFilters(List<Document> results, DocumentSearchDTO searchDTO) {
+        // Filter by document type
+        if (searchDTO.getDocumentType() != null && !searchDTO.getDocumentType().trim().isEmpty()) {
+            results = results.stream()
+                    .filter(d -> d.getDocumentType().equals(searchDTO.getDocumentType()))
+                    .collect(Collectors.toList());
+        }
+        
+        // Filter by tags
+        if (searchDTO.getTags() != null && searchDTO.getTags().length > 0) {
+            results = results.stream()
+                    .filter(d -> containsAnyTag(d, searchDTO.getTags()))
+                    .collect(Collectors.toList());
+        }
+        
+        // Filter by classification
+        if (searchDTO.getClassification() != null && !searchDTO.getClassification().trim().isEmpty()) {
+            results = results.stream()
+                    .filter(d -> d.getClassification() != null && 
+                            d.getClassification().equals(searchDTO.getClassification()))
+                    .collect(Collectors.toList());
+        }
+        
+        // Filter by markings
+        if (searchDTO.getMarkings() != null && !searchDTO.getMarkings().trim().isEmpty()) {
+            results = results.stream()
+                    .filter(d -> d.getMarkings() != null && 
+                            d.getMarkings().contains(searchDTO.getMarkings()))
+                    .collect(Collectors.toList());
+        }
+        
+        return results;
     }
 
     private boolean containsAnyTag(Document document, String[] tags) {

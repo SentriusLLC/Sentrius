@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
@@ -319,7 +320,7 @@ public class RuleApiController extends BaseController {
                 // Create token for LLM service
                 // Note: Using empty builder as LLM service will use system authentication
                 // If LLM requires user-specific tokens, this would need to be enhanced
-                TokenDTO token = TokenDTO.builder().build();
+                TokenDTO token = TokenDTO.builder().communicationId(UUID.randomUUID().toString()).build();
 
                 var authToken = integrationSecurityTokenService
                     .selectToken(systemOptions.getDefaultLlmProvider())
@@ -334,12 +335,27 @@ public class RuleApiController extends BaseController {
                     
                     // Parse the response
                     JsonNode responseJson = objectMapper.readTree(llmResponse);
-                    assistantMessage = responseJson.get("choices")
-                        .get(0)
-                        .get("message")
-                        .get("content")
-                        .asText();
-                    
+
+                    // Handle both old format (choices) and new format (output)
+                    JsonNode outputNode = responseJson.get("output");
+                    if (outputNode != null && outputNode.isArray() && outputNode.size() > 0) {
+                        // New format: output array
+                        JsonNode messageNode = outputNode.get(0);
+                        JsonNode contentArray = messageNode.get("content");
+                        if (contentArray != null && contentArray.isArray() && contentArray.size() > 0) {
+                            assistantMessage = contentArray.get(0).get("text").asText();
+                        }
+                    } else {
+                        // Old format: choices array
+                        JsonNode choicesNode = responseJson.get("choices");
+                        if (choicesNode != null && choicesNode.isArray() && choicesNode.size() > 0) {
+                            assistantMessage = choicesNode.get(0)
+                                .get("message")
+                                .get("content")
+                                .asText();
+                        }
+                    }
+
                     // Try to extract rule configuration from the response
                     ruleConfig = extractRuleConfig(assistantMessage);
                 } catch (io.sentrius.sso.core.exceptions.ZtatException ztatEx) {

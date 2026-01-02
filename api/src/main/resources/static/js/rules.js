@@ -118,7 +118,7 @@ function editRule(ruleId) {
 
 function deleteRule(ruleId) {
         const csrfToken = document.getElementById("assignCsrf").value;
-        var url = '/api/v1/zerotrust/rules/delete/' + ruleId
+        const url = '/api/v1/zerotrust/rules/delete/' + ruleId;
         fetch(url, {
             method: "DELETE",
             headers: {
@@ -254,7 +254,7 @@ $(document).ready(function () {
 
 
             (async () => {
-                url = "/api/v1/zerotrust/rules/save";
+                let url = "/api/v1/zerotrust/rules/save";
                 const csrfToken = document.getElementById('csrf-token').value; // Get CSRF token value
                 const payload = {
                     ruleName: ruleName,
@@ -277,7 +277,7 @@ $(document).ready(function () {
             return;
         } else {
             (async () => {
-                url = "/api/v1/zerotrust/rules/save";
+                let url = "/api/v1/zerotrust/rules/save";
                 const csrfToken = document.getElementById('csrf-token').value; // Get CSRF token value
                 const payload = {
                     ruleName: ruleName,
