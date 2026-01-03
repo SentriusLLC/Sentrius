@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.BooleanNode;
@@ -347,7 +348,8 @@ public class UserApiController extends BaseController {
         var userDtos = userService.getUserTypeList();
         userDtos.forEach( userDto -> {
             try {
-
+                // remove the zero base access set items.
+                userDto.setAccessSet(userDto.getAccessSet().stream().filter(x -> !x.contains("CANNOT")).collect(Collectors.toSet()));
                 if (userDto.getId() > 0) {
                     userDto.setDtoId(cryptoService.encrypt(userDto.getId().toString()));
                 }

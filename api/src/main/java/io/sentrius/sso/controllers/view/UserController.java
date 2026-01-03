@@ -167,7 +167,8 @@ public class UserController extends BaseController {
 
     @GetMapping("/list")
     public String listUsers(Model model) {
-        model.addAttribute("globalAccessSet", UserType.createSuperUser().getAccessSet());
+        model.addAttribute("globalAccessSet",
+            UserType.createSuperUser().getAccessSet().stream().filter(x -> !x.startsWith("CANNOT")).collect(Collectors.toSet()));
 
         return "sso/users/list_users";
     }
