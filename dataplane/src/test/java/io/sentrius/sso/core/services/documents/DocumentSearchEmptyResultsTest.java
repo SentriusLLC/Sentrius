@@ -39,13 +39,16 @@ class DocumentSearchEmptyResultsTest {
     @Mock
     private KeycloakService keycloakService;
 
+    @Mock
+    private DocumentAccessControlService accessControlService;
+
     private DocumentService documentService;
     private SystemOptions systemOptions = new SystemOptions();
 
     @BeforeEach
     void setUp() {
         documentService = new DocumentService(documentRepository, embeddingService, 
-                keycloakService, systemOptions);
+                keycloakService, systemOptions, accessControlService);
     }
 
     @Test

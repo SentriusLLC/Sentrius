@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.accumulo.access.AccessEvaluator;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -88,9 +89,11 @@ public class DocumentController extends BaseController {
         
         try {
             var operatingUser = getOperatingUser(request, response);
-            log.debug("Retrieving document: id={}, user={}", id, operatingUser.getUserId());
+            String userId = operatingUser.getUserId();
+            log.debug("Retrieving document: id={}, user={}", id, userId);
 
-            Optional<Document> documentOpt = documentService.getDocument(id);
+            AccessEvaluator evaluator = documentService.buildAccessEvaluatorForUser(userId);
+            Optional<Document> documentOpt = documentService.getDocument(id, userId, evaluator);
             
             if (documentOpt.isPresent()) {
                 DocumentDTO responseDTO = convertToDTO(documentOpt.get());
@@ -115,9 +118,11 @@ public class DocumentController extends BaseController {
         
         try {
             var operatingUser = getOperatingUser(request, response);
-            log.info("Searching documents: query={}, user={}", searchDTO.getQuery(), operatingUser.getUserId());
+            String userId = operatingUser.getUserId();
+            log.info("Searching documents: query={}, user={}", searchDTO.getQuery(), userId);
 
-            List<Document> documents = documentService.searchDocuments(searchDTO);
+            AccessEvaluator evaluator = documentService.buildAccessEvaluatorForUser(userId);
+            List<Document> documents = documentService.searchDocuments(searchDTO, userId, evaluator);
             
             List<DocumentDTO> responseDTOs = documents.stream()
                     .map(this::convertToDTO)
@@ -141,9 +146,11 @@ public class DocumentController extends BaseController {
         
         try {
             var operatingUser = getOperatingUser(request, response);
-            log.debug("Getting documents by type: type={}, user={}", documentType, operatingUser.getUserId());
+            String userId = operatingUser.getUserId();
+            log.debug("Getting documents by type: type={}, user={}", documentType, userId);
 
-            List<Document> documents = documentService.getDocumentsByType(documentType);
+            AccessEvaluator evaluator = documentService.buildAccessEvaluatorForUser(userId);
+            List<Document> documents = documentService.getDocumentsByType(documentType, userId, evaluator);
             
             List<DocumentDTO> responseDTOs = documents.stream()
                     .map(this::convertToDTO)
@@ -167,9 +174,11 @@ public class DocumentController extends BaseController {
         
         try {
             var operatingUser = getOperatingUser(request, response);
-            log.debug("Getting documents by tag: tag={}, user={}", tag, operatingUser.getUserId());
+            String userId = operatingUser.getUserId();
+            log.debug("Getting documents by tag: tag={}, user={}", tag, userId);
 
-            List<Document> documents = documentService.getDocumentsByTag(tag);
+            AccessEvaluator evaluator = documentService.buildAccessEvaluatorForUser(userId);
+            List<Document> documents = documentService.getDocumentsByTag(tag, userId, evaluator);
             
             List<DocumentDTO> responseDTOs = documents.stream()
                     .map(this::convertToDTO)

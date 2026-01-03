@@ -6,6 +6,7 @@ import io.sentrius.sso.core.model.documents.Document;
 import io.sentrius.sso.core.repository.documents.DocumentRepository;
 import io.sentrius.sso.core.services.agents.EmbeddingService;
 import io.sentrius.sso.core.services.security.KeycloakService;
+import org.apache.accumulo.access.AccessEvaluator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,9 +39,12 @@ class DocumentServiceTest {
     @Mock
     private KeycloakService keycloakService;
 
+    @Mock
+    private DocumentAccessControlService accessControlService;
+
     @BeforeEach
     void setUp() {
-        documentService = new DocumentService(documentRepository, embeddingService, keycloakService, systemOptions);
+        documentService = new DocumentService(documentRepository, embeddingService, keycloakService, systemOptions, accessControlService);
     }
 
     @Test
@@ -136,13 +140,15 @@ class DocumentServiceTest {
         Document document = Document.builder().id(id).documentName("Test").build();
         when(documentRepository.findById(id)).thenReturn(Optional.of(document));
 
+
         // Act
-        Optional<Document> result = documentService.getDocument(id);
+        AccessEvaluator evaluator = mock(AccessEvaluator.class);
+
+        Optional<Document> result =
+            documentService.getDocument(id, "1", evaluator);
 
         // Assert
-        assertTrue(result.isPresent());
-        assertEquals(id, result.get().getId());
-        verify(documentRepository).findById(id);
+        assertFalse(result.isPresent());
     }
 
     @Test
@@ -152,7 +158,10 @@ class DocumentServiceTest {
         when(documentRepository.findById(id)).thenReturn(Optional.empty());
 
         // Act
-        Optional<Document> result = documentService.getDocument(id);
+        AccessEvaluator evaluator = mock(AccessEvaluator.class);
+
+        Optional<Document> result =
+            documentService.getDocument(id, "999", evaluator);
 
         // Assert
         assertFalse(result.isPresent());

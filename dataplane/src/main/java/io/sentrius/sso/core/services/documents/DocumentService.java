@@ -4,10 +4,13 @@ import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.dto.documents.DocumentDTO;
 import io.sentrius.sso.core.dto.documents.DocumentSearchDTO;
 import io.sentrius.sso.core.model.documents.Document;
+import io.sentrius.sso.core.model.users.UserAttribute;
 import io.sentrius.sso.core.repository.documents.DocumentRepository;
 import io.sentrius.sso.core.services.agents.EmbeddingService;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.accumulo.access.AccessEvaluator;
+import org.apache.accumulo.access.Authorizations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -44,18 +47,21 @@ public class DocumentService {
     private final EmbeddingService embeddingService;
     private final RestTemplate restTemplate;
     private final KeycloakService keycloakService;
-
+    private final DocumentAccessControlService accessControlService;
 
     private final SystemOptions  systemOptions;
 
     public DocumentService(DocumentRepository documentRepository,
                            @Autowired(required = false) EmbeddingService embeddingService,
-                           KeycloakService keycloakService, SystemOptions systemOptions
+                           KeycloakService keycloakService, 
+                           SystemOptions systemOptions,
+                           DocumentAccessControlService accessControlService
     ) {
         this.documentRepository = documentRepository;
         this.embeddingService = embeddingService;
         this.keycloakService = keycloakService;
         this.systemOptions = systemOptions;
+        this.accessControlService = accessControlService;
         this.restTemplate = new RestTemplate();
 
     }
@@ -111,23 +117,94 @@ public class DocumentService {
     }
 
     /**
-     * Retrieve a document by ID
+     * Retrieve a document by ID with access control
      */
-    public Optional<Document> getDocument(Long id) {
-        return documentRepository.findById(id);
+    public Optional<Document> getDocument(Long id, String userId, AccessEvaluator evaluator) {
+        Optional<Document> document = documentRepository.findById(id);
+        if (document.isPresent()) {
+            if (accessControlService.canAccessDocument(document.get(), evaluator, userId)) {
+                return document;
+            } else {
+                log.warn("User {} denied access to document {}", userId, id);
+                return Optional.empty();
+            }
+        }
+        return Optional.empty();
     }
 
     /**
-     * Retrieve a document by name
+     * Retrieve a document by ID without access control (legacy method)
+     * @deprecated Use getDocument(Long id, String userId, AccessEvaluator evaluator) instead
      */
+    /*
+    @Deprecated
+    public Optional<Document> getDocument(Long id) {
+        log.warn("getDocument called without access control - this is deprecated");
+        return documentRepository.findById(id);
+    }*/
+
+    /**
+     * Retrieve a document by name with access control
+     */
+    public Optional<Document> getDocumentByName(String documentName, String userId, AccessEvaluator evaluator) {
+        Optional<Document> document = documentRepository.findByDocumentName(documentName);
+        if (document.isPresent()) {
+            if (accessControlService.canAccessDocument(document.get(), evaluator, userId)) {
+                return document;
+            } else {
+                log.warn("User {} denied access to document {}", userId, documentName);
+                return Optional.empty();
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Retrieve a document by name without access control (legacy method)
+     * @deprecated Use getDocumentByName(String documentName, String userId, AccessEvaluator evaluator) instead
+     */
+    @Deprecated
     public Optional<Document> getDocumentByName(String documentName) {
+        log.warn("getDocumentByName called without access control - this is deprecated");
         return documentRepository.findByDocumentName(documentName);
     }
 
     /**
-     * Search documents using hybrid text and vector search
+     * Search documents using hybrid text and vector search with access control
      */
+    public List<Document> searchDocuments(DocumentSearchDTO searchDTO, String userId, AccessEvaluator evaluator) {
+        /*
+        log.info("Searching documents with query: '{}', type: {}, markings: {}, useSemanticSearch: {}, userId: {}", 
+                searchDTO.getQuery(), searchDTO.getDocumentType(), searchDTO.getMarkings(), 
+                searchDTO.isUseSemanticSearch(), userId);*/
+
+        List<Document> results;
+        
+        if (searchDTO.getQuery() == null || searchDTO.getQuery().trim().isEmpty()) {
+            log.info("Query is null or empty, returning all documents with filters");
+            results = getAllDocuments(searchDTO);
+        } else if (!searchDTO.isUseSemanticSearch() || embeddingService == null || !embeddingService.isAvailable()) {
+            log.info("Using text search (semantic search disabled or unavailable)");
+            results = textSearchDocuments(searchDTO);
+        } else {
+            log.info("Using hybrid search (semantic + text)");
+            results = hybridSearchDocuments(searchDTO);
+        }
+
+        // Apply access control filter
+        results = accessControlService.filterAccessibleDocuments(results, evaluator, userId);
+        log.info("After access control filter: {} documents accessible to user {}", results.size(), userId);
+        
+        return results;
+    }
+
+    /**
+     * Search documents without access control (legacy method)
+     * @deprecated Use searchDocuments(DocumentSearchDTO searchDTO, String userId, AccessEvaluator evaluator) instead
+     */
+    @Deprecated
     public List<Document> searchDocuments(DocumentSearchDTO searchDTO) {
+        log.warn("searchDocuments called without access control - this is deprecated");
         log.info("Searching documents with query: '{}', type: {}, markings: {}, useSemanticSearch: {}", 
                 searchDTO.getQuery(), searchDTO.getDocumentType(), searchDTO.getMarkings(), 
                 searchDTO.isUseSemanticSearch());
@@ -147,16 +224,38 @@ public class DocumentService {
     }
 
     /**
-     * Find documents by type
+     * Find documents by type with access control
      */
+    public List<Document> getDocumentsByType(String documentType, String userId, AccessEvaluator evaluator) {
+        List<Document> documents = documentRepository.findByDocumentTypeOrderByCreatedAtDesc(documentType);
+        return accessControlService.filterAccessibleDocuments(documents, evaluator, userId);
+    }
+
+    /**
+     * Find documents by type without access control (legacy method)
+     * @deprecated Use getDocumentsByType(String documentType, String userId, AccessEvaluator evaluator) instead
+     */
+    @Deprecated
     public List<Document> getDocumentsByType(String documentType) {
+        log.warn("getDocumentsByType called without access control - this is deprecated");
         return documentRepository.findByDocumentTypeOrderByCreatedAtDesc(documentType);
     }
 
     /**
-     * Find documents by tags
+     * Find documents by tag with access control
      */
+    public List<Document> getDocumentsByTag(String tag, String userId, AccessEvaluator evaluator) {
+        List<Document> documents = documentRepository.findByTagsContaining(tag);
+        return accessControlService.filterAccessibleDocuments(documents, evaluator, userId);
+    }
+
+    /**
+     * Find documents by tag without access control (legacy method)
+     * @deprecated Use getDocumentsByTag(String tag, String userId, AccessEvaluator evaluator) instead
+     */
+    @Deprecated
     public List<Document> getDocumentsByTag(String tag) {
+        log.warn("getDocumentsByTag called without access control - this is deprecated");
         return documentRepository.findByTagsContaining(tag);
     }
 
@@ -699,5 +798,28 @@ public class DocumentService {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Failed to communicate with integration-proxy: " + e.getMessage()));
         }
+    }
+
+    /**
+     * Build an AccessEvaluator from user attributes for document access control
+     */
+    public AccessEvaluator buildAccessEvaluatorForUser(String userId) {
+        if (userId == null) {
+            return null;
+        }
+
+        List<UserAttribute> attributes = accessControlService.getUserAttributes(userId);
+        if (attributes.isEmpty()) {
+            log.debug("No attributes found for user: {}", userId);
+            return null;
+        }
+
+        List<Authorizations> authorizations = new ArrayList<>();
+        for (UserAttribute attr : attributes) {
+            authorizations.add(Authorizations.of(attr.getAttributeValue()));
+        }
+
+        log.debug("Built AccessEvaluator with {} authorizations for user: {}", authorizations.size(), userId);
+        return AccessEvaluator.of(authorizations);
     }
 }
