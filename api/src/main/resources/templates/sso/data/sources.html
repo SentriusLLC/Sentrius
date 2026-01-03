@@ -349,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <span class="tag-badge">${source.documentType}</span>
                 ${source.markings ? `<span class="marking-badge"><i class="fas fa-shield-alt"></i> ${escapeHtml(source.markings)}</span>` : ''}
             </div>
-            ${source.summary ? `<div class="source-summary">${escapeHtml(source.summary)}</div>` : ''}
+            ${source.summary ? `<div class="source-summary">${escapeHtmlLimitLength(source.summary, 50)}</div>` : ''}
             <div class="source-tags">
                 ${(source.tags || []).map(tag => `<span class="tag-badge"><i class="fas fa-tag"></i> ${escapeHtml(tag)}</span>`).join('')}
             </div>
@@ -480,6 +480,20 @@ document.addEventListener('DOMContentLoaded', function () {
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function escapeHtmlLimitLength(text, maxLength = 50) {
+        if (text == null) return "";
+
+        // Convert to string and trim to length
+        const truncated =
+            String(text).length > maxLength
+                ? String(text).slice(0, maxLength) + "…"
+                : String(text);
+
+        const div = document.createElement("div");
+        div.textContent = truncated;   // safely escapes HTML
         return div.innerHTML;
     }
 

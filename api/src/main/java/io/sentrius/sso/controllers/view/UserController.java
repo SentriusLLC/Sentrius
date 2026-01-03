@@ -177,7 +177,7 @@ public class UserController extends BaseController {
     @GetMapping("/edit")
     public String editUser(Model model, HttpServletRequest request, HttpServletResponse response,
                            @RequestParam("userId") String userId) throws GeneralSecurityException {
-        model.addAttribute("globalAccessSet", UserType.createSuperUser().getAccessSet());
+        model.addAttribute("globalAccessSet", UserType.createSuperUser().getAccessSet().stream().filter(x -> !x.startsWith("CANNOT")).collect(Collectors.toSet()));
         var decryptedUserId = cryptoService.decrypt(userId);
         Long id = Long.parseLong(decryptedUserId);
         User user = userService.getUserById(id);

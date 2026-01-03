@@ -377,12 +377,20 @@ public class DocumentController extends BaseController {
             String documentType = (String) retrievalRequest.get("documentType");
             String classification = (String) retrievalRequest.get("classification");
             String markings = (String) retrievalRequest.get("markings");
+
+            if (null == classification || classification.trim().isEmpty() || "UNCLASSIFIED".equalsIgnoreCase(classification)) {
+                if (null == markings || markings.trim().isEmpty()) {
+                    classification = "PUBLIC";
+                } else {
+                    classification = "PRIVATE";
+                }
+            }
             
             @SuppressWarnings("unchecked")
             Map<String, String> options = (Map<String, String>) retrievalRequest.get("options");
 
-            log.info("Retrieving document from external source via integration-proxy: {}, store={}, user={}", 
-                    sourceUrl, storeDocument, userId);
+            log.info("Retrieving document from external source via integration-proxy: {}, store={}, user={}, classification={}, markings={}",
+                    sourceUrl, storeDocument, userId, classification, markings);
 
             Document document = documentService.retrieveFromExternalSource(
                     sourceUrl, options, storeDocument, documentName, 

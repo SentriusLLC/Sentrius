@@ -89,7 +89,7 @@ public class DocumentService {
                 .content(content)
                 .contentType(contentType != null ? contentType : "text/plain")
                 .summary(summary)
-                .classification(classification != null ? classification : "UNCLASSIFIED")
+                .classification(classification != null ? classification : markings != null ? "PRIVATE" : "PUBLIC")
                 .markings(markings)
                 .createdBy(createdBy)
                 .checksum(checksum)
@@ -671,12 +671,7 @@ public class DocumentService {
             log.info("Calling integration-proxy at: {}", url);
 
             ResponseEntity<Map> response = (ResponseEntity<Map>) forwardRequest(url,HttpMethod.POST, request,
-                Map.class); /*restTemplate.exchange(
-                    url,
-                    HttpMethod.POST,
-                    entity,
-                    Map.class
-            );*/
+                Map.class);
 
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
                 throw new RuntimeException("Failed to retrieve document from integration-proxy");
@@ -709,7 +704,7 @@ public class DocumentService {
                         finalContentType,
                         "Retrieved from " + sourceUrl,
                         null, // tags can be added later
-                        classification != null ? classification : "UNCLASSIFIED",
+                        classification != null ? classification : markings != null ? "PRIVATE" : "PUBLIC",
                         markings,
                         createdBy
                 );

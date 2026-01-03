@@ -50,8 +50,10 @@ public class Document {
     @Column(name = "tags")
     private String tags; // Comma-separated tags for categorization
 
+    // previously classified as UNCLASSIFIED, which are documents we assume are public or markings
+    // that are nothing more than tags. If not PUBLIC, then we must enforce markings-based access control.
     @Column(name = "classification")
-    private String classification = "UNCLASSIFIED";
+    private String classification = "PUBLIC";
 
     @Column(name = "markings")
     private String markings;
