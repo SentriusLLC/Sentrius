@@ -1,6 +1,8 @@
 package io.sentrius.sso.controllers.api.abac;
 
 import io.sentrius.sso.core.annotations.LimitAccess;
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.abac.AccessPolicyDTO;
 import io.sentrius.sso.core.dto.abac.PolicyRuleDTO;
 import io.sentrius.sso.core.model.abac.AccessPolicy;
@@ -10,6 +12,8 @@ import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
 import io.sentrius.sso.core.repository.abac.AccessPolicyRepository;
 import io.sentrius.sso.core.repository.abac.AttributeDefinitionRepository;
 import io.sentrius.sso.core.repository.abac.PolicyRuleRepository;
+import io.sentrius.sso.core.services.ErrorOutputService;
+import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.abac.CustomAttributeMigrationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,7 +33,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/abac/policies")
-public class AccessPolicyController {
+public class AccessPolicyController extends BaseController {
 
     private static final boolean DEFAULT_IS_NEGATED = false;
     private static final int DEFAULT_EVALUATION_ORDER = 0;
@@ -40,10 +44,14 @@ public class AccessPolicyController {
     private final CustomAttributeMigrationService migrationService;
 
     public AccessPolicyController(
+        UserService userService,
+        SystemOptions systemOptions,
+        ErrorOutputService errorOutputService,
         AccessPolicyRepository policyRepository,
         PolicyRuleRepository ruleRepository,
         AttributeDefinitionRepository attributeDefinitionRepository,
         CustomAttributeMigrationService migrationService) {
+        super(userService, systemOptions, errorOutputService);
         this.policyRepository = policyRepository;
         this.ruleRepository = ruleRepository;
         this.attributeDefinitionRepository = attributeDefinitionRepository;

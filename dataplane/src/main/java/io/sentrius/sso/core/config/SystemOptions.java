@@ -149,6 +149,8 @@ public class SystemOptions {
   @Updatable(description = "Default LLM provider for automation and AI services (openai, claude, etc.)")
   @Builder.Default public String defaultLlmProvider = "openai";
 
+
+
   public Boolean lockdownEnabled = false;
 
   @Updatable(description = "AI risk score before user sessions are halted. Changes won't apply to currently running " +
@@ -182,6 +184,9 @@ public class SystemOptions {
     @Builder.Default
     public String integrationProxyUrl = "http://sentrius-integrationproxy:8080/";
 
+    @Updatable(description = "Agent namespace name.")
+    @Builder.Default
+    public String agentNamespace = "default";
 
 
     // the default path may be sufficient

@@ -55,6 +55,32 @@ public class AgentExecutionContextDTO {
         putStructuredToMemory(key, value);
     }
 
+    public void addToMemory(String key, String value) {
+        log.info("Adding to memory key: {} with string value", key);
+        JsonNode jsonValue = JsonUtil.MAPPER.convertValue(value, JsonNode.class);
+        putStructuredToMemory(key, jsonValue);
+    }
+
+    public Optional<String> getFromMemory(String key) {
+        log.info("Getting from memory key: {}", key);
+        JsonNode value = agentShortTermMemory.get(key);
+        if (value != null) {
+            if (value.isTextual()) {
+                return Optional.of(value.asText());
+            } else {
+                return Optional.of(value.toString());
+            }
+        }
+        return Optional.empty();
+    }
+
+    public void removeFromMemory(String key) {
+        log.info("Removing from memory key: {}", key);
+        agentShortTermMemory.remove(key);
+        // Also remove from long-term memories if present
+        longTermMemories.remove(key);
+    }
+
     public void putStructuredToMemory(String key, JsonNode value) {
         agentShortTermMemory.put(key, value);
         // Optional: Add to agentDataList if you want to preserve all data too

@@ -329,7 +329,7 @@ public class AgentClientService {
         return acommResponse;
     }
 
-    public String getCreatedAgentStatus(AgentExecution execution, String agentId)
+    public String getCreatedAgentStatus(TokenDTO execution, String agentId)
         throws ZtatException, JsonProcessingException {
         String ask = "/agent/bootstrap/launcher/status";
 

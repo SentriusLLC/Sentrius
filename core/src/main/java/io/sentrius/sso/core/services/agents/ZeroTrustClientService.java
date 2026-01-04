@@ -881,4 +881,42 @@ public class ZeroTrustClientService {
         }
     }
 
+    /**
+     * Makes a DELETE request to the API with the given endpoint.
+     *
+     * @param token The authentication token
+     * @param apiEndpoint The API endpoint path
+     * @return Response body as string
+     * @throws ZtatException If ZTAT token validation fails
+     */
+    public String callDeleteOnApi(@NonNull TokenDTO token, @NonNull String apiEndpoint) throws ZtatException {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(getKeycloakToken());
+        headers.set("X-Ztat-Token", token.getZtatToken());
+
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+
+        String url = agentApiUrl + apiEndpoint;
+        log.info("DELETE request to: {}", url);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.DELETE, requestEntity, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                return response.getBody() != null ? response.getBody() : "";
+            } else {
+                throw new RuntimeException("DELETE request failed: " + response.getStatusCode());
+            }
+
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
+                throw new ZtatException(e.getResponseBodyAsString(), apiEndpoint);
+            } else {
+                log.error("DELETE request error: {}", e.getResponseBodyAsString());
+                throw new RuntimeException("DELETE request failed: " + e.getResponseBodyAsString());
+            }
+        }
+    }
+
 }

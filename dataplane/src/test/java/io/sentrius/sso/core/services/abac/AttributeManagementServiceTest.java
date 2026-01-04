@@ -26,6 +26,9 @@ class AttributeManagementServiceTest {
     private AttributeAssignmentRepository assignmentRepository;
     
     @Mock
+    private io.sentrius.sso.core.repository.UserAttributeRepository userAttributeRepository;
+    
+    @Mock
     private io.sentrius.sso.core.services.security.KeycloakService keycloakService;
     
     private AttributeManagementService attributeManagementService;
@@ -35,6 +38,7 @@ class AttributeManagementServiceTest {
         attributeManagementService = new AttributeManagementService(
                 definitionRepository,
                 assignmentRepository,
+                userAttributeRepository,
                 keycloakService
         );
     }
@@ -204,6 +208,8 @@ class AttributeManagementServiceTest {
                 .thenReturn(Optional.of(assignment));
         when(assignmentRepository.save(any(AttributeAssignment.class)))
                 .thenReturn(assignment);
+        when(userAttributeRepository.findByUserIdAndAttributeNameAndIsActiveTrue(anyString(), anyString()))
+                .thenReturn(Optional.empty());
         
         // Act
         boolean result = attributeManagementService.removeAttributeAssignment(1L);
@@ -212,6 +218,130 @@ class AttributeManagementServiceTest {
         assertTrue(result);
         assertFalse(assignment.getIsActive());
         verify(assignmentRepository).save(assignment);
+    }
+    
+    @Test
+    void testAssignAttribute_UserTargetType_AlsoCreatesUserAttribute() {
+        // Arrange
+        AttributeDefinition definition = createAttributeDefinition();
+        
+        when(assignmentRepository.findByAttributeDefinitionAndTargetTypeAndTargetIdAndIsActiveTrue(
+                any(), any(), anyString()))
+                .thenReturn(Optional.empty());
+        
+        AttributeAssignment savedAssignment = createAttributeAssignment(definition);
+        when(assignmentRepository.save(any(AttributeAssignment.class)))
+                .thenReturn(savedAssignment);
+        
+        when(userAttributeRepository.findByUserIdAndAttributeNameAndIsActiveTrue(anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        
+        io.sentrius.sso.core.model.users.UserAttribute savedUserAttr = 
+                io.sentrius.sso.core.model.users.UserAttribute.builder()
+                .id(1L)
+                .userId("user123")
+                .attributeName("department")
+                .attributeValue("engineering")
+                .attributeType("STRING")
+                .source("SENTRIUS")
+                .isActive(true)
+                .syncedFromKeycloak(false)
+                .build();
+        
+        when(userAttributeRepository.save(any(io.sentrius.sso.core.model.users.UserAttribute.class)))
+                .thenReturn(savedUserAttr);
+        
+        // Act
+        AttributeAssignment result = attributeManagementService.assignAttribute(
+                definition,
+                AttributeAssignment.TargetType.USER,
+                "user123",
+                "engineering",
+                AttributeAssignment.AssignmentSource.SENTRIUS,
+                false
+        );
+        
+        // Assert
+        assertNotNull(result);
+        verify(assignmentRepository).save(any(AttributeAssignment.class));
+        // Verify that UserAttribute was also saved
+        verify(userAttributeRepository).save(any(io.sentrius.sso.core.model.users.UserAttribute.class));
+    }
+    
+    @Test
+    void testAssignAttribute_NonUserTargetType_DoesNotCreateUserAttribute() {
+        // Arrange
+        AttributeDefinition definition = createAttributeDefinition();
+        
+        when(assignmentRepository.findByAttributeDefinitionAndTargetTypeAndTargetIdAndIsActiveTrue(
+                any(), any(), anyString()))
+                .thenReturn(Optional.empty());
+        
+        AttributeAssignment savedAssignment = AttributeAssignment.builder()
+                .id(1L)
+                .attributeDefinition(definition)
+                .targetType(AttributeAssignment.TargetType.ENDPOINT)
+                .targetId("/api/data")
+                .attributeValue("high")
+                .source(AttributeAssignment.AssignmentSource.SENTRIUS)
+                .isActive(true)
+                .build();
+        
+        when(assignmentRepository.save(any(AttributeAssignment.class)))
+                .thenReturn(savedAssignment);
+        
+        // Act
+        AttributeAssignment result = attributeManagementService.assignAttribute(
+                definition,
+                AttributeAssignment.TargetType.ENDPOINT,
+                "/api/data",
+                "high",
+                AttributeAssignment.AssignmentSource.SENTRIUS,
+                false
+        );
+        
+        // Assert
+        assertNotNull(result);
+        verify(assignmentRepository).save(any(AttributeAssignment.class));
+        // Verify that UserAttribute was NOT saved for non-USER target types
+        verify(userAttributeRepository, never()).save(any());
+    }
+    
+    @Test
+    void testRemoveAttributeAssignment_UserTargetType_AlsoDeactivatesUserAttribute() {
+        // Arrange
+        AttributeAssignment assignment = createAttributeAssignment(createAttributeDefinition());
+        assignment.setIsActive(true);
+        
+        when(assignmentRepository.findById(1L))
+                .thenReturn(Optional.of(assignment));
+        when(assignmentRepository.save(any(AttributeAssignment.class)))
+                .thenReturn(assignment);
+        
+        io.sentrius.sso.core.model.users.UserAttribute existingUserAttr = 
+                io.sentrius.sso.core.model.users.UserAttribute.builder()
+                .id(1L)
+                .userId("user123")
+                .attributeName("department")
+                .attributeValue("engineering")
+                .isActive(true)
+                .build();
+        
+        when(userAttributeRepository.findByUserIdAndAttributeNameAndIsActiveTrue("user123", "department"))
+                .thenReturn(Optional.of(existingUserAttr));
+        when(userAttributeRepository.save(any(io.sentrius.sso.core.model.users.UserAttribute.class)))
+                .thenReturn(existingUserAttr);
+        
+        // Act
+        boolean result = attributeManagementService.removeAttributeAssignment(1L);
+        
+        // Assert
+        assertTrue(result);
+        assertFalse(assignment.getIsActive());
+        verify(assignmentRepository).save(assignment);
+        // Verify that UserAttribute was also deactivated
+        verify(userAttributeRepository).save(any(io.sentrius.sso.core.model.users.UserAttribute.class));
+        assertFalse(existingUserAttr.getIsActive());
     }
     
     // Helper methods

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta th:replace="~{fragments/header}" />
+    <title>[[${systemOptions.systemLogoName}]] - ABAC Agent Management</title>
+    
+    <style>
+        body { background-color: #121212; color: #eaeaea; }
+        .container { margin-top: 20px; }
+        .toast-header { font-size: 1.5rem; font-weight: bold; margin-bottom: 15px; }
+        .card { background-color: #1e1e1e; color: #eaeaea; margin-bottom: 20px; }
+        .card-header { background-color: #2b2b2b; }
+        .status-badge { font-size: 0.9rem; padding: 0.5rem 1rem; }
+        .status-running { background-color: #28a745; }
+        .status-stopped { background-color: #dc3545; }
+        .status-disabled { background-color: #6c757d; }
+    </style>
+</head>
+<body>
+<div id="csrf-token" style="display: none;" th:text="${_csrf.token}"></div>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+                
+                <h2 class="toast-header">ABAC Agent Management</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Agent Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Service:</strong> ABAC Attribute Evaluator</p>
+                                <p><strong>Type:</strong> abac</p>
+                                <p><strong>Description:</strong> Evaluates user attribute access requests using LLM-powered justification analysis</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Status:</strong> <span id="agent-status" class="badge status-badge">Checking...</span></p>
+                                <p><strong>Agent ID:</strong> <span id="agent-id">N/A</span></p>
+                                <p><strong>Namespace:</strong> <span id="agent-namespace">Loading...</span></p>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button id="launch-btn" class="btn btn-success" onclick="launchAgent()">
+                                <i class="fas fa-rocket"></i> Launch ABAC Agent
+                            </button>
+                            <button id="shutdown-btn" class="btn btn-danger" onclick="shutdownAgent()" style="display:none;">
+                                <i class="fas fa-stop"></i> Shutdown Agent
+                            </button>
+                            <button class="btn btn-info" onclick="refreshStatus()">
+                                <i class="fas fa-sync"></i> Refresh Status
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Features</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul>
+                            <li><strong>Intelligent Evaluation:</strong> Uses LLM to assess attribute access requests based on justification</li>
+                            <li><strong>Time-Based Expiration:</strong> Automatically revokes attributes after specified expiry time</li>
+                            <li><strong>Memory Management:</strong> Maintains history of evaluations, assignments, and expiry times</li>
+                            <li><strong>Trust Policy:</strong> Operates under defined trust policy with appropriate capabilities</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Available Verbs</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-dark table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Verb</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>evaluate_attribute_access</code></td>
+                                    <td>Evaluates if user should have access to an attribute based on justification</td>
+                                </tr>
+                                <tr>
+                                    <td><code>assign_user_attribute</code></td>
+                                    <td>Assigns attribute to user with optional expiry time</td>
+                                </tr>
+                                <tr>
+                                    <td><code>revoke_user_attribute</code></td>
+                                    <td>Revokes attribute from user</td>
+                                </tr>
+                                <tr>
+                                    <td><code>list_user_attributes</code></td>
+                                    <td>Lists all active attributes for a user</td>
+                                </tr>
+                                <tr>
+                                    <td><code>check_expired_attributes</code></td>
+                                    <td>Checks and revokes expired attributes</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <pre id="config-content" style="background: #222; padding: 10px; border-radius: 5px; color: #00ff00;">Loading configuration...</pre>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentAgentId = null;
+
+function getCsrfToken() {
+    return document.getElementById('csrf-token') ? document.getElementById('csrf-token').textContent : '';
+}
+
+function refreshStatus() {
+    fetch('/api/v1/abac/agent/status' + (currentAgentId ? '?agentId=' + currentAgentId : ''))
+        .then(response => response.json())
+        .then(data => {
+            const statusBadge = document.getElementById('agent-status');
+            const launchBtn = document.getElementById('launch-btn');
+            const shutdownBtn = document.getElementById('shutdown-btn');
+            
+            if (!data.enabled) {
+                statusBadge.textContent = 'Disabled';
+                statusBadge.className = 'badge status-badge status-disabled';
+                launchBtn.style.display = 'none';
+                shutdownBtn.style.display = 'none';
+            } else if (data.status === 'Running' || data.status === 'Pending') {
+                statusBadge.textContent = data.status;
+                statusBadge.className = 'badge status-badge status-running';
+                launchBtn.style.display = 'none';
+                shutdownBtn.style.display = 'inline-block';
+            } else {
+                statusBadge.textContent = 'Not Running';
+                statusBadge.className = 'badge status-badge status-stopped';
+                launchBtn.style.display = 'inline-block';
+                shutdownBtn.style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing status:', error);
+            document.getElementById('agent-status').textContent = 'Error';
+        });
+}
+
+function launchAgent() {
+    const launchBtn = document.getElementById('launch-btn');
+    launchBtn.disabled = true;
+    launchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Launching...';
+    
+    fetch('/api/v1/abac/agent/launch', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            currentAgentId = data.agentName;
+            document.getElementById('agent-id').textContent = data.agentName;
+            document.getElementById('agent-namespace').textContent = data.namespace;
+            alert('ABAC agent launched successfully: ' + data.agentName);
+            refreshStatus();
+        } else {
+            alert('Failed to launch agent: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error launching agent:', error);
+        alert('Error launching agent: ' + error);
+    })
+    .finally(() => {
+        launchBtn.disabled = false;
+        launchBtn.innerHTML = '<i class="fas fa-rocket"></i> Launch ABAC Agent';
+    });
+}
+
+function shutdownAgent() {
+    if (!currentAgentId) {
+        alert('No agent ID available');
+        return;
+    }
+    
+    if (!confirm('Are you sure you want to shutdown the ABAC agent?')) {
+        return;
+    }
+    
+    const shutdownBtn = document.getElementById('shutdown-btn');
+    shutdownBtn.disabled = true;
+    shutdownBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Shutting down...';
+    
+    fetch('/api/v1/abac/agent/shutdown?agentId=' + currentAgentId, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('ABAC agent shutdown successfully');
+            currentAgentId = null;
+            document.getElementById('agent-id').textContent = 'N/A';
+            refreshStatus();
+        } else {
+            alert('Failed to shutdown agent: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error shutting down agent:', error);
+        alert('Error shutting down agent: ' + error);
+    })
+    .finally(() => {
+        shutdownBtn.disabled = false;
+        shutdownBtn.innerHTML = '<i class="fas fa-stop"></i> Shutdown Agent';
+    });
+}
+
+function loadConfig() {
+    fetch('/api/v1/abac/agent/config')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('config-content').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('agent-namespace').textContent = data.namespace || 'dev';
+        })
+        .catch(error => {
+            console.error('Error loading config:', error);
+            document.getElementById('config-content').textContent = 'Error loading configuration';
+        });
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    refreshStatus();
+    loadConfig();
+});
+</script>
+
+</body>
+</html>
