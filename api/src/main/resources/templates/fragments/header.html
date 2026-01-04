@@ -1,7 +1,8 @@
 <head xmlns:th="http://www.thymeleaf.org" th:remove="tag">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-
+    <meta name="_csrf" th:content="${_csrf.token}">
+    
     <link rel="icon" th:href="@{/images/sentrius.ico}" type="image/x-icon"/>
     <link rel="stylesheet" type="text/css" th:href="@{/node/css/jquery-ui/all.css}"/>
     <!-- <link rel="stylesheet" type="text/css" th:href="@{/node/css/xterm.css}"/> -->
@@ -16,6 +17,7 @@
     <link rel="stylesheet" type="text/css" th:href="@{/node/css/gridstack/gridstack.css}"/>
     <link rel="stylesheet" type="text/css" th:href="@{/node/css/datatables/jquery.dataTables.css}"/>
     <link rel="stylesheet" type="text/css" th:href="@{/css/sso.css}"/>
+    <link rel="stylesheet" type="text/css" th:href="@{/css/ai-helper.css}"/>
 
     <script th:src="@{/node/js/jquery.min.js}"></script>
     <script th:src="@{/node/js/jquery-ui/version.js}"></script>
@@ -59,6 +61,7 @@
     <script th:src="@{/node/js/gridstack/gridstack-all.js}"></script>
     <script th:src="@{/node/js/chart.js/chart.umd.js}"></script>
     <script th:src="@{/js/abac-ui.js}"></script>
+    <script th:src="@{/js/ai-helper.js}"></script>
     <!--
         <script th:src="@{/node/js/tags.js}">
             Tags.init("select");
