@@ -344,6 +344,8 @@
       const input = document.getElementById('ai-helper-chat-input');
       if (!input) return;
 
+      const token = document.querySelector('meta[name="_csrf"]')?.content;
+
       const message = input.value.trim();
       if (!message) return;
 
@@ -365,6 +367,7 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': token
           },
           body: JSON.stringify({
             message: message,

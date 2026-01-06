@@ -133,7 +133,7 @@ public class TooltipController extends BaseController {
             }
 
             // Build token DTO for LLM service
-            TokenDTO tokenDTO = TokenDTO.builder().build();
+            TokenDTO tokenDTO = TokenDTO.builder().communicationId(UUID.randomUUID().toString()).build();
             // Token will be populated from security context by LLM service
 
             // Generate chat response
@@ -162,7 +162,7 @@ public class TooltipController extends BaseController {
      */
     @PostMapping("/admin/index")
     @Endpoint(description = "Trigger manual indexing of codebase and documentation")
-    @LimitAccess(applicationAccess = ApplicationAccessEnum.CAN_LOG_IN)
+    @LimitAccess(applicationAccess = ApplicationAccessEnum.CAN_MANAGE_APPLICATION)
     public ResponseEntity<Map<String, Object>> triggerIndexing(
             HttpServletRequest httpRequest,
             HttpServletResponse httpResponse) {

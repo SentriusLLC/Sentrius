@@ -31,18 +31,24 @@ spec:
             - containerPort: {{ .Values.sentrius.port }}
 
           {{- if not (eq .Values.environment "gke") }}
+          startupProbe:
+            tcpSocket:
+              port: 8080
+            failureThreshold: 60
+            periodSeconds: 2
+
           readinessProbe:
             httpGet:
               path: {{ .Values.healthCheck.readinessProbe.path }}
               port: {{ .Values.healthCheck.readinessProbe.port }}
-            initialDelaySeconds: 5
-            periodSeconds: 10
+            periodSeconds: 5
+
           livenessProbe:
             httpGet:
               path: {{ .Values.healthCheck.livenessProbe.path }}
               port: {{ .Values.healthCheck.livenessProbe.port }}
-            initialDelaySeconds: 5
-            periodSeconds: 10
+            periodSeconds: 20
+            failureThreshold: 3
           {{- end }}
 
           volumeMounts:

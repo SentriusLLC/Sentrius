@@ -136,11 +136,14 @@ public class ChatWSHandler extends TextWebSocketHandler {
             if (uri != null) {
                 Map<String, String> queryParams = parseQueryParams(uri.getQuery());
                 String sessionId = queryParams.get("sessionId");
+                String userId = queryParams.get("userId");
 
                 var websocky = userCommunicationService.getSession(sessionId);
 
+
                 if (sessionId != null && websocky.isPresent()) {
                     var websocketCommunication = websocky.get();
+                    websocketCommunication.setUserId(userId);
                     if (null == websocketCommunication.getAgentExecutionContextDTO().getAgentContext()){
                         log.info("Loading agent context for session ID: {} is null ? {}" , sessionId,
                             agentExecutionService.getExecutionContextDTO( chatAgent.getAgentExecution().getExecutionId() ).getAgentContext()==null);
@@ -148,7 +151,8 @@ public class ChatWSHandler extends TextWebSocketHandler {
                             agentExecutionService.getExecutionContextDTO( chatAgent.getAgentExecution().getExecutionId() ).getAgentContext()
                         );
                     }
-                    log.info("Received message from session ID: {}" , sessionId, websocketCommunication.getUniqueIdentifier());
+                    log.info("Received message from session ID: {}, userId {}" , sessionId,
+                        websocketCommunication.getUniqueIdentifier(), userId);
                     // Handle the message (e.g., process or respond)
 
 
@@ -521,9 +525,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                                     memoryMeta.get("value") : memoryMeta;
 
                                                 // Add userId to markings for privacy scoping if userId is available
-                                                String userId = chatAgent.getAgentExecution().getUser() != null 
-                                                    ? chatAgent.getAgentExecution().getUser().getUserId() 
-                                                    : null;
+
                                                 String enhancedMarkings;
                                                 if (userId != null && !userId.isEmpty()) {
                                                     enhancedMarkings = markings != null
@@ -574,10 +576,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                         JsonNode value = memoryMeta.has("value") ?
                                             memoryMeta.get("value") : memoryMeta;
 
-                                        // Add userId to markings for privacy scoping if userId is available
-                                        String userId = chatAgent.getAgentExecution().getUser() != null 
-                                            ? chatAgent.getAgentExecution().getUser().getUserId() 
-                                            : null;
+
                                         String enhancedMarkings;
                                         if (userId != null && !userId.isEmpty()) {
                                             enhancedMarkings = markings != null

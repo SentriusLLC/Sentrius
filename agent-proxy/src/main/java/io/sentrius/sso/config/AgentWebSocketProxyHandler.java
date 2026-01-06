@@ -48,6 +48,8 @@ public class AgentWebSocketProxyHandler implements WebSocketHandler {
             chatGroupId = chatGroupId.replace(" ","+");
             String ztat = queryParams.get("ztat");
             String ztatForChat = queryParams.get("jwt");
+            String userId = queryParams.get("userId");
+            userId = userId.replace(" ","+");
 
 
             if (ztatForChat != null && !ztatForChat.isEmpty()) {
@@ -62,10 +64,11 @@ public class AgentWebSocketProxyHandler implements WebSocketHandler {
                 log.info("Invalid ZTAT token for sessionId: {}", sessionId);
                 return Mono.error(new RuntimeException("Invalid ZTAT token") );
             }
-            log.info("Handling WebSocket connection for host: {}, sessionId: {}, chatGroupId: {}, ztat: {}",
-                agentHost, sessionId, chatGroupId, ztat);
+            log.info("Handling WebSocket connection for host: {}, sessionId: {}, chatGroupId: {}, ztat: {}, userId: {}",
+                agentHost, sessionId, chatGroupId, ztat, userId);
 
-            URI agentUri = agentLocator.resolveWebSocketUri(agentHost.toLowerCase(), sessionId, chatGroupId, ztat);
+            URI agentUri = agentLocator.resolveWebSocketUri(agentHost.toLowerCase(), sessionId, chatGroupId, ztat,
+                userId);
 
             log.info("Resolved agent URI: {}", agentUri);
 

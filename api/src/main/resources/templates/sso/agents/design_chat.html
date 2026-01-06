@@ -341,9 +341,10 @@
     </div>
 </div>
 
-    <script type="module">
+    <script type="module" th:inline="javascript">
         import * as Chat from '/js/chat.js';
         let sessionId = crypto.randomUUID();
+        let userId = [[${userId}]];
         let conversationHistory = [];
         let availableAgent = null;
         const csrfToken = document.getElementById("csrf-token").value;
@@ -426,7 +427,7 @@
                         if (!session) {
                             console.log("New session creating:");
                             session = new ChatSession(availableAgent.agentName, availableAgent.agentId, sessionId,
-                                availableAgent.agentCallback);
+                                userId,availableAgent.agentCallback);
                             session.connect().then(() => {
                                 console.log("Connected to chat server");
                             });
@@ -458,7 +459,7 @@
                 let session = chatSessions.get(availableAgent.agentId);
                 if (!session) {
                     console.log("New session creating:");
-                    session = new ChatSession(availableAgent.agentName, availableAgent.agentId, sessionId,
+                    session = new ChatSession(availableAgent.agentName, availableAgent.agentId, sessionId,userId,
                         availableAgent.agentCallback);
                     session.connect().then(() => {
                         console.log("Connected to chat server");

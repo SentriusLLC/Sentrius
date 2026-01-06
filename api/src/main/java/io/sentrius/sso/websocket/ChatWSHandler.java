@@ -33,7 +33,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
 
 
 
-    // Store active sessions, using session ID or a custom identifier
+    // Storec active sessions, using session ID or a custom identifier
     private final ConcurrentHashMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
     @Override

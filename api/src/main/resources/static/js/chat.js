@@ -23,11 +23,12 @@ const chatSessions = new Map(); // key: agentId, value: ChatSession
 // Section: ChatSession Class
 // =========================
 class ChatSession {
-    constructor(agentName, agentId, sessionId, agentHost, preloadMessages = []) {
+    constructor(agentName, agentId, sessionId, userId, agentHost, preloadMessages = []) {
         this.agentId = agentId;
         this.agentName = agentName;
         this.sessionId = sessionId;
         this.agentHost = agentHost;
+        this.userId = userId;
         this.chatGroupId = `${agentId}-${sessionId}`;
         this.messages = preloadMessages || [];
         this.connection = null;
@@ -79,7 +80,7 @@ class ChatSession {
         let ztatForChat = {};
         try {
             const response = await fetch(
-                "/api/v1/agent/connect?session_id=" + this.sessionId,
+                "/api/v1/agent/connect?session_id=" + this.sessionId + "&userId=" + this.userId,
                 {
                     method: "POST",
                     headers: {
@@ -115,7 +116,7 @@ class ChatSession {
         //const uri = `${phost}/api/v1/chat/attach/subscribe?sessionId=${encodeURIComponent(this.sessionId)}&chatGroupId=${this.chatGroupId}&ztat=${encodeURIComponent(jwt)}`;
         //const uri = `/api/v1/agents/ws/${encodeURIComponent(phost)}/${encodeURIComponent(this.sessionId)}/${encodeURIComponent(this.chatGroupId)}/${encodeURIComponent(jwt)}`;
 
-        const uri = config.agentProxyWsUrl + `/api/v1/agents/ws?phost=${encodeURIComponent(phost)}&sessionId=${encodeURIComponent(this.sessionId)}&chatGroupId=${encodeURIComponent(this.chatGroupId)}&ztat=${encodeURIComponent(jwt)}&jwt=${encodeURIComponent(ztatForChat.ztat_token)}`;
+        const uri = config.agentProxyWsUrl + `/api/v1/agents/ws?phost=${encodeURIComponent(phost)}&sessionId=${encodeURIComponent(this.sessionId)}&userId=${encodeURIComponent(this.userId)}&chatGroupId=${encodeURIComponent(this.chatGroupId)}&ztat=${encodeURIComponent(jwt)}&jwt=${encodeURIComponent(ztatForChat.ztat_token)}`;
 
         console.log("Connecting to chat server with ZTAT at:", uri);
         this.connection = new WebSocket(uri);
