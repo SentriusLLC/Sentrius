@@ -2,9 +2,6 @@
  * AI Helper Library
  * Enables right-click context menu to get AI-powered descriptions and chat assistance
  */
-<script th:inline="javascript">
-    var csrf = [[${session._csrf}]];
-</script>
 
 (function(window, document) {
   'use strict';

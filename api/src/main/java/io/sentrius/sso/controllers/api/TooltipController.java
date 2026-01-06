@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * REST Controller for AI-powered tooltip and contextual help features.
@@ -82,7 +83,7 @@ public class TooltipController extends BaseController {
             }
 
             // Build token DTO for LLM service
-            TokenDTO tokenDTO = TokenDTO.builder().build();
+            TokenDTO tokenDTO = TokenDTO.builder().communicationId(UUID.randomUUID().toString()).build();
             // Token will be populated from security context by LLM service
 
             // Generate description

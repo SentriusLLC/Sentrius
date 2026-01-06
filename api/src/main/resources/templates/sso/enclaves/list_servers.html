@@ -285,17 +285,57 @@
 
     function initializeRdpConnection(sessionData) {
         // Build the WebSocket tunnel to guacd via your proxy
-        const u = new URL(sessionData.websocketUrl, sessionData.websocketHost);
-        u.protocol = (u.protocol === 'https:') ? 'wss:' : 'ws:';
-        const wsUrl = u.toString();
+        // Build the WebSocket URL with the token as a query parameter
+        const baseUrl = sessionData.websocketHost;
+        const path = sessionData.websocketBaseUrl;
+        const token = sessionData.jwtToken;
+        // Construct the WebSocket URL
+        const url = new URL(path, baseUrl);
+        url.protocol = (url.protocol === 'https:') ? 'wss:' : 'ws:';
+        url.searchParams.set('token', token);
+        const wsUrlWithToken = url.toString();
 
-        console.log("Connecting to Guacamole WebSocket:", wsUrl);
-        console.log("Connecting to Guacamole WebSocket:", sessionData.websocketUrl);
-        console.log("Connecting to Guacamole WebSocket:", sessionData.websocketHost);
+        console.log("=== RDP Connection Debug Info ===");
+        console.log("Platform:", navigator.platform);
+        console.log("User Agent:", navigator.userAgent);
+        console.log("WebSocket URL:", wsUrlWithToken);
+        console.log("===============================");
 
-        const tunnel = new Guacamole.WebSocketTunnel(wsUrl);
+        const OriginalWebSocket = window.WebSocket;
+        const isChromium = /Chrome|Chromium|Edg/.test(navigator.userAgent);
+
+        window.WebSocket = function(url, protocols) {
+            // Clean the URL if it has ?undefined or &undefined
+            let cleanUrl = url.replace(/[?&]undefined/g, '');
+            console.log("WebSocket constructor called with:", url);
+            console.log("Cleaned URL:", cleanUrl);
+            console.log("Protocols:", protocols);
+            console.log("Browser is Chromium:", isChromium);
+
+            // Chrome/Edge are strict about subprotocol negotiation
+            // Don't specify subprotocol to avoid rejection
+            if (isChromium) {
+                console.log("Chromium browser detected - connecting without subprotocol");
+                return new OriginalWebSocket(cleanUrl);
+            } else {
+                console.log("Non-Chromium browser - connecting with subprotocol:", protocols);
+                return new OriginalWebSocket(cleanUrl, protocols);
+            }
+        };
+
+        try {
+        // Use standard Guacamole WebSocketTunnel
+        const tunnel = new Guacamole.WebSocketTunnel(wsUrlWithToken);
         const client = new Guacamole.Client(tunnel);
 
+        tunnel.onerror = function(status) {
+            console.error("Tunnel error:", status.code, status.message);
+            const statusDiv = document.getElementById("rdpConnectionStatus");
+            if (statusDiv) {
+                statusDiv.className = "alert alert-danger";
+                statusDiv.innerHTML = `<i class='fa fa-exclamation-triangle'></i> Tunnel Error: ${status.code} - ${status.message || 'Connection failed'}`;
+            }
+        };
         tunnel.onerror = function(status) {
             console.error("Tunnel error:", status.code, status.message);
         };
@@ -313,12 +353,13 @@
 
         // Clear any previous content
         displayDiv.innerHTML = '<div id="rdpControls" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); padding: 5px; border-radius: 3px; z-index: 100;"><button class="btn btn-sm btn-secondary" onclick="disconnectRdp()" title="Disconnect"><i class="fa fa-power-off"></i></button></div>';
-        
+
         // Get the display element and append it
         const guacDisplay = client.getDisplay().getElement();
         displayDiv.appendChild(guacDisplay);
 
         // Now connect
+        //client.connect();
         client.connect();
 
         $('#rdpModal').on('shown.bs.modal', function () {
@@ -389,6 +430,13 @@
                     break;
             }
         };
+
+    } finally {
+        // Restore original WebSocket after a short delay
+        setTimeout(() => {
+            window.WebSocket = OriginalWebSocket;
+        }, 1000);
+    }
     }
 
 

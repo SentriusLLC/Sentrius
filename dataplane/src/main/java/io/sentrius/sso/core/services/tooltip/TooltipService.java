@@ -1,6 +1,9 @@
 package io.sentrius.sso.core.services.tooltip;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.dto.SystemOption;
 import io.sentrius.sso.core.dto.documents.DocumentSearchDTO;
 import io.sentrius.sso.core.dto.tooltip.TooltipChatRequest;
 import io.sentrius.sso.core.dto.tooltip.TooltipChatResponse;
@@ -33,6 +36,7 @@ public class TooltipService {
 
     private final DocumentService documentService;
     private final LLMService llmService;
+    private final SystemOptions systemOptions;
     
     @Value("${sentrius.tooltip.max-context-documents:5}")
     private int maxContextDocuments;
@@ -43,9 +47,10 @@ public class TooltipService {
     @Value("${sentrius.tooltip.llm-model:gpt-4o-mini}")
     private String llmModel;
 
-    public TooltipService(DocumentService documentService, LLMService llmService) {
+    public TooltipService(DocumentService documentService, LLMService llmService, SystemOptions systemOptions) {
         this.documentService = documentService;
         this.llmService = llmService;
+        this.systemOptions = systemOptions;
     }
 
     /**
@@ -325,19 +330,29 @@ public class TooltipService {
         request.put("temperature", 0.7);
         
         // Call LLM
-        String responseJson = llmService.askQuestion(tokenDTO, request);
-        
-        // Parse response
-        var response = JsonUtil.MAPPER.readTree(responseJson);
-        var choices = response.get("choices");
-        if (choices != null && choices.isArray() && !choices.isEmpty()) {
-            var firstChoice = choices.get(0);
-            var message = firstChoice.get("message");
-            if (message != null) {
-                var content = message.get("content");
-                if (content != null) {
-                    return content.asText();
-                }
+        String llmResponse = llmService.askQuestion(tokenDTO,systemOptions.getIntegrationProxyUrl(), request);
+
+
+        // Parse the response
+        JsonNode responseJson = JsonUtil.MAPPER.readTree(llmResponse);
+
+        // Handle both old format (choices) and new format (output)
+        JsonNode outputNode = responseJson.get("output");
+        if (outputNode != null && outputNode.isArray() && outputNode.size() > 0) {
+            // New format: output array
+            JsonNode messageNode = outputNode.get(0);
+            JsonNode contentArray = messageNode.get("content");
+            if (contentArray != null && contentArray.isArray() && contentArray.size() > 0) {
+                return contentArray.get(0).get("text").asText();
+            }
+        } else {
+            // Old format: choices array
+            JsonNode choicesNode = responseJson.get("choices");
+            if (choicesNode != null && choicesNode.isArray() && choicesNode.size() > 0) {
+                return  choicesNode.get(0)
+                    .get("message")
+                    .get("content")
+                    .asText();
             }
         }
         

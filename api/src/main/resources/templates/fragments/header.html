@@ -439,7 +439,16 @@
         });
 
         /*]]>*/
+
+        // Initialize AI Helper after DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            const aiHelper = new AIHelper({
+                apiEndpoint: '/api/v1/tooltip'
+            });
+            console.log('AI Helper initialized with mock API');
+        });
     </script>
+
 
 
 </head>
