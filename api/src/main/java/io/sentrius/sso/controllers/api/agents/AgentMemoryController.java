@@ -426,12 +426,13 @@ public class AgentMemoryController extends BaseController {
         
         String searchTerm = (String) searchRequest.get("searchTerm");
         String markingsFilter = (String) searchRequest.get("markings");
+        String agentId = (String) searchRequest.get("agentId");
         Integer limit = (Integer) searchRequest.getOrDefault("limit", 10);
         // Default to 0 to let the service determine optimal threshold
         Double threshold = (Double) searchRequest.getOrDefault("threshold", 0.0);
         
-        log.debug("Hybrid search - term: {}, markings: {}, limit: {}, threshold: {}", 
-                  searchTerm, markingsFilter, limit, threshold);
+        log.debug("Hybrid search - term: {}, markings: {}, agentId: {}, limit: {}, threshold: {}", 
+                  searchTerm, markingsFilter, agentId, limit, threshold);
         
         try {
             var operatingUser = getOperatingUser(request,response);
@@ -449,7 +450,7 @@ public class AgentMemoryController extends BaseController {
             AccessEvaluator evaluator = authorizations.isEmpty() ? null :  AccessEvaluator.of(authorizations);
 
             List<AgentMemory> results = vectorMemoryStore.hybridSearch(evaluator,
-                    searchTerm, markingsFilter, userId, limit, threshold);
+                    searchTerm, markingsFilter, userId, agentId, limit, threshold);
             
             List<AgentMemoryDTO> responseDTOs = results.stream()
                     .map(this::convertToDTO)
@@ -595,8 +596,9 @@ public class AgentMemoryController extends BaseController {
             AccessEvaluator evaluator = authorizations.isEmpty() ? null :  AccessEvaluator.of(authorizations);
 
             // Pass 0 as threshold to let the service determine the optimal threshold based on query
+            // Pass agent parameter to enable access to PRIVATE memories without USER markings
             List<AgentMemory> results = vectorMemoryStore.hybridSearch(evaluator,
-                content, markings, operatingUser.getUserId(), 10, 0);
+                content, markings, operatingUser.getUserId(), agent, 10, 0);
 
             Page<AgentMemoryDTO> responseDTOs = results.stream()
                 .map(this::convertToDTO).collect(Collectors.collectingAndThen(

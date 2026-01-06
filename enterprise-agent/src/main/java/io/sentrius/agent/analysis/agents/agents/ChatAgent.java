@@ -357,11 +357,20 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                         JsonNode value = memoryMeta.has("value") ? 
                                             memoryMeta.get("value") : memoryMeta;
                                         
-                                        // Add userId to markings for privacy scoping
-                                        String userId = agentExecution.getUser().getUserId();
-                                        String enhancedMarkings = markings != null 
-                                            ? markings + ",USER:" + userId 
-                                            : "USER:" + userId;
+                                        // Add userId to markings for privacy scoping if userId is available
+                                        String userId = agentExecution.getUser() != null 
+                                            ? agentExecution.getUser().getUserId() 
+                                            : null;
+                                        String enhancedMarkings;
+                                        if (userId != null && !userId.isEmpty()) {
+                                            enhancedMarkings = markings != null 
+                                                ? markings + ",USER:" + userId 
+                                                : "USER:" + userId;
+                                        } else {
+                                            // If no userId, use markings as-is without USER scoping
+                                            // Ensure we have at least an empty string to avoid NPE in split()
+                                            enhancedMarkings = markings != null ? markings : "";
+                                        }
                                         
                                         agentClientService.storeMemory(agentExecution,
                                             agentExecutionContext.getAgentContext().getName(),
@@ -370,7 +379,7 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                                 .memoryKey(memoryEntry.getKey())
                                                 .memoryValue(value.toString())
                                                 .classification(classification)
-                                                .markings(enhancedMarkings.split(","))
+                                                .markings(enhancedMarkings.isEmpty() ? new String[0] : enhancedMarkings.split(","))
                                                 .conversationId(agentExecution.getCommunicationId())
                                                 .build());
                                         log.info("Stored memory: {} with classification: {} and markings: {}", 

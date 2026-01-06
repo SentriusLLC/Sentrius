@@ -249,6 +249,75 @@ class MemoryUserMarkingAccessControlTest {
     }
 
     @Test
+    void testCanAccessMemory_PrivateAgentMemoryWithoutUserMarking_ShouldAllowAgentAccess() {
+        // Arrange
+        String agentId = "agent-123";
+        String userId = null; // No userId available (e.g., during agent initialization)
+        AgentMemory memory = AgentMemory.builder()
+                .memoryKey("test-memory")
+                .memoryValue("test-value")
+                .agentId(agentId)
+                .classification("PRIVATE")
+                .markings("CONVERSATION") // No USER marking
+                .creatorUserId(userId)
+                .build();
+
+        // Act
+        boolean canAccess = accessControlService.canAccessMemory(memory, userId, agentId, "READ");
+
+        // Assert
+        assertTrue(canAccess, "Agent should be able to access its own PRIVATE memory without USER marking");
+    }
+
+    @Test
+    void testCanAccessMemory_PrivateAgentMemoryWithoutUserMarking_ShouldDenyDifferentAgent() {
+        // Arrange
+        String agentId = "agent-123";
+        String differentAgentId = "agent-456";
+        String userId = null;
+        AgentMemory memory = AgentMemory.builder()
+                .memoryKey("test-memory")
+                .memoryValue("test-value")
+                .agentId(agentId)
+                .classification("PRIVATE")
+                .markings("CONVERSATION")
+                .creatorUserId(userId)
+                .build();
+
+        // Mock empty policies (since we check policies after agent check fails)
+        when(policyRepository.findByIsActiveTrueOrderByPolicyName()).thenReturn(Collections.emptyList());
+
+        // Act
+        boolean canAccess = accessControlService.canAccessMemory(memory, userId, differentAgentId, "READ");
+
+        // Assert
+        assertFalse(canAccess, "Different agent should NOT be able to access another agent's PRIVATE memory");
+    }
+
+    @Test
+    void testCanAccessMemory_PrivateMemoryWithUserMarking_ShouldNotUseAgentFallback() {
+        // Arrange
+        String agentId = "agent-123";
+        String userId = "user-123";
+        String differentUserId = "user-456";
+        AgentMemory memory = AgentMemory.builder()
+                .memoryKey("test-memory")
+                .memoryValue("test-value")
+                .agentId(agentId)
+                .classification("PRIVATE")
+                .markings("CONVERSATION,USER:" + userId) // Has USER marking
+                .creatorUserId(userId)
+                .build();
+
+        // Act
+        boolean canAccess = accessControlService.canAccessMemory(memory, differentUserId, agentId, "READ");
+
+        // Assert
+        assertFalse(canAccess, "Agent access fallback should not apply when USER marking is present");
+    }
+
+
+    @Test
     void testCanAccessMemory_MultipleUserMarkings_ShouldDenyIfNoMatch() {
         // Arrange - This is an edge case that shouldn't normally happen but we should handle it
         String user1 = "user-123";
