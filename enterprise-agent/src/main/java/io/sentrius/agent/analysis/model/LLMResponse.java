@@ -5,8 +5,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
 import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.genai.Response;
 import lombok.AllArgsConstructor;
@@ -27,7 +30,13 @@ import lombok.extern.slf4j.Slf4j;
 public class LLMResponse {
     String previousOperation;
     String nextOperation;
-    String memoryLookup;
+    /**
+     * Memory lookup specification. Can be either:
+     * - A simple String query (legacy format): "user name"
+     * - A structured MemoryLookupRequest object (new format): {"query": "user name", "agentId": "...", "markings": "...", "limit": 10}
+     */
+    @JsonDeserialize(using = MemoryLookupDeserializer.class)
+    Object memoryLookup;
     String summaryForLLM;
     String responseForUser;
     
@@ -167,6 +176,55 @@ public class LLMResponse {
         }
 
         return "";
+    }
+
+    /**
+     * Checks if a memory lookup has been requested.
+     * @return true if memoryLookup is not null and not empty
+     */
+    @JsonIgnore
+    public boolean hasMemoryLookup() {
+        if (memoryLookup == null) {
+            return false;
+        }
+        if (memoryLookup instanceof String str) {
+            return !str.isEmpty();
+        }
+        if (memoryLookup instanceof MemoryLookupRequest req) {
+            return req.getQuery() != null && !req.getQuery().isEmpty();
+        }
+        return false;
+    }
+    
+    /**
+     * Converts the memoryLookup to a Map suitable for passing to the lookup_agent_memory verb.
+     * Handles both legacy String format and new structured MemoryLookupRequest format.
+     * @return Map with query, agentId, markings, and limit fields
+     */
+    @JsonIgnore
+    public Map<String, Object> getMemoryLookupAsMap() {
+        Map<String, Object> memoryArgs = new HashMap<>();
+        
+        if (memoryLookup instanceof String queryStr) {
+            // Legacy string format - just set the query
+            memoryArgs.put("query", queryStr);
+        } else if (memoryLookup instanceof MemoryLookupRequest req) {
+            // New structured format - map all fields
+            if (req.getQuery() != null) {
+                memoryArgs.put("query", req.getQuery());
+            }
+            if (req.getAgentId() != null) {
+                memoryArgs.put("agentId", req.getAgentId());
+            }
+            if (req.getMarkings() != null) {
+                memoryArgs.put("markings", req.getMarkings());
+            }
+            if (req.getLimit() != null) {
+                memoryArgs.put("limit", req.getLimit());
+            }
+        }
+        
+        return memoryArgs;
     }
 
 }

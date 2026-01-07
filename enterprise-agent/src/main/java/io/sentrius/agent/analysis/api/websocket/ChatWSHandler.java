@@ -319,12 +319,11 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                 websocketCommunication.getAgentExecutionContextDTO(),
                                 websocketCommunication, userMessage);
                             log.info("Response: {}", response);
-                            if (response.getMemoryLookup() != null && !response.getMemoryLookup().isEmpty()) {
+                            if (response.hasMemoryLookup()) {
                                 log.info("Memory lookup requested: {}", response.getMemoryLookup());
                                 try {
                                     // Set up memory lookup arguments
-                                    Map<String, Object> memoryArgs = new HashMap<>();
-                                    memoryArgs.put("query", response.getMemoryLookup());
+                                    Map<String, Object> memoryArgs = response.getMemoryLookupAsMap();
 
                                     // Execute memory lookup
 
@@ -439,12 +438,11 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                             planResponse
                                         );
 
-                                        if (nextResponse.getMemoryLookup() != null && !nextResponse.getMemoryLookup().isEmpty()) {
+                                        if (nextResponse.hasMemoryLookup()) {
                                             log.info("Memory lookup requested: {}", nextResponse.getMemoryLookup());
                                             try {
                                                 // Set up memory lookup arguments
-                                                Map<String, Object> memoryArgs = new HashMap<>();
-                                                memoryArgs.put("query", nextResponse.getMemoryLookup());
+                                                Map<String, Object> memoryArgs = response.getMemoryLookupAsMap();
 
                                                 // Execute memory lookup
                                                 var memoryResponse = verbRegistry.execute(

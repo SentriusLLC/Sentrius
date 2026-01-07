@@ -239,12 +239,11 @@ public class ChatAgent extends BaseEnterpriseAgent {
                         if (null != response) {
                             var arguments = response.getArguments();
                             // Handle memory lookup if specified
-                            if (response.getMemoryLookup() != null && !response.getMemoryLookup().isEmpty()) {
+                            if (response.hasMemoryLookup()) {
                                 log.info("Memory lookup requested: {}", response.getMemoryLookup());
                                 try {
                                     // Set up memory lookup arguments
-                                    Map<String, Object> memoryArgs = new HashMap<>();
-                                    memoryArgs.put("query", response.getMemoryLookup());
+                                     Map<String, Object> memoryArgs = response.getMemoryLookupAsMap();
                                     
                                     // Execute memory lookup
                                     var memoryResponse = verbRegistry.execute(
