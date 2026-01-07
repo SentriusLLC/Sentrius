@@ -1341,8 +1341,22 @@ public class AgentVerbs extends VerbBase {
             throw new IllegalArgumentException("Query parameter is required for memory lookup. Please provide a search query.");
         }
         
-        log.info("Memory lookup - query: '{}', agentId: {}, markings: {}, limit: {}", 
-            query, agentId, markings, limit);
+        // Include private user conversations by adding USER:<userId> marking
+        // This allows agents to search both PUBLIC and user-specific PRIVATE conversations
+        String effectiveMarkings = markings;
+        if (execution.getUser() != null && execution.getUser().getUserId() != null) {
+            String userMarking = "USER:" + execution.getUser().getUserId();
+            if (markings == null || markings.isEmpty()) {
+                // If no markings specified, search both PUBLIC and user-specific private conversations
+                effectiveMarkings = "PUBLIC," + userMarking;
+            } else if (!markings.contains("USER:")) {
+                // If markings specified but don't include USER marking, append it
+                effectiveMarkings = markings + "," + userMarking;
+            }
+        }
+        
+        log.info("Memory lookup - query: '{}', agentId: {}, markings: {}, effectiveMarkings: {}, limit: {}", 
+            query, agentId, markings, effectiveMarkings, limit);
         
         // Call the memory API endpoint
         List<Map.Entry<String, List<String>>> params = new ArrayList<>();
@@ -1351,8 +1365,8 @@ public class AgentVerbs extends VerbBase {
         }
         params.add(Maps.immutableEntry("content", List.of(query)));
         params.add(Maps.immutableEntry("size", List.of(String.valueOf(limit))));
-        if (markings != null && !markings.isEmpty()) {
-            params.add(Maps.immutableEntry("markings", List.of(markings)));
+        if (effectiveMarkings != null && !effectiveMarkings.isEmpty()) {
+            params.add(Maps.immutableEntry("markings", List.of(effectiveMarkings)));
         }
         
         String response;

@@ -1,0 +1,30 @@
+package io.sentrius.sso.genai.api;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
+
+/**
+ * Base class for generative requests, defining the necessary methods required to generate a request.
+ */
+@Data
+@SuperBuilder(toBuilder = true)
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public abstract class BaseGenerativeRequest {
+
+    /**
+     * Defined end user id : https://platform.openai.com/docs/guides/safety-best-practices/end-user-ids
+     */
+    protected String user;
+
+    /**
+     * Model name, if applicable of the request
+     */
+    @JsonProperty(value = "model")
+    protected String model;
+}

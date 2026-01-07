@@ -523,6 +523,7 @@ echo "======================================"
 echo "Deploying Sentrius launcher chart to namespace ${TENANT}-agents..."
 helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${TENANT}-agents \
     --set tenant=${TENANT}-agents \
+    --set base-tenant=${TENANT} \
     --set baseRelease=sentrius \
     --set sentriusNamespace=${TENANT} \
     --set ingress.class="nginx" \

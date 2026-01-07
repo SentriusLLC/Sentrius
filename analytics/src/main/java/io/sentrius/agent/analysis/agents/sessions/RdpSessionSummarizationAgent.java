@@ -278,21 +278,7 @@ public class RdpSessionSummarizationAgent {
                     
                     // Parse the response to extract the analysis text
                     JsonNode jsonResponse = JsonUtil.MAPPER.readTree(response);
-                    JsonNode choices = jsonResponse.get("choices");
-                    if (choices != null && choices.isArray() && choices.size() > 0) {
-                        JsonNode message = choices.get(0).get("message");
-                        if (message != null) {
-                            JsonNode content = message.get("content");
-                            if (content != null) {
-                                String batchAnalysis = content.asText();
-                                // Append analysis without referencing screenshot numbers
-                                if (fullAnalysis.length() > 0) {
-                                    fullAnalysis.append("\n\n");
-                                }
-                                fullAnalysis.append(batchAnalysis);
-                            }
-                        }
-                    }
+                    fullAnalysis.append(extractResponseText(jsonResponse));
                     
                     // Small delay between batches to avoid rate limiting
                     if (batchIndex < totalBatches - 1) {
@@ -311,6 +297,24 @@ public class RdpSessionSummarizationAgent {
             log.warn("Failed to get LLM analysis: {}", e.getMessage());
             return null;
         }
+    }
+
+    private String extractResponseText(JsonNode response) {
+        JsonNode output = response.get("output");
+        if (output != null && output.isArray()) {
+            StringBuilder sb = new StringBuilder();
+            for (JsonNode item : output) {
+                if ("message".equals(item.path("type").asText())) {
+                    for (JsonNode content : item.path("content")) {
+                        if ("output_text".equals(content.path("type").asText())) {
+                            sb.append(content.path("text").asText()).append("\n");
+                        }
+                    }
+                }
+            }
+            return sb.toString().trim();
+        }
+        return "";
     }
     
     /**

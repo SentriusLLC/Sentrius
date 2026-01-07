@@ -15,6 +15,13 @@ public class SessionLogDTO {
     private String host;
     private Timestamp sessionTime;
     private boolean closed;
+    
+    /**
+     * AI-generated summary of the session activity.
+     * Populated from SshSessionSummary for SSH/terminal sessions or RdpSessionSummary for RDP sessions.
+     * May be null if no summary has been generated yet.
+     */
+    private String summary;
 
 
 }

@@ -4,6 +4,7 @@ namespace: default
 
 environment: "gke"  # Can be "gke", "aws", "azure", "local"
 
+base-tenant: sentrius-demo
 tenant: sentrius-demo
 sentriusNamespace: "sentrius-demo"
 baseRelease: sentrius-demo

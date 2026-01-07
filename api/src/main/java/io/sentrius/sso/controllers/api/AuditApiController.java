@@ -18,8 +18,10 @@ import io.sentrius.sso.core.model.sessions.SessionLog;
 import io.sentrius.sso.core.model.sessions.TerminalLogs;
 import io.sentrius.sso.core.model.sessions.RdpSessionSummary;
 import io.sentrius.sso.core.model.sessions.RdpSessionScreenshot;
+import io.sentrius.sso.core.model.sessions.SshSessionSummary;
 import io.sentrius.sso.core.repository.RdpSessionSummaryRepository;
 import io.sentrius.sso.core.repository.RdpSessionScreenshotRepository;
+import io.sentrius.sso.core.repository.SshSessionSummaryRepository;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.auditing.AuditService;
@@ -50,6 +52,7 @@ public class AuditApiController extends BaseController {
     final KeycloakService keycloakService;
     private final RdpSessionSummaryRepository rdpSessionSummaryRepository;
     private final RdpSessionScreenshotRepository rdpSessionScreenshotRepository;
+    private final SshSessionSummaryRepository sshSessionSummaryRepository;
 
     private WebClient webClient;
 
@@ -61,7 +64,8 @@ public class AuditApiController extends BaseController {
         CryptoService cryptoService, SessionTrackingService sessionTrackingService, AppConfig appConfig,
         KeycloakService keycloakService,
         RdpSessionSummaryRepository rdpSessionSummaryRepository,
-        RdpSessionScreenshotRepository rdpSessionScreenshotRepository
+        RdpSessionScreenshotRepository rdpSessionScreenshotRepository,
+        SshSessionSummaryRepository sshSessionSummaryRepository
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
@@ -71,6 +75,7 @@ public class AuditApiController extends BaseController {
         this.keycloakService = keycloakService;
         this.rdpSessionSummaryRepository = rdpSessionSummaryRepository;
         this.rdpSessionScreenshotRepository = rdpSessionScreenshotRepository;
+        this.sshSessionSummaryRepository = sshSessionSummaryRepository;
         try {
             this.webClient = WebClient.builder().baseUrl(appConfig.getAgentProxyExternalUrl()).build();
         }
@@ -137,7 +142,14 @@ public class AuditApiController extends BaseController {
         return auditService.listUniqueSessions().stream().map(
             x -> {
                 try {
-                    return x.toSessionLogDTO(cryptoService.encrypt(x.getId().toString()));
+                    SessionLogDTO dto = x.toSessionLogDTO(cryptoService.encrypt(x.getId().toString()));
+                    
+                    // Fetch SSH session summary if it exists
+                    sshSessionSummaryRepository.findBySessionId(x.getId()).ifPresent(summary -> {
+                        dto.setSummary(summary.getSummary());
+                    });
+                    
+                    return dto;
                 } catch (GeneralSecurityException e) {
                     throw new RuntimeException(e);
                 }

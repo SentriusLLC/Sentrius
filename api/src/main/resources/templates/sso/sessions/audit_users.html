@@ -41,10 +41,14 @@
 </script>
 
 <script th:inline="none">
+    // Configuration constants
+    const SUMMARY_MAX_LENGTH = 150;
+    const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
+    
     $(document).ready(function() {
         
         // Initialize SSH/Terminal Sessions Table
-        $('#audit-table').DataTable({
+        var auditTable = $('#audit-table').DataTable({
             ajax: {
                 url: '/api/v1/sessions/audit/list',
                 dataSrc: '',
@@ -64,6 +68,20 @@
                     }
                 },
                 {
+                    data: 'summary',
+                    render: function(data, type, row) {
+                        if (data && data.length > 0) {
+                            // Show first SUMMARY_MAX_LENGTH characters of summary
+                            var truncated = data.substring(0, SUMMARY_MAX_LENGTH);
+                            if (data.length > SUMMARY_MAX_LENGTH) {
+                                truncated += '...';
+                            }
+                            return `<span class="text-muted" style="font-size: 0.9em;">${truncated}</span>`;
+                        }
+                        return '<span class="text-muted">No analysis available</span>';
+                    }
+                },
+                {
                     data: 'sessionId',
                     render: function(data, type, row) {
                         if (data) {
@@ -75,11 +93,17 @@
                         }
                     }
                 },
-            ]
+            ],
+            order: [[2, 'desc']] // Sort by session time, newest first
         });
         
+        // Auto-refresh SSH/Terminal sessions
+        setInterval(function() {
+            auditTable.ajax.reload(null, false); // false to keep current page
+        }, AUTO_REFRESH_INTERVAL);
+        
         // Initialize RDP Sessions Table
-        $('#rdp-sessions-table').DataTable({
+        var rdpTable = $('#rdp-sessions-table').DataTable({
             ajax: {
                 url: '/api/v1/sessions/rdp/list',
                 dataSrc: '',
@@ -111,9 +135,9 @@
                     data: 'summary',
                     render: function(data, type, row) {
                         if (data && data.length > 0) {
-                            // Show first 150 characters of summary
-                            var truncated = data.substring(0, 150);
-                            if (data.length > 150) {
+                            // Show first SUMMARY_MAX_LENGTH characters of summary
+                            var truncated = data.substring(0, SUMMARY_MAX_LENGTH);
+                            if (data.length > SUMMARY_MAX_LENGTH) {
                                 truncated += '...';
                             }
                             return `<span class="text-muted" style="font-size: 0.9em;">${truncated}</span>`;
@@ -130,6 +154,11 @@
             ],
             order: [[3, 'desc']] // Sort by session start time, newest first
         });
+        
+        // Auto-refresh RDP sessions
+        setInterval(function() {
+            rdpTable.ajax.reload(null, false); // false to keep current page
+        }, AUTO_REFRESH_INTERVAL);
     });
 </script>
 
@@ -171,6 +200,7 @@
                                         <th>Destination Host</th>
                                         <th>Connection Time</th>
                                         <th>Status</th>
+                                        <th>Summary</th>
                                         <th>Actions</th>
                                     </tr>
                                     </thead>
