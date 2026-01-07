@@ -1,5 +1,6 @@
 package io.sentrius.agent.launcher.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubernetes.client.custom.IntOrString;
 import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.openapi.ApiClient;
@@ -7,13 +8,17 @@ import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.*;
 import io.kubernetes.client.util.Config;
+import io.sentrius.agent.launcher.model.ImageIntent;
+import io.sentrius.agent.launcher.model.ResourcesConfig;
 import io.sentrius.sso.core.dto.AgentRegistrationDTO;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -23,7 +28,10 @@ import java.util.regex.Pattern;
 @Service
 public class PodLauncherService {
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    
     private final CoreV1Api coreV1Api;
+    private final AgentImageResolver imageResolver;
 
     @Value("${sentrius.agent.registry}")
     private String agentRegistry;
@@ -41,9 +49,11 @@ public class PodLauncherService {
     Pattern pattern = Pattern.compile("^service-account-(.*?)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
 
 
-    public PodLauncherService() throws IOException {
+    @Autowired
+    public PodLauncherService(AgentImageResolver imageResolver) throws IOException {
         ApiClient client = Config.defaultClient(); // in-cluster or kubeconfig
         this.coreV1Api = new CoreV1Api(client);
+        this.imageResolver = imageResolver;
     }
 
     private String buildAgentCallbackUrl(String agentId) {
@@ -160,17 +170,6 @@ public class PodLauncherService {
 
 
     public V1Pod launchAgentPod(AgentRegistrationDTO agent) throws Exception {
-        var myAgentRegistry = "";
-        if (agentRegistry != null) {
-            if ("local".equalsIgnoreCase(agentRegistry)) {
-                myAgentRegistry = "";
-            } else {
-                myAgentRegistry = agentRegistry;
-                if (!myAgentRegistry.endsWith("/")) {
-                    myAgentRegistry += "/";
-                }
-            }
-        }
         String agentId = agent.getAgentName().toLowerCase();
         String callbackUrl = agent.getAgentCallbackUrl();
         String agentType = agent.getAgentType();
@@ -211,9 +210,14 @@ public class PodLauncherService {
 
         log.info("Agent {} using config file: {}", agentId, argList);
 
-        String image = String.format("%ssentrius-launchable-agent:%s", myAgentRegistry, agentVersion);
+        // Use image resolver to determine the correct image
+        String image = imageResolver.resolveImage(agent);
 
         log.info("Launching agent pod with ID: {}, Image: {}, Callback URL: {}", agentId, image, callbackUrl);
+        
+        // Parse resources from templateLaunchConfiguration if available
+        Map<String, Quantity> resourceLimits = parseResourceLimits(agent);
+        
         V1Pod pod = new V1Pod()
             .metadata(new V1ObjectMeta()
                 .generateName("sentrius-agent-")
@@ -226,10 +230,7 @@ public class PodLauncherService {
 
                     .args(argList)
                     .resources(new V1ResourceRequirements()
-                        .limits(Map.of(
-                            "cpu", Quantity.fromString("2000m"),
-                            "memory", Quantity.fromString("2Gi")
-                        )))
+                        .limits(resourceLimits))
                         .volumeMounts(List.of(
                             new V1VolumeMount()
                                 .name("config-volume")
@@ -277,6 +278,64 @@ public class PodLauncherService {
             }
         }
         return createdPod;
+    }
+
+    /**
+     * Parse resource limits from agent's templateLaunchConfiguration
+     * Falls back to default values if not specified
+     */
+    private Map<String, Quantity> parseResourceLimits(AgentRegistrationDTO agent) {
+        Map<String, Quantity> limits = new HashMap<>();
+        
+        // Default values
+        String defaultCpu = "2000m";
+        String defaultMemory = "2Gi";
+        
+        String launchConfig = agent.getTemplateLaunchConfiguration();
+        if (launchConfig != null && !launchConfig.trim().isEmpty()) {
+            try {
+                LaunchConfiguration config = OBJECT_MAPPER.readValue(launchConfig, LaunchConfiguration.class);
+                
+                if (config.getResources() != null) {
+                    ResourcesConfig resources = config.getResources();
+                    
+                    if (resources.getCpu() != null) {
+                        limits.put("cpu", Quantity.fromString(resources.getCpu()));
+                        log.info("Using CPU limit from template: {}", resources.getCpu());
+                    } else {
+                        limits.put("cpu", Quantity.fromString(defaultCpu));
+                    }
+                    
+                    if (resources.getMemory() != null) {
+                        limits.put("memory", Quantity.fromString(resources.getMemory()));
+                        log.info("Using memory limit from template: {}", resources.getMemory());
+                    } else {
+                        limits.put("memory", Quantity.fromString(defaultMemory));
+                    }
+                    
+                    return limits;
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse resource limits from templateLaunchConfiguration for agent {}: {}", 
+                    agent.getAgentName(), e.getMessage());
+            }
+        }
+        
+        // Use defaults
+        limits.put("cpu", Quantity.fromString(defaultCpu));
+        limits.put("memory", Quantity.fromString(defaultMemory));
+        return limits;
+    }
+    
+    /**
+     * Wrapper class for parsing launch configuration JSON
+     */
+    @lombok.Data
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
+    private static class LaunchConfiguration {
+        private ImageIntent imageIntent;
+        private ResourcesConfig resources;
+        private String restartPolicy;
     }
 
 }
