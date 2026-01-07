@@ -2,8 +2,10 @@ package io.sentrius.sso.core.services.abac;
 
 import io.sentrius.sso.core.model.abac.AttributeAssignment;
 import io.sentrius.sso.core.model.abac.AttributeDefinition;
+import io.sentrius.sso.core.model.users.UserAttribute;
 import io.sentrius.sso.core.repository.abac.AttributeAssignmentRepository;
 import io.sentrius.sso.core.repository.abac.AttributeDefinitionRepository;
+import io.sentrius.sso.core.repository.UserAttributeRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Service;
@@ -28,14 +30,17 @@ public class AttributeManagementService {
 
     private final AttributeDefinitionRepository definitionRepository;
     private final AttributeAssignmentRepository assignmentRepository;
+    private final UserAttributeRepository userAttributeRepository;
     private final io.sentrius.sso.core.services.security.KeycloakService keycloakService;
 
     public AttributeManagementService(
             AttributeDefinitionRepository definitionRepository,
             AttributeAssignmentRepository assignmentRepository,
+            UserAttributeRepository userAttributeRepository,
             io.sentrius.sso.core.services.security.KeycloakService keycloakService) {
         this.definitionRepository = definitionRepository;
         this.assignmentRepository = assignmentRepository;
+        this.userAttributeRepository = userAttributeRepository;
         this.keycloakService = keycloakService;
     }
 
@@ -131,18 +136,19 @@ public class AttributeManagementService {
                 .findByAttributeDefinitionAndTargetTypeAndTargetIdAndIsActiveTrue(
                         definition, targetType, targetId);
         
+        AttributeAssignment assignment;
         if (existing.isPresent()) {
             // Update existing assignment
-            AttributeAssignment assignment = existing.get();
+            assignment = existing.get();
             assignment.setAttributeValue(value);
             assignment.setSource(source);
             assignment.setSyncedFromKeycloak(syncedFromKeycloak);
             log.debug("Updated attribute assignment: {} for {}:{}", 
                     definition.getAttributeName(), targetType, targetId);
-            return assignmentRepository.save(assignment);
+            assignment = assignmentRepository.save(assignment);
         } else {
             // Create new assignment
-            AttributeAssignment assignment = AttributeAssignment.builder()
+            assignment = AttributeAssignment.builder()
                     .attributeDefinition(definition)
                     .targetType(targetType)
                     .targetId(targetId)
@@ -154,7 +160,68 @@ public class AttributeManagementService {
                     .build();
             log.info("Created new attribute assignment: {} = {} for {}:{} from {}",
                     definition.getAttributeName(), value, targetType, targetId, source);
-            return assignmentRepository.save(assignment);
+            assignment = assignmentRepository.save(assignment);
+        }
+        
+        // IMPORTANT: Also persist to UserAttribute table for USER target types
+        // This ensures compatibility with DocumentAccessControlService and MemoryAccessControlService
+        if (targetType == AttributeAssignment.TargetType.USER) {
+            syncToUserAttributeTable(targetId, definition.getAttributeName(), value, 
+                                    source.name(), syncedFromKeycloak);
+        }
+        
+        return assignment;
+    }
+    
+    /**
+     * Sync an attribute to the UserAttribute table for backward compatibility
+     * This ensures attributes work with DocumentAccessControlService and other services
+     * that query the user_attributes table
+     */
+    private void syncToUserAttributeTable(String userId, String attributeName, String attributeValue,
+                                          String source, boolean syncedFromKeycloak) {
+        try {
+            // Check if UserAttribute already exists
+            Optional<UserAttribute> existingUserAttr = userAttributeRepository
+                    .findByUserIdAndAttributeNameAndIsActiveTrue(userId, attributeName);
+            
+            if (existingUserAttr.isPresent()) {
+                // Update existing UserAttribute
+                UserAttribute userAttr = existingUserAttr.get();
+                userAttr.setAttributeValue(attributeValue);
+                userAttr.setSource(source);
+                userAttr.setSyncedFromKeycloak(syncedFromKeycloak);
+                userAttributeRepository.save(userAttr);
+                log.debug("Updated UserAttribute for user: {}, attribute: {}", userId, attributeName);
+            } else {
+                // Create new UserAttribute - use STRING as default type for simplicity
+                // UserAttribute has basic type checking (STRING, INTEGER, BOOLEAN, etc.)
+                // while AttributeDefinition has more complex type system
+                UserAttribute userAttr = UserAttribute.builder()
+                        .userId(userId)
+                        .attributeName(attributeName)
+                        .attributeValue(attributeValue)
+                        .attributeType("STRING")
+                        .source(source)
+                        .isActive(true)
+                        .syncedFromKeycloak(syncedFromKeycloak)
+                        .build();
+                userAttributeRepository.save(userAttr);
+                log.info("Created UserAttribute for user: {}, attribute: {} = {}", 
+                        userId, attributeName, attributeValue);
+            }
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            log.error("Database constraint violation syncing attribute to UserAttribute table for user: {}, attribute: {}", 
+                     userId, attributeName, e);
+            // Don't fail the main operation if UserAttribute sync fails
+        } catch (org.springframework.dao.DataAccessException e) {
+            log.error("Database error syncing attribute to UserAttribute table for user: {}, attribute: {}", 
+                     userId, attributeName, e);
+            // Don't fail the main operation if UserAttribute sync fails
+        } catch (Exception e) {
+            log.error("Unexpected error syncing attribute to UserAttribute table for user: {}, attribute: {}", 
+                     userId, attributeName, e);
+            // Don't fail the main operation if UserAttribute sync fails
         }
     }
 
@@ -305,9 +372,43 @@ public class AttributeManagementService {
             a.setIsActive(false);
             assignmentRepository.save(a);
             log.info("Deactivated attribute assignment: {}", assignmentId);
+            
+            // Also deactivate corresponding UserAttribute if this is a USER assignment
+            if (a.getTargetType() == AttributeAssignment.TargetType.USER) {
+                deactivateUserAttribute(a.getTargetId(), a.getAttributeDefinition().getAttributeName());
+            }
+            
             return true;
         }
         return false;
+    }
+    
+    /**
+     * Deactivate a UserAttribute for backward compatibility
+     */
+    private void deactivateUserAttribute(String userId, String attributeName) {
+        try {
+            Optional<UserAttribute> userAttr = userAttributeRepository
+                    .findByUserIdAndAttributeNameAndIsActiveTrue(userId, attributeName);
+            if (userAttr.isPresent()) {
+                UserAttribute attr = userAttr.get();
+                attr.setIsActive(false);
+                userAttributeRepository.save(attr);
+                log.debug("Deactivated UserAttribute for user: {}, attribute: {}", userId, attributeName);
+            }
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            log.error("Database constraint violation deactivating UserAttribute for user: {}, attribute: {}", 
+                     userId, attributeName, e);
+            // Don't fail the main operation
+        } catch (org.springframework.dao.DataAccessException e) {
+            log.error("Database error deactivating UserAttribute for user: {}, attribute: {}", 
+                     userId, attributeName, e);
+            // Don't fail the main operation
+        } catch (Exception e) {
+            log.error("Unexpected error deactivating UserAttribute for user: {}, attribute: {}", 
+                     userId, attributeName, e);
+            // Don't fail the main operation
+        }
     }
 
     /**

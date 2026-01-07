@@ -353,6 +353,7 @@ public class HostApiController extends BaseController {
             sessionData.put("jwtToken", jwtToken);
             sessionData.put("target", hostSystem.getId());
             sessionData.put("websocketHost", systemOptions.getRdpProxyDomain());
+            sessionData.put("websocketBaseUrl", "/guacamole/tunnel");
             sessionData.put("websocketUrl", "/guacamole/tunnel?token=" + jwtToken);
             sessionData.put("displayName", hostSystem.getDisplayName());
             

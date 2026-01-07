@@ -84,6 +84,15 @@ public class MemoryAccessControlService {
             log.debug("Creator access granted");
             return true;
         }
+        
+        // PRIVATE memories without USER markings: allow agent to access its own memories
+        // This handles the case where userId is null during storage but the memory belongs to the agent
+        if ("PRIVATE".equalsIgnoreCase(memory.getClassification()) && 
+            agentId != null && agentId.equals(memory.getAgentId()) &&
+            (memory.getMarkings() == null || !memory.getMarkings().contains("USER:"))) {
+            log.debug("PRIVATE agent memory access granted - agent accessing its own memory: {}", agentId);
+            return true;
+        }
 
         // Check if memory can be shared with the agent
         if (agentId != null && memory.canBeSharedWith(agentId)) {

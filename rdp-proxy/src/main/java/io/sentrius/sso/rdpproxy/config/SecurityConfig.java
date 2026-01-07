@@ -77,6 +77,7 @@ public class SecurityConfig {
         return token -> {
             // Try RS256 with ZtatTokenService public key first
             PublicKey ztatPublicKey = ztatPublicKeyService.getZtatPublicKey();
+            log.info("Public key is: {}", ztatPublicKey.toString());
             if (ztatPublicKey != null) {
 
                 try {
@@ -103,6 +104,43 @@ public class SecurityConfig {
                     return rsaDecoder.decode(token);
                 } catch (JwtException e) {
                     log.debug("Failed to decode JWT with ZtatTokenService public key, trying HMAC: {}", e.getMessage());
+
+                    ztatPublicKeyService.clearCache();
+
+                    ztatPublicKey = ztatPublicKeyService.getZtatPublicKey();
+
+                    if (ztatPublicKey != null) {
+
+                        try {
+                            JwtDecoder rsaDecoder = NimbusJwtDecoder.withPublicKey((java.security.interfaces.RSAPublicKey) ztatPublicKey)
+                                .signatureAlgorithm(SignatureAlgorithm.RS256)
+                                .build();
+                            log.info("Composite JWT decoder initialized with HS256 and RS256 support {}", token);
+                            if (token.endsWith("?"))
+                            {
+                                token = token.substring(0, token.length() - 1);
+                            }
+                            else if (token.endsWith("?."))
+                            {
+                                token = token.substring(0, token.length() - 2);
+                            } else if (token.endsWith("?undefined."))
+                            {
+                                token = token.substring(0, token.length() - 11);
+                            }
+                            else if (token.endsWith("?undefined"))
+                            {
+                                token = token.substring(0, token.length() - 10);
+                            }
+                            log.info("Composite JWT decoder initialized with HS256 and RS256 support {}", token);
+                            return rsaDecoder.decode(token);
+                        } catch (JwtException e2) {
+                            log.debug("Second attempt failed to decode JWT with ZtatTokenService public key, trying " +
+                                "HMAC: {}", e.getMessage());
+
+
+                        }
+                    }
+
                 }
             }
             

@@ -386,6 +386,7 @@ data:
     sentrius.rlhf.feedback.api.url={{ .Values.sentriusDomain }}
   api-application.properties: |
     org.springframework.context.ApplicationListener=your.package.DbEnvPrinter
+    sentrius.tenant={{ .Values.tenant }}
     keystore.file=sso.jceks
     keystore.password=${KEYSTORE_PASSWORD}
     keystore.alias=KEYBOX-ENCRYPTION_KEY

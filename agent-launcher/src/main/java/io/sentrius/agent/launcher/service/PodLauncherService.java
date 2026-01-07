@@ -199,6 +199,9 @@ public class PodLauncherService {
                 case "atpl-helper":
                     agentFile = "chat-atpl-helper.yaml";
                     break;
+                case "abac":
+                    agentFile = "abac-helper.yaml";
+                    break;
                 case "default":
                 default:
                     agentFile = "chat-helper.yaml";

@@ -1,0 +1,93 @@
+---
+version: "v0"
+policy_id: "abac-agent-policy"
+description: "Trust Policy for ABAC (Attribute-Based Access Control) Agent"
+match:
+  agent_tags:
+    - "service:abac-evaluator"
+    - "type:attribute-management"
+identity:
+  issuer: "https://keycloak.sentrius.internal"
+  subject_prefix: "service-account-abac-evaluator"
+  mfa_required: false
+  certificate_authority: "Sentrius-CA"
+provenance:
+  source: "sentrius-abac-agent"
+  signature_required: false
+runtime:
+  enclave_required: false
+  allow_drift: true
+behavior:
+  minimum_positive_runs: 1
+  max_incidents: 3
+  incident_types:
+    denylist:
+      - "policy_violation"
+      - "unauthorized_access"
+trust_score:
+  minimum: 60
+  marginalThreshold: 40
+  weightings:
+    identity: 0.3
+    provenance: 0.2
+    runtime: 0.2
+    behavior: 0.3
+actions:
+  on_success: "allow"
+  on_failure: "deny"
+  on_marginal:
+    action: "require_ztat"
+    ztat_provider: "ztat-service.internal"
+capabilities:
+  primitives:
+    - id: "abac_read"
+      description: "Read ABAC attribute definitions and assignments"
+      endpoints:
+        - "/api/v1/abac/user-attributes"
+        - "/api/v1/abac/user-attributes/user/*"
+        - "/api/v1/abac/attribute-definitions"
+        - "/api/v1/abac/attribute-definitions/scope/*"
+    - id: "abac_write"
+      description: "Create and modify ABAC attribute assignments"
+      endpoints:
+        - "/api/v1/abac/user-attributes"
+    - id: "abac_delete"
+      description: "Delete ABAC attribute assignments"
+      endpoints:
+        - "/api/v1/abac/user-attributes/*"
+    - id: "llm_access"
+      description: "Access LLM for attribute evaluation"
+      endpoints:
+        - "/api/v1/chat/completions"
+        - "/api/v1/llm/*"
+    - id: "agent_registration"
+      description: "Agent registration and bootstrap"
+      endpoints:
+        - "/api/v1/agent/bootstrap/register"
+        - "/api/v1/agent/register"
+    - id: "agent_context"
+      description: "Access agent context and memory"
+      endpoints:
+        - "/api/v1/agent/context/*"
+        - "/api/v1/agent/memory/*"
+    - id: "capabilities_discovery"
+      description: "Discover available capabilities and verbs"
+      endpoints:
+        - "/api/v1/capabilities/endpoints"
+        - "/api/v1/capabilities/verbs"
+  composed:
+    - id: "abac_full_management"
+      description: "Full ABAC attribute management capabilities"
+      requires:
+        - "abac_read"
+        - "abac_write"
+        - "abac_delete"
+        - "llm_access"
+ztat:
+  provider: "ztat-service.internal"
+  ttl: "15m"
+  approved_issuers:
+    - "http://localhost:8080/"
+    - "https://sentrius.internal/"
+  key_binding: "RSA2048"
+  approval_required: false

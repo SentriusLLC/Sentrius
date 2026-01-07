@@ -21,6 +21,7 @@ import org.springframework.web.socket.WebSocketSession;
 @AllArgsConstructor
 public class WebSocky {
     HostSystemDTO host;
+    String userId;
     String sessionId;
     Long uniqueIdentifier;
     WebSocketSession webSocketSession;

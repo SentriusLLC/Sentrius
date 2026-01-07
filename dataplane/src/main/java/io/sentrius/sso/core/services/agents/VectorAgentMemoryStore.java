@@ -173,10 +173,10 @@ public class VectorAgentMemoryStore {
      */
     public List<AgentMemory>  hybridSearch(
         AccessEvaluator evaluator, String searchTerm, String markingsFilter,
-        String requestingUserId, int limit, double threshold) {
+        String requestingUserId, String agentId, int limit, double threshold) {
 
-        log.info("Hybrid search - term: '{}', markings: {}, user: {}, threshold: {}", 
-                 searchTerm, markingsFilter, requestingUserId, threshold);
+        log.info("Hybrid search - term: '{}', markings: {}, user: {}, agent: {}, threshold: {}", 
+                 searchTerm, markingsFilter, requestingUserId, agentId, threshold);
 
         try {
             // Use a more lenient threshold if not explicitly provided
@@ -249,7 +249,7 @@ public class VectorAgentMemoryStore {
                 .filter(m -> seen.add(m.getId())) // dedupe by ID
                 .filter(m -> !m.isExpired())
                 .filter(m -> !isExcludedMemoryKey(m.getMemoryKey())) // Exclude temporary lookup results
-                .filter(m -> accessControlService.canAccessMemory(m, evaluator, requestingUserId, null, "READ"))
+                .filter(m -> accessControlService.canAccessMemory(m, evaluator, requestingUserId, agentId, "READ"))
                 .sorted((a, b) -> Double.compare(
                     scores.getOrDefault(b.getId(), 0.0),
                     scores.getOrDefault(a.getId(), 0.0)))

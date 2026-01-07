@@ -16,6 +16,8 @@ import io.sentrius.sso.core.services.agents.AgentContextService;
 import io.sentrius.sso.core.services.auditing.AuditService;
 import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -58,7 +60,8 @@ public class AgentController extends BaseController {
 
     @GetMapping("/design/chat")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
-    public String designAgent(Model m) {
+    public String designAgent(HttpServletRequest request, HttpServletResponse response, Model m) {
+        m.addAttribute("userId", getOperatingUser(request,response).getUserId() );
         return "sso/agents/design_chat";
     }
 

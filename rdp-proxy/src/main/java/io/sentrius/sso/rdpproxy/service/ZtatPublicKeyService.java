@@ -55,6 +55,7 @@ public class ZtatPublicKeyService {
         // Check cache first
         PublicKey cachedKey = publicKeyCache.getIfPresent("ztat-public-key");
         if (cachedKey != null) {
+            log.info("ZtatTokenService found existing cached key");
             return cachedKey;
         }
         
