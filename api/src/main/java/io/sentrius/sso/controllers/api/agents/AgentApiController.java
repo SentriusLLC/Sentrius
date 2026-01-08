@@ -181,7 +181,7 @@ public class AgentApiController extends BaseController {
         @RequestHeader("Authorization") String token,
         HttpServletRequest request, HttpServletResponse response) throws SQLException, GeneralSecurityException {
 
-        String compactJwt = token.startsWith("Beaer ") ? token.substring(7) : token;
+        String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
 
 
         if (!keycloakService.validateJwt(compactJwt)) {

@@ -1,7 +1,5 @@
 package io.sentrius.agent.launcher.service;
 
-import io.sentrius.agent.launcher.model.ImageIntent;
-import io.sentrius.agent.launcher.model.SelectionConfig;
 import io.sentrius.sso.core.dto.AgentRegistrationDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

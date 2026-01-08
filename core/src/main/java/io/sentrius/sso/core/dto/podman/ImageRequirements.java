@@ -1,4 +1,4 @@
-package io.sentrius.agent.launcher.model;
+package io.sentrius.sso.core.dto.podman;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;

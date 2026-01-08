@@ -1,6 +1,8 @@
 package io.sentrius.agent.launcher.model;
 
 import io.sentrius.sso.core.dto.AgentRegistrationDTO;
+import io.sentrius.sso.core.dto.podman.ImageIntent;
+import io.sentrius.sso.core.dto.podman.SelectionConfig;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

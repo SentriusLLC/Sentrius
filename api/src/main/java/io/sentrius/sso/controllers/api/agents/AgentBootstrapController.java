@@ -212,6 +212,13 @@ public class AgentBootstrapController extends BaseController {
         try{
             log.info("Launching agent pod with ID: {}", registrationDTO.getAgentName());
 
+            if (registrationDTO.getTemplateLaunchConfiguration() != null || !registrationDTO.getTemplateLaunchConfiguration().isEmpty()) {
+                log.info("Launch configuration ( should be empty): {}",
+                    registrationDTO.getTemplateLaunchConfiguration());
+
+
+            }
+
             var status = getAgentStatus( registrationDTO.getAgentName(), request, response);
             if (  status != null ) {
                 var body = status.getBody();

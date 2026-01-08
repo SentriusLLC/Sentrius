@@ -1,8 +1,8 @@
-package io.sentrius.agent.launcher.model;
+package io.sentrius.sso.core.dto.podman;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentrius.sso.core.dto.AgentRegistrationDTO;
+import io.sentrius.sso.core.utils.JsonUtil;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,8 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Slf4j
 public class ImageIntent {
-    
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     
     /**
      * Container registry repository (e.g., "ghcr.io/sentrius/agents/payments")
@@ -60,7 +59,7 @@ public class ImageIntent {
         }
         
         try {
-            LaunchConfiguration config = OBJECT_MAPPER.readValue(launchConfig, LaunchConfiguration.class);
+            LaunchConfiguration config = JsonUtil.MAPPER.readValue(launchConfig, LaunchConfiguration.class);
             
             if (config.getImageIntent() != null) {
                 log.info("Found imageIntent configuration for agent: {}", agent.getAgentName());

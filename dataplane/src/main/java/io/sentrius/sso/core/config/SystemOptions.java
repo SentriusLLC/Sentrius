@@ -189,6 +189,17 @@ public class SystemOptions {
     public String agentNamespace = "default";
 
 
+    @Updatable(description = "Agent registry.")
+    @Builder.Default
+    public String agentRegistry = "local";
+
+    @Updatable(description = "Agent tag.")
+    @Builder.Default
+    public String agentImageTag = "latest";
+
+
+
+
     // the default path may be sufficient
   @Updatable(description = "This is the path where uploaded files will be stored before distributed to remote systems.")
   public String uploadPath;
