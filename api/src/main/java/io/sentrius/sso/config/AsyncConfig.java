@@ -36,9 +36,11 @@ public class AsyncConfig {
         }
         log.info("Shutting down executor");
         // Call shutdown on SshListenerService to close streams
-        terminalService.shutdown();
+        if (null != terminalService ) {
+            terminalService.shutdown();
+        }
     }
 
-    @Autowired
+    @Autowired(required = false)
     private TerminalService terminalService;
 }

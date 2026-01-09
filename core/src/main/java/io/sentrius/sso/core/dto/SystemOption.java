@@ -19,6 +19,8 @@ public class SystemOption {
     Boolean requiresRestart = false;
     String closestType = "";
     String closestPrimitive = "";
+    @Builder.Default
+    String group = "General";
 
     public SystemOption(String name, String value, String description) {
         this.name = name;

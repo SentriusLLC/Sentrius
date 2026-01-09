@@ -5,7 +5,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import io.sentrius.sso.core.model.HostSystem;
 import io.sentrius.sso.core.model.sessions.SessionLog;
 import io.sentrius.sso.core.model.users.User;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public abstract class BaseAccessTokenAuditor {
 
   protected final HostSystem system;
@@ -113,6 +115,11 @@ public abstract class BaseAccessTokenAuditor {
   public void shutdown() {
     // nothing to do here
     shutdownRequested.set(true);
+  }
+
+  public boolean isSentriusCommand() {
+      log.info("BaseAccessTokenAuditor.isSentriusCommand() called");
+      return false;
   }
 
   public Trigger getCurrentTrigger() {

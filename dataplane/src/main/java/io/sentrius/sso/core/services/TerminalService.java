@@ -49,15 +49,18 @@ import io.sentrius.sso.core.services.security.KeyStoreService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import io.sentrius.sso.core.utils.SecureShellTask;
+import io.sentrius.sso.services.WebTerminalAISupportService;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class TerminalService {
 
     protected final SystemOptions systemOptions;
@@ -71,6 +74,7 @@ public class TerminalService {
     protected final ZeroTrustAccessTokenService ztatService;
     protected final ApplicationContext applicationContext;
     protected final KnownHostService knownHostService;
+    protected final WebTerminalAISupportService aiSupportService;
 
     public static final int SESSION_TIMEOUT = 60000;
     public static final int CHANNEL_TIMEOUT = 60000;
@@ -207,7 +211,7 @@ public class TerminalService {
             RecordingStudio recorder = new RecordingStudio(schSession,sessionTrackingService, automationService);
             AccessTokenAuditor terminalAuditor =
                 new AccessTokenAuditor(ztatService, schSession, sessionOutputService,
-                    recorder);
+                    recorder, aiSupportService);
 
             schSession.setChannel(channel);
             schSession.setTerminalRecorder(recorder);

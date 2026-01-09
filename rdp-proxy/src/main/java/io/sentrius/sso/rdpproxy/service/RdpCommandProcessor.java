@@ -12,6 +12,7 @@ import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import io.sentrius.sso.protobuf.Session;
+import io.sentrius.sso.services.WebTerminalAISupportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class RdpCommandProcessor {
     private final AgentService agentService;
     private final ZeroTrustAccessTokenService zeroTrustAccessTokenService;
     private final SystemOptions systemOptions;
+    private final WebTerminalAISupportService aiSupportService;
     
     // Track AccessTokenAuditor per session for proper command handling with ctrl+c, backspace, etc.
     private final ConcurrentMap<Long, AccessTokenAuditor> sessionAuditors = new ConcurrentHashMap<>();
@@ -853,7 +855,8 @@ public class RdpCommandProcessor {
                 zeroTrustAccessTokenService,
                 connectedSystem,
                 sessionTrackingService,
-                recorder
+                recorder,
+                aiSupportService
             );
             
             // Set up rules

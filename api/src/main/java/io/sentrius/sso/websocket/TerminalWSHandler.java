@@ -43,9 +43,8 @@ public class TerminalWSHandler extends TextWebSocketHandler {
     final CryptoService cryptoService;
     final TerminalSessionMetadataService terminalSessionMetadataService;
     private final ChatService chatService;
-    
-    @Autowired(required = false)
-    private WebTerminalAISupportService aiSupportService;
+
+
 
     // Store active sessions, using session ID or a custom identifier
     private final ConcurrentHashMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
@@ -102,13 +101,7 @@ public class TerminalWSHandler extends TextWebSocketHandler {
                     // Retrieve ConnectedSystem from your persistent map using the session ID
                     var sys = sessionTrackingService.getEncryptedConnectedSession(sessionIdStr);
                     if (null != sys ) {
-                        
-                        // Check for @agent commands before processing other actions
-                        if (aiSupportService != null && isAgentCommand(auditLog)) {
-                            handleAgentCommand(auditLog, sys, session);
-                            return;
-                        }
-                        
+
                         boolean allNoAction = true;
                         log.debug("**** Processing message for session ID: {} with {} actions", sessionId,
                             sys.getSessionStartupActions().size());
@@ -211,103 +204,6 @@ public class TerminalWSHandler extends TextWebSocketHandler {
             }
         } else {
             System.err.println("Session not found or already closed: " + sessionId);
-        }
-    }
-    
-    /**
-     * Check if a terminal message contains an @agent command
-     */
-    private boolean isAgentCommand(Session.TerminalMessage message) {
-        if (message.getType() != Session.MessageType.USER_DATA) {
-            return false;
-        }
-        
-        String command = message.getCommand();
-        if (command == null || command.trim().isEmpty()) {
-            return false;
-        }
-        
-        String trimmed = command.trim();
-        return trimmed.startsWith("@agent") || trimmed.startsWith("/ask");
-    }
-    
-    /**
-     * Handle an @agent command from the web terminal
-     */
-    private void handleAgentCommand(Session.TerminalMessage message, 
-                                    io.sentrius.sso.core.model.ConnectedSystem connectedSystem,
-                                    WebSocketSession webSocketSession) {
-        try {
-            String command = message.getCommand().trim();
-            String query;
-            
-            // Extract query from command
-            if (command.startsWith("@agent ")) {
-                query = command.substring("@agent ".length()).trim();
-            } else if (command.startsWith("/ask ")) {
-                query = command.substring("/ask ".length()).trim();
-            } else if (command.equals("@agent") || command.equals("/ask")) {
-                // Show help if no query provided
-                sendAgentHelpMessage(webSocketSession);
-                return;
-            } else {
-                return;
-            }
-            
-            if (query.isEmpty()) {
-                sendAgentHelpMessage(webSocketSession);
-                return;
-            }
-            
-            log.info("Processing @agent command from web terminal: {}", query);
-            
-            // Process the query through AI support service
-            String response = aiSupportService.processAgentQuery(connectedSystem, query);
-            
-            // Send response back to terminal via chat
-            if (response != null && !response.isEmpty()) {
-                aiSupportService.sendAgentMessageToTerminal(webSocketSession, response, "ai-support-agent");
-            }
-            
-        } catch (Exception e) {
-            log.error("Error handling agent command in web terminal", e);
-            try {
-                aiSupportService.sendAgentMessageToTerminal(
-                    webSocketSession,
-                    "Sorry, I encountered an error processing your request. Please try again.",
-                    "system"
-                );
-            } catch (Exception e2) {
-                log.error("Failed to send error message", e2);
-            }
-        }
-    }
-    
-    /**
-     * Send agent help message to terminal
-     */
-    private void sendAgentHelpMessage(WebSocketSession webSocketSession) {
-        String helpMessage = "╔════════════════════════════════════════════════════════════════╗\n" +
-            "║                    AI SUPPORT AGENT                            ║\n" +
-            "╚════════════════════════════════════════════════════════════════╝\n" +
-            "\n" +
-            "Ask questions and get intelligent assistance from the AI agent:\n" +
-            "\n" +
-            "Usage:\n" +
-            "  @agent <question>     - Ask the agent a question\n" +
-            "  /ask <question>       - Alternative command prefix\n" +
-            "\n" +
-            "Examples:\n" +
-            "  @agent How do I list all files in a directory?\n" +
-            "  /ask What is the purpose of the chmod command?\n" +
-            "  @agent Help me understand this error message\n" +
-            "\n" +
-            "The agent can search documentation and TSGs to provide relevant help.\n";
-        
-        try {
-            aiSupportService.sendAgentMessageToTerminal(webSocketSession, helpMessage, "system");
-        } catch (Exception e) {
-            log.error("Failed to send help message", e);
         }
     }
 }

@@ -33,19 +33,19 @@ public class SystemOptions {
   private ThreadSafeDynamicPropertiesService dynamicPropertiesService;
 
 
-  @Updatable(description = "This is the name of the system, next to the logo on the top left.")
+  @Updatable(description = "This is the name of the system, next to the logo on the top left.", group = "UI")
   @Builder.Default public String systemLogoName = "Sentrius";
 
-  @Updatable(description = "System logo path.")
+  @Updatable(description = "System logo path.", group = "UI")
   @Builder.Default public String systemLogoPathSmall = "/images/sentrius_small.png";
 
-  @Updatable(description = "System logo path.")
+  @Updatable(description = "System logo path.", group = "UI")
   @Builder.Default public String systemLogoPathLarge = "/images/sentrius_large.jpg";
 
-  @Updatable(description = "Banner Text at the top of the screen. If empty it will not be displayed.")
+  @Updatable(description = "Banner Text at the top of the screen. If empty it will not be displayed.", group = "UI")
   @Builder.Default public String systemTopBanner = "";
 
-  @Updatable(description = "Banner Text at the top of the screen. If empty it will not be displayed.")
+  @Updatable(description = "Banner Text at the top of the screen. If empty it will not be displayed.", group = "UI")
   @Builder.Default public String systemTopBannerClass = "";
 
   /** Full admin can login. */
@@ -55,7 +55,7 @@ public class SystemOptions {
 
   @Builder.Default public Integer approvedJITPeriod = 60;
 
-  @Updatable(description = "Defined whether or not proxied are allowed.")
+  @Updatable(description = "Defined whether or not proxied are allowed.", group = "Security")
   @Builder.Default public Boolean allowProxies = true;
 
   @Builder.Default public String auditorClass = "io.sentrius.sso.automation.auditing.RuleAlertAuditor";
@@ -66,45 +66,45 @@ public class SystemOptions {
 
   @Builder.Default public Boolean allowInsecureCookies = false;
 
-  @Updatable
+  @Updatable(group = "Security")
   @Builder.Default public Boolean requireProfileForLogin = true;
 
-  @Updatable
+  @Updatable(group = "Security")
   @Builder.Default public Integer maxJitUses = 1;
 
   /**
    * This is how long before a ztat request ( that has been denied or approved ) can last.
    */
-  @Updatable(description = "This is how long before a ztat request ( that has been denied or approved ) can last.")
+  @Updatable(description = "This is how long before a ztat request ( that has been denied or approved ) can last.", group = "Security")
   @RequiresRestart
   @Builder.Default public Integer maxJitDurationMs = (1440 * 1000); // 60 min * 24 hrs * 1000 ms
 
   @Builder.Default public int sessionLogThreadPoolSize = 1;
 
-  @Updatable
+  @Updatable(group = "Audit")
   @RequiresRestart
   @Builder.Default public Boolean enableInternalAudit = true;
 
-  @Updatable(description = "This is the interval in milliseconds that the audit log will be flushed to the database.")
+  @Updatable(description = "This is the interval in milliseconds that the audit log will be flushed to the database.", group = "Audit")
   @RequiresRestart
   @Builder.Default public Integer auditFlushIntervalMs = 5000;
 
-  @Updatable
+  @Updatable(group = "SSH")
   @Builder.Default
   public String knownHostsPath = System.getProperty("user.home") + "/.ssh/known_hosts";
 
-  @Updatable(description = "This is the default settings for terminals to open in a new tab. Users can override")
+  @Updatable(description = "This is the default settings for terminals to open in a new tab. Users can override", group = "UI")
   @Builder.Default public Boolean terminalsInNewTab = true;
 
   @Builder.Default public Boolean testMode = false;
 
-  @Updatable(description = "This is the default user type new users are assigned if not passed in via jwt.")
+  @Updatable(description = "This is the default user type new users are assigned if not passed in via jwt.", group = "Security")
   @Builder.Default public String defaultUserTypeName = "";
 
   @Builder.Default
   public Integer globalCacheExpirationMinutes = 1440; // 24 hours
 
-  @Updatable
+  @Updatable(group = "UI")
   public String systemBanner = "";
 
   public Boolean agentForwarding = false;
@@ -119,34 +119,34 @@ public class SystemOptions {
 
   public Boolean allowUploadSystemConfiguration = false;
 
-  @Updatable(description = "Allows LLM to ask questions of the user")
+  @Updatable(description = "Allows LLM to ask questions of the user", group = "AI/LLM")
   public Boolean enableLLMQuestions = false;
 
-  @Updatable(description = "Enables agent memory store functionality")
+  @Updatable(description = "Enables agent memory store functionality", group = "AI/LLM")
   @Builder.Default public Boolean enableMemoryStore = true;
 
-  @Updatable(description = "Enables vector store capabilities for semantic memory search")
+  @Updatable(description = "Enables vector store capabilities for semantic memory search", group = "AI/LLM")
   @Builder.Default public Boolean enableVectorStore = true;
 
-  @Updatable(description = "Default similarity threshold for vector searches")
+  @Updatable(description = "Default similarity threshold for vector searches", group = "AI/LLM")
   @Builder.Default public Double vectorSimilarityThreshold = 0.7;
 
-  @Updatable(description = "Dimension size for vector embeddings")
+  @Updatable(description = "Dimension size for vector embeddings", group = "AI/LLM")
   @Builder.Default public Integer vectorDimension = 1536;
 
-  @Updatable(description = "Enables prompt advisor service for prompt validation and refinement")
+  @Updatable(description = "Enables prompt advisor service for prompt validation and refinement", group = "AI/LLM")
   @Builder.Default public Boolean enablePromptAdvisor = false;
 
-  @Updatable(description = "Minimum score threshold for prompt advisor (0-100)")
+  @Updatable(description = "Minimum score threshold for prompt advisor (0-100)", group = "AI/LLM")
   @Builder.Default public Integer promptAdvisorThreshold = 70;
 
-  @Updatable(description = "Maximum refinement iterations for prompt advisor")
+  @Updatable(description = "Maximum refinement iterations for prompt advisor", group = "AI/LLM")
   @Builder.Default public Integer promptAdvisorMaxIterations = 3;
 
-  @Updatable(description = "Prompt advisor service endpoint URL")
+  @Updatable(description = "Prompt advisor service endpoint URL", group = "AI/LLM")
   @Builder.Default public String promptAdvisorEndpoint = "http://sentrius-prompt-advisor/validate_prompt";
 
-  @Updatable(description = "Default LLM provider for automation and AI services (openai, claude, etc.)")
+  @Updatable(description = "Default LLM provider for automation and AI services (openai, claude, etc.)", group = "AI/LLM")
   @Builder.Default public String defaultLlmProvider = "openai";
 
 
@@ -154,54 +154,58 @@ public class SystemOptions {
   public Boolean lockdownEnabled = false;
 
   @Updatable(description = "AI risk score before user sessions are halted. Changes won't apply to currently running " +
-      "sessions")
+      "sessions", group = "AI/LLM")
   public Double aiRiskThreshold = 0.8;
 
-  @Updatable(description = "This is the number of commands to buffer for AI monitoring.")
+  @Updatable(description = "This is the number of commands to buffer for AI monitoring.", group = "AI/LLM")
   public Integer commandsToBuffer = 10;
 
-  @Updatable(description = "This is the number of commands to evaluate for AI monitoring.")
+  @Updatable(description = "This is the number of commands to evaluate for AI monitoring.", group = "AI/LLM")
   public Integer commandsToEvaluate = 5;
 
-  @Updatable(description = "Minimum trust score nto create a new generation.")
+  @Updatable(description = "Minimum trust score nto create a new generation.", group = "AI/LLM")
   public Double minTrustScoreForGeneration = 0.6;
 
-  @Updatable(description = "Default trust score.")
+  @Updatable(description = "Default trust score.", group = "AI/LLM")
   public Double defaultTrustScore = 0.8;
   /**
    * Purely for testing mode
    */
-  @Updatable(description = "Allows admins to view and approve their own ZTAT ( Zero Trust Access Token) requests.")
+  @Updatable(description = "Allows admins to view and approve their own ZTAT ( Zero Trust Access Token) requests.", group = "Security")
   public Boolean canApproveOwnZtat = false;
 
-    @Updatable(description = "Enable ABAC-based UI control to dynamically show/hide menu items based on access policies. When enabled, ABAC policies will override default access set checks.")
+    @Updatable(description = "Enable ABAC-based UI control to dynamically show/hide menu items based on access policies. When enabled, ABAC policies will override default access set checks.", group = "Security")
     @Builder.Default public Boolean enableAbacUiControl = false;
 
-    @Updatable(description = "RDP Proxy domain.")
+    @Updatable(description = "RDP Proxy domain.", group = "Integration")
     public String rdpProxyDomain = "https://rdpproxy-dev.local";
 
-    @Updatable(description = "Integration Proxy URL for K8s and other integration operations.")
+    @Updatable(description = "Integration Proxy URL for K8s and other integration operations.", group = "Integration")
     @Builder.Default
     public String integrationProxyUrl = "http://sentrius-integrationproxy:8080/";
 
-    @Updatable(description = "Agent namespace name.")
+    @Updatable(description = "Agent namespace name.", group = "Agent")
     @Builder.Default
     public String agentNamespace = "default";
 
 
-    @Updatable(description = "Agent registry.")
+    @Updatable(description = "Agent registry.", group = "Agent")
     @Builder.Default
     public String agentRegistry = "local";
 
-    @Updatable(description = "Agent tag.")
+    @Updatable(description = "Agent tag.", group = "Agent")
     @Builder.Default
     public String agentImageTag = "latest";
+
+    @Updatable(description = "SSH Support agent.", group = "Agent")
+    @Builder.Default
+    public Boolean agentSupportEnabled = false;
 
 
 
 
     // the default path may be sufficient
-  @Updatable(description = "This is the path where uploaded files will be stored before distributed to remote systems.")
+  @Updatable(description = "This is the path where uploaded files will be stored before distributed to remote systems.", group = "General")
   public String uploadPath;
   public String sshKeyType = "rsa";
 
@@ -302,6 +306,9 @@ public class SystemOptions {
 
         log.trace("Field: {} Value: {}", fieldName, fieldValue);
 
+        // Get the Updatable annotation to extract description and group
+        var updatableAnnotation = field.getAnnotation(Updatable.class);
+
         // Create a SystemOption object with the field details
         var sysOpt = SystemOption.builder()
             .name(fieldName)
@@ -309,9 +316,15 @@ public class SystemOptions {
             .requiresRestart(requiresRestart);
 
         // Set the description if available in the annotation
-        var desc = field.getAnnotation(Updatable.class).description();
+        var desc = updatableAnnotation.description();
         if (null != desc && !desc.isEmpty()) {
           sysOpt = sysOpt.description(desc);
+        }
+
+        // Set the group from the annotation
+        var group = updatableAnnotation.group();
+        if (null != group && !group.isEmpty()) {
+          sysOpt = sysOpt.group(group);
         }
 
         // Set the closest data type of the field if it's not a primitive type

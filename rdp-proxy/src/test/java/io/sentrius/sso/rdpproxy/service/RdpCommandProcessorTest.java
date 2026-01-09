@@ -6,6 +6,7 @@ import io.sentrius.sso.core.model.sessions.SessionLog;
 import io.sentrius.sso.core.services.agents.AgentService;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
+import io.sentrius.sso.services.WebTerminalAISupportService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +35,9 @@ class RdpCommandProcessorTest {
     private ZeroTrustAccessTokenService zeroTrustAccessTokenService;
 
     @Mock
+    private WebTerminalAISupportService webTerminalAISupportService;
+
+    @Mock
     private SystemOptions systemOptions;
 
     @Mock
@@ -51,7 +55,8 @@ class RdpCommandProcessorTest {
             terminalResponseService, 
             agentService,
             zeroTrustAccessTokenService,
-            systemOptions
+            systemOptions,
+            webTerminalAISupportService
         );
         
         // Mock the session to avoid null pointer exceptions - use lenient to avoid unnecessary stubbing errors

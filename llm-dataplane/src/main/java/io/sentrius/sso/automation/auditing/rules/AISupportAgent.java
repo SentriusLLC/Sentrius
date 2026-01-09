@@ -8,17 +8,21 @@ import io.sentrius.sso.core.dto.documents.DocumentSearchDTO;
 import io.sentrius.sso.core.model.ConnectedSystem;
 import io.sentrius.sso.core.model.documents.Document;
 import io.sentrius.sso.core.services.documents.DocumentService;
+import io.sentrius.sso.core.services.documents.retrieval.QueryEnhancementService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import io.sentrius.sso.protobuf.Session;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.accumulo.access.AccessEvaluator;
 
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * AI Support Agent - A pluggable feature that provides intelligent assistance
@@ -41,12 +45,14 @@ public class AISupportAgent extends SessionTokenEvaluator {
     private ConnectedSystem connectedSystem;
     private SessionTrackingService sessionTrackingService;
     private DocumentService documentService;
+    private QueryEnhancementService queryEnhancementService;
     
     // Configuration options
     private boolean enabled = true;
     private boolean proactiveMode = true;
     private int commandBufferSize = 5;
     private double suggestionThreshold = 0.7;
+    private boolean useEnhancedSearch = true;
     
     // Command buffer for context analysis
     private final Queue<String> recentCommands = new LinkedList<>();
@@ -96,6 +102,10 @@ public class AISupportAgent extends SessionTokenEvaluator {
 
     public void setDocumentService(DocumentService documentService) {
         this.documentService = documentService;
+    }
+
+    public void setQueryEnhancementService(QueryEnhancementService queryEnhancementService) {
+        this.queryEnhancementService = queryEnhancementService;
     }
 
     @Override
@@ -432,10 +442,15 @@ public class AISupportAgent extends SessionTokenEvaluator {
      * Uses semantic search to find TSGs and documentation that can help
      * users understand commands or resolve issues.
      * 
-     * This implements a RAG (Retrieval-Augmented Generation) approach where:
-     * 1. Documents are retrieved based on command context
-     * 2. Document summaries are injected into LLM prompts
-     * 3. LLM generates responses informed by relevant documentation
+     * This implements an enhanced RAG (Retrieval-Augmented Generation) approach where:
+     * 1. Query is expanded and keywords are extracted
+     * 2. Multiple search queries are generated using disjunction (OR) logic
+     * 3. Documents are retrieved using semantic + keyword-based search
+     * 4. Document summaries are injected into LLM prompts
+     * 5. LLM generates responses informed by relevant documentation
+     * 
+     * This fixes the issue where "/ask what type of agents exist in sentrius" would
+     * fail to match documents that "/ask agents" would match.
      * 
      * @param query The command or query to search for
      * @param userId User ID for access control
@@ -451,29 +466,148 @@ public class AISupportAgent extends SessionTokenEvaluator {
             // Build access evaluator for the user
             AccessEvaluator evaluator = documentService.buildAccessEvaluatorForUser(userId);
             
-            // Search with semantic search enabled for better results
-            DocumentSearchDTO searchDTO = DocumentSearchDTO.builder()
-                .query(query)
-                .useSemanticSearch(true)
-                .threshold(suggestionThreshold)
-                .limit(5)
-                .documentType("TSG") // Prioritize TSGs
-                .build();
-            
-            List<Document> results = documentService.searchDocuments(searchDTO, userId, evaluator);
-            
-            // If no TSGs found, search all document types
-            if (results.isEmpty()) {
-                searchDTO.setDocumentType(null);
-                results = documentService.searchDocuments(searchDTO, userId, evaluator);
+            // Use enhanced RAG search if available and enabled
+            if (useEnhancedSearch && queryEnhancementService != null) {
+                return performEnhancedRAGSearch(query, userId, evaluator);
+            } else {
+                // Fallback to basic search
+                return performBasicSearch(query, userId, evaluator);
             }
-            
-            log.info("AI Support Agent found {} relevant documents for query: {}", results.size(), query);
-            return results;
             
         } catch (Exception e) {
             log.error("Failed to search documents for AI Support Agent", e);
             return List.of();
         }
+    }
+    
+    /**
+     * Perform enhanced RAG search with keyword extraction and query expansion.
+     */
+    private List<Document> performEnhancedRAGSearch(String query, String userId, AccessEvaluator evaluator) {
+        log.info("AI Support Agent performing enhanced RAG search for: '{}'", query);
+        
+        // Extract keywords from the query
+        List<String> keywords = queryEnhancementService.extractKeywords(query);
+        log.debug("Extracted keywords: {}", keywords);
+        
+        // Generate multiple search queries
+        List<String> searchQueries = queryEnhancementService.generateSearchQueries(query);
+        log.debug("Generated {} search queries", searchQueries.size());
+        
+        // Collect all matching documents using disjunction (OR logic)
+        Set<Document> allResults = new LinkedHashSet<>();
+        
+        // Search with each query variation
+        for (String searchQuery : searchQueries) {
+            try {
+                // Search TSGs first with lower threshold for better recall
+                DocumentSearchDTO searchDTO = DocumentSearchDTO.builder()
+                    .query(searchQuery)
+                    .useSemanticSearch(true)
+                    .threshold(Math.max(0.5, suggestionThreshold - 0.2))  // Lower threshold
+                    .limit(5)
+                    .documentType("TSG")
+                    .build();
+                
+                List<Document> tsgResults = documentService.searchDocuments(searchDTO, userId, evaluator);
+                allResults.addAll(tsgResults);
+                
+                // Also search all document types
+                searchDTO.setDocumentType(null);
+                List<Document> allTypeResults = documentService.searchDocuments(searchDTO, userId, evaluator);
+                allResults.addAll(allTypeResults);
+                
+                // Early stopping if we have enough results
+                if (allResults.size() >= 10) {
+                    break;
+                }
+            } catch (Exception e) {
+                log.warn("Error searching with query '{}': {}", searchQuery, e.getMessage());
+            }
+        }
+        
+        // If no results, try keyword-based text search
+        if (allResults.isEmpty() && !keywords.isEmpty()) {
+            log.info("Semantic search returned no results, trying keyword-based search");
+            for (String keyword : keywords) {
+                try {
+                    DocumentSearchDTO textSearch = DocumentSearchDTO.builder()
+                        .query(keyword)
+                        .useSemanticSearch(false)
+                        .limit(3)
+                        .build();
+                    
+                    List<Document> keywordResults = documentService.searchDocuments(textSearch, userId, evaluator);
+                    allResults.addAll(keywordResults);
+                } catch (Exception e) {
+                    log.warn("Error in keyword search for '{}': {}", keyword, e.getMessage());
+                }
+            }
+        }
+        
+        // Rank and return top results
+        List<Document> rankedResults = allResults.stream()
+            .sorted((d1, d2) -> {
+                String doc1Text = buildDocText(d1);
+                String doc2Text = buildDocText(d2);
+                
+                double score1 = queryEnhancementService.calculateKeywordRelevance(keywords, doc1Text);
+                double score2 = queryEnhancementService.calculateKeywordRelevance(keywords, doc2Text);
+                
+                return Double.compare(score2, score1);
+            })
+            .limit(5)
+            .collect(Collectors.toList());
+        
+        log.info("Enhanced RAG search found {} documents (from {} total matches)", 
+                rankedResults.size(), allResults.size());
+        
+        return rankedResults;
+    }
+    
+    /**
+     * Perform basic search (original implementation).
+     */
+    private List<Document> performBasicSearch(String query, String userId, AccessEvaluator evaluator) {
+        DocumentSearchDTO searchDTO = DocumentSearchDTO.builder()
+            .query(query)
+            .useSemanticSearch(true)
+            .threshold(suggestionThreshold)
+            .limit(5)
+            .documentType("TSG")
+            .build();
+        
+        List<Document> results = documentService.searchDocuments(searchDTO, userId, evaluator);
+        
+        if (results.isEmpty()) {
+            searchDTO.setDocumentType(null);
+            results = documentService.searchDocuments(searchDTO, userId, evaluator);
+        }
+        
+        log.info("Basic search found {} documents", results.size());
+        return results;
+    }
+    
+    /**
+     * Build combined text from document for relevance scoring
+     */
+    private String buildDocText(Document doc) {
+        StringBuilder text = new StringBuilder();
+        
+        if (doc.getDocumentName() != null) {
+            text.append(doc.getDocumentName()).append(" ");
+        }
+        if (doc.getSummary() != null) {
+            text.append(doc.getSummary()).append(" ");
+        }
+        if (doc.getContent() != null) {
+            String content = doc.getContent();
+            if (content.length() > 500) {
+                content = content.substring(0, 500);
+            }
+            text.append(content);
+        }
+        
+        return text.toString();
     }
 }

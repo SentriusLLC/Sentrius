@@ -10,4 +10,5 @@ import java.lang.annotation.Target;
 public @interface Updatable {
 
     String description() default "";
+    String group() default "General";
 }
