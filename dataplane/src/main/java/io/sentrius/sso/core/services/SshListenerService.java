@@ -218,12 +218,22 @@ public class SshListenerService {
                                 terminalSessionId.getCommander().write(keyMap.get(keyCode));
                                 terminalSessionId.getTerminalAuditor().clear(0); // clear in case
                             } else {
+
+                                boolean isSentriusCommand = terminalSessionId.getTerminalAuditor().isSentriusCommand();
+
                                 if (terminalSessionId.getTerminalAuditor().keycode(keyCode)
                                     == TriggerAction.RECORD_ACTION) {
                                     keyCode = 67;
                                 }
-                                terminalSessionId.getCommander().write(keyMap.get(keyCode));
-                                terminalSessionId.getTerminalAuditor().keycode(keyCode);
+                                if ( isSentriusCommand ){
+                                    log.info("Sending CTRL-C to terminate Sentrius command");
+                                    terminalSessionId.getCommander().write(keyMap.get(67));
+                                }
+                                else {
+                                    log.info("Sending keycode to SSH server: {}", keyCode);
+                                    terminalSessionId.getCommander().write(keyMap.get(keyCode));
+                                }
+                                //terminalSessionId.getTerminalAuditor().keycode(keyCode);
                             }
                         } else {
                             log.info("Keycode not mapped: {}", keyCode);
@@ -245,7 +255,7 @@ public class SshListenerService {
             }
         } else if (terminalMessage.getType() == Session.MessageType.HEARTBEAT) {
             // Handle heartbeat message
-            log.trace("received heartbedat");
+            log.trace("received heartbeat");
         }
         log.debug("Processed terminal message for session: {}", terminalSessionId.getSession().getId());
     }

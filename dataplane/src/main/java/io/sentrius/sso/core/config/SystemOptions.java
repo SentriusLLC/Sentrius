@@ -197,6 +197,10 @@ public class SystemOptions {
     @Builder.Default
     public String agentImageTag = "latest";
 
+    @Updatable(description = "SSH Support agent.")
+    @Builder.Default
+    public Boolean agentSupportEnabled = false;
+
 
 
 

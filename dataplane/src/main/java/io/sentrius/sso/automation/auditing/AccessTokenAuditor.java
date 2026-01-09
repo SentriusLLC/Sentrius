@@ -10,11 +10,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import io.sentrius.sso.core.data.auditing.RecordingStudio;
 import io.sentrius.sso.core.model.ConnectedSystem;
+import io.sentrius.sso.core.model.sessions.SessionOutput;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenReason;
 import io.sentrius.sso.core.model.zt.ZeroTrustAccessTokenRequest;
 import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
+import io.sentrius.sso.protobuf.Session;
+import io.sentrius.sso.services.WebTerminalAISupportService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.socket.WebSocketSession;
 
 @Slf4j
 public class AccessTokenAuditor extends BaseAccessTokenAuditor {
@@ -45,9 +50,13 @@ public class AccessTokenAuditor extends BaseAccessTokenAuditor {
 
   final ZeroTrustAccessTokenService ztatService;
 
+private final  WebTerminalAISupportService aiSupportService;
+
   public AccessTokenAuditor(
       ZeroTrustAccessTokenService ztatService,
-      ConnectedSystem schSession, SessionTrackingService sessionTrackingService, RecordingStudio recorder) {
+      ConnectedSystem schSession, SessionTrackingService sessionTrackingService, RecordingStudio recorder,
+      WebTerminalAISupportService aiSupportService
+  ) {
     super(schSession.getUser(), schSession.getSession(), schSession.getHostSystem());
 
     this.ztatService = ztatService;
@@ -57,8 +66,9 @@ public class AccessTokenAuditor extends BaseAccessTokenAuditor {
     this.sessionTrackingService = sessionTrackingService;
 
     this.recordingStudio = recorder;
+      this.aiSupportService = aiSupportService;
 
-    // async thread evaluate
+      // async thread evaluate
     executorService = Executors.newFixedThreadPool(2);
 
   }
@@ -184,8 +194,20 @@ public class AccessTokenAuditor extends BaseAccessTokenAuditor {
   }
 
   @Override
+  public boolean isSentriusCommand() {
+    return isAgentCommand(get());
+  }
+
+  @Override
   protected synchronized TriggerAction submit(String command) {
     // currentTrigger
+
+  if (isAgentCommand(command)) {
+      handleAgentCommand(command);
+      // Clear the buffer and don't send to SSH
+      currentTrigger = Trigger.NO_ACTION;
+      return TriggerAction.NO_ACTION;
+  }
 
     fullRunner.enqueue(command);
     if (null != recordingStudio && !isRestrictedCommand()) {
@@ -278,4 +300,101 @@ public class AccessTokenAuditor extends BaseAccessTokenAuditor {
     }
     return currentTrigger.getAction();
   }
+
+    private boolean isAgentCommand(String command) {
+        log.info("isAgentCommand: {}", command);
+        if (!aiSupportService.isEnabled() &&
+            command == null || command.trim().isEmpty()) {
+            return false;
+        }
+        String trimmed = command.trim();
+        log.info("isAgentCommand: {}", trimmed);
+        return trimmed.startsWith("@agent") || trimmed.startsWith("/ask");
+    }
+
+    private void handleAgentCommand(
+        String command) {
+        try {
+
+            String query;
+
+            // Extract query from command
+            if (command.startsWith("@agent ")) {
+                query = command.substring("@agent ".length()).trim();
+            } else if (command.startsWith("/ask ")) {
+                query = command.substring("/ask ".length()).trim();
+            } else if (command.equals("@agent") || command.equals("/ask")) {
+                // Show help if no query provided
+                sendAgentHelpMessage();
+                return;
+            } else {
+                return;
+            }
+
+            if (query.isEmpty()) {
+                sendAgentHelpMessage();
+                return;
+            }
+
+            log.info("Processing @agent command from web terminal: {}", query);
+
+            SessionOutput output = new SessionOutput(connectedSystem);
+            output.append(WebTerminalAISupportService.sanitizeForTerminal("[AI] Processing your query and searching " +
+                "available docs" +
+                "...\n"));
+            sessionTrackingService.addOutput(output);
+
+            // Process the query through AI support service
+            String response = aiSupportService.processAgentQuery(connectedSystem, query);
+
+            log.info("AI agent response: {}", response);
+            // Send response back to terminal via chat
+
+            if (response != null && !response.isEmpty()) {
+                output = new SessionOutput(connectedSystem);
+                output.append(response);
+                sessionTrackingService.addOutput(output);
+                //aiSupportService.sendAgentMessageToTerminal(webSocketSession, response, "ai-support-agent");
+            }
+
+        } catch (Exception e) {
+            log.error("Error handling agent command in web terminal", e);
+            try {
+                SessionOutput output = new SessionOutput(connectedSystem);
+                output.append("Sorry, I encountered an error processing your request. Please try again.");
+                sessionTrackingService.addOutput(output);
+            } catch (Exception e2) {
+                log.error("Failed to send error message", e2);
+            }
+        }
+    }
+
+    private void sendAgentHelpMessage() {
+        String helpMessage =
+            "+--------------------------------------------------------------+\n" +
+                "|                      AI SUPPORT AGENT                        |\n" +
+                "+--------------------------------------------------------------+\n" +
+                "\n" +
+                "Ask questions and get intelligent assistance from the AI agent.\n" +
+                "\n" +
+                "Usage:\n" +
+                "  @agent <question>   - Ask the agent a question\n" +
+                "  /ask <question>     - Alternative command prefix\n" +
+                "\n" +
+                "Examples:\n" +
+                "  @agent How do I list all files in a directory?\n" +
+                "  /ask What is the purpose of chmod?\n" +
+                "  @agent Help me understand this error\n" +
+                "\n" +
+                "The agent can search documentation and TSGs for relevant help.\n";
+
+            try {
+                SessionOutput output = new SessionOutput(connectedSystem);
+                output.append(WebTerminalAISupportService.sanitizeForTerminal(helpMessage));
+                sessionTrackingService.addOutput(output);
+            } catch (Exception e) {
+                log.error("Failed to send help message", e);
+            }
+    }
+
 }
