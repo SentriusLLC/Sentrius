@@ -23,16 +23,17 @@ const chatSessions = new Map(); // key: agentId, value: ChatSession
 // Section: ChatSession Class
 // =========================
 class ChatSession {
-    constructor(agentName, agentId, sessionId, userId, agentHost, preloadMessages = []) {
+    constructor(agentName, agentId, sessionId, agentHost, preloadMessages = []) {
         this.agentId = agentId;
         this.agentName = agentName;
         this.sessionId = sessionId;
         this.agentHost = agentHost;
-        this.userId = userId;
+        this.userId = document.querySelector('meta[name="sentrius-user-id"]')?.content;
         this.chatGroupId = `${agentId}-${sessionId}`;
         this.messages = preloadMessages || [];
         this.connection = null;
     }
+    
 
     async connect() {
 
@@ -253,7 +254,7 @@ export function switchToAgent(agentName,agentId, sessionId, agentHost) {
     let session = chatSessions.get(agentId);
     if (!session) {
         console.log("New session creating:");
-        session = new ChatSession(agentName, agentId, sessionId, agentHost);
+        session = new ChatSession(agentName, agentId, sessionId,  agentHost);
         session.connect().then(() => {
             console.log("Connected to chat server");
         });

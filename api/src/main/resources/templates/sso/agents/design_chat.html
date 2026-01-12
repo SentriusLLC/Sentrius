@@ -427,7 +427,7 @@
                         if (!session) {
                             console.log("New session creating:");
                             session = new ChatSession(availableAgent.agentName, availableAgent.agentId, sessionId,
-                                userId,availableAgent.agentCallback);
+                                availableAgent.agentCallback);
                             session.connect().then(() => {
                                 console.log("Connected to chat server");
                             });
@@ -459,7 +459,7 @@
                 let session = chatSessions.get(availableAgent.agentId);
                 if (!session) {
                     console.log("New session creating:");
-                    session = new ChatSession(availableAgent.agentName, availableAgent.agentId, sessionId,userId,
+                    session = new ChatSession(availableAgent.agentName, availableAgent.agentId, sessionId,
                         availableAgent.agentCallback);
                     session.connect().then(() => {
                         console.log("Connected to chat server");

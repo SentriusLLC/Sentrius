@@ -24,7 +24,7 @@ public class AsyncConfig {
         executor.setCorePoolSize(15);
         executor.setMaxPoolSize(20);
         executor.setQueueCapacity(100);
-        executor.setThreadNamePrefix("SentriusTask-");
+        executor.setThreadNamePrefix("SentriusAgentProxyTask-");
         executor.initialize();
         return executor;
     }
@@ -35,10 +35,6 @@ public class AsyncConfig {
             executor.shutdown();
         }
         log.info("Shutting down executor");
-        // Call shutdown on SshListenerService to close streams
-        terminalService.shutdown();
     }
 
-    @Autowired
-    private TerminalService terminalService;
 }

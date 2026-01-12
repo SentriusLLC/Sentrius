@@ -271,7 +271,7 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set ssh.image.repository="${GCP_REGISTRY}/sentrius-ssh" \
     --set ssh.image.pullPolicy="IfNotPresent" \
     --set ssh.image.tag=${SENTRIUS_SSH_VERSION} \
-    --set sentriusaiagent.image.repository="${GCP_REGISTRY}/sentrius-ai-agent" \
+    --set sentriusaiagent.image.repository="${GCP_REGISTRY}" \
     --set sentriusaiagent.image.pullPolicy="IfNotPresent" \
     --set sentriusaiagent.image.tag=${SENTRIUS_AI_AGENT_VERSION} \
     --set launcherservice.image.repository="${GCP_REGISTRY}/sentrius-launcher-service" \
@@ -478,7 +478,7 @@ helm upgrade --install sentrius-agents ./sentrius-chart-launcher --namespace ${T
     --set ssh.image.repository="${GCP_REGISTRY}/sentrius-ssh" \
     --set ssh.image.pullPolicy="IfNotPresent" \
     --set ssh.image.tag=${SENTRIUS_SSH_VERSION} \
-    --set sentriusaiagent.image.repository="${GCP_REGISTRY}/sentrius-ai-agent" \
+    --set sentriusaiagent.image.repository="${GCP_REGISTRY}" \
     --set sentriusaiagent.image.pullPolicy="IfNotPresent" \
     --set sentriusaiagent.image.tag=${SENTRIUS_AI_AGENT_VERSION} \
     --set launcherservice.image.repository="${GCP_REGISTRY}/sentrius-launcher-service" \
