@@ -84,7 +84,7 @@
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Connecting...';
             
             try {
-                const response = await fetch(form.action, {
+                const response = await fetch('/api/v1/integrations/openai/add', {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -127,25 +127,25 @@
                         <p class="text-muted">Integrate AI capabilities and natural language processing into your workflows.</p>
                     </div>
 
-                    <form th:action="@{/api/v1/integrations/openai/add}" th:object="${openaiIntegration}" method="post" onsubmit="submitIntegration(event)">
+                    <form id="openaiForm" onsubmit="submitIntegration(event)">
                         <div class="form-group">
                             <label for="name" class="form-label">Integration Name</label>
                             <input type="text" id="name" name="name" class="form-control"
-                                   th:field="*{name}" placeholder="My OpenAI Integration" required>
+                                   placeholder="My OpenAI Integration" required>
                             <div class="help-text">Choose a name to identify this integration</div>
                         </div>
 
                         <div class="form-group">
                             <label for="username" class="form-label">OpenAI Organization ID</label>
                             <input type="text" id="username" name="username" class="form-control"
-                                   th:field="*{username}" placeholder="org-xxxxxxxxx (optional)">
+                                   placeholder="org-xxxxxxxxx (optional)">
                             <div class="help-text">Your OpenAI organization ID (optional for personal accounts)</div>
                         </div>
 
                         <div class="form-group">
                             <label for="apiToken" class="form-label">OpenAI API Key</label>
                             <input type="password" id="apiToken" name="apiToken" class="form-control"
-                                   th:field="*{apiToken}" placeholder="sk-xxxxxxxxx" required>
+                                   placeholder="sk-xxxxxxxxx" required>
                             <div class="help-text">
                                 <i class="fas fa-info-circle me-1"></i>
                                 Generate an API key at <a href="https://platform.openai.com/api-keys" target="_blank" class="text-primary">OpenAI Platform</a>
@@ -155,7 +155,7 @@
                         <div class="form-group">
                             <label for="baseUrl" class="form-label">API Base URL</label>
                             <input type="text" id="baseUrl" name="baseUrl" class="form-control"
-                                   th:field="*{baseUrl}" placeholder="https://api.openai.com/v1" value="https://api.openai.com/v1">
+                                   placeholder="https://api.openai.com/v1" value="https://api.openai.com/v1">
                             <div class="help-text">Use default URL unless you're using a custom endpoint</div>
                         </div>
 
@@ -165,8 +165,6 @@
                                 <i class="fas fa-plug me-2"></i>Connect OpenAI
                             </button>
                         </div>
-
-                        <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
                     </form>
                 </div>
 

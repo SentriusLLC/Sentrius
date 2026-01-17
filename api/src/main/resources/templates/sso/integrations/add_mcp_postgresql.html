@@ -84,50 +84,48 @@
                         <p class="text-muted">Enable database queries and schema management through the Model Context Protocol.</p>
                     </div>
 
-                    <form th:action="@{/api/v1/integrations/mcp/postgresql/add}" th:object="${mcpIntegration}" method="post">
+                    <form id="mcpForm">
                         <div class="form-group">
                             <label for="name" class="form-label">Integration Name</label>
                             <input type="text" id="name" name="name" class="form-control"
-                                   th:field="*{name}" placeholder="My PostgreSQL MCP Server" required>
+                                   placeholder="My PostgreSQL MCP Server" required>
                             <div class="help-text">Choose a name to identify this MCP server</div>
                         </div>
 
                         <div class="form-group">
                             <label for="baseUrl" class="form-label">Database Connection String</label>
                             <input type="text" id="baseUrl" name="baseUrl" class="form-control"
-                                   th:field="*{baseUrl}" placeholder="postgresql://localhost:5432/mydb" required>
+                                   placeholder="postgresql://localhost:5432/mydb" required>
                             <div class="help-text">PostgreSQL connection string</div>
                         </div>
 
                         <div class="form-group">
                             <label for="username" class="form-label">Username</label>
                             <input type="text" id="username" name="username" class="form-control"
-                                   th:field="*{username}" placeholder="postgres" required>
+                                   placeholder="postgres" required>
                             <div class="help-text">Database username</div>
                         </div>
 
                         <div class="form-group">
                             <label for="apiToken" class="form-label">Password</label>
                             <input type="password" id="apiToken" name="apiToken" class="form-control"
-                                   th:field="*{apiToken}" placeholder="Enter database password" required>
+                                   placeholder="Enter database password" required>
                             <div class="help-text">Database password (encrypted)</div>
                         </div>
 
                         <div class="form-group">
                             <label for="description" class="form-label">Description (Optional)</label>
                             <textarea id="description" name="description" class="form-control" rows="3"
-                                      th:field="*{description}" placeholder="Describe this MCP server..."></textarea>
+                                      placeholder="Describe this MCP server..."></textarea>
                             <div class="help-text">Optional description for this MCP server</div>
                         </div>
 
                         <div class="d-flex gap-2 justify-content-end">
                             <a href="/sso/v1/integrations" class="btn btn-secondary">Cancel</a>
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
                                 <i class="fas fa-plug me-2"></i>Connect MCP Server
                             </button>
                         </div>
-
-                        <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
                     </form>
                 </div>
 
@@ -135,6 +133,51 @@
         </div>
     </div>
 </div>
+
+<script th:inline="javascript">
+    document.getElementById('mcpForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const submitBtn = document.getElementById('submitBtn');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Connecting...';
+
+        const formData = {
+            name: document.getElementById('name').value,
+            baseUrl: document.getElementById('baseUrl').value,
+            username: document.getElementById('username').value,
+            apiToken: document.getElementById('apiToken').value,
+            description: document.getElementById('description').value
+        };
+
+        try {
+            const csrfToken = /*[[${_csrf.token}]]*/ 'default-csrf-token';
+            const response = await fetch('/api/v1/integrations/mcp/postgresql/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                window.location.href = '/sso/v1/integrations?success=PostgreSQL MCP integration added successfully';
+            } else {
+                const error = await response.text();
+                alert('Error: ' + error);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to add integration: ' + error.message);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    });
+</script>
 
 </body>
 </html>

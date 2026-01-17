@@ -194,4 +194,8 @@ public class KubernetesService {
         
         return info;
     }
+
+    public String getTenant() {
+        return tenant;
+    }
 }

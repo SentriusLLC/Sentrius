@@ -435,6 +435,65 @@
     </div>
 </div>
 
+<!-- Execute Modal -->
+<div class="modal fade" id="executeModal" tabindex="-1" aria-labelledby="executeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h5 class="modal-title" id="executeModalLabel">Execute Automation on System</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="execute-suggestion-id">
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    This will execute the automation script on the selected system and automatically clean up the script file after execution.
+                </div>
+                
+                <div class="mb-3">
+                    <label for="execute-system-select" class="form-label">Select System</label>
+                    <select class="form-select" id="execute-system-select">
+                        <option value="">-- Choose a system --</option>
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                    <small class="text-muted">Only systems you have access to are shown</small>
+                </div>
+                
+                <div id="execution-results" style="display:none;" class="mt-3">
+                    <h6>Execution Results</h6>
+                    <div id="execution-output" class="test-output"></div>
+                </div>
+                
+                <div id="execution-history" style="display:none;" class="mt-3">
+                    <h6>Recent Executions</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-dark">
+                            <thead>
+                                <tr>
+                                    <th>System</th>
+                                    <th>Status</th>
+                                    <th>Executed By</th>
+                                    <th>Date</th>
+                                    <th>Exit Code</th>
+                                </tr>
+                            </thead>
+                            <tbody id="execution-history-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" onclick="submitExecution()">
+                    <i class="fas fa-play"></i> Execute
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script th:inline="none">
 $(document).ready(function() {
     // Initialize DataTable
@@ -510,6 +569,8 @@ $(document).ready(function() {
                     
                     if (row.status === 'APPROVED') {
                         buttons += '<button class="btn btn-sm btn-primary" onclick="convertToAutomation(' + row.id + ')"><i class="fas fa-cog"></i> Convert</button>';
+                        // Allow execution for all approved scripts, even without automation conversion
+                        buttons += '<button class="btn btn-sm btn-primary" onclick="executeAutomation(' + row.id + ')"><i class="fas fa-play"></i> Run</button>';
                     }
                     
                     if (row.automationId) {
@@ -620,11 +681,16 @@ function submitApprove() {
 function submitReject() {
     var id = $('#rejectSuggestionId').val();
     var comments = $('#rejectComments').val();
-    
+
+    const csrfToken = document.getElementById("csrf-token").value;
     $.ajax({
         url: '/api/v1/automation/suggestions/' + id + '/reject',
         type: 'POST',
         contentType: 'application/json',
+        headers: {
+            'Content-Type': 'application/json',
+            "X-CSRF-TOKEN": csrfToken
+        },
         data: JSON.stringify({ comments: comments }),
         success: function(response) {
             $('#rejectModal').modal('hide');
@@ -663,10 +729,14 @@ function deleteSuggestion(id) {
     if (!confirm('Are you sure you want to delete this suggestion?')) {
         return;
     }
-    
+    const csrfToken = document.getElementById("csrf-token").value;
     $.ajax({
         url: '/api/v1/automation/suggestions/' + id,
         type: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            "X-CSRF-TOKEN": csrfToken
+        },
         success: function(response) {
             $('#suggestions-table').DataTable().ajax.reload();
             alert('Suggestion deleted successfully!');
@@ -1293,6 +1363,130 @@ function unassignSystem(suggestionId, systemId) {
         },
         error: function(xhr) {
             alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Failed to unassign system'));
+        }
+    });
+}
+
+// Execute automation functions
+function executeAutomation(id) {
+    $('#execute-suggestion-id').val(id);
+    $('#execution-results').hide();
+    $('#execution-history').hide();
+    
+    loadSystemsForExecution();
+    loadExecutionHistory(id);
+    
+    $('#executeModal').modal('show');
+}
+
+function loadSystemsForExecution() {
+    $.get('/api/v1/automation/suggestions/systems', function(response) {
+        var select = $('#execute-system-select');
+        select.empty();
+        select.append('<option value="">-- Choose a system --</option>');
+        
+        if (response.status === 'success' && response.systems) {
+            response.systems.forEach(function(system) {
+                var option = $('<option></option>')
+                    .val(system.id)
+                    .text(system.displayName + ' (' + system.host + ')');
+                select.append(option);
+            });
+        }
+    }).fail(function(xhr) {
+        console.error('Error loading systems:', xhr);
+        alert('Failed to load available systems');
+    });
+}
+
+function loadExecutionHistory(suggestionId) {
+    $.get('/api/v1/automation/suggestions/' + suggestionId + '/executions', function(response) {
+        if (response.status === 'success' && response.executions && response.executions.length > 0) {
+            var tbody = $('#execution-history-tbody');
+            tbody.empty();
+            
+            response.executions.forEach(function(exec) {
+                var statusClass = exec.status === 'SUCCESS' ? 'text-success' : 
+                                 exec.status === 'FAILED' ? 'text-danger' : 
+                                 exec.status === 'RUNNING' ? 'text-info' : 'text-warning';
+                
+                var row = '<tr>';
+                row += '<td>' + exec.systemName + '</td>';
+                row += '<td><span class="' + statusClass + '">' + exec.status + '</span></td>';
+                row += '<td>' + (exec.executedBy || 'N/A') + '</td>';
+                row += '<td>' + new Date(exec.executedAt).toLocaleString() + '</td>';
+                row += '<td>' + (exec.exitCode !== null ? exec.exitCode : 'N/A') + '</td>';
+                row += '</tr>';
+                
+                tbody.append(row);
+            });
+            
+            $('#execution-history').show();
+        }
+    }).fail(function(xhr) {
+        console.error('Error loading execution history:', xhr);
+    });
+}
+
+function submitExecution() {
+    var suggestionId = $('#execute-suggestion-id').val();
+    var systemId = $('#execute-system-select').val();
+    
+    if (!systemId || systemId === '') {
+        alert('Please select a system');
+        return;
+    }
+    
+    if (!confirm('Execute this automation on the selected system? The script will be automatically cleaned up after execution.')) {
+        return;
+    }
+    
+    const csrfToken = document.getElementById("csrf-token").value;
+    
+    // Show loading message
+    $('#execution-results').show();
+    $('#execution-output').html('<div class="text-info"><i class="fas fa-spinner fa-spin"></i> Executing automation...</div>');
+    
+    $.ajax({
+        url: '/api/v1/automation/suggestions/' + suggestionId + '/execute',
+        type: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            "X-CSRF-TOKEN": csrfToken
+        },
+        contentType: 'application/json',
+        data: JSON.stringify({
+            systemId: parseInt(systemId)
+        }),
+        success: function(response) {
+            var output = '=== Execution Results ===\n\n';
+            output += 'Status: ' + response.status + '\n';
+            output += 'System: ' + (response.system || 'N/A') + '\n';
+            output += 'Exit Code: ' + (response.exitCode !== undefined ? response.exitCode : 'N/A') + '\n';
+            output += 'Execution ID: ' + (response.executionId || 'N/A') + '\n\n';
+            
+            if (response.message) {
+                output += 'Message: ' + response.message + '\n\n';
+            }
+            
+            if (response.output) {
+                output += '=== Output ===\n';
+                output += response.output;
+            }
+            
+            $('#execution-output').text(output);
+            $('#execution-results').show();
+            
+            // Reload execution history
+            loadExecutionHistory(suggestionId);
+            
+            // Clear selection
+            $('#execute-system-select').val('');
+        },
+        error: function(xhr) {
+            var errorMsg = xhr.responseJSON ? xhr.responseJSON.message : 'Failed to execute automation';
+            $('#execution-output').html('<div class="text-danger"><strong>Error:</strong> ' + errorMsg + '</div>');
+            $('#execution-results').show();
         }
     });
 }

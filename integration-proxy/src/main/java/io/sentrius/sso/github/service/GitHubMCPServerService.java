@@ -1,10 +1,13 @@
 package io.sentrius.sso.github.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.*;
 import io.sentrius.sso.core.model.security.IntegrationSecurityToken;
 import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
+import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.integration.service.IntegrationServerManager;
+import io.sentrius.sso.k8s.service.KubernetesService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,13 +30,13 @@ public class GitHubMCPServerService extends IntegrationServerManager {
     @Value("${sentrius.github.mcp.image:github-mcp-server:latest}")
     private String githubMcpImage;
 
-    @Value("${sentrius.github.mcp.registry:}")
+    @Value("${sentrius.github.mcp.registry:ghcr.io/github}")
     private String registry;
 
     private static final int MCP_SERVER_PORT = 3000;
 
-    public GitHubMCPServerService(IntegrationSecurityTokenService integrationSecurityTokenService) throws IOException {
-        super();
+    public GitHubMCPServerService(IntegrationSecurityTokenService integrationSecurityTokenService, KubernetesService kubernetesService) throws IOException {
+        super(kubernetesService);
         this.integrationSecurityTokenService = integrationSecurityTokenService;
     }
 
@@ -55,6 +58,8 @@ public class GitHubMCPServerService extends IntegrationServerManager {
         }
 
         String githubToken = token.getConnectionInfo();
+        JsonNode connectionInfo = JsonUtil.MAPPER.readTree(githubToken);
+        githubToken = connectionInfo.get("apiToken").asText();
         String podName = "github-mcp-" + tokenId;
 
         // Build the full image name
@@ -75,7 +80,10 @@ public class GitHubMCPServerService extends IntegrationServerManager {
         List<V1EnvVar> envVars = List.of(
             new V1EnvVar()
                 .name("GITHUB_PERSONAL_ACCESS_TOKEN")
-                .value(githubToken)
+                .value(githubToken),
+            new V1EnvVar()
+                .name("GITHUB_TOOLSETS")
+                .value("all")
         );
 
         // Launch pod using base class

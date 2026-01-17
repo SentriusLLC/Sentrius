@@ -457,14 +457,14 @@ public class UserApiController extends BaseController {
                     node.fields().forEachRemaining(
                         entry -> {
                             completedMap.put(entry.getKey(), entry.getValue());
-                            log.info(
+                            log.trace(
                                 "Processing agent session duration entry: {} = {}", entry.getKey(), entry.getValue());
                         }
 
                     );
                 }
                 if (completedMap.size() > 0) {
-                    log.info("Adding completed agent session duration data: {}", completedMap);
+                    log.trace("Adding completed agent session duration data: {}", completedMap);
                     agentSessions.add(completedMap);
                 }
 
@@ -482,14 +482,14 @@ public class UserApiController extends BaseController {
                     node.fields().forEachRemaining(
                         entry -> {
                             completedMap.put(entry.getKey(), entry.getValue());
-                            log.info(
+                            log.trace(
                                 "Processing agent session duration entry: {} = {}", entry.getKey(), entry.getValue());
                         }
 
                     );
                 }
                 if (completedMap.size() > 0) {
-                    log.info("Adding completed agent session duration data: {}", completedMap);
+                    log.trace("Adding completed agent session duration data: {}", completedMap);
                     agentSessions.add(completedMap);
                 }
 

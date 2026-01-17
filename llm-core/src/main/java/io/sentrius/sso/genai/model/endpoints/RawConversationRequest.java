@@ -11,7 +11,6 @@ import io.sentrius.sso.genai.model.LLMResponse;
 import io.sentrius.sso.genai.model.ResponsesApiRequest;
 import io.sentrius.sso.genai.model.ResponsesApiInputItem;
 import io.sentrius.sso.genai.model.ResponsesApiContentItem;
-import io.sentrius.sso.genai.model.ResponsesApiImageUrl;
 import lombok.Builder;
 import lombok.Data;
 import lombok.experimental.SuperBuilder;
@@ -173,27 +172,21 @@ public class RawConversationRequest extends ApiEndPointRequest {
                 else if ("image_url".equals(type)) {
                     Object imageObj = map.get("image_url");
                     String url = null;
-                    String detail = "auto";
 
                     if (imageObj instanceof String s) {
                         url = s;
                     } else if (imageObj instanceof Map<?, ?> imgMap) {
+                        // Extract URL from nested object (Chat Completions format)
                         Object u = imgMap.get("url");
-                        Object d = imgMap.get("detail");
                         if (u != null) url = u.toString();
-                        if (d != null) detail = d.toString();
+                        // Note: 'detail' is ignored - Responses API doesn't support it
                     }
 
                     if (url != null) {
                         contentItems.add(
                             ResponsesApiContentItem.builder()
                                 .type("input_image")
-                                .imageUrl(
-                                    ResponsesApiImageUrl.builder()
-                                        .url(url)
-                                        .detail(detail)
-                                        .build()
-                                )
+                                .imageUrl(url)  // Direct string for Responses API
                                 .build()
                         );
                     }
@@ -205,7 +198,7 @@ public class RawConversationRequest extends ApiEndPointRequest {
                         contentItems.add(
                             ResponsesApiContentItem.builder()
                                 .type("input_image")
-                                .imageBase64(base64)   // ✅ CORRECT
+                                .imageUrl(base64)  // Direct data URI string
                                 .build()
                         );
                     }

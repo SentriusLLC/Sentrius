@@ -22,6 +22,7 @@ GITHUB_MCP_VERSION="${GITHUB_MCP_VERSION:-latest}"
 MONITORING_AGENT_VERSION="${MONITORING_AGENT_VERSION:-latest}"
 SSH_AGENT_VERSION="${SSH_AGENT_VERSION:-latest}"
 
+
 TENANT=""
 ENV_TARGET="gke"
 CERTIFICATES_ENABLED="true"
@@ -29,7 +30,7 @@ INGRESS_TLS_ENABLED="true"
 ENVIRONMENT="gke"
 DEPLOY_ADMINER=${DEPLOY_ADMINER:-false}
 ENABLE_RDP_CONTAINER=${ENABLE_RDP_CONTAINER:-true}
-
+UPDATE_DNS=${UPDATE_DNS:-false}
 # GCP Container Registry
 GCP_REGISTRY="us-central1-docker.pkg.dev/sentrius-project/sentrius-repo"
 
@@ -51,6 +52,10 @@ while [[ $# -gt 0 ]]; do
         --no-tls)
             CERTIFICATES_ENABLED="false"
             INGRESS_TLS_ENABLED="false"
+            shift
+            ;;
+        --update-dns)
+            UPDATE_DNS="true"
             shift
             ;;
         *)
@@ -329,20 +334,23 @@ if [[ -z "$KEYCLOAK_INGRESS_IP" ]]; then
 fi
 
 # Create/Update DNS for Keycloak immediately
-echo ""
-echo "🌐 Configuring DNS for Keycloak..."
-if gcloud dns record-sets list --zone=${ZONE} --name=${KEYCLOAK_SUBDOMAIN}. 2>/dev/null | grep -q ${KEYCLOAK_SUBDOMAIN}.; then
-    echo "  Updating existing DNS record for ${KEYCLOAK_SUBDOMAIN}..."
-    gcloud dns record-sets delete ${KEYCLOAK_SUBDOMAIN}. --type=A --zone=${ZONE} --quiet 2>/dev/null || true
-fi
 
-gcloud dns record-sets create ${KEYCLOAK_SUBDOMAIN}. \
-    --zone=${ZONE} \
-    --type=A \
-    --ttl=300 \
-    --rrdatas=$KEYCLOAK_INGRESS_IP || {
-    echo "⚠️ Failed to create DNS record, it may already exist"
-}
+if [[ "$UPDATE_DNS" == "true" ]]; then
+  echo ""
+  echo "🌐 Configuring DNS for Keycloak..."
+  if gcloud dns record-sets list --zone=${ZONE} --name=${KEYCLOAK_SUBDOMAIN}. 2>/dev/null | grep -q ${KEYCLOAK_SUBDOMAIN}.; then
+      echo "  Updating existing DNS record for ${KEYCLOAK_SUBDOMAIN}..."
+      gcloud dns record-sets delete ${KEYCLOAK_SUBDOMAIN}. --type=A --zone=${ZONE} --quiet 2>/dev/null || true
+  fi
+
+  gcloud dns record-sets create ${KEYCLOAK_SUBDOMAIN}. \
+      --zone=${ZONE} \
+      --type=A \
+      --ttl=300 \
+      --rrdatas=$KEYCLOAK_INGRESS_IP || {
+      echo "⚠️ Failed to create DNS record, it may already exist"
+  }
+fi
 
 # Wait for Keycloak pod to be ready
 echo ""
@@ -414,24 +422,27 @@ if [[ -z "$APPS_INGRESS_IP" ]]; then
     echo "  Application pods may still be starting up..."
 else
     # Configure DNS for apps
-    echo ""
-    echo "🌐 Configuring DNS for application services..."
 
-    # Check and create/update DNS records
-    for SUBDOMAIN_NAME in "${SUBDOMAIN}" "${APROXY_SUBDOMAIN}" "${RDPPROXY_SUBDOMAIN}"; do
-        if gcloud dns record-sets list --zone=${ZONE} --name=${SUBDOMAIN_NAME}. 2>/dev/null | grep -q ${SUBDOMAIN_NAME}.; then
-            echo "  Updating ${SUBDOMAIN_NAME}..."
-            gcloud dns record-sets delete ${SUBDOMAIN_NAME}. --type=A --zone=${ZONE} --quiet 2>/dev/null || true
-        fi
+    if [[ "$UPDATE_DNS" == "true" ]]; then
+      echo ""
+      echo "🌐 Configuring DNS for application services..."
 
-        gcloud dns record-sets create ${SUBDOMAIN_NAME}. \
-            --zone=${ZONE} \
-            --type=A \
-            --ttl=300 \
-            --rrdatas=$APPS_INGRESS_IP || {
-            echo "⚠️ Failed to create DNS record for ${SUBDOMAIN_NAME}"
-        }
-    done
+      # Check and create/update DNS records
+      for SUBDOMAIN_NAME in "${SUBDOMAIN}" "${APROXY_SUBDOMAIN}" "${RDPPROXY_SUBDOMAIN}"; do
+          if gcloud dns record-sets list --zone=${ZONE} --name=${SUBDOMAIN_NAME}. 2>/dev/null | grep -q ${SUBDOMAIN_NAME}.; then
+              echo "  Updating ${SUBDOMAIN_NAME}..."
+              gcloud dns record-sets delete ${SUBDOMAIN_NAME}. --type=A --zone=${ZONE} --quiet 2>/dev/null || true
+          fi
+
+          gcloud dns record-sets create ${SUBDOMAIN_NAME}. \
+              --zone=${ZONE} \
+              --type=A \
+              --ttl=300 \
+              --rrdatas=$APPS_INGRESS_IP || {
+              echo "⚠️ Failed to create DNS record for ${SUBDOMAIN_NAME}"
+          }
+      done
+    fi
 fi
 
 # Deploy launcher service

@@ -33,16 +33,10 @@ public class ResponsesApiContentItem {
     private String text;
     
     /**
-     * Image URL object (for image types)
-     * Contains the URL and detail level
+     * Image URL (for image types) - direct string
+     * For OpenAI Responses API, this must be a plain string (the data URI or URL)
+     * NOT an object like in Chat Completions API
      */
     @JsonProperty(value = "image_url")
-    private ResponsesApiImageUrl imageUrl;
-
-    /**
-     * Base64-encoded image (used only when image is provided via base64)
-     */
-    @JsonProperty("image_base64")
-    private String imageBase64;
+    private String imageUrl;
 }
-

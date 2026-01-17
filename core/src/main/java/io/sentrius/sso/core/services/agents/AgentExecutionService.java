@@ -19,8 +19,7 @@ public class AgentExecutionService {
             .build(this::createExecution);
 
     private final Cache<String, AgentExecutionContextDTO> agentExecutionContextCache =
-        Caffeine.newBuilder()
-            .expireAfterWrite(1, TimeUnit.HOURS).build();
+        Caffeine.newBuilder().maximumSize(100).build();
 
     public void setExecutionContextDTO(AgentExecution execution, AgentExecutionContextDTO contextDTO) {
         agentExecutionContextCache.put(execution.getExecutionId(), contextDTO);

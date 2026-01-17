@@ -5,6 +5,7 @@ import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.*;
 import io.kubernetes.client.util.Config;
+import io.sentrius.sso.k8s.service.KubernetesService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 
@@ -23,10 +24,11 @@ public abstract class IntegrationServerManager {
 
     protected final CoreV1Api coreV1Api;
 
-    @Value("${sentrius.integration.namespace:dev}")
-    protected String namespace;
+    final KubernetesService kubernetesService;
 
-    protected IntegrationServerManager() throws IOException {
+
+    protected IntegrationServerManager(KubernetesService kubernetesService) throws IOException {
+        this.kubernetesService = kubernetesService;
         ApiClient client = Config.defaultClient();
         this.coreV1Api = new CoreV1Api(client);
     }
@@ -66,7 +68,7 @@ public abstract class IntegrationServerManager {
         // Explicitly set overhead to null to avoid Kubernetes RuntimeClass errors
         pod.getSpec().setOverhead(null);
 
-        V1Pod createdPod = coreV1Api.createNamespacedPod(namespace, pod).execute();
+        V1Pod createdPod = coreV1Api.createNamespacedPod(kubernetesService.getTenant(), pod).execute();
         
         // Create service for the pod
         createServiceForPod(serverName, labels, port);
@@ -94,7 +96,7 @@ public abstract class IntegrationServerManager {
             );
 
         try {
-            coreV1Api.createNamespacedService(namespace, service).execute();
+            coreV1Api.createNamespacedService(kubernetesService.getTenant(), service).execute();
             log.info("Created service for integration: {}", serviceName);
         } catch (ApiException e) {
             if (e.getCode() == 409) {
@@ -112,7 +114,7 @@ public abstract class IntegrationServerManager {
         log.info("Deleting integration pod: {}", podName);
 
         try {
-            coreV1Api.deleteNamespacedPod(podName, namespace).execute();
+            coreV1Api.deleteNamespacedPod(podName, kubernetesService.getTenant()).execute();
         } catch (ApiException e) {
             if (e.getCode() != 404) {
                 throw e;
@@ -121,7 +123,7 @@ public abstract class IntegrationServerManager {
         }
 
         try {
-            coreV1Api.deleteNamespacedService(serviceName, namespace).execute();
+            coreV1Api.deleteNamespacedService(serviceName, kubernetesService.getTenant()).execute();
         } catch (ApiException e) {
             if (e.getCode() != 404) {
                 throw e;
@@ -135,7 +137,7 @@ public abstract class IntegrationServerManager {
      */
     protected String getPodStatus(String podName) throws ApiException {
         try {
-            V1Pod pod = coreV1Api.readNamespacedPod(podName, namespace).execute();
+            V1Pod pod = coreV1Api.readNamespacedPod(podName, kubernetesService.getTenant()).execute();
             if (pod != null && pod.getStatus() != null) {
                 return pod.getStatus().getPhase();
             }
@@ -152,7 +154,7 @@ public abstract class IntegrationServerManager {
      * List all pods matching a label selector
      */
     protected List<V1Pod> listPods(String labelSelector) throws ApiException {
-        return coreV1Api.listNamespacedPod(namespace)
+        return coreV1Api.listNamespacedPod(kubernetesService.getTenant())
             .labelSelector(labelSelector)
             .execute()
             .getItems();
@@ -162,7 +164,7 @@ public abstract class IntegrationServerManager {
      * Build service URL for cluster-internal access
      */
     protected String buildServiceUrl(String serviceName, int port) {
-        return String.format("http://%s.%s.svc.cluster.local:%d", serviceName, namespace, port);
+        return String.format("http://%s.%s.svc.cluster.local:%d", serviceName, kubernetesService.getTenant(), port);
     }
 
     /**

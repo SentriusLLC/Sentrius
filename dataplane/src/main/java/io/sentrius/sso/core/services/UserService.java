@@ -256,7 +256,7 @@ public class UserService {
                 return null;
             }
         } else {
-            log.info("no operating user");
+            log.debug("no operating user");
             return null;
         }
     }

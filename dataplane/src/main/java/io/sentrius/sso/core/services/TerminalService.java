@@ -573,5 +573,65 @@ public class TerminalService {
         return rules;
     }
 
+    /**
+     * Create and configure a JSch SSH session for a host system.
+     * This is a reusable method for creating sessions across the application.
+     *
+     * @param hostSystem The target host system
+     * @param password Optional password for authentication (can be null)
+     * @param connectSession Whether to automatically connect the session
+     * @return Configured JSch Session (connected if connectSession is true)
+     * @throws JSchException If session creation or connection fails
+     * @throws GeneralSecurityException If key management fails
+     * @throws IOException If I/O operations fail
+     */
+    public Session createJSchSession(HostSystem hostSystem, String password, boolean connectSession)
+            throws JSchException, GeneralSecurityException, IOException {
+
+        JSch jsch = new JSch();
+        ApplicationKey appKey = keyStoreService.getGlobalKey();
+
+        String passphrase = appKey.getPassphrase();
+        if (passphrase == null) {
+            passphrase = "";
+        }
+
+        // Add private key identity
+        jsch.addIdentity(
+            appKey.getId().toString(),
+            appKey.getPrivateKey().trim().getBytes(),
+            appKey.getPublicKey().getBytes(),
+            passphrase.getBytes()
+        );
+
+        // Create session
+        Session session = jsch.getSession(
+            hostSystem.getSshUser(),
+            hostSystem.getHost(),
+            hostSystem.getPort()
+        );
+
+        // Set password if provided
+        if (password != null && !password.trim().isEmpty()) {
+            session.setPassword(password);
+        }
+
+        // Configure session settings
+        if (systemOptions.getTestMode()) {
+            session.setConfig("StrictHostKeyChecking", "no");
+        } else {
+            jsch.setKnownHosts(knownHostService.getKnownHostsPath());
+        }
+        session.setConfig("PreferredAuthentications", "publickey,keyboard-interactive,password");
+        session.setServerAliveInterval(SESSION_TIMEOUT);
+
+        // Connect if requested
+        if (connectSession) {
+            session.connect(SESSION_TIMEOUT);
+        }
+
+        return session;
+    }
+
 
 }

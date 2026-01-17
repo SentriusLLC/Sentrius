@@ -3,6 +3,7 @@ package io.sentrius.sso.coding.service;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.*;
 import io.sentrius.sso.integration.service.IntegrationServerManager;
+import io.sentrius.sso.k8s.service.KubernetesService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -39,8 +40,8 @@ public class CodingMCPServerService extends IntegrationServerManager {
 
     private static final int MCP_SERVER_PORT = 3000;
 
-    public CodingMCPServerService() throws IOException {
-        super();
+    public CodingMCPServerService(KubernetesService kubernetesService) throws IOException {
+        super(kubernetesService);
     }
 
     /**
