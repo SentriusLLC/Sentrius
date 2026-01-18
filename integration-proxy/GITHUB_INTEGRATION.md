@@ -1,153 +1,99 @@
-# GitHub MCP Server Integration
+# GitHub Integration
 
-This integration adds support for the [GitHub MCP Server](https://github.com/github/github-mcp-server) to Sentrius, enabling secure GitHub operations through the Model Context Protocol (MCP).
+This integration adds native GitHub support to Sentrius, enabling secure GitHub operations through the integration proxy. The integration proxy acts as an MCP (Model Context Protocol) server, making direct GitHub REST API calls without external dependencies.
 
 ## Overview
 
 The GitHub integration allows agents and users to:
 - Query GitHub issues and pull requests
-- Clone and access repository information
+- Access repository information and file contents
+- Search code, repositories, and users
 - Manage GitHub resources through a secure, zero-trust proxy
 - Execute GitHub operations with proper authentication and authorization
 
 ## Architecture
 
-The integration consists of four main components:
+The integration consists of three main components:
 
-1. **GitHub MCP Server Pod**: A containerized instance of the github-mcp-server that runs in the Kubernetes cluster
-2. **IntegrationServerManager**: Abstract base class for managing integration server pods (reusable for other integrations)
-3. **GitHubMCPServerService**: Service that manages the lifecycle of GitHub MCP server pods (extends IntegrationServerManager)
-4. **GitHubMCPProxyService**: Service that forwards MCP requests to GitHub MCP servers
-5. **GitHubIntegrationController**: REST API endpoints for managing and proxying to GitHub integrations
+1. **GitHubApiService**: Direct GitHub REST API client that handles all GitHub API calls
+2. **GitHubMCPAdapter**: MCP protocol adapter that converts MCP requests to GitHub API calls
+3. **GitHubIntegrationController**: REST API endpoints for managing and proxying GitHub requests
 
 ### Security Model
 
 All GitHub operations go through Sentrius's zero-trust security model:
 - GitHub Personal Access Tokens (PATs) are stored as `IntegrationSecurityToken` entries
-- Each token launches a dedicated MCP server pod in the cluster
 - All requests are authenticated via Keycloak JWT tokens
-- Integration proxy provides secure routing to the appropriate MCP server
+- Integration proxy provides secure routing directly to GitHub API
+- Token selection is required before making any GitHub operations
 
 ## Deployment
 
 ### Prerequisites
 
-- Kubernetes cluster with access configured
 - GitHub Personal Access Token with appropriate permissions
 - Sentrius integration-proxy deployed and running
+- Keycloak authentication configured
 
-### Building the GitHub MCP Server Image
+### Configuration
 
-```bash
-cd /path/to/sentrius
-docker build -t github-mcp-server:latest -f docker/github-mcp-server/Dockerfile docker/github-mcp-server/
-```
+No special deployment configuration is needed. The GitHub integration is built into the integration-proxy and is always available.
 
-### Helm Configuration
+### Storing GitHub Token
 
-To enable the GitHub MCP server in your Helm deployment, update `values.yaml`:
-
-```yaml
-githubMcp:
-  enabled: true  # Enable GitHub MCP server
-  replicaCount: 1
-  image:
-    repository: github-mcp-server
-    tag: latest
-    pullPolicy: IfNotPresent
-  service:
-    type: ClusterIP
-    port: 3000
-  resources:
-    requests:
-      memory: "256Mi"
-      cpu: "200m"
-    limits:
-      memory: "512Mi"
-      cpu: "500m"
-```
-
-Then deploy:
-
-```bash
-helm upgrade --install sentrius sentrius-chart -n dev
-```
-
-### Manual Deployment (Development)
-
-For development or testing, you can launch GitHub MCP servers dynamically:
-
-1. **Store GitHub Token**:
-   Create an `IntegrationSecurityToken` with `connectionType: "github"` and `connectionInfo` containing your GitHub PAT
-
-2. **Launch MCP Server**:
-   ```bash
-   curl -X POST "http://localhost:8080/api/v1/github/mcp/launch?tokenId=<TOKEN_ID>" \
-     -H "Authorization: Bearer <JWT_TOKEN>"
-   ```
-
-3. **Check Status**:
-   ```bash
-   curl -X GET "http://localhost:8080/api/v1/github/mcp/status?tokenId=<TOKEN_ID>" \
-     -H "Authorization: Bearer <JWT_TOKEN>"
-   ```
-
-4. **Delete MCP Server**:
-   ```bash
-   curl -X DELETE "http://localhost:8080/api/v1/github/mcp/delete?tokenId=<TOKEN_ID>" \
-     -H "Authorization: Bearer <JWT_TOKEN>"
-   ```
+1. Navigate to Integrations → GitHub in the Sentrius dashboard
+2. Create a new GitHub integration token with your GitHub PAT
+3. The token will be stored securely and can be selected when launching agents
 
 ## API Endpoints
 
-### Launch GitHub MCP Server
+### Enable GitHub Integration
 ```
 POST /api/v1/github/mcp/launch?tokenId=<TOKEN_ID>
 Authorization: Bearer <JWT_TOKEN>
 ```
 
-Launches a GitHub MCP server pod for the specified integration token.
+Validates and enables GitHub integration for the specified token.
 
 **Response**:
 ```json
 {
   "status": "success",
-  "podName": "github-mcp-123",
-  "serviceUrl": "http://github-mcp-svc-123.dev.svc.cluster.local:3000",
-  "message": "GitHub MCP server launched successfully"
+  "tokenId": "123",
+  "message": "GitHub integration enabled successfully - ready to use"
 }
 ```
 
-### Get MCP Server Status
+### Get Integration Status
 ```
 GET /api/v1/github/mcp/status?tokenId=<TOKEN_ID>
 Authorization: Bearer <JWT_TOKEN>
 ```
 
-Returns the status of a GitHub MCP server.
+Returns the status of a GitHub integration.
 
 **Response**:
 ```json
 {
-  "status": "Running",
+  "status": "active",
   "tokenId": "123",
-  "serviceUrl": "http://github-mcp-svc-123.dev.svc.cluster.local:3000"
+  "message": "GitHub integration is ready"
 }
 ```
 
-### Delete MCP Server
+### Disable Integration
 ```
 DELETE /api/v1/github/mcp/delete?tokenId=<TOKEN_ID>
 Authorization: Bearer <JWT_TOKEN>
 ```
 
-Terminates a GitHub MCP server pod.
+Disables a GitHub integration (no-op since no resources to clean up).
 
 **Response**:
 ```json
 {
   "status": "success",
-  "message": "GitHub MCP server deleted successfully"
+  "message": "GitHub integration disabled (no resources to clean up)"
 }
 ```
 
@@ -158,80 +104,98 @@ Authorization: Bearer <JWT_TOKEN>
 Content-Type: application/json
 
 {
-  "method": "tools/list",
+  "jsonrpc": "2.0",
   "id": "req-123",
+  "method": "tools/list",
   "params": {}
 }
 ```
 
-Forwards an MCP request to the GitHub MCP server. This endpoint enables agents to communicate with the GitHub MCP server.
+Forwards an MCP request directly to GitHub API. Returns 404 if no token is selected.
 
-**Response**: Returns the response from the GitHub MCP server
+**Response**: MCP-formatted response from GitHub API
 
 **Error Responses**:
 - `401 Unauthorized`: Invalid JWT token
-- `503 Service Unavailable`: GitHub MCP server not available (needs to be launched first)
+- `404 Not Found`: No GitHub token selected
 - `500 Internal Server Error`: Failed to proxy request
 
-### List All MCP Servers
+### List Integrations
 ```
 GET /api/v1/github/mcp/list
 Authorization: Bearer <JWT_TOKEN>
 ```
 
-Lists all running GitHub MCP servers.
+Lists all available GitHub integration tokens.
 
 **Response**:
 ```json
 {
-  "servers": [
+  "integrations": [
     {
-      "podName": "github-mcp-123",
       "tokenId": "123",
-      "status": "Running",
-      "serviceUrl": "http://github-mcp-svc-123.dev.svc.cluster.local:3000"
+      "name": "My GitHub Token",
+      "status": "active",
+      "message": "Ready to use"
     }
   ],
   "count": 1
 }
 ```
 
-## Configuration
+## Available GitHub Tools
 
-### Environment Variables (GitHub MCP Server)
+The integration implements the following MCP tools:
 
-- `GITHUB_PERSONAL_ACCESS_TOKEN`: GitHub PAT for authentication (injected from IntegrationSecurityToken)
+### Repository Operations
+- `get_file_contents` - Get contents of a file or directory from a repository
+- `search_repositories` - Search for repositories on GitHub
+- `list_branches` - List branches for a repository
+- `list_releases` - List releases for a repository
+- `get_latest_release` - Get the latest release for a repository
 
-### Application Properties (Integration Proxy)
+### Commit Operations
+- `list_commits` - List commits for a repository
+- `get_commit` - Get details of a specific commit
 
-```properties
-# GitHub MCP Server Configuration
-sentrius.github.mcp.namespace=dev
-sentrius.github.mcp.image=github-mcp-server:latest
-sentrius.github.mcp.registry=
-```
+### Issue Operations
+- `list_issues` - List issues for a repository
+- `issue_read` - Read issue details, comments, and labels
+- `search_issues` - Search for issues and pull requests
+
+### Pull Request Operations
+- `list_pull_requests` - List pull requests for a repository
+- `pull_request_read` - Read pull request details, files, and reviews
+- `create_pull_request` - Create a new pull request
+
+### Search Operations
+- `search_code` - Search code across GitHub
+- `search_users` - Search for users on GitHub
+
+### User Operations
+- `get_me` - Get information about the authenticated user
 
 ## Usage Examples
 
 ### From Python Agent or Sentrius Agent
 
-Agents can now directly communicate with the GitHub MCP server through the proxy endpoint:
+Agents can directly communicate with the GitHub integration through the proxy endpoint:
 
 ```python
 import requests
 
-# 1. Ensure GitHub MCP server is launched
+# 1. Enable GitHub integration
 launch_response = requests.post(
     "http://integration-proxy:8080/api/v1/github/mcp/launch",
     params={"tokenId": "123"},
     headers={"Authorization": f"Bearer {jwt_token}"}
 )
-service_url = launch_response.json()["serviceUrl"]
 
 # 2. Send MCP requests through the proxy
 mcp_request = {
-    "method": "tools/list",
+    "jsonrpc": "2.0",
     "id": "req-123",
+    "method": "tools/list",
     "params": {}
 }
 
@@ -250,15 +214,13 @@ print(f"Available GitHub tools: {tools}")
 
 # 3. Call a specific GitHub operation
 mcp_request = {
-    "method": "tools/call",
+    "jsonrpc": "2.0",
     "id": "req-124",
+    "method": "get_file_contents",
     "params": {
-        "name": "github_search_issues",
-        "arguments": {
-            "owner": "microsoft",
-            "repo": "vscode",
-            "query": "is:open label:bug"
-        }
+        "owner": "microsoft",
+        "repo": "vscode",
+        "path": "README.md"
     }
 }
 
@@ -272,65 +234,92 @@ response = requests.post(
     json=mcp_request
 )
 
-issues = response.json()
-print(f"Found issues: {issues}")
+file_contents = response.json()
+print(f"File contents: {file_contents}")
 ```
 
-### Direct Access (Internal Cluster Only)
+### MCP Tools Call Format
 
-For internal services that already have the service URL:
+```python
+# Example: Search repositories
+mcp_request = {
+    "jsonrpc": "2.0",
+    "id": "req-125",
+    "method": "tools/call",
+    "params": {
+        "name": "search_repositories",
+        "arguments": {
+            "query": "machine learning language:python stars:>1000"
+        }
+    }
+}
+
+# Example: List commits
+mcp_request = {
+    "jsonrpc": "2.0",
+    "id": "req-126",
+    "method": "list_commits",
+    "params": {
+        "owner": "kubernetes",
+        "repo": "kubernetes",
+        "author": "jane-doe",
+        "perPage": 10
+    }
+}
+```
 
 ## Troubleshooting
 
-### Pod Not Starting
+### 404 Not Found Error
 
-Check pod logs:
+**Issue**: Receiving 404 when making MCP proxy requests
+
+**Solution**: Ensure a GitHub token is selected. The integration requires a token ID to be passed with every request:
 ```bash
-kubectl logs github-mcp-<TOKEN_ID> -n dev
+# Correct
+POST /api/v1/github/mcp/proxy?tokenId=123
+
+# Incorrect (will return 404)
+POST /api/v1/github/mcp/proxy
 ```
 
-Common issues:
-- Invalid GitHub token
-- Network connectivity issues
-- Image pull failures
+### Authentication Errors
 
-### Connection Errors
+**Issue**: Receiving 401 Unauthorized errors
 
-Verify service exists:
-```bash
-kubectl get svc -n dev | grep github-mcp
-```
+**Solution**: 
+- Ensure GitHub PAT has necessary scopes for the operations you're performing
+- Verify Keycloak JWT token is valid and not expired
+- Confirm user has `CAN_LOG_IN` application access
 
-Check pod status:
-```bash
-kubectl get pods -n dev | grep github-mcp
-```
+### Rate Limiting
 
-### Permission Errors
+**Issue**: GitHub API rate limit exceeded
 
-Ensure:
-- GitHub PAT has necessary scopes
-- Keycloak JWT token is valid
-- User has `CAN_LOG_IN` application access
+**Solution**:
+- GitHub API has rate limits (5000 requests/hour for authenticated requests)
+- Use authenticated requests with a valid PAT
+- Implement caching where appropriate in your application
+- Monitor the `X-RateLimit-*` headers in responses
 
 ## Security Considerations
 
 1. **Token Storage**: GitHub PATs are stored encrypted in the database
-2. **Pod Isolation**: Each integration token gets its own MCP server pod
-3. **Network Policies**: MCP servers are only accessible within the cluster
-4. **Authentication**: All API calls require valid JWT tokens
-5. **Authorization**: User permissions are enforced by the integration proxy
+2. **Direct API Access**: All requests go directly from integration proxy to GitHub
+3. **Authentication**: All API calls require valid JWT tokens
+4. **Authorization**: User permissions are enforced by the integration proxy
+5. **Rate Limiting**: Subject to GitHub's standard API rate limits
 
 ## Limitations
 
-- One MCP server per GitHub token
-- MCP servers are ephemeral and don't persist state
-- Resource limits are enforced per pod (256Mi-512Mi memory, 200m-500m CPU)
+- Subject to GitHub API rate limits (5000 requests/hour for authenticated requests)
+- Response times depend on GitHub API performance
+- Some GitHub operations may require specific token permissions
 
 ## Future Enhancements
 
-- Automatic MCP server lifecycle management based on usage
+- Webhook support for real-time GitHub events
 - Caching layer for frequently accessed GitHub data
 - Enhanced monitoring and metrics
 - Support for GitHub Apps in addition to PATs
-- Multi-tenant isolation improvements
+- GraphQL API support for more efficient queries

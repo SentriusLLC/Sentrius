@@ -29,8 +29,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -208,6 +210,20 @@ public class SystemApiController extends BaseController {
 
         return ResponseEntity.badRequest().body(Map.of("error", "ID cannot be empty"));
         // Respond with success and an ID for redirection
+
+    }
+
+    @GetMapping(value = "/settings/{name}")
+    public ResponseEntity<SystemOption> getSystemOption(@PathVariable String name, Model model)
+        throws IllegalAccessException {
+
+
+        var option = systemOptions.getOptions().get(name);
+        if (option != null) {
+            return ResponseEntity.ok(option);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
 
     }
 

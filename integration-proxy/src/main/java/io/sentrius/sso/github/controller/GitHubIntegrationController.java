@@ -1,10 +1,14 @@
 package io.sentrius.sso.github.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentrius.sso.core.annotations.LimitAccess;
+import io.sentrius.sso.core.config.SystemOptions;
+import io.sentrius.sso.core.model.security.IntegrationSecurityToken;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
 import io.sentrius.sso.core.services.security.KeycloakService;
-import io.sentrius.sso.github.service.GitHubMCPServerService;
-import io.sentrius.sso.github.service.GitHubMCPProxyService;
+import io.sentrius.sso.github.service.GitHubMCPAdapter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -12,43 +16,53 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
- * Controller for managing GitHub MCP server integration
- * Provides endpoints to launch, monitor, terminate, and proxy to GitHub MCP server containers
+ * Controller for GitHub integration via native MCP protocol implementation
+ * The integration proxy acts as the MCP server, making direct GitHub API calls
+ * No external pods or containers are launched - all operations are handled directly
  */
 @RestController
 @RequestMapping("/api/v1/github")
 @Slf4j
 public class GitHubIntegrationController {
 
-    private final GitHubMCPServerService githubMcpServerService;
-    private final GitHubMCPProxyService githubMcpProxyService;
+    private final GitHubMCPAdapter githubMcpAdapter;
+    private final IntegrationSecurityTokenService tokenService;
     private final KeycloakService keycloakService;
+    private final ObjectMapper objectMapper;
+    private final SystemOptions systemOptions;
 
     public GitHubIntegrationController(
-        GitHubMCPServerService githubMcpServerService,
-        GitHubMCPProxyService githubMcpProxyService,
-        KeycloakService keycloakService
+        GitHubMCPAdapter githubMcpAdapter,
+        IntegrationSecurityTokenService tokenService,
+        KeycloakService keycloakService,
+        ObjectMapper objectMapper,
+        SystemOptions systemOptions
     ) {
-        this.githubMcpServerService = githubMcpServerService;
-        this.githubMcpProxyService = githubMcpProxyService;
+        this.githubMcpAdapter = githubMcpAdapter;
+        this.tokenService = tokenService;
         this.keycloakService = keycloakService;
+        this.objectMapper = objectMapper;
+        this.systemOptions = systemOptions;
     }
 
     /**
-     * Launch a GitHub MCP server for a specific integration token
+     * Enable GitHub integration for a specific token
+     * Saves the token name to SystemOptions for persistent use
      */
     @PostMapping("/mcp/launch")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
-    public ResponseEntity<?> launchGitHubMCPServer(
+    public ResponseEntity<?> enableGitHubIntegration(
         @RequestHeader("Authorization") String token,
         @RequestParam String tokenId,
         HttpServletRequest request,
         HttpServletResponse response
     ) {
-        log.info("Received request to launch GitHub MCP server for token ID: {}", tokenId);
+        log.info("Enabling GitHub integration for token ID: {}", tokenId);
 
         String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
 
@@ -58,36 +72,57 @@ public class GitHubIntegrationController {
         }
 
         try {
-            var pod = githubMcpServerService.launchGitHubMCPServer(tokenId);
-            String serviceUrl = githubMcpServerService.getServiceUrl(tokenId);
+            // Validate the token exists and is a GitHub token
+            Optional<IntegrationSecurityToken> tokenOpt = tokenService.findById(Long.parseLong(tokenId));
+            if (tokenOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    "status", "error",
+                    "message", "GitHub integration token not found: " + tokenId
+                ));
+            }
 
+            IntegrationSecurityToken integrationToken = tokenOpt.get();
+            if (!"github".equals(integrationToken.getConnectionType())) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", "Token is not a GitHub integration token"
+                ));
+            }
+
+            // Save the token name to SystemOptions for future use
+            String tokenName = integrationToken.getName();
+            systemOptions.setValue("githubAgentTokenName", tokenName);
+            log.info("Saved GitHub agent token name to SystemOptions: {}", tokenName);
+
+            // Token is valid and ready to use
             return ResponseEntity.ok(Map.of(
                 "status", "success",
-                "podName", pod.getMetadata().getName(),
-                "serviceUrl", serviceUrl,
-                "message", "GitHub MCP server launched successfully"
+                "tokenId", tokenId,
+                "tokenName", tokenName,
+                "message", "GitHub integration enabled successfully - ready to use"
             ));
-        } catch (IllegalArgumentException e) {
-            log.error("Invalid token ID or token type: {}", e.getMessage());
+        } catch (NumberFormatException e) {
+            log.error("Invalid token ID format: {}", tokenId, e);
             return ResponseEntity.badRequest().body(Map.of(
                 "status", "error",
-                "message", e.getMessage()
+                "message", "Invalid token ID format"
             ));
         } catch (Exception e) {
-            log.error("Failed to launch GitHub MCP server", e);
+            log.error("Failed to enable GitHub integration", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                 "status", "error",
-                "message", "Failed to launch GitHub MCP server: " + e.getMessage()
+                "message", "Failed to enable GitHub integration: " + e.getMessage()
             ));
         }
     }
 
     /**
-     * Get status of a GitHub MCP server
+     * Get status of GitHub integration for a token
+     * Always returns active since no pod is needed
      */
     @GetMapping("/mcp/status")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
-    public ResponseEntity<?> getGitHubMCPServerStatus(
+    public ResponseEntity<?> getGitHubIntegrationStatus(
         @RequestHeader("Authorization") String token,
         @RequestParam String tokenId,
         HttpServletRequest request,
@@ -101,16 +136,30 @@ public class GitHubIntegrationController {
         }
 
         try {
-            String status = githubMcpServerService.getStatus(tokenId);
-            String serviceUrl = githubMcpServerService.getServiceUrl(tokenId);
+            // Validate the token exists and is a GitHub token
+            Optional<IntegrationSecurityToken> tokenOpt = tokenService.findById(Long.parseLong(tokenId));
+            if (tokenOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    "status", "not_found",
+                    "message", "Token not found"
+                ));
+            }
+
+            IntegrationSecurityToken integrationToken = tokenOpt.get();
+            if (!"github".equals(integrationToken.getConnectionType())) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", "Token is not a GitHub integration token"
+                ));
+            }
 
             return ResponseEntity.ok(Map.of(
-                "status", status,
+                "status", "active",
                 "tokenId", tokenId,
-                "serviceUrl", serviceUrl
+                "message", "GitHub integration is ready"
             ));
         } catch (Exception e) {
-            log.error("Failed to get GitHub MCP server status", e);
+            log.error("Failed to get GitHub integration status", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                 "status", "error",
                 "message", "Failed to get status: " + e.getMessage()
@@ -119,17 +168,17 @@ public class GitHubIntegrationController {
     }
 
     /**
-     * Delete a GitHub MCP server
+     * Disable GitHub integration for a token (no-op since no pod to delete)
      */
     @DeleteMapping("/mcp/delete")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
-    public ResponseEntity<?> deleteGitHubMCPServer(
+    public ResponseEntity<?> disableGitHubIntegration(
         @RequestHeader("Authorization") String token,
         @RequestParam String tokenId,
         HttpServletRequest request,
         HttpServletResponse response
     ) {
-        log.info("Received request to delete GitHub MCP server for token ID: {}", tokenId);
+        log.info("Disabling GitHub integration for token ID: {}", tokenId);
 
         String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
 
@@ -138,28 +187,19 @@ public class GitHubIntegrationController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Keycloak token");
         }
 
-        try {
-            githubMcpServerService.deleteGitHubMCPServer(tokenId);
-
-            return ResponseEntity.ok(Map.of(
-                "status", "success",
-                "message", "GitHub MCP server deleted successfully"
-            ));
-        } catch (Exception e) {
-            log.error("Failed to delete GitHub MCP server", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "status", "error",
-                "message", "Failed to delete GitHub MCP server: " + e.getMessage()
-            ));
-        }
+        // No pod to delete - integration is always available when token exists
+        return ResponseEntity.ok(Map.of(
+            "status", "success",
+            "message", "GitHub integration disabled (no resources to clean up)"
+        ));
     }
 
     /**
-     * List all GitHub MCP servers
+     * List GitHub integration tokens (replaces list of pods)
      */
     @GetMapping("/mcp/list")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
-    public ResponseEntity<?> listGitHubMCPServers(
+    public ResponseEntity<?> listGitHubIntegrations(
         @RequestHeader("Authorization") String token,
         HttpServletRequest request,
         HttpServletResponse response
@@ -172,50 +212,42 @@ public class GitHubIntegrationController {
         }
 
         try {
-            var pods = githubMcpServerService.listGitHubMCPServers();
+            var githubTokens = tokenService.findByConnectionType("github");
 
-            var serverList = pods.stream().map(pod -> {
-                var labels = pod.getMetadata().getLabels();
-                var tokenId = labels != null ? labels.get("token-id") : null;
-                var status = pod.getStatus();
-                var serviceUrl = tokenId != null ? githubMcpServerService.getServiceUrl(tokenId) : "unknown";
-
-                return Map.of(
-                    "podName", pod.getMetadata().getName(),
-                    "tokenId", tokenId != null ? tokenId : "unknown",
-                    "status", status != null && status.getPhase() != null ? status.getPhase() : "Unknown",
-                    "serviceUrl", serviceUrl
-                );
-            }).toList();
+            var integrationList = githubTokens.stream().map(integrationToken -> Map.of(
+                "tokenId", integrationToken.getId().toString(),
+                "name", integrationToken.getName(),
+                "status", "active",
+                "message", "Ready to use"
+            )).toList();
 
             return ResponseEntity.ok(Map.of(
-                "servers", serverList,
-                "count", serverList.size()
+                "integrations", integrationList,
+                "count", integrationList.size()
             ));
         } catch (Exception e) {
-            log.error("Failed to list GitHub MCP servers", e);
+            log.error("Failed to list GitHub integrations", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                 "status", "error",
-                "message", "Failed to list GitHub MCP servers: " + e.getMessage()
+                "message", "Failed to list GitHub integrations: " + e.getMessage()
             ));
         }
     }
 
     /**
-     * Proxy MCP requests to a GitHub MCP server
-     * This endpoint allows agents to communicate with the GitHub MCP server
+     * Proxy MCP requests directly to GitHub API
+     * The integration proxy acts as the MCP server
+     * Uses the token name saved in SystemOptions from the Launch Agent UI
+     * Returns 404 if no token has been configured
      */
     @PostMapping("/mcp/proxy")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<String> proxyMCPRequest(
         @RequestHeader("Authorization") String token,
-        @RequestParam String tokenId,
         @RequestBody Map<String, Object> mcpRequest,
         HttpServletRequest request,
         HttpServletResponse response
     ) {
-        log.info("Proxying MCP request to GitHub MCP server for token ID: {}", tokenId);
-
         String compactJwt = token.startsWith("Bearer ") ? token.substring(7) : token;
 
         if (!keycloakService.validateJwt(compactJwt)) {
@@ -224,15 +256,41 @@ public class GitHubIntegrationController {
                 .body("{\"error\": \"Invalid Keycloak token\"}");
         }
 
-        // Check if server is available
-        if (!githubMcpProxyService.isServerAvailable(tokenId)) {
-            log.warn("GitHub MCP server not available for token ID: {}", tokenId);
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body("{\"error\": \"GitHub MCP server not available. Please launch it first.\"}");
+        // Get the configured GitHub token name from SystemOptions
+        String configuredTokenName = systemOptions.getGithubAgentTokenName();
+        if (configuredTokenName == null || configuredTokenName.trim().isEmpty()) {
+            log.warn("No GitHub token configured in SystemOptions");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body("{\"error\": \"No GitHub token configured. Please select a token from the Launch Agent UI or configure it in System Settings.\"}");
         }
 
         try {
-            return githubMcpProxyService.forwardMCPRequest(tokenId, mcpRequest);
+            // Find the token by name
+            List<IntegrationSecurityToken> githubTokens = tokenService.findByConnectionType("github");
+            Optional<IntegrationSecurityToken> configuredToken = githubTokens.stream()
+                .filter(t -> configuredTokenName.equals(t.getName()))
+                .findFirst();
+
+            if (configuredToken.isEmpty()) {
+                log.warn("Configured GitHub token '{}' not found", configuredTokenName);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("{\"error\": \"Configured GitHub token '" + configuredTokenName + "' not found. Please reconfigure in Launch Agent UI.\"}");
+            }
+
+            String tokenId = String.valueOf(configuredToken.get().getId());
+            log.info("Proxying MCP request to GitHub API using configured token: {} (ID: {})", configuredTokenName, tokenId);
+
+            // Convert request map to JsonNode
+            JsonNode requestNode = objectMapper.valueToTree(mcpRequest);
+            
+            // Process request through MCP adapter
+            JsonNode mcpResponse = githubMcpAdapter.processRequest(tokenId, requestNode);
+            
+            // Return response
+            return ResponseEntity.ok()
+                .header("Content-Type", "application/json")
+                .body(objectMapper.writeValueAsString(mcpResponse));
+                
         } catch (Exception e) {
             log.error("Failed to proxy MCP request", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

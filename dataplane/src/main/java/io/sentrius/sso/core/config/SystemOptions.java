@@ -201,6 +201,9 @@ public class SystemOptions {
     @Builder.Default
     public Boolean agentSupportEnabled = false;
 
+    @Updatable(description = "GitHub integration token name for agent operations. This token is used for GitHub MCP operations.", group = "Agent")
+    @Builder.Default
+    public String githubAgentTokenName = "";
 
 
 
@@ -220,7 +223,7 @@ public class SystemOptions {
   }
 
   @PostConstruct
-  private void init() throws IllegalAccessException {
+  public void init() throws IllegalAccessException {
     List<Field> fields =  getAllInstanceFields();
     for (Field field : fields) {
       field.setAccessible(true); // Allow access to private fields

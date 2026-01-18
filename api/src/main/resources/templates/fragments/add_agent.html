@@ -111,10 +111,10 @@
 
                     <!-- GitHub MCP Configuration -->
                     <div id="githubMCPConfig" class="service-config" style="display: none;">
-                        <h6 class="mb-3">GitHub MCP Server Configuration</h6>
+                        <h6 class="mb-3">GitHub Integration Configuration</h6>
                         <div class="alert alert-info" role="alert">
                             <i class="fas fa-info-circle"></i> 
-                            <strong>GitHub MCP Server:</strong> Provides access to GitHub repositories, issues, and pull requests through the Model Context Protocol. Required for GitHub-based automations and integrations.
+                            <strong>GitHub Integration:</strong> Enables direct access to GitHub repositories, issues, and pull requests through the integration proxy. The integration proxy acts as the MCP server, handling all GitHub operations directly without external services.
                         </div>
                         <div class="mb-3">
                             <label for="githubTokenId" class="form-label">GitHub Integration Token <span class="text-danger">*</span></label>
@@ -122,7 +122,7 @@
                                 <option value="">Select GitHub token...</option>
                                 <!-- Options will be populated dynamically -->
                             </select>
-                            <small class="form-text text-muted">Select the GitHub token this MCP server will use for repository operations.</small>
+                            <small class="form-text text-muted">Select the GitHub token for API operations. The integration is ready immediately after selection.</small>
                         </div>
                         <div class="mb-3">
                             <a href="/sso/v1/integrations/github" class="btn btn-sm btn-outline-secondary" target="_blank">
@@ -138,7 +138,7 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary" id="launchServiceBtn">
-                        <i class="fas fa-rocket"></i> Launch Service
+                        <i class="fas fa-rocket"></i> Set Token
                     </button>
                 </div>
 
@@ -278,20 +278,37 @@ document.addEventListener('DOMContentLoaded', function() {
         const select = document.getElementById('githubTokenId');
         select.innerHTML = '<option value="">Loading tokens...</option>';
         
-        fetch('/api/v1/integrations/github/list')
-            .then(response => response.json())
-            .then(tokens => {
-                if (tokens && tokens.length > 0) {
-                    select.innerHTML = '<option value="">Select GitHub token...</option>';
-                    tokens.forEach(token => {
-                        const option = document.createElement('option');
-                        option.value = token.id;
-                        option.textContent = token.name || `Token ${token.id}`;
-                        select.appendChild(option);
-                    });
-                } else {
-                    select.innerHTML = '<option value="">No tokens available - Please add one</option>';
+        // First, get the GitHub Agent token from system settings
+        fetch('/api/v1/system/settings/githubAgentTokenName')
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
                 }
+                return null;
+            })
+            .then(mcpTokenOption => {
+                const mcpTokenId = mcpTokenOption?.value;
+
+                // Then load GitHub tokens
+                return fetch('/api/v1/integrations/github/list')
+                    .then(response => response.json())
+                    .then(tokens => {
+                        if (tokens && tokens.length > 0) {
+                            select.innerHTML = '<option value="">Select GitHub token...</option>';
+                            tokens.forEach(token => {
+                                const option = document.createElement('option');
+                                option.value = token.id;
+                                option.textContent = token.name || `Token ${token.id}`;
+                                // Auto-select if it matches the MCP token
+                                if (mcpTokenId && token.id.toString() === mcpTokenId) {
+                                    option.selected = true;
+                                }
+                                select.appendChild(option);
+                            });
+                        } else {
+                            select.innerHTML = '<option value="">No tokens available - Please add one</option>';
+                        }
+                    });
             })
             .catch(error => {
                 console.error('Error loading GitHub tokens:', error);
@@ -303,20 +320,37 @@ document.addEventListener('DOMContentLoaded', function() {
         const select = document.getElementById('codingGitHubTokenId');
         select.innerHTML = '<option value="">Loading tokens...</option>';
         
-        fetch('/api/v1/integrations/github/list')
-            .then(response => response.json())
-            .then(tokens => {
-                if (tokens && tokens.length > 0) {
-                    select.innerHTML = '<option value="">Select GitHub token...</option>';
-                    tokens.forEach(token => {
-                        const option = document.createElement('option');
-                        option.value = token.id;
-                        option.textContent = token.name || `Token ${token.id}`;
-                        select.appendChild(option);
-                    });
-                } else {
-                    select.innerHTML = '<option value="">No tokens available - Please add one</option>';
+        // First, get the GitHub Agent token from system settings
+        fetch('/api/v1/system/settings/githubAgentTokenName')
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
                 }
+                return null;
+            })
+            .then(mcpTokenOption => {
+                const mcpTokenId = mcpTokenOption?.value;
+
+                // Then load GitHub tokens
+                return fetch('/api/v1/integrations/github/list')
+                    .then(response => response.json())
+                    .then(tokens => {
+                        if (tokens && tokens.length > 0) {
+                            select.innerHTML = '<option value="">Select GitHub token...</option>';
+                            tokens.forEach(token => {
+                                const option = document.createElement('option');
+                                option.value = token.id;
+                                option.textContent = token.name || `Token ${token.id}`;
+                                // Auto-select if it matches the MCP token
+                                if (mcpTokenId && token.id.toString() === mcpTokenId) {
+                                    option.selected = true;
+                                }
+                                select.appendChild(option);
+                            });
+                        } else {
+                            select.innerHTML = '<option value="">No tokens available - Please add one</option>';
+                        }
+                    });
             })
             .catch(error => {
                 console.error('Error loading GitHub tokens for coding:', error);
@@ -384,7 +418,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const launchInfo = document.getElementById('launchInfo');
         const launchInfoText = document.getElementById('launchInfoText');
         launchInfo.style.display = 'block';
-        launchInfoText.textContent = 'Launching GitHub MCP server...';
+        launchInfoText.textContent = 'Enabling GitHub integration...';
         
         const csrfToken = document.getElementById('csrf-token') ? document.getElementById('csrf-token').value : '';
         
@@ -397,7 +431,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                launchInfoText.textContent = 'GitHub MCP server launched successfully!';
+                launchInfoText.textContent = 'GitHub integration enabled successfully! Ready to use immediately.';
                 setTimeout(() => {
                     bootstrap.Modal.getInstance(document.getElementById('agentFormModal')).hide();
                     if (typeof loadMCPServers === 'function') loadMCPServers();
@@ -407,7 +441,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         })
         .catch(error => {
-            launchInfoText.textContent = 'Error launching server: ' + error;
+            launchInfoText.textContent = 'Error enabling integration: ' + error;
         });
     }
     

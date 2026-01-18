@@ -1,6 +1,7 @@
 package io.sentrius.sso.controllers.view;
 
 import java.util.List;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.sentrius.sso.automation.sideeffects.SideEffect;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -71,6 +73,7 @@ public class SystemController extends BaseController {
     @ModelAttribute("systemSettings")
     public List<SystemOption> getSystemSettings() throws IllegalAccessException {
         log.info("SystemSettings: {}", systemOptions.getOptions());
+        systemOptions.init();
         return systemOptions.getOptions().values().stream().toList();
     }
     @GetMapping("/settings")
@@ -93,6 +96,8 @@ public class SystemController extends BaseController {
             return ResponseEntity.badRequest().body("Failed to parse YAML: " + e.getMessage());
         }
     }
+
+
 
     @GetMapping(value = "/settings/validate")
     public String uploadConfig(@RequestParam("id") String id, Model model) {
