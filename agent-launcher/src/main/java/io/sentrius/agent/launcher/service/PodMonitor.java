@@ -39,9 +39,6 @@ public class PodMonitor {
 
     private final CoreV1Api coreV1Api;
 
-    @Value("${sentrius.agent.registry}")
-    private String agentRegistry;
-
     @Value("${sentrius.agent.namespace}")
     private String agentNamespace;
 

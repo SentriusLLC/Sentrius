@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.ToString;
 
 @Getter
@@ -25,6 +24,9 @@ public class AgentRegistrationDTO {
     private final String agentContextId = "";
     @Builder.Default
     private final String agentPolicyId = "";
+
+    @Builder.Default
+    private final Long idleSleepMs = 30000L; // Default to 30 seconds
     
     // Template-based configuration fields
     /**
@@ -69,4 +71,33 @@ public class AgentRegistrationDTO {
      * Structure: {"resources": {...}, "environmentVariables": {...}, "restartPolicy": "..."}
      */
     private final String templateLaunchConfiguration;
+
+    /**
+     * Creates a new builder with all fields deep-copied from this instance.
+     * Note: Strings are immutable in Java, so copying references is safe.
+     *
+     * @return a new builder with all fields populated from this instance
+     */
+    public AgentRegistrationDTOBuilder toBuilder() {
+        return AgentRegistrationDTO.builder()
+                .agentName(this.agentName)
+                .agentPublicKey(this.agentPublicKey)
+                .agentPublicKeyAlgo(this.agentPublicKeyAlgo)
+                .clientSecret(this.clientSecret)
+                .clientId(this.clientId)
+                .agentType(this.agentType)
+                .agentCallbackUrl(this.agentCallbackUrl)
+                .agentContextId(this.agentContextId)
+                .agentPolicyId(this.agentPolicyId)
+                .idleSleepMs(this.idleSleepMs)
+                .agentTemplateId(this.agentTemplateId)
+                .templateConfiguration(this.templateConfiguration)
+                .templateIdentity(this.templateIdentity)
+                .templatePurpose(this.templatePurpose)
+                .templateGoals(this.templateGoals)
+                .templateGuardrails(this.templateGuardrails)
+                .templateTrustPolicyId(this.templateTrustPolicyId)
+                .templateLaunchConfiguration(this.templateLaunchConfiguration);
+    }
+
 }

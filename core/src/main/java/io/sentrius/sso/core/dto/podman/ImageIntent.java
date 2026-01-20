@@ -53,6 +53,7 @@ public class ImageIntent {
         }
         
         String launchConfig = agent.getTemplateLaunchConfiguration();
+        log.info("Launch configuration: {}", launchConfig);
         if (launchConfig == null || launchConfig.trim().isEmpty()) {
             log.debug("No templateLaunchConfiguration found for agent: {}", agent.getAgentName());
             return ImageIntent.builder().build();
@@ -83,14 +84,5 @@ public class ImageIntent {
         return repo != null || tag != null || selection != null;
     }
     
-    /**
-     * Wrapper class for parsing launch configuration JSON
-     */
-    @Data
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    private static class LaunchConfiguration {
-        private ImageIntent imageIntent;
-        private ResourcesConfig resources;
-        private String restartPolicy;
-    }
+
 }

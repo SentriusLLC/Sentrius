@@ -370,19 +370,26 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                             // Ensure we have at least an empty string to avoid NPE in split()
                                             enhancedMarkings = markings != null ? markings : "";
                                         }
-                                        
-                                        agentClientService.storeMemory(agentExecution,
-                                            agentExecutionContext.getAgentContext().getName(),
-                                            io.sentrius.sso.core.dto.agents.AgentMemoryDTO.builder()
-                                                .agentName(agentExecutionContext.getAgentContext().getName())
-                                                .memoryKey(memoryEntry.getKey())
-                                                .memoryValue(value.toString())
-                                                .classification(classification)
-                                                .markings(enhancedMarkings.isEmpty() ? new String[0] : enhancedMarkings.split(","))
-                                                .conversationId(agentExecution.getCommunicationId())
-                                                .build());
-                                        log.info("Stored memory: {} with classification: {} and markings: {}", 
-                                            memoryEntry.getKey(), classification, enhancedMarkings);
+
+                                        if (value.size() < 8192 ) {
+                                            agentClientService.storeMemory(
+                                                agentExecution,
+                                                agentExecutionContext.getAgentContext().getName(),
+                                                io.sentrius.sso.core.dto.agents.AgentMemoryDTO.builder()
+                                                    .agentName(agentExecutionContext.getAgentContext().getName())
+                                                    .memoryKey(memoryEntry.getKey())
+                                                    .memoryValue(value.toString())
+                                                    .classification(classification)
+                                                    .markings(enhancedMarkings.isEmpty() ? new String[0] :
+                                                        enhancedMarkings.split(","))
+                                                    .conversationId(agentExecution.getCommunicationId())
+                                                    .build()
+                                            );
+                                            log.info(
+                                                "Stored memory: {} with classification: {} and markings: {}",
+                                                memoryEntry.getKey(), classification, enhancedMarkings
+                                            );
+                                        }
                                     }
                                 } else {
                                     log.info("No persistent memory to store at this time.");

@@ -98,13 +98,13 @@ public class VerbRegistry {
             var verbs = agentClientService.getAvailableVerbs(execution);
 
             endpoints.forEach(x -> {
-                log.info("Discovered endpoint: {}", x);
+                log.trace("Discovered endpoint: {}", x);
             });
 
             this.endpoints.addAll(endpoints);
 
             verbs.forEach(x -> {
-                log.info("Discovered verb: {}", x);
+                log.trace("Discovered verb: {}", x);
             });
         }
     }

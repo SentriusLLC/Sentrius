@@ -12,6 +12,7 @@ import io.sentrius.sso.core.repository.automation.ScriptRepository;
 import io.sentrius.sso.core.services.TerminalService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,7 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class AutomationExecutionService {
 
     private final ScriptRepository scriptRepository;

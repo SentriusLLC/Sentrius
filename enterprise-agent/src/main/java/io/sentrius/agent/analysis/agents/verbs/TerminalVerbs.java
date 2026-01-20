@@ -1,15 +1,14 @@
 package io.sentrius.agent.analysis.agents.verbs;
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Maps;
@@ -66,14 +65,29 @@ public class TerminalVerbs {
     }
 
     /**
-     * Retrieves a list of currently open terminals.
+     * Retrieves a list of all currently open terminal sessions across all users in the system.
+     * This is THE primary verb for monitoring other users' terminal activity.
      *
-
-     * @return An `ArrayNode` containing the list of open terminals.
-     * @throws ZtatException If there is an error during the operation.
+     * With administrative privileges, this returns terminal connections for ALL users.
+     * Without admin privileges, returns only the current user's terminals.
+     *
+     * Workflow for monitoring other users' terminal activity:
+     * 1. Call this verb with admin privileges to get all users' open terminals
+     * 2. Pass the returned terminals to fetch_terminal_logs to retrieve log content
+     *
+     * Returns HostSystemDTO objects containing: user, host, port, sessionId, connection status, etc.
+     *
+     * @param token The Zero Trust authentication token
+     * @param execution The agent execution context
+     * @return An ArrayNode containing HostSystemDTO objects for all open terminal sessions
+     * @throws ZtatException If there is an error during the operation
      */
-    @Verb(name = "list_open_terminals", description = "Retrieves a list of currently open terminals.",
-         requiresTokenManagement = true)
+    @Verb(name = "list_open_terminals",
+          description = "**PRIMARY VERB FOR MONITORING**: Retrieves ALL currently open terminal sessions across all users in the system. " +
+                        "With admin privileges (CAN_MANAGE_APPLICATION and CAN_MANAGE_SYSTEMS), returns ALL users' terminal connections. " +
+                        "Returns HostSystemDTO objects that can be passed to fetch_terminal_logs for retrieving log content. " +
+                        "Use this verb (not list_active_terminal_sessions) to monitor other users' terminal activity.",
+          requiresTokenManagement = true)
     public ArrayNode listTerminals(TokenDTO token, AgentExecutionContextDTO execution) throws ZtatException {
         try {
             String response = zeroTrustClientService.callGetOnApi(token, "/ssh/terminal/list/all");
@@ -111,23 +125,106 @@ public class TerminalVerbs {
     }
 
     /**
-     * Retrieves a list of terminal output logs for the given open terminals.
+     * Retrieves terminal log output content for specified terminal sessions.
+     * Takes a list of terminals (typically from list_open_terminals) and fetches their log content.
      *
-     * @return A list of `ObjectNode` objects containing terminal output logs.
-     * @throws ZtatException If there is an error during the operation.
+     * Workflow for monitoring users' terminal logs:
+     * 1. Call list_open_terminals to get all users' open terminal sessions (requires admin privileges)
+     * 2. Pass those terminals to this verb to retrieve their actual log content
+     *
+     * With admin privileges, can retrieve logs for any user's terminal sessions.
+     *
+     * @param token The Zero Trust authentication token
+     * @param contextDTO The agent execution context containing "terminals" argument with HostSystemDTO list
+     * @return A list of ObjectNode objects containing terminal IDs and their log output
+     * @throws ZtatException If there is an error during the operation
      */
-    @Verb(name = "fetch_terminal_logs", description = "Retrieves a list of terminal output from a given open terminal.",
-        returnType = List.class,exampleJson = "\terminals\" : { \"id\" : 1, \"hostConnection\" : \"hostConnection\" } ",
-        requiresTokenManagement = true)
+    @Verb(name = "fetch_terminal_logs",
+          description = "Retrieves terminal log output content for specified terminals. " +
+                        "Takes 'terminals' argument containing list of HostSystemDTO objects (from list_open_terminals). " +
+                        "With admin privileges, can fetch logs for any user's terminals. " +
+                        "Use list_open_terminals first to get terminals, then pass them here to retrieve log content.",
+          returnType = List.class,
+          exampleJson = "\"terminals\" : [{ \"id\" : 1, \"hostConnection\" : \"encrypted-session-id\" }]",
+          requiresTokenManagement = true,
+          skipMemoryStorage = true)  // Don't store terminal logs in persistent memory - they're large and session-specific
     public List<ObjectNode> fetchTerminalOutput(TokenDTO token, AgentExecutionContextDTO contextDTO) throws ZtatException {
         try {
             List<ObjectNode> responses = new ArrayList<>();
-            List<HostSystemDTO> dtos = contextDTO
-                .getExecutionArgumentScoped("terminals", new TypeReference<List<HostSystemDTO>>() {})
-                .orElse(Collections.emptyList());
+
+            // Try to get terminals from execution arguments
+            List<HostSystemDTO> dtos = new ArrayList<>();
+
+            // First, try to get as a typed list
+            Optional<List<HostSystemDTO>> typedList = contextDTO
+                .getExecutionArgumentScoped("terminals", new TypeReference<List<HostSystemDTO>>() {});
+
+            if (typedList.isPresent()) {
+                dtos = typedList.get();
+                log.info("Successfully retrieved {} terminals from typed list", dtos.size());
+            } else {
+                // If that fails, try to get the raw JsonNode and parse it manually
+                Optional<JsonNode> terminalsNode = contextDTO.getExecutionArgument("terminals");
+
+                if (terminalsNode.isPresent()) {
+                    JsonNode node = terminalsNode.get();
+                    log.info("Retrieved terminals as JsonNode, type: {}, value: {}", node.getNodeType(), node);
+
+                    // Handle case where it might be a string representation of JSON
+                    if (node.isTextual()) {
+                        String jsonString = node.asText();
+                        log.info("Terminals stored as text, attempting to parse: {}", jsonString);
+
+                        try {
+                            // First, try to parse as standard JSON
+                            JsonNode parsedNode = JsonUtil.MAPPER.readTree(jsonString);
+                            if (parsedNode.isArray()) {
+                                for (JsonNode item : parsedNode) {
+                                    HostSystemDTO dto = JsonUtil.MAPPER.treeToValue(item, HostSystemDTO.class);
+                                    dtos.add(dto);
+                                }
+                                log.info("Successfully parsed {} terminals from JSON text", dtos.size());
+                            }
+                        } catch (Exception e) {
+                            // If JSON parsing fails, try to parse Java toString format: [{key=value, key2=value2}]
+                            log.info("Standard JSON parsing failed, attempting to parse Java toString format");
+                            try {
+                                List<HostSystemDTO> parsedDtos = parseJavaToStringFormat(jsonString);
+                                dtos.addAll(parsedDtos);
+                                log.info("Successfully parsed {} terminals from Java toString format", dtos.size());
+                            } catch (Exception e2) {
+                                log.error("Failed to parse terminals from both JSON and toString formats. JSON error: {}, toString error: {}",
+                                    e.getMessage(), e2.getMessage());
+                            }
+                        }
+                    } else if (node.isArray()) {
+                        // Direct array - convert each element
+                        for (JsonNode item : node) {
+                            try {
+                                HostSystemDTO dto = JsonUtil.MAPPER.treeToValue(item, HostSystemDTO.class);
+                                dtos.add(dto);
+                            } catch (Exception e) {
+                                log.error("Failed to convert array item to HostSystemDTO: {}", e.getMessage(), e);
+                            }
+                        }
+                        log.info("Successfully converted {} terminals from array", dtos.size());
+                    }
+                } else {
+                    log.warn("No 'terminals' argument found in execution context");
+                }
+            }
+
             log.debug("Terminal list response: {}", dtos);
+
+            if (dtos.isEmpty()) {
+                log.warn("No terminals to fetch logs from");
+                return responses;
+            }
+
             for (HostSystemDTO dto : dtos) {
-                var sessionId = URLEncoder.encode(dto.getHostConnection(), StandardCharsets.UTF_8);
+                // hostConnection is already encrypted and will be decrypted by the API
+                // Don't URL encode it - Spring handles URL encoding/decoding of query params automatically
+                var sessionId = dto.getHostConnection();
                 var response = zeroTrustClientService.callGetOnApi(token,"/sessions/audit/attach", Maps.immutableEntry(
                     "sessionId", List.of(sessionId)));
 
@@ -142,7 +239,7 @@ public class TerminalVerbs {
             }
             return responses;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to retrieve terminal logs", e);
             throw new RuntimeException("Failed to retrieve terminal list", e);
         }
     }
@@ -186,7 +283,8 @@ public class TerminalVerbs {
                                 throw new RuntimeException("Unknown risk level: " + risk);
                         }
                         try {
-                            var sessionId = URLEncoder.encode(dto.getAssessment().getSessionId(), StandardCharsets.UTF_8);
+                            // sessionId is already encrypted, don't URL encode it
+                            var sessionId = dto.getAssessment().getSessionId();
                             var response = zeroTrustClientService.callPutOnApi(
                                 execution, "/ssh/terminal/kill",
                                 Maps.immutableEntry("sessionId", List.of(sessionId))
@@ -218,7 +316,8 @@ public class TerminalVerbs {
 
                             var token = agentVerbs.justifyAgent(execution,contextDTO, ztatRequestDTO, dto);
                             execution.setZtatToken(token);
-                            var sessionId = URLEncoder.encode(dto.getAssessment().getSessionId(), StandardCharsets.UTF_8);
+                            // sessionId is already encrypted, don't URL encode it
+                            var sessionId = dto.getAssessment().getSessionId();
                             var response = zeroTrustClientService.callPutOnApi(
                                 execution, "/ssh/terminal/kill",
                                 Maps.immutableEntry("sessionId", List.of(sessionId))
@@ -459,10 +558,29 @@ public class TerminalVerbs {
             throw new RuntimeException("Failed to close terminal session: " + e.getMessage(), e);
         }
     }
-    
-    @Verb(name = "list_active_terminal_sessions", description = "Lists all currently active SSH terminal sessions " +
-        "managed by this agent.",
-        requiresTokenManagement = true)
+    /**
+     * Lists SSH terminal sessions that THIS AGENT has personally opened via WebSocket connections.
+     * This tracks only the agent's own active WebSocket sessions stored in the activeSessions map.
+     *
+     * IMPORTANT: This does NOT list other users' terminal sessions.
+     * To monitor other users' terminals, use list_open_terminals instead.
+     *
+     * Use cases for this verb:
+     * - Track terminals this agent has opened via open_ssh_terminal
+     * - Monitor the agent's own WebSocket connections
+     * - Get metadata about terminals the agent is actively controlling
+     *
+     * @param execution The agent execution context
+     * @param contextDTO The agent execution context DTO
+     * @return An ArrayNode containing this agent's WebSocket terminal sessions
+     * @throws ZtatException If there is an error during the operation
+     */
+    @Verb(name = "list_active_terminal_sessions",
+          description = "Lists SSH terminal sessions that THIS AGENT has opened via WebSocket (open_ssh_terminal verb). " +
+                        "Does NOT list other users' terminals or system-wide sessions. " +
+                        "For monitoring other users' terminal activity, use list_open_terminals instead. " +
+                        "Only use this to track terminals that this specific agent instance has personally opened.",
+          requiresTokenManagement = true)
     public ArrayNode listActiveTerminalSessions(AgentExecution execution, AgentExecutionContextDTO contextDTO)
         throws ZtatException {
         
@@ -487,7 +605,8 @@ public class TerminalVerbs {
         log.info("Found {} active terminal sessions", result.size());
         return result;
     }
-    
+
+
     /**
      * Builds the WebSocket URL for connecting to a terminal session
      */
@@ -504,11 +623,12 @@ public class TerminalVerbs {
     private ObjectNode readTerminalOutputFromApi(AgentExecution execution, String sessionId) 
         throws ZtatException {
         try {
-            var encodedSessionId = URLEncoder.encode(sessionId, StandardCharsets.UTF_8);
+            // sessionId is already encrypted if coming from API, don't URL encode it
+            // Spring handles URL encoding/decoding of query parameters automatically
             String response = zeroTrustClientService.callGetOnApi(
                 execution,
                 "/sessions/audit/attach",
-                Maps.immutableEntry("sessionId", List.of(encodedSessionId))
+                Maps.immutableEntry("sessionId", List.of(sessionId))
             );
             
             ObjectNode result = JsonUtil.MAPPER.createObjectNode();
@@ -523,5 +643,100 @@ public class TerminalVerbs {
         }
     }
 
+    /**
+     * Parses Java toString format: [{key=value, key2=value2}]
+     * Converts it to List of HostSystemDTO objects.
+     *
+     * Example input: "[{id=1, hostConnection=abc123}]"
+     *
+     * @param toStringFormat The Java toString representation
+     * @return List of parsed HostSystemDTO objects
+     */
+    private List<HostSystemDTO> parseJavaToStringFormat(String toStringFormat) {
+        List<HostSystemDTO> result = new ArrayList<>();
+
+        // Remove outer brackets: "[{...}]" -> "{...}"
+        String content = toStringFormat.trim();
+        if (content.startsWith("[") && content.endsWith("]")) {
+            content = content.substring(1, content.length() - 1).trim();
+        }
+
+        // Split by "}, {" to handle multiple objects
+        // Handle both "{...}, {...}" and "{...},{...}"
+        String[] objects = content.split("\\},\\s*\\{");
+
+        for (String objStr : objects) {
+            // Clean up braces
+            objStr = objStr.trim();
+            if (objStr.startsWith("{")) {
+                objStr = objStr.substring(1);
+            }
+            if (objStr.endsWith("}")) {
+                objStr = objStr.substring(0, objStr.length() - 1);
+            }
+
+            // Parse key=value pairs
+            HostSystemDTO dto = new HostSystemDTO();
+            String[] pairs = objStr.split(",\\s*");
+
+            for (String pair : pairs) {
+                String[] keyValue = pair.split("=", 2);
+                if (keyValue.length == 2) {
+                    String key = keyValue[0].trim();
+                    String value = keyValue[1].trim();
+
+                    // Map to HostSystemDTO fields
+                    switch (key) {
+                        case "id":
+                            try {
+                                // ID might be a number or string
+                                dto.setId(Long.parseLong(value));
+                            } catch (NumberFormatException e) {
+                                log.warn("Could not parse id as number: {}", value);
+                            }
+                            break;
+                        case "hostConnection":
+                            dto.setHostConnection(value);
+                            break;
+                        case "host":
+                            dto.setHost(value);
+                            break;
+                        case "user":
+                        case "sshUser":
+                            dto.setSshUser(value);
+                            break;
+                        case "port":
+                            try {
+                                dto.setPort(Integer.parseInt(value));
+                            } catch (NumberFormatException e) {
+                                log.warn("Could not parse port as number: {}", value);
+                            }
+                            break;
+                        case "displayName":
+                            dto.setDisplayName(value);
+                            break;
+                        case "statusCd":
+                            dto.setStatusCd(value);
+                            break;
+                        default:
+                            log.debug("Unknown field in toString format: {}", key);
+                            break;
+                    }
+                }
+            }
+
+            // Only add if we have at least the hostConnection (required field)
+            if (dto.getHostConnection() != null && !dto.getHostConnection().isEmpty()) {
+                result.add(dto);
+                log.debug("Parsed HostSystemDTO: id={}, hostConnection={}", dto.getId(), dto.getHostConnection());
+            } else {
+                log.warn("Skipping HostSystemDTO with no hostConnection: {}", objStr);
+            }
+        }
+
+        return result;
+    }
+
 
 }
+

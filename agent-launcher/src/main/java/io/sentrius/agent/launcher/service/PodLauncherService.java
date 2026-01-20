@@ -33,14 +33,9 @@ public class PodLauncherService {
     private final CoreV1Api coreV1Api;
     private final AgentImageResolver imageResolver;
 
-    @Value("${sentrius.agent.registry}")
-    private String agentRegistry;
 
     @Value("${sentrius.agent.namespace}")
     private String agentNamespace;
-
-    @Value("${sentrius.agent.registry.version}")
-    private String agentVersion;
 
     @Value("${sentrius.agent.callback.format.url:http://sentrius-agent-%s.%s.svc.cluster.local:8090}")
     private String callbackFormatUrl;
@@ -183,6 +178,7 @@ public class PodLauncherService {
         argList.add("--agent.type=" + agentType);
         argList.add("--agent.clientId=" + agent.getClientId());
         argList.add("--agent.listen.websocket=true");
+        argList.add("--agent.idleSleepMs=" + agent.getIdleSleepMs());
         argList.add("--agent.callback.url=" + constructedCallbackUrl);
         if (agent.getAgentPolicyId() != null && !agent.getAgentPolicyId().isEmpty()) {
             argList.add("--agent.ai.policy.id=" + agent.getAgentPolicyId());

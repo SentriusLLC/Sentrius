@@ -15,6 +15,8 @@ import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
 import io.sentrius.sso.core.dto.AgentRegistrationDTO;
+import io.sentrius.sso.core.dto.podman.ImageIntent;
+import io.sentrius.sso.core.dto.podman.LaunchConfiguration;
 import io.sentrius.sso.core.exceptions.ZtatException;
 import io.sentrius.sso.core.model.ATPLPolicyEntity;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
@@ -36,6 +38,7 @@ import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
 import io.sentrius.sso.core.trust.ATPLPolicy;
+import io.sentrius.sso.core.utils.JsonUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
@@ -206,9 +209,19 @@ public class AgentBootstrapController extends BaseController {
     @PostMapping("/launcher/create")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<String> launchPod(
-        @RequestBody AgentRegistrationDTO registrationDTO, HttpServletRequest request, HttpServletResponse response
+        @RequestBody AgentRegistrationDTO registrationDTOPre, HttpServletRequest request, HttpServletResponse response
         ) throws GeneralSecurityException, IOException, ZtatException {
 
+        // supplement the registration DTO with image information.
+
+        var image =
+            ImageIntent.builder().tag(systemOptions.getAgentImageTag()).repo(systemOptions.getAgentRegistry()).build();
+
+        LaunchConfiguration launchConfig = LaunchConfiguration.builder().imageIntent(image).build();
+        log.info("Using agent image intent: {}", JsonUtil.MAPPER.writeValueAsString(launchConfig));
+        AgentRegistrationDTO registrationDTO  =
+            registrationDTOPre.toBuilder().idleSleepMs(systemOptions.getAgentSleepInterval()).templateLaunchConfiguration(
+                JsonUtil.MAPPER.writeValueAsString(launchConfig)).build();
         try{
             log.info("Launching agent pod with ID: {}", registrationDTO.getAgentName());
 

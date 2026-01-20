@@ -109,25 +109,83 @@ public class ChatVerbs extends VerbBase{
             protocol.append("- If the task has been fulfilled, set planStatus to 'completed' and leave nextOperation empty.\n");
         }
         protocol.append("\n");
-        
-        protocol.append("RULES:\n");
-        protocol.append("- You MUST respond with EXACTLY ONE valid JSON object.\n");
-        protocol.append("- You MUST NOT include conversational text, explanations, markdown, or prose.\n");
-        protocol.append("- You MUST NOT ask the user any questions.\n");
-        protocol.append("- You MUST NOT request clarification.\n");
-        protocol.append("- You MUST select and execute the next operation using the available verbs ONLY if action is needed.\n");
-        protocol.append("- If required information is missing, you MUST infer conservatively OR return an executable fallback.\n");
-        protocol.append("- Returning free-form text is a protocol violation.\n\n");
-        
+
+        if (isAutonomous) {
+            protocol.append("RULES:\n");
+            protocol.append("- You MUST respond with EXACTLY ONE valid JSON object.\n");
+            protocol.append("- You MUST NOT include conversational text, explanations, markdown, or prose.\n");
+            protocol.append("- You MUST NOT ask the user any questions.\n");
+            protocol.append("- You MUST NOT request clarification.\n");
+            protocol.append(
+                "- You MUST select and execute the next operation using the available verbs ONLY if action is needed.\n");
+            protocol.append(
+                "- If required information is missing, you MUST infer conservatively OR return an executable fallback.\n");
+            protocol.append("- Returning free-form text is a protocol violation.\n\n");
+        } else {
+
+            protocol.append("RULES:\n");
+            protocol.append("- You MUST respond with EXACTLY ONE valid JSON object.\n");
+            protocol.append("- You MUST NOT include conversational text outside the 'responseForUser' field.\n");
+
+            // UPDATED RULE: Seeking clarification
+            protocol.append("- If the user's request is ambiguous or lacks parameters, you MUST:\n");
+            protocol.append("  1. Set 'planStatus' to 'awaiting_input'.\n");
+            protocol.append("  2. Use 'responseForUser' to ask targeted, clarifying questions.\n");
+            protocol.append("  3. Set 'nextOperation' to an empty string.\n\n");
+
+            protocol.append("- If required information is missing, DO NOT guess sensitive values; seek clarification.\n");
+            protocol.append("- Returning free-form text outside JSON is a protocol violation.\n\n");
+
+            // NEW SECTION: GUARDRAIL FORMULATION
+            protocol.append("GUARDRAIL & SECURITY PROTOCOL:\n");
+            protocol.append("- When designing or creating an agent, you MUST explicitly formulate guardrails.\n");
+            protocol.append("- Guardrails must include: Data access limits (Least Privilege), PII masking rules, and Infrastructure boundaries.\n");
+            protocol.append("- Include these guardrails in the 'summaryForLLM' and 'responseForUser' during the design phase.\n\n");
+
+        }
+
         if (isAutonomous) {
             // Autonomous agent mode - encourage plan creation and execution
             protocol.append("AUTONOMOUS AGENT MODE:\n");
             protocol.append("- You are operating autonomously without user interaction.\n");
-            protocol.append("- Analyze the available verbs and create a plan to accomplish your configured task.\n");
-            protocol.append("- Execute one verb at a time, using nextOperation to specify the verb to run.\n");
+            protocol.append("- FIRST: Analyze your task context and identify ALL required steps to complete it.\n");
+            protocol.append("- THEN: Execute verbs one at a time in the correct sequence.\n");
             protocol.append("- After each verb execution, evaluate the results and determine the next step.\n");
-            protocol.append("- Continue executing verbs until your task is complete.\n");
-            protocol.append("- Set planStatus to 'in_progress' while working, 'completed' when done.\n\n");
+            protocol.append("- Continue executing verbs until ALL task objectives are complete.\n");
+            protocol.append("- Set planStatus to 'in_progress' while working, 'completed' only when ALL objectives done.\n\n");
+
+            protocol.append("TASK COMPLETION CRITERIA:\n");
+            protocol.append("- A task is ONLY complete when ALL objectives from the context have been fulfilled.\n");
+            protocol.append("- Gathering data is NOT completion - you must analyze and act on that data.\n");
+            protocol.append("- If your context says to 'query X and then do Y', you must do BOTH before completing.\n");
+            protocol.append("- Before setting planStatus to 'completed', verify in summaryForLLM that ALL task objectives are done.\n");
+            protocol.append("- Example: 'Scan terminals and query GitHub' means: (1) scan terminals, (2) query GitHub, (3) analyze results, (4) take action.\n\n");
+
+            protocol.append("ERROR HANDLING:\n");
+            protocol.append("- If a verb execution fails with an error, READ THE ERROR MESSAGE carefully.\n");
+            protocol.append("- Error messages tell you what's wrong and how to fix it (e.g., missing arguments).\n");
+            protocol.append("- Adjust your nextOperation based on the error - don't retry the same invalid operation.\n");
+            protocol.append("- If you tried to skip a required step (like calling call_endpoint without get_endpoints_like), go back and do that step.\n\n");
+
+            protocol.append("MULTI-STEP EXECUTION:\n");
+            protocol.append("- Break complex tasks into discrete verb operations.\n");
+            protocol.append("- Each operation should produce data needed for the next step.\n");
+            protocol.append("- Use the execution results to inform your next operation choice.\n\n");
+
+            protocol.append("ENDPOINT CALLING WORKFLOW (MANDATORY TWO-STEP PROCESS):\n");
+            protocol.append("- STEP 1: You MUST call 'get_endpoints_like' FIRST to discover available endpoints.\n");
+            protocol.append("  Example: get_endpoints_like with arguments: { \"endpoints_like\": [\"github issues\", \"list issues\"] }\n");
+            protocol.append("- STEP 2: ONLY AFTER getting results, call 'call_endpoint' with the discovered endpoint.\n");
+            protocol.append("  Example: call_endpoint with arguments: { \"endpointToCall\": { \"endpoint\": \"discovered-url\", \"method\": \"GET\", \"params\": {...} } }\n");
+            protocol.append("- NEVER call 'call_endpoint' without first calling 'get_endpoints_like'.\n");
+            protocol.append("- If 'get_endpoints_like' returns no results, report this in responseForUser and mark complete.\n\n");
+
+            protocol.append("ENDPOINT URL HANDLING:\n");
+            protocol.append("- When calling endpoints with path parameters (e.g., /repos/{owner}/{repo}/issues):\n");
+            protocol.append("  1. You MUST provide concrete values for ALL path parameters in the 'params' object.\n");
+            protocol.append("  2. Extract or infer actual values - do NOT leave placeholders like {owner} or {repo}.\n");
+            protocol.append("  3. If you cannot determine required values, use memory lookup or make reasonable assumptions.\n");
+            protocol.append("  4. Example: For GitHub issues, use actual org/repo names from context or common defaults.\n\n");
         } else {
             // Chat-driven mode - handle conversational inputs
             protocol.append("CONVERSATIONAL INPUT HANDLING:\n");

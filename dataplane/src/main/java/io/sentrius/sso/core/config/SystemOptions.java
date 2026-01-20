@@ -201,6 +201,10 @@ public class SystemOptions {
     @Builder.Default
     public Boolean agentSupportEnabled = false;
 
+    @Updatable(description = "Agent Sleep time between autonomous interactions", group = "Agent")
+    @Builder.Default
+    public Long agentSleepInterval = 30000L;
+
     @Updatable(description = "GitHub integration token name for agent operations. This token is used for GitHub MCP operations.", group = "Agent")
     @Builder.Default
     public String githubAgentTokenName = "";
@@ -316,6 +320,7 @@ public class SystemOptions {
         var sysOpt = SystemOption.builder()
             .name(fieldName)
             .value(fieldValue == null ? "" : String.valueOf(fieldValue))
+            .isSecureVariable(updatableAnnotation.isSecure())
             .requiresRestart(requiresRestart);
 
         // Set the description if available in the annotation

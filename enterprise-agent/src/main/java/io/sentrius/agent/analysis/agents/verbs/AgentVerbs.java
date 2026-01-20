@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -1075,7 +1076,23 @@ public class AgentVerbs extends VerbBase {
                 endpointNode.put("name", endpoint.getName());
                 endpointNode.put("description", endpoint.getDescription());
                 endpointNode.put("method", endpoint.getHttpMethod());
-                endpointNode.put("endpoint", endpoint.getPath());
+
+                // Include serviceUrl if available - this is crucial for routing to integration proxy
+                String serviceUrl = endpoint.getServiceUrl();
+                if (serviceUrl != null && !serviceUrl.isEmpty()) {
+                    // Combine serviceUrl with path to give the LLM the complete URL
+                    String fullUrl = serviceUrl;
+                    if (!fullUrl.endsWith("/") && endpoint.getPath() != null && !endpoint.getPath().startsWith("/")) {
+                        fullUrl += "/";
+                    }
+                    fullUrl += endpoint.getPath();
+                    endpointNode.put("endpoint", fullUrl);
+                    endpointNode.put("serviceUrl", serviceUrl); // Also include separately for reference
+                } else {
+                    // No serviceUrl, just use the path (will be called against current API server)
+                    endpointNode.put("endpoint", endpoint.getPath());
+                }
+
                 endpointNode.put("searchQuery", queryText);
                 endpoints.add(endpointNode);
             }
@@ -1120,13 +1137,14 @@ public class AgentVerbs extends VerbBase {
         return null;
     }
 
-    @Verb(name = "call_endpoint", returnType = AgentExecutionContextDTO.class, description = "Executes an endpoint at the " +
-        "service. Input ", exampleJson = "{ \"endpoint\": \"<url>\", \"method\": \"httpMethod\", \"params\": { " +
-        "\"param1\": " +
-        "\"param1Value\", " +
-        "\"param2\": " +
-        "\"param2Value\"" +
-        " } }",
+    @Verb(name = "call_endpoint",
+        returnType = AgentExecutionContextDTO.class,
+        description = "Executes an endpoint at the service. " +
+            "Supports both query parameters and path parameters (URL templates). " +
+            "For URLs with path parameters like '/repos/{owner}/{repo}/issues', provide values in params object. " +
+            "Path parameters will be substituted into the URL, remaining params become query parameters.",
+        exampleJson = "{ \"endpoint\": \"/repos/{owner}/{repo}/issues\", \"method\": \"GET\", " +
+            "\"params\": { \"owner\": \"myorg\", \"repo\": \"myrepo\", \"state\": \"open\" } }",
         argName = "endpointToCall",
         requiresTokenManagement = true )
     public ObjectNode callEndpoint(AgentExecution execution, AgentExecutionContextDTO queryInput)
@@ -1155,6 +1173,7 @@ public class AgentVerbs extends VerbBase {
         var paramsNode = queryInput.getExecutionArgument("endpointToCall", "params");
 
         List<Map.Entry<String, List<String>>> entries = new ArrayList<>();
+        Map<String, String> pathParams = new HashMap<>();
 
         if (paramsNode.isPresent() && paramsNode.get().isObject()) {
             ObjectNode paramObject = (ObjectNode) paramsNode.get();
@@ -1176,8 +1195,31 @@ public class AgentVerbs extends VerbBase {
                     valueList.add(valueNode.toString());
                 }
 
-                entries.add(new AbstractMap.SimpleEntry<>(key, valueList));
+                // Check if this parameter is a path variable (used in URL template)
+                String placeholder = "{" + key + "}";
+                if (endpoint.contains(placeholder)) {
+                    // This is a path parameter - store for URL substitution
+                    pathParams.put(key, valueList.isEmpty() ? "" : valueList.get(0));
+                } else {
+                    // This is a query parameter - add to entries
+                    entries.add(new AbstractMap.SimpleEntry<>(key, valueList));
+                }
             }
+        }
+
+        // Substitute path parameters in the endpoint URL
+        for (Map.Entry<String, String> pathParam : pathParams.entrySet()) {
+            String placeholder = "{" + pathParam.getKey() + "}";
+            endpoint = endpoint.replace(placeholder, pathParam.getValue());
+        }
+
+        // Check if there are still unresolved placeholders
+        if (endpoint.contains("{") && endpoint.contains("}")) {
+            log.warn("Endpoint still contains unresolved path parameters: {}", endpoint);
+            throw new IllegalArgumentException(
+                "Endpoint URL contains unresolved path parameters: " + endpoint +
+                ". Please provide values for all path parameters in the 'params' object."
+            );
         }
 
 // Determine params and payload for POST

@@ -19,6 +19,7 @@ public class SystemOption {
     Boolean requiresRestart = false;
     String closestType = "";
     String closestPrimitive = "";
+    boolean isSecureVariable = false;
     @Builder.Default
     String group = "General";
 
@@ -26,5 +27,12 @@ public class SystemOption {
         this.name = name;
         this.value = value;
         this.description = description;
+    }
+
+    public SystemOption(String name, String value, String description, boolean isSecureVariable) {
+        this.name = name;
+        this.value = value;
+        this.description = description;
+        this.isSecureVariable = isSecureVariable;
     }
 }

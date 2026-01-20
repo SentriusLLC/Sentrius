@@ -11,4 +11,5 @@ public @interface Updatable {
 
     String description() default "";
     String group() default "General";
+    boolean isSecure() default false;
 }

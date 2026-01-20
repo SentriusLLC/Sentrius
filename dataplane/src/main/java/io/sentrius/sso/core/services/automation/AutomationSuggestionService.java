@@ -90,19 +90,6 @@ public class AutomationSuggestionService {
             String comments,
             String modifiedScript) {
         
-        // Validate reviewer
-        if (reviewer == null) {
-            throw new IllegalArgumentException("Reviewer cannot be null");
-        }
-
-        log.debug("Reviewing suggestion {} by user with ID: {}", suggestionId, reviewer.getId());
-
-        if (reviewer.getId() == null) {
-            throw new IllegalArgumentException(
-                "Reviewer must be a valid user with an ID. User object: " + reviewer
-            );
-        }
-
         AutomationSuggestion suggestion = suggestionRepository.findById(suggestionId)
             .orElseThrow(() -> new IllegalArgumentException("Suggestion not found: " + suggestionId));
         

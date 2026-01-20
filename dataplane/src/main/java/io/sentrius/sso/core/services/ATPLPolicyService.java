@@ -109,9 +109,10 @@ public class ATPLPolicyService {
         }
 
         for(AgentPolicyAssignment assignment : assignments) {
-            ATPLPolicy policy = getPolicy(assignment.getPolicy());
-            if (null != policy){
-                return Optional.of(policy);
+            var policy = getLatestPolicy(assignment.getPolicy().getPolicyId());
+            if (policy.isPresent()) {
+                log.info("Found policy {} for user {}", policy.get().getPolicyId(), operatingUser.getUsername());
+                return policy;
             }
         }
 
