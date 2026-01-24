@@ -1,4 +1,4 @@
-package io.sentrius.sentrius.analysis.agents.verbs;
+package io.sentrius.sentrius.analysis.agents.agents;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -47,12 +47,13 @@ class PromptBuilderTest {
         Method mockMethod = Verb.class.getDeclaredMethods()[0];
         when(verb.getMethod()).thenReturn(mockMethod);
         when(verb.getDescription()).thenReturn("Description of the verb");
-        when(verbRegistry.getVerbs()).thenReturn(Map.of("verbName", verb));
+        // Use a verb lookup verb name to match the new implementation
+        when(verbRegistry.getVerbs()).thenReturn(Map.of("search_verbs", verb));
 
         String result = promptBuilder.buildPrompt();
 
-        assertTrue(result.contains("Verb operations:"));
-        assertTrue(result.contains("- verbName ("));
+        assertTrue(result.contains("VERB DISCOVERY:"));
+        assertTrue(result.contains("- search_verbs ("));
         assertTrue(result.contains("Description of the verb"));
     }
 
@@ -72,6 +73,7 @@ class PromptBuilderTest {
 
         String result = promptBuilder.buildPrompt();
 
-        assertTrue(result.contains("Verb operations:"));
+        // The prompt now uses "VERB DISCOVERY:" instead of "Verb operations:"
+        assertTrue(result.contains("VERB DISCOVERY:"));
     }
 }

@@ -31,16 +31,38 @@ data:
     description: "Agent that handles logs and OpenAI access."
     context: |
       You help launch agents. User will define agent responsibilities that will fill in the agent context.
-      You can query status of the agent launch and return it to the user after you create them. Validate the agent
-      launch
-      by checking
-      if the agent is running.
-      regex for agent names: [a-z]([-a-z0-9]*[a-z0-9])? . use hyphens instead of underscores in agent name.
-      IMPORTANT: Before responding to questions about information the user may have provided previously, ALWAYS use the lookup_agent_memory or search_agent_memory_semantic verbs to check if that information exists in your memory from a prior conversation or session.
-      For example:
-      - If a user asks "What's my name?" first use lookup_agent_memory with query="user name" to search your memory
-      - If a user asks about their preferences, use search_agent_memory_semantic to find related information
-      - Never ask users to repeat information they may have already told you without first checking your memory
+      AGENT DESIGN MODE (HARD CONSTRAINT)
+      You are an AGENT DESIGNER, not a runtime agent.
+
+      RULES:
+      - You MUST NOT execute the task an agent is meant to perform.
+      - You ONLY design, validate, launch, and inspect agents.
+      - If the user describes behavior (e.g. scan pods, kill sessions, send alerts),
+        write it into the agent’s context — DO NOT perform it.
+      - Agent context is WRITE-ONLY configuration, not instructions for you.
+
+      ALLOWED VERBS (DESIGN MODE ONLY):
+      - create_agent_with_context
+      - get_agent_status
+      - lookup_agent_memory
+      - search_agent_memory_semantic
+
+      MODE REQUIREMENT:
+      - Every response MUST include `"mode": "design"`.
+      - Any other mode is invalid.
+
+      NAME RULE:
+      - Agent names must match: [a-z]([-a-z0-9]*[a-z0-9])?
+      - Use hyphens only.
+
+      MEMORY RULE:
+      - Before asking the user to repeat information, check memory using lookup/search.
+
+      SELF-CHECK (MANDATORY):
+      If you are about to perform the agent’s task yourself, STOP and write it into the agent context instead.
+
+      The STRICT EXECUTION PROTOCOL that follows applies to the agent being created, not to you.
+
   launcher.properties: |
     spring.main.web-application-type=servlet
     spring.thymeleaf.enabled=false
@@ -110,8 +132,8 @@ data:
     #flyway configuration
     spring.flyway.enabled=false
     #spring.datasource.url=jdbc:h2:mem:testdb
-    logging.level.org.springframework.web=DEBUG
-    logging.level.org.springframework.security=DEBUG
+    logging.level.org.springframework.web=INFO
+    logging.level.org.springframework.security=INFO
     logging.level.io.sentrius=DEBUG
     logging.level.org.thymeleaf=INFO
     spring.thymeleaf.servlet.produce-partial-output-while-processing=false
@@ -177,3 +199,4 @@ data:
     # RLHF Feedback System Configuration
     sentrius.rlhf.enabled=true
     sentrius.rlhf.feedback.api.url={{ .Values.sentriusDomain }}
+    server.netty.idle-timeout=3600s

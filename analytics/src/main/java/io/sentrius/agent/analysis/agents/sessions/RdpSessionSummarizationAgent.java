@@ -7,6 +7,7 @@ import io.sentrius.sso.core.model.sessions.RdpSessionSummary;
 import io.sentrius.sso.core.repository.RdpSessionScreenshotRepository;
 import io.sentrius.sso.core.repository.RdpSessionSummaryRepository;
 import io.sentrius.sso.core.services.agents.LLMService;
+import io.sentrius.sso.core.services.agents.AgentExecutionAuditService;
 import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
 import io.sentrius.sso.core.utils.JsonUtil;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +38,8 @@ public class RdpSessionSummarizationAgent {
     private final RdpSessionSummaryRepository summaryRepository;
     private final IntegrationSecurityTokenService integrationSecurityTokenService;
     private final LLMService llmService;
-    
+    private final AgentExecutionAuditService auditService;
+
     /**
      * Process RDP sessions with unprocessed screenshots every 2 minutes
      */
@@ -49,23 +51,48 @@ public class RdpSessionSummarizationAgent {
             log.debug("LLM integration not available, skipping RDP session summarization");
             return;
         }
-        
-        log.info("Processing RDP sessions with unprocessed screenshots...");
-        
+
+        log.debug("Checking for RDP sessions with unprocessed screenshots...");
+
         // Find sessions with unprocessed screenshots
         List<String> sessionIds = screenshotRepository.findSessionsWithUnprocessedScreenshots();
-        
-        log.info("Found {} RDP sessions with unprocessed screenshots", sessionIds.size());
-        
-        for (String sessionId : sessionIds) {
-            try {
-                processSession(sessionId);
-            } catch (Exception e) {
-                log.error("Error processing RDP session {}: {}", sessionId, e.getMessage(), e);
-            }
+
+        // Skip audit creation if there's nothing to process
+        if (sessionIds.isEmpty()) {
+            log.debug("No RDP sessions to process");
+            return;
         }
-        
-        log.info("Finished processing RDP sessions");
+
+        // Only create audit when we have actual work to do
+        String taskExecutionId = UUID.randomUUID().toString();
+        createTaskAudit(taskExecutionId, "rdp-session-summarizer");
+
+        String taskStatus = "COMPLETED";
+        log.info("Processing {} RDP sessions with unprocessed screenshots...", sessionIds.size());
+
+        try {
+
+            int failed = 0;
+            for (String sessionId : sessionIds) {
+                try {
+                    processSession(sessionId);
+                } catch (Exception e) {
+                    log.error("Error processing RDP session {}: {}", sessionId, e.getMessage(), e);
+                    failed++;
+                }
+            }
+
+            log.info("Finished processing RDP sessions");
+
+            if (failed > 0) {
+                taskStatus = "COMPLETED_WITH_ERRORS";
+            }
+        } catch (Exception e) {
+            log.error("Error in processRdpSessions", e);
+            taskStatus = "ERROR";
+        } finally {
+            closeTaskAudit(taskExecutionId, taskStatus);
+        }
     }
     
     /**
@@ -468,6 +495,35 @@ public class RdpSessionSummarizationAgent {
         } catch (Exception e) {
             log.debug("Error checking LLM availability", e);
             return false;
+        }
+    }
+
+    /**
+     * Create an audit record for a scheduled task execution
+     */
+    private void createTaskAudit(String taskExecutionId, String agentType) {
+        try {
+            auditService.createAudit(
+                "analytics-agent",
+                taskExecutionId,
+                agentType,
+                "system"
+            );
+            log.debug("Created audit for {} task: {}", agentType, taskExecutionId);
+        } catch (Exception e) {
+            log.debug("Could not create audit for {} task: {}", agentType, e.getMessage());
+        }
+    }
+
+    /**
+     * Close an audit record for a scheduled task execution
+     */
+    private void closeTaskAudit(String taskExecutionId, String status) {
+        try {
+            auditService.closeAudit(taskExecutionId, status);
+            log.debug("Closed audit for task {} with status: {}", taskExecutionId, status);
+        } catch (Exception e) {
+            log.debug("Could not close audit for task: {}", e.getMessage());
         }
     }
 }

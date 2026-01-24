@@ -1,4 +1,3 @@
-
 package io.sentrius.agent.analysis.api.websocket;
 
 import java.io.IOException;
@@ -8,6 +7,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -185,6 +185,10 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                 log.warn("ZTAT challenge failed for session {}", session.getId());
                                 session.close();
                             }
+                            return;
+                        } else if ("end-chat".equals(json.get("type").asText())) {
+                            log.info("Ending chat session {}", sessionId);
+                            cleanupSession(sessionId, session, CloseStatus.NORMAL);
                             return;
                         } else if ("pause-agent".equals(json.get("type").asText())) {
                             log.info("Received pause command from session {}", sessionId);
@@ -394,26 +398,32 @@ public class ChatWSHandler extends TextWebSocketHandler {
 
                             websocky.get().getCommunicationResponses().add(response);
 
-                            if (response.getNextOperation() != null && !response.getNextOperation().isEmpty() &&
-                                verbRegistry.isVerbRegistered(response.getNextOperation()))
-                            {
-                                try {
+                            if (response.getNextOperation() != null && !response.getNextOperation().isEmpty()) {
+                                if (verbRegistry.isVerbRegistered(response.getNextOperation())) {
+                                    // Execute verb asynchronously to prevent blocking the WebSocket thread
+                                    // This is critical for long-running operations like create_agent
+                                    final String operationName = response.getNextOperation();
+                                    final LLMResponse initialResponse = response;
+                                    log.info("Executing verb '{}' asynchronously to keep WebSocket alive", operationName);
 
-                                    LLMResponse nextResponse = null;
+                                    CompletableFuture.runAsync(() -> {
+                                    try {
+                                        LLMResponse nextResponse;
+                                        LLMResponse currentResponse = initialResponse;
 
-                                    var lastVerbResponse =
-                                        websocketCommunication.getVerbResponses().stream()
-                                            .reduce((prev, next) -> next)
-                                            .orElse(null);
-                                    do {
+                                        var lastVerbResponse =
+                                            websocketCommunication.getVerbResponses().stream()
+                                                .reduce((prev, next) -> next)
+                                                .orElse(null);
+                                        do {
 
-                                        var arguments = response.getArguments();
-                                        var executionResponse = verbRegistry.execute(
-                                            chatAgent.getAgentExecution(),
-                                            websocketCommunication.getAgentExecutionContextDTO(),
-                                            lastVerbResponse,
-                                            response.getNextOperation(), arguments
-                                        );
+                                            var arguments = currentResponse.getArguments();
+                                            var executionResponse = verbRegistry.execute(
+                                                chatAgent.getAgentExecution(),
+                                                websocketCommunication.getAgentExecutionContextDTO(),
+                                                lastVerbResponse,
+                                                currentResponse.getNextOperation(), arguments
+                                            );
 
 //                                        chatAgent.getAgentExecution().addMessages(Message.builder().role("System")
 //                                        .content("System executed operation: " + response.getNextOperation()).build());
@@ -434,7 +444,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                         nextResponse = chatVerbs.interpret_plan_response(
                                             chatAgent.getAgentExecution(),
                                             websocketCommunication.getAgentExecutionContextDTO(),
-                                            verbRegistry.getVerbs().get(response.getNextOperation()),
+                                            verbRegistry.getVerbs().get(currentResponse.getNextOperation()),
                                             planResponse
                                         );
 
@@ -442,7 +452,7 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                             log.info("Memory lookup requested: {}", nextResponse.getMemoryLookup());
                                             try {
                                                 // Set up memory lookup arguments
-                                                Map<String, Object> memoryArgs = response.getMemoryLookupAsMap();
+                                                Map<String, Object> memoryArgs = nextResponse.getMemoryLookupAsMap();
 
                                                 // Execute memory lookup
                                                 var memoryResponse = verbRegistry.execute(
@@ -498,16 +508,18 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                             .setSessionId(websocketCommunication.getUniqueIdentifier())
                                             .setTimestamp(System.currentTimeMillis())
                                             .build();
-                                        messageBytes = newNextMessage.toByteArray();
-                                        base64Message = Base64.getEncoder().encodeToString(messageBytes);
-                                        session.sendMessage(new TextMessage(
-                                            base64Message
-                                        ));
+                                        byte[] nextMessageBytes = newNextMessage.toByteArray();
+                                        String nextBase64Message = Base64.getEncoder().encodeToString(nextMessageBytes);
+                                        synchronized(session) {
+                                            if (session.isOpen()) {
+                                                session.sendMessage(new TextMessage(nextBase64Message));
+                                            }
+                                        }
                                         log.info("Next response: {}", nextResponse.getResponseForUser());
                                         log.info("Next getNextOperation: {}", nextResponse.getNextOperation());
                                         log.info("Next getArguments: {}", nextResponse.getArguments());
                                         lastVerbResponse = executionResponse;
-                                        response = nextResponse;
+                                        currentResponse = nextResponse;
 
                                         var memory = websocketCommunication.getAgentExecutionContextDTO().flushPersistentMemory();
                                         if (memory != null && !memory.isEmpty()) {
@@ -553,14 +565,108 @@ public class ChatWSHandler extends TextWebSocketHandler {
                                         }
 
                                     }while (nextResponse.getNextOperation() != null && !nextResponse.getNextOperation().isEmpty());
-                                }catch (Exception e){
-                                    e.printStackTrace();
-                                    log.error("Error executing next operation: {}", e.getMessage());
 
+                                    } catch (Exception | ZtatException e){
+                                        log.error("Error executing next operation asynchronously: {}", e.getMessage(), e);
+
+                                        // Send error message to user instead of closing connection
+                                        String errorMessage = "Error executing operation '" + operationName + "': " + e.getMessage();
+                                        if (e.getCause() != null && e.getCause().getMessage() != null) {
+                                            errorMessage += " - " + e.getCause().getMessage();
+                                        }
+
+                                        var errorResponse = Session.ChatMessage.newBuilder()
+                                            .setMessage(errorMessage)
+                                            .setSender("agent")
+                                            .setChatGroupId("")
+                                            .setSessionId(websocketCommunication.getUniqueIdentifier())
+                                            .setTimestamp(System.currentTimeMillis())
+                                            .build();
+
+                                        try {
+                                            byte[] errorBytes = errorResponse.toByteArray();
+                                            String base64Error = Base64.getEncoder().encodeToString(errorBytes);
+                                            synchronized(session) {
+                                                if (session.isOpen()) {
+                                                    session.sendMessage(new TextMessage(base64Error));
+                                                }
+                                            }
+                                        } catch (IOException sendError) {
+                                            log.error("Failed to send error message to client", sendError);
+                                        }
+                                    }
+                                }); // End of CompletableFuture.runAsync
+
+                                // Don't execute else block - async task will handle memory storage
+                                log.info("Async verb execution started for '{}'", operationName);
+
+                                } else {
+                                    // Verb not registered - send error to user
+                                    log.warn("LLM requested unregistered verb '{}'. Available verbs: {}",
+                                        response.getNextOperation(), verbRegistry.getVerbs().keySet());
+
+                                    String errorMsg = String.format(
+                                        "Error: The operation '%s' is not available. Did you mean one of these? %s",
+                                        response.getNextOperation(),
+                                        verbRegistry.getVerbs().keySet().stream()
+                                            .filter(v -> v.contains("agent") || v.contains("create"))
+                                            .collect(java.util.stream.Collectors.joining(", "))
+                                    );
+
+                                    var errorResponse = Session.ChatMessage.newBuilder()
+                                        .setMessage(errorMsg)
+                                        .setSender("agent")
+                                        .setChatGroupId("")
+                                        .setSessionId(websocketCommunication.getUniqueIdentifier())
+                                        .setTimestamp(System.currentTimeMillis())
+                                        .build();
+
+                                    byte[] errorBytes = errorResponse.toByteArray();
+                                    String errorBase64 = Base64.getEncoder().encodeToString(errorBytes);
+                                    session.sendMessage(new TextMessage(errorBase64));
+
+                                    // Still need to store memory for non-verb responses
+                                    var memory = websocketCommunication.getAgentExecutionContextDTO().flushPersistentMemory();
+                                    if (memory != null && !memory.isEmpty()) {
+                                        for(var memoryEntry : memory.entrySet()){
+                                            JsonNode memoryMeta = memoryEntry.getValue();
+
+                                            // Extract metadata from the memory node
+                                            String classification = memoryMeta.has("classification") ?
+                                                memoryMeta.get("classification").asText() : "PRIVATE";
+                                            String markings = memoryMeta.has("markings") ?
+                                                memoryMeta.get("markings").asText() : null;
+                                            JsonNode value = memoryMeta.has("value") ?
+                                                memoryMeta.get("value") : memoryMeta;
+
+                                            String enhancedMarkings;
+                                            if (userId != null && !userId.isEmpty()) {
+                                                enhancedMarkings = markings != null
+                                                    ? markings + ",USER:" + userId
+                                                    : "USER:" + userId;
+                                            } else {
+                                                enhancedMarkings = markings != null ? markings : "";
+                                            }
+
+                                            agentClientService.storeMemory(chatAgent.getAgentExecution(),
+                                                websocketCommunication.getAgentExecutionContextDTO().getAgentContext().getName(),
+                                                io.sentrius.sso.core.dto.agents.AgentMemoryDTO.builder()
+                                                    .agentName(websocketCommunication.getAgentExecutionContextDTO().getAgentContext().getName())
+                                                    .memoryKey(memoryEntry.getKey())
+                                                    .memoryValue(value.toString())
+                                                    .classification(classification)
+                                                    .markings(enhancedMarkings.isEmpty() ? new String[0] : enhancedMarkings.split(","))
+                                                    .conversationId(chatAgent.getAgentExecution().getCommunicationId())
+                                                    .build());
+                                            log.info("Stored memory: {} with classification: {} and markings: {}",
+                                                memoryEntry.getKey(), classification, enhancedMarkings);
+                                        }
+                                    } else {
+                                        log.info("No persistent memory to store 470.");
+                                    }
                                 }
-
-
-                            }else {
+                            } else {
+                                // No nextOperation - store memory synchronously
                                 var memory = websocketCommunication.getAgentExecutionContextDTO().flushPersistentMemory();
                                 if (memory != null && !memory.isEmpty()) {
                                     for(var memoryEntry : memory.entrySet()){
@@ -620,7 +726,27 @@ public class ChatWSHandler extends TextWebSocketHandler {
                 }
             }
         }catch (Exception | ZtatException e ){
-            throw new RuntimeException(e);
+            log.error("Error handling chat message", e);
+
+            // Try to send error to user instead of crashing the connection
+            try {
+                String errorMessage = "Internal error: " + e.getMessage();
+                var errorResponse = Session.ChatMessage.newBuilder()
+                    .setMessage(errorMessage)
+                    .setSender("agent")
+                    .setChatGroupId("")
+                    .setSessionId(UUID.randomUUID().getMostSignificantBits())
+                    .setTimestamp(System.currentTimeMillis())
+                    .build();
+
+                byte[] errorBytes = errorResponse.toByteArray();
+                String base64Error = Base64.getEncoder().encodeToString(errorBytes);
+                session.sendMessage(new TextMessage(base64Error));
+            } catch (IOException sendError) {
+                log.error("Failed to send error message after exception", sendError);
+                // Only throw if we can't even send the error message
+                throw new RuntimeException(e);
+            }
         }
     }
 
@@ -640,17 +766,17 @@ public class ChatWSHandler extends TextWebSocketHandler {
 
             if (sessionId != null) {
                 // Remove the session when connection is closed
+                log.info("WebSocket connection closed for session ID: " + sessionId + " with status: " + status);
                 var lookupId = sessionId + "==";
 
 
-                userCommunicationService.remove(sessionId);
-
                 log.info("Connection closed, session ID: " + sessionId);
 
-                if (chatAgent.isPaused()){
-                    log.info("Resuming agent as chat session has ended");
-                    chatAgent.resumeAgent();
+                // Cleanup only if abnormal
+                if (!CloseStatus.NORMAL.equals(status)) {
+                    cleanupSession(sessionId, session, status);
                 }
+                
             }
         }
     }
@@ -684,6 +810,37 @@ public class ChatWSHandler extends TextWebSocketHandler {
             } else {
                 System.err.println("Session not found or already closed: " + sessionId);
             }
+        }
+    }
+
+    private void cleanupSession(
+    String sessionId,
+    WebSocketSession session,
+    CloseStatus status
+    ) {
+        try {
+            var lookupId = sessionId + "==";
+
+            userCommunicationService.remove(lookupId);
+
+            if (session.isOpen()) {
+                session.close(status);
+            }
+
+            ProvenanceEvent event = ProvenanceEvent.builder()
+                .eventType(ProvenanceEvent.EventType.USER_CHAT_ENDED)
+                .actor("system")
+                .outputSummary("Chat session ended: " + status)
+                .sessionId(sessionId)
+                .build();
+
+            agentClientService.submitProvenance(
+                chatAgent.getAgentExecution(), event
+            );
+
+            log.info("Cleaned up chat session {}", sessionId);
+        } catch (Exception e) {
+            log.warn("Cleanup failed for session {}", sessionId, e);
         }
     }
 }

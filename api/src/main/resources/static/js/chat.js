@@ -5,6 +5,10 @@ const chatSessions = new Map(); // key: agentId, value: ChatSession
 
 //window.addEventListener("beforeunload", persistChatSessions);
 
+window.addEventListener("beforeunload", () => {
+    chatSessions.forEach(session => session.endChat());
+});
+
 // Restore on page load
 (function restoreSesions() {
     const saved = localStorage.getItem("openChats");
@@ -184,6 +188,26 @@ class ChatSession {
 
         this.connection.onopen = () => this.heartbeat();
     }
+
+    endChat() {
+    if (!this.connection || this.connection.readyState !== WebSocket.OPEN) {
+        return;
+    }
+
+    const msg = new proto.io.sentrius.protobuf.ChatMessage();
+    msg.setSender("user");
+    msg.setMessage(JSON.stringify({
+        type: "end-chat"
+    }));
+
+    this.connection.send(
+        btoa(String.fromCharCode(...msg.serializeBinary()))
+    );
+
+    // Optional: close transport AFTER intent is sent
+    this.connection.close();
+}
+
 
 
     handleMessage(e) {

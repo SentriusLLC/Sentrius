@@ -14,6 +14,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.sentrius.agent.analysis.agents.agents.VerbLookupService;
 import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
 import io.sentrius.agent.analysis.agents.verbs.AgentVerbs;
 import io.sentrius.agent.services.EndpointRegistry;
@@ -49,6 +50,9 @@ class AgentVerbsTest {
     private VerbRegistry verbRegistry;
 
     @Mock
+    private VerbLookupService verbLookupService;
+
+    @Mock
     private AgentClientService agentClientService;
 
     @Mock
@@ -70,6 +74,7 @@ class AgentVerbsTest {
             zeroTrustClientService,
             llmService,
             verbRegistry,
+            verbLookupService,
             agentClientService,
             endpointRegistry,
             endpointSearcher,
@@ -835,7 +840,7 @@ class AgentVerbsTest {
         // Then
         assertNotNull(result);
         assertTrue(result.has("agentType"));
-        assertEquals("chat", result.get("agentType").asText());  // Default value
+        assertEquals("chat-autonomous", result.get("agentType").asText());  // Default value
         assertTrue(result.has("policyId"));
         assertEquals("default", result.get("policyId").asText());  // No policy created when no endpoints
     }

@@ -149,7 +149,8 @@ public class SystemOptions {
   @Updatable(description = "Default LLM provider for automation and AI services (openai, claude, etc.)", group = "AI/LLM")
   @Builder.Default public String defaultLlmProvider = "openai";
 
-
+  @Updatable(description = "Enables automatic LLM-based summarization of agent execution logs", group = "AI/LLM")
+  @Builder.Default public Boolean enableAgentExecutionSummarization = true;
 
   public Boolean lockdownEnabled = false;
 

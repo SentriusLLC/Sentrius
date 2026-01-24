@@ -109,83 +109,111 @@ public class ChatVerbs extends VerbBase{
             protocol.append("- If the task has been fulfilled, set planStatus to 'completed' and leave nextOperation empty.\n");
         }
         protocol.append("\n");
-
-        if (isAutonomous) {
-            protocol.append("RULES:\n");
-            protocol.append("- You MUST respond with EXACTLY ONE valid JSON object.\n");
-            protocol.append("- You MUST NOT include conversational text, explanations, markdown, or prose.\n");
-            protocol.append("- You MUST NOT ask the user any questions.\n");
-            protocol.append("- You MUST NOT request clarification.\n");
-            protocol.append(
-                "- You MUST select and execute the next operation using the available verbs ONLY if action is needed.\n");
-            protocol.append(
-                "- If required information is missing, you MUST infer conservatively OR return an executable fallback.\n");
-            protocol.append("- Returning free-form text is a protocol violation.\n\n");
-        } else {
-
-            protocol.append("RULES:\n");
-            protocol.append("- You MUST respond with EXACTLY ONE valid JSON object.\n");
-            protocol.append("- You MUST NOT include conversational text outside the 'responseForUser' field.\n");
-
-            // UPDATED RULE: Seeking clarification
-            protocol.append("- If the user's request is ambiguous or lacks parameters, you MUST:\n");
-            protocol.append("  1. Set 'planStatus' to 'awaiting_input'.\n");
-            protocol.append("  2. Use 'responseForUser' to ask targeted, clarifying questions.\n");
-            protocol.append("  3. Set 'nextOperation' to an empty string.\n\n");
-
-            protocol.append("- If required information is missing, DO NOT guess sensitive values; seek clarification.\n");
-            protocol.append("- Returning free-form text outside JSON is a protocol violation.\n\n");
-
-            // NEW SECTION: GUARDRAIL FORMULATION
-            protocol.append("GUARDRAIL & SECURITY PROTOCOL:\n");
-            protocol.append("- When designing or creating an agent, you MUST explicitly formulate guardrails.\n");
-            protocol.append("- Guardrails must include: Data access limits (Least Privilege), PII masking rules, and Infrastructure boundaries.\n");
-            protocol.append("- Include these guardrails in the 'summaryForLLM' and 'responseForUser' during the design phase.\n\n");
-
-        }
+        
+        protocol.append("RULES:\n");
+        protocol.append("- You MUST respond with EXACTLY ONE valid JSON object.\n");
+        protocol.append("- You MUST NOT include conversational text, explanations, markdown, or prose.\n");
+        protocol.append("- You MUST NOT ask the user any questions.\n");
+        protocol.append("- You MUST NOT request clarification.\n");
+        protocol.append("- You MUST use verb lookup verbs when you don't know which verb to use.\n");
+        protocol.append("- You MUST select and execute the next operation using discovered verbs ONLY if action is needed.\n");
+        protocol.append("- If required information is missing, you MUST infer conservatively OR return an executable fallback.\n");
+        protocol.append("- Returning free-form text is a protocol violation.\n");
+        protocol.append("- CRITICAL: NEVER invent verb names. If a verb doesn't exist, use verb lookup to find it.\n");
+        protocol.append("- Analysis/thinking happens in summaryForLLM, NOT as a verb execution.\n\n");
 
         if (isAutonomous) {
             // Autonomous agent mode - encourage plan creation and execution
             protocol.append("AUTONOMOUS AGENT MODE:\n");
             protocol.append("- You are operating autonomously without user interaction.\n");
-            protocol.append("- FIRST: Analyze your task context and identify ALL required steps to complete it.\n");
-            protocol.append("- THEN: Execute verbs one at a time in the correct sequence.\n");
-            protocol.append("- After each verb execution, evaluate the results and determine the next step.\n");
-            protocol.append("- Continue executing verbs until ALL task objectives are complete.\n");
-            protocol.append("- Set planStatus to 'in_progress' while working, 'completed' only when ALL objectives done.\n\n");
+            protocol.append("- CRITICAL: Read your Context carefully and identify ALL steps required before starting.\n");
+            protocol.append("- If context says 'do A and do B', you must complete BOTH A and B.\n");
+            protocol.append("- If context says 'do A if B', you must: (1) check B, (2) decide, (3) conditionally do A.\n");
+            protocol.append("- Set planStatus to 'in_progress' while working, 'completed' ONLY when ALL steps done.\n\n");
+
+            protocol.append("TASK ANALYSIS (REQUIRED FIRST STEP):\n");
+            protocol.append("- Before executing ANY verb, mentally break down your Context into discrete steps.\n");
+            protocol.append("- Example context: 'Scan terminals and kill if no GitHub ticket'\n");
+            protocol.append("  Required steps: (1) list terminals, (2) get logs, (3) query GitHub, (4) analyze, (5) conditionally kill\n");
+            protocol.append("- Example context: 'Monitor pods and alert on failures'\n");
+            protocol.append("  Required steps: (1) list pods, (2) check status, (3) detect failures, (4) send alert\n");
+            protocol.append("- DO NOT mark complete until ALL steps in your mental breakdown are done.\n\n");
+
+            protocol.append("EXECUTION SEQUENCE:\n");
+            protocol.append("- Execute verbs one at a time in logical order.\n");
+            protocol.append("- Each verb should produce data needed for the next step.\n");
+            protocol.append("- Use verb lookup to discover verbs as needed.\n");
+            protocol.append("- After each verb execution, evaluate results and determine next step.\n");
+            protocol.append("- If results indicate you need different verbs, use verb lookup again.\n");
+            protocol.append("- Continue executing verbs until ALL task objectives are complete.\n\n");
 
             protocol.append("TASK COMPLETION CRITERIA:\n");
             protocol.append("- A task is ONLY complete when ALL objectives from the context have been fulfilled.\n");
             protocol.append("- Gathering data is NOT completion - you must analyze and act on that data.\n");
-            protocol.append("- If your context says to 'query X and then do Y', you must do BOTH before completing.\n");
+            protocol.append("- Setting up integrations or discovering verbs is NOT completion - these are preparatory steps.\n");
+            protocol.append("- If your context says to 'scan X and query Y', you must: (1) scan X, (2) query Y, (3) analyze results, (4) take action.\n");
+            protocol.append("- If your context says to 'do X if Y not found', you must: (1) do X, (2) check Y, (3) conditionally act based on result.\n");
             protocol.append("- Before setting planStatus to 'completed', verify in summaryForLLM that ALL task objectives are done.\n");
-            protocol.append("- Example: 'Scan terminals and query GitHub' means: (1) scan terminals, (2) query GitHub, (3) analyze results, (4) take action.\n\n");
+            protocol.append("- Example: 'Scan terminals and kill if no GitHub ticket' means:\n");
+            protocol.append("    1. List open terminals (verb: list_open_terminals)\n");
+            protocol.append("    2. Fetch terminal logs (verb: fetch_terminal_logs)\n");
+            protocol.append("    3. Query GitHub for tickets (verb: search_verbs, then github_mcp_proxy)\n");
+            protocol.append("    4. Analyze internally (summaryForLLM: 'Checking if GitHub results match terminal activity...')\n");
+            protocol.append("    5. Kill terminals if no match (verb: kill_terminal_session)\n");
+            protocol.append("- NEVER mark complete after just discovering verbs or listing integrations.\n\n");
 
             protocol.append("ERROR HANDLING:\n");
             protocol.append("- If a verb execution fails with an error, READ THE ERROR MESSAGE carefully.\n");
             protocol.append("- Error messages tell you what's wrong and how to fix it (e.g., missing arguments).\n");
             protocol.append("- Adjust your nextOperation based on the error - don't retry the same invalid operation.\n");
-            protocol.append("- If you tried to skip a required step (like calling call_endpoint without get_endpoints_like), go back and do that step.\n\n");
+            protocol.append("- If you tried to skip a required step (like calling a verb without discovering it first), use verb lookup.\n");
+            protocol.append("- If you used placeholder/example data (e.g., 'encrypted-session-id'), go back and get real data first.\n\n");
+
+            protocol.append("USING EXECUTION RESULTS:\n");
+            protocol.append("- After each verb execution, the results are available in your context.\n");
+            protocol.append("- Extract actual values from previous results to use in subsequent operations.\n");
+            protocol.append("- NEVER use placeholder values like 'encrypted-session-id', 'host-id-123', 'example-value'.\n");
+            protocol.append("- Example: If list_open_terminals returns [{\"hostConnection\": \"abc123\"}], use \"abc123\" not \"encrypted-session-id\".\n");
+            protocol.append("- If you don't see the data you need, the verb likely hasn't been executed yet - do it first.\n\n");
+
+            protocol.append("ANALYSIS vs VERB EXECUTION:\n");
+            protocol.append("- VERBS are for actions: list, fetch, query, kill, send, create, update, delete.\n");
+            protocol.append("- ANALYSIS is internal reasoning - it happens in your summaryForLLM, NOT as a verb.\n");
+            protocol.append("- WRONG: {\"nextOperation\": \"analyze_terminal_logs\"} - 'analyze' is not a verb!\n");
+            protocol.append("- RIGHT: {\"nextOperation\": \"search_verbs\", \"summaryForLLM\": \"Need to query GitHub...\"}\n");
+            protocol.append("- After fetching data, analyze it internally, then execute the NEXT action verb.\n");
+            protocol.append("- Common analysis tasks that are NOT verbs:\n");
+            protocol.append("    * analyze_logs → Do internally, then query GitHub or kill terminal\n");
+            protocol.append("    * check_for_ticket → Query GitHub verb instead\n");
+            protocol.append("    * evaluate_results → Do internally, then decide next verb\n");
+            protocol.append("    * determine_action → Do internally in summaryForLLM\n");
+            protocol.append("- If you need to analyze, set nextOperation to the NEXT ACTION verb or empty string.\n\n");
 
             protocol.append("MULTI-STEP EXECUTION:\n");
             protocol.append("- Break complex tasks into discrete verb operations.\n");
             protocol.append("- Each operation should produce data needed for the next step.\n");
-            protocol.append("- Use the execution results to inform your next operation choice.\n\n");
+            protocol.append("- Use the execution results to inform your next operation choice.\n");
+            protocol.append("- NEVER use placeholder or example values - always use real data from previous verb results.\n");
+            protocol.append("- Example workflow for 'scan terminals and check GitHub':\n");
+            protocol.append("    Step 1: list_open_terminals → Get actual terminal list\n");
+            protocol.append("    Step 2: fetch_terminal_logs → Get actual logs from terminals in Step 1\n");
+            protocol.append("    Step 3: Query GitHub → Use actual data from Step 2 to search\n");
+            protocol.append("    Step 4: Analyze → Check if GitHub results match terminal activity\n");
+            protocol.append("    Step 5: Take action → Kill terminals based on Step 4 analysis\n");
+            protocol.append("- If you don't have the required data yet, go back and get it first.\n\n");
 
-            protocol.append("ENDPOINT CALLING WORKFLOW (MANDATORY TWO-STEP PROCESS):\n");
-            protocol.append("- STEP 1: You MUST call 'get_endpoints_like' FIRST to discover available endpoints.\n");
-            protocol.append("  Example: get_endpoints_like with arguments: { \"endpoints_like\": [\"github issues\", \"list issues\"] }\n");
-            protocol.append("- STEP 2: ONLY AFTER getting results, call 'call_endpoint' with the discovered endpoint.\n");
-            protocol.append("  Example: call_endpoint with arguments: { \"endpointToCall\": { \"endpoint\": \"discovered-url\", \"method\": \"GET\", \"params\": {...} } }\n");
-            protocol.append("- NEVER call 'call_endpoint' without first calling 'get_endpoints_like'.\n");
-            protocol.append("- If 'get_endpoints_like' returns no results, report this in responseForUser and mark complete.\n\n");
-
-            protocol.append("ENDPOINT URL HANDLING:\n");
-            protocol.append("- When calling endpoints with path parameters (e.g., /repos/{owner}/{repo}/issues):\n");
-            protocol.append("  1. You MUST provide concrete values for ALL path parameters in the 'params' object.\n");
-            protocol.append("  2. Extract or infer actual values - do NOT leave placeholders like {owner} or {repo}.\n");
-            protocol.append("  3. If you cannot determine required values, use memory lookup or make reasonable assumptions.\n");
-            protocol.append("  4. Example: For GitHub issues, use actual org/repo names from context or common defaults.\n\n");
+            protocol.append("VERB DISCOVERY WORKFLOW (RECOMMENDED PROCESS):\n");
+            protocol.append("- STEP 1: If you don't know what verbs are available for a task, use verb lookup.\n");
+            protocol.append("  Examples:\n");
+            protocol.append("  * search_verbs with arguments: { \"keywords\": \"slack send message\", \"maxResults\": 5 }\n");
+            protocol.append("  * find_verbs_by_intent with arguments: { \"intent\": \"send notification to Slack\", \"maxResults\": 5 }\n");
+            protocol.append("  * get_verbs_by_category with arguments: { \"category\": \"slack\" }\n");
+            protocol.append("- STEP 2: Review the discovered verbs in the execution results.\n");
+            protocol.append("- STEP 3: Use get_verb_details to get full information about the verb you want to use.\n");
+            protocol.append("  Example: get_verb_details with arguments: { \"verbName\": \"send_slack_message\" }\n");
+            protocol.append("- STEP 4: Execute the discovered verb with proper arguments.\n");
+            protocol.append("  Example: send_slack_message with arguments: { \"channel\": \"#general\", \"message\": \"Hello\" }\n");
+            protocol.append("- If verb lookup returns no results, report this in responseForUser and mark complete.\n\n");
         } else {
             // Chat-driven mode - handle conversational inputs
             protocol.append("CONVERSATIONAL INPUT HANDLING:\n");
@@ -194,14 +222,44 @@ public class ChatVerbs extends VerbBase{
             protocol.append("- For conversational inputs, set nextOperation to empty string and planStatus to 'completed' or 'idle'.\n");
             protocol.append("- DO NOT execute any verbs for simple acknowledgments or greetings.\n");
             protocol.append("- Conversational text MUST NOT trigger new operations.\n");
-            protocol.append("- Always include a user response even for conversational inputs.\n\n");
+            protocol.append("- Always include a user response even for conversational inputs.\n");
+            protocol.append("- If new user input changes requirements, use verb lookup to find appropriate verbs.\n\n");
         }
         
+        protocol.append("VERB DISCOVERY RULES:\n");
+        protocol.append("- The system has 75+ verbs organized by category (slack, k8s, llm, mcp, jira, teams, etc.).\n");
+        protocol.append("- DO NOT assume verb names. Use verb lookup verbs to discover the correct verb:\n");
+        protocol.append("  * search_verbs: Search by keywords (e.g., {\"keywords\": \"slack send message\", \"maxResults\": 5})\n");
+        protocol.append("  * get_verbs_by_category: Browse by category (e.g., {\"category\": \"slack\"})\n");
+        protocol.append("  * get_verb_summary: Get overview of all categories\n");
+        protocol.append("  * get_verb_details: Get full details about a specific verb (e.g., {\"verbName\": \"send_slack_message\"})\n");
+        protocol.append("  * find_verbs_by_intent: Natural language search (e.g., {\"intent\": \"send message to Slack\", \"maxResults\": 5})\n");
+        protocol.append("- Verb discovery workflow:\n");
+        protocol.append("  1. Use search_verbs or find_verbs_by_intent to discover relevant verbs\n");
+        protocol.append("  2. Review the search results in the execution output\n");
+        protocol.append("  3. Use get_verb_details to get full information about the verb you want to use\n");
+        protocol.append("  4. Execute the discovered verb with proper arguments\n");
+        protocol.append("- If new information arrives that changes your plan, repeat the discovery process.\n");
+        protocol.append("- All verbs (except verb lookup verbs themselves) should be discovered through this mechanism.\n\n");
+
         protocol.append("MEMORY RULES:\n");
         protocol.append("- If required information is NOT in the current context, you MUST populate the memoryLookup field.\n");
         protocol.append("- memoryLookup is executed BEFORE nextOperation.\n");
         protocol.append("- Leave memoryLookup empty ONLY if the information is already present.\n\n");
         
+        protocol.append("VERB CHAINING & OUTPUT PASSING:\n");
+        protocol.append("- Verb outputs are automatically stored in memory with their returnName.\n");
+        protocol.append("- To use output from a previous verb as input to the next verb:\n");
+        protocol.append("  1. First verb executes and stores output (e.g., 'verb_search_results')\n");
+        protocol.append("  2. Output is available in memory and in execution results\n");
+        protocol.append("  3. Next verb can reference this data in its arguments\n");
+        protocol.append("- Example workflow:\n");
+        protocol.append("  Step 1: {\"nextOperation\": \"search_verbs\", \"arguments\": {\"keywords\": \"slack send\", \"maxResults\": 5}}\n");
+        protocol.append("  Step 2: Review search results in execution output\n");
+        protocol.append("  Step 3: {\"nextOperation\": \"get_verb_details\", \"arguments\": {\"verbName\": \"send_slack_message\"}}\n");
+        protocol.append("  Step 4: {\"nextOperation\": \"send_slack_message\", \"arguments\": {\"channel\": \"#general\", \"message\": \"Hi\"}}\n");
+        protocol.append("- Always check execution results for verb outputs before planning next steps.\n\n");
+
         protocol.append("MANDATORY RESPONSE FORMAT (LLMResponse):\n");
         protocol.append("{\n");
         protocol.append("  \"previousOperation\": \"<last executed operation or empty>\",\n");
@@ -222,7 +280,9 @@ public class ChatVerbs extends VerbBase{
         
         protocol.append("FAILURE MODE:\n");
         protocol.append("- If NO operation is valid or needed, return nextOperation as an empty string.\n");
-        protocol.append("- NEVER invent verbs.\n");
+        protocol.append("- NEVER invent verbs like 'analyze_terminal_logs', 'check_for_ticket', 'evaluate_results'.\n");
+        protocol.append("- If unsure what verb to use, use search_verbs or find_verbs_by_intent to discover it.\n");
+        protocol.append("- If a verb doesn't exist for your intended action, do the analysis internally and execute the next real verb.\n");
         protocol.append("- NEVER emit partial JSON.\n");
         protocol.append("- NEVER produce more than one JSON object.\n");
         protocol.append("- NEVER re-execute already completed operations.\n");
@@ -315,7 +375,7 @@ public class ChatVerbs extends VerbBase{
                     .build()
             );
             messages.add(Message.builder().role("user").content(userMessage.getContentAsString()).build());
-            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4.1").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
             
             // Only add user message to context, not the full messages array (avoids context duplication)
@@ -388,7 +448,7 @@ public class ChatVerbs extends VerbBase{
             executionContext.addMessages( userMessage );
             messages.add(Message.builder().role("user").content(userMessage.getContentAsString()).build());
 
-            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4.1").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
 
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
@@ -502,8 +562,10 @@ public class ChatVerbs extends VerbBase{
 
             if (isAutonomous) {
                 messages.add(Message.builder().role("system").content("You are operating in autonomous mode. " +
-                    "Analyze your available verbs and create a plan to accomplish your configured task. " +
-                    "Execute one operation at a time using nextOperation.").build());
+                    "Use verb lookup verbs (search_verbs, get_verbs_by_category, get_verb_details) to discover available operations. " +
+                    "Analyze discovered verbs and create a plan to accomplish your configured task. " +
+                    "Execute one operation at a time using nextOperation. " +
+                    "Verb outputs are stored in memory and available for subsequent verb calls.").build());
             } else {
                 messages.add(Message.builder().role("system").content("You have executed verbs for the previous user " +
                     "messages. Please generate a user response that summarizes the last message.").build());
@@ -521,7 +583,7 @@ public class ChatVerbs extends VerbBase{
                 .build()
         );
 
-        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4.1").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
             
             // Only add the LLM response to context, not the entire prompt/messages array
@@ -745,11 +807,11 @@ public class ChatVerbs extends VerbBase{
                 .build()
         );
         
-            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4.1").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
 
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
-            log.info("Response is {}", resp);
+            log.trace("Response is {}", resp);
         Optional<LLMResponse> convertedResponse = LLMResponse.extractStructuredResponse(response);
         String stringResponse = LLMResponse.extractStructuredResponseString(response);
         

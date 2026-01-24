@@ -29,6 +29,7 @@ import com.google.common.collect.Sets;
 import io.sentrius.agent.analysis.agents.agents.AgentConfig;
 import io.sentrius.agent.analysis.agents.agents.PromptBuilder;
 import io.sentrius.agent.analysis.agents.agents.VerbRegistry;
+import io.sentrius.agent.analysis.agents.agents.VerbLookupService;
 import io.sentrius.agent.analysis.model.AssessedTerminal;
 import io.sentrius.agent.analysis.model.Assessment;
 import io.sentrius.agent.analysis.model.LLMResponse;
@@ -77,6 +78,7 @@ public class AgentVerbs extends VerbBase {
     final ZeroTrustClientService zeroTrustClientService;
     final LLMService llmService;
     final VerbRegistry verbRegistry;
+    final VerbLookupService verbLookupService;
     final EndpointRegistry endpointRegistry;
     final EndpointSearcher endpointSearcher;
 
@@ -100,13 +102,14 @@ public class AgentVerbs extends VerbBase {
         @Value("${agent.ai.config}") String agentConfigFile,
         @Value("${agent.ai.context.db.id:none}") String agentDatabaseContext,
         ZeroTrustClientService zeroTrustClientService, LLMService llmService, VerbRegistry verbRegistry,
-        AgentClientService agentService, EndpointRegistry endpointRegistry, EndpointSearcher endpointSearcher,
-        AgentExecutionService agentExecutionService
+        VerbLookupService verbLookupService, AgentClientService agentService, EndpointRegistry endpointRegistry, 
+        EndpointSearcher endpointSearcher, AgentExecutionService agentExecutionService
     ) throws JsonProcessingException {
         super(agentConfigFile, agentDatabaseContext, agentService);
         this.zeroTrustClientService = zeroTrustClientService;
         this.llmService = llmService;
         this.verbRegistry = verbRegistry;
+        this.verbLookupService = verbLookupService;
         this.endpointRegistry = endpointRegistry;
         this.endpointSearcher = endpointSearcher;
 
@@ -137,7 +140,7 @@ public class AgentVerbs extends VerbBase {
 
         messages.add(Message.builder().role("system").content(prompt).build());
 
-        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4.1").messages(messages).build();
         var resp = llmService.askQuestion(execution, chatRequest);
         if (null != context ) {
             context.addMessages(messages);
@@ -250,7 +253,7 @@ public class AgentVerbs extends VerbBase {
                 messages.add(Message.builder().role("system").content("please respond in the following json " +
                     "format: " + respondZtat).build());
 
-                LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+                LLMRequest chatRequest = LLMRequest.builder().model("gpt-4.1").messages(messages).build();
                 context.addMessages(messages);
                 var resp = llmService.askQuestion(execution, chatRequest);
                 Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
@@ -328,7 +331,7 @@ public class AgentVerbs extends VerbBase {
                 messages.add(userMessage);
 
 
-                LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+                LLMRequest chatRequest = LLMRequest.builder().model("gpt-4.1").messages(messages).build();
 
                 var resp = llmService.askQuestion(execution, chatRequest);
                 Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
@@ -363,7 +366,7 @@ public class AgentVerbs extends VerbBase {
             agentContext.addMessages(assistantMessage);
 
 
-            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4.1").messages(messages).build();
             agentContext.addMessages(messages);
             var resp = llmService.askQuestion(execution, chatRequest);
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
@@ -489,7 +492,7 @@ public class AgentVerbs extends VerbBase {
 
             log.info("Messages is {}", messages);
 
-            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini-mini").messages(messages).build();
+            LLMRequest chatRequest = LLMRequest.builder().model("gpt-4.1-mini").messages(messages).build();
             var resp = llmService.askQuestion(execution, chatRequest);
             Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
             //log.info("Assess Response is {}", resp);
@@ -556,7 +559,7 @@ public class AgentVerbs extends VerbBase {
 
                         log.info("Messages is {}", messages);
 
-                        chatRequest = LLMRequest.builder().model("gpt-4o-mini-mini").messages(messages).build();
+                        chatRequest = LLMRequest.builder().model("gpt-4.1-mini").messages(messages).build();
                         resp = llmService.askQuestion(execution, chatRequest);
                         response = JsonUtil.MAPPER.readValue(resp, Response.class);
                         if (response.getOutputItems().isEmpty()) {
@@ -615,7 +618,7 @@ public class AgentVerbs extends VerbBase {
             " " +
             "summarize them. return { \"summary\" : \"summary text\" }").build());
         messages.addAll(status.getMessages());
-        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4.1").messages(messages).build();
         var resp = llmService.askQuestion(execution, chatRequest);
         context.addMessages(messages);
         Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
@@ -720,7 +723,7 @@ public class AgentVerbs extends VerbBase {
         messages.add(Message.builder().role("user").content(userQuery).build());
 
         // Query LLM
-        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4.1").messages(messages).build();
         var resp = llmService.askQuestion(execution, chatRequest);
         context.addMessages(messages);
         Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
@@ -778,7 +781,8 @@ public class AgentVerbs extends VerbBase {
             "This handles context creation, endpoint discovery via LLM, trust policy generation, and agent creation. " +
             "Agent type can be 'chat' (chat only) or 'chat-autonomous' (chat and autonomous). " +
             "Determine agent type based on whether the workload requires autonomous operation.",
-        exampleJson = "{ \"agentName\": \"my-agent\", \"context\": \"Notify when a new user is added\", \"agentType\": \"chat\" }",
+        exampleJson = "{ \"agentName\": \"my-agent\", \"context\": \"Notify when a new user is added\", " +
+            "\"agentType\": \"chat-autonomous\" }",
         requiresTokenManagement = true,
         returnName = "created_agent"
     )
@@ -804,7 +808,7 @@ public class AgentVerbs extends VerbBase {
         }
 
         var agentTypeArg = context.getExecutionArgument("agentType");
-        String agentType = agentTypeArg.isPresent() ? agentTypeArg.get().asText() : "chat";
+        String agentType = agentTypeArg.isPresent() ? agentTypeArg.get().asText() : "chat-autonomous";
 
         log.info("Creating agent '{}' with type '{}' and context: {}", agentName, agentType, originalContext.get().asText());
 
@@ -842,7 +846,7 @@ public class AgentVerbs extends VerbBase {
             " endpoints").build());
         messages.add(Message.builder().role("user").content(originalContext.get().asText()).build());
 
-        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4o-mini").messages(messages).build();
+        LLMRequest chatRequest = LLMRequest.builder().model("gpt-4.1").messages(messages).build();
         var resp = llmService.askQuestion(execution, chatRequest);
 
         Response response = JsonUtil.MAPPER.readValue(resp, Response.class);
@@ -1576,5 +1580,212 @@ public class AgentVerbs extends VerbBase {
         log.info("Found {} semantically similar memories for query: '{}'", memories.size(), query);
         
         return result;
+}
+    /**
+     * Search for verbs by keywords without loading all verbs into context.
+     * This enables efficient verb discovery at scale.
+     *
+     * @param contextDTO The execution context containing 'keywords' and optional 'maxResults'
+     * @return JSON with matching verb descriptors
+     */
+    @Verb(
+        name = "search_verbs",
+        description = "Search for verbs by keywords in name or description. " +
+                     "Requires 'keywords' parameter. Optional: 'maxResults' (default: 10).",
+        returnType = ObjectNode.class,
+        returnName = "verb_search_results",
+        argName = "search_params",
+        exampleJson = "{\"keywords\": \"slack send message\", \"maxResults\": 5}",
+        isAiCallable = true,
+        requiresTokenManagement = false,
+        skipMemoryStorage = true
+    )
+    public ObjectNode searchVerbs(AgentExecutionContextDTO contextDTO) {
+        String keywords = contextDTO.getExecutionArgumentScoped("keywords", String.class)
+            .orElseThrow(() -> new IllegalArgumentException("keywords parameter is required"));
+        int maxResults = contextDTO.getExecutionArgumentScoped("maxResults", Integer.class)
+            .orElse(10);
+
+        log.info("Searching for verbs with keywords: '{}', maxResults: {}", keywords, maxResults);
+
+        List<VerbLookupService.VerbDescriptor> results = verbLookupService.searchVerbs(keywords, maxResults);
+
+        ObjectNode response = JsonUtil.MAPPER.createObjectNode();
+        response.put("query", keywords);
+        response.put("found", results.size());
+
+        ArrayNode verbsArray = response.putArray("verbs");
+        results.forEach(verb -> {
+            ObjectNode verbNode = verbsArray.addObject();
+            verbNode.put("name", verb.getName());
+            verbNode.put("description", verb.getDescription());
+            verbNode.put("category", verb.getCategory());
+            if (verb.getExampleJson() != null && !verb.getExampleJson().isEmpty()) {
+                verbNode.put("exampleJson", verb.getExampleJson());
+            }
+        });
+
+        log.info("Verb search completed. Found {} matching verbs", results.size());
+        return response;
+    }
+
+    /**
+     * Get verbs by category (e.g., slack, k8s, mcp).
+     * This allows agents to explore related verbs together.
+     *
+     * @param contextDTO The execution context containing 'category'
+     * @return JSON with verbs in that category
+     */
+    @Verb(
+        name = "get_verbs_by_category",
+        description = "Get all verbs in a specific category. " +
+                     "Requires 'category' parameter (e.g., 'slack', 'k8s', 'llm', 'mcp').",
+        returnType = ObjectNode.class,
+        returnName = "category_verbs",
+        argName = "category_param",
+        exampleJson = "{\"category\": \"slack\"}",
+        isAiCallable = true,
+        requiresTokenManagement = false,
+        skipMemoryStorage = true
+    )
+    public ObjectNode getVerbsByCategory(AgentExecutionContextDTO contextDTO) {
+        String category = contextDTO.getExecutionArgumentScoped("category", String.class)
+            .orElseThrow(() -> new IllegalArgumentException("category parameter is required"));
+
+        log.info("Getting verbs in category: {}", category);
+
+        List<VerbLookupService.VerbDescriptor> results = verbLookupService.getVerbsByCategory(category);
+
+        ObjectNode response = JsonUtil.MAPPER.createObjectNode();
+        response.put("category", category);
+        response.put("count", results.size());
+
+        ArrayNode verbsArray = response.putArray("verbs");
+        results.forEach(verb -> {
+            ObjectNode verbNode = verbsArray.addObject();
+            verbNode.put("name", verb.getName());
+            verbNode.put("description", verb.getDescription());
+        });
+
+        log.info("Found {} verbs in category '{}'", results.size(), category);
+        return response;
+    }
+
+    /**
+     * Get a summary of all available verb categories.
+     * This provides a high-level view without loading all verb details.
+     *
+     * @param contextDTO The execution context
+     * @return JSON summary of verb categories
+     */
+    @Verb(
+        name = "get_verb_summary",
+        description = "Get a summary of all available verb categories and counts. " +
+                     "This provides an overview of what verbs are available without loading all details.",
+        returnType = JsonNode.class,
+        returnName = "verb_summary",
+        isAiCallable = true,
+        requiresTokenManagement = false,
+        skipMemoryStorage = true
+    )
+    public JsonNode getVerbSummary(AgentExecutionContextDTO contextDTO) {
+        log.info("Getting verb summary");
+        JsonNode summary = verbLookupService.getVerbSummary();
+        log.info("Verb summary retrieved successfully");
+        return summary;
+    }
+
+    /**
+     * Get detailed information about a specific verb.
+     * Use this after finding a verb via search to get full details before calling it.
+     *
+     * @param contextDTO The execution context containing 'verbName'
+     * @return JSON with verb details
+     */
+    @Verb(
+        name = "get_verb_details",
+        description = "Get detailed information about a specific verb. " +
+                     "Requires 'verbName' parameter. Use this after finding a verb via search.",
+        returnType = ObjectNode.class,
+        returnName = "verb_details",
+        argName = "verb_param",
+        exampleJson = "{\"verbName\": \"send_slack_message\"}",
+        isAiCallable = true,
+        requiresTokenManagement = false,
+        skipMemoryStorage = true
+    )
+    public ObjectNode getVerbDetails(AgentExecutionContextDTO contextDTO) {
+        String verbName = contextDTO.getExecutionArgumentScoped("verbName", String.class)
+            .orElseThrow(() -> new IllegalArgumentException("verbName parameter is required"));
+
+        log.info("Getting details for verb: {}", verbName);
+
+        VerbLookupService.VerbDescriptor verb = verbLookupService.getVerbDetails(verbName);
+        if (verb == null) {
+            throw new IllegalArgumentException("Verb not found: " + verbName);
+        }
+
+        ObjectNode response = JsonUtil.MAPPER.createObjectNode();
+        response.put("name", verb.getName());
+        response.put("description", verb.getDescription());
+        response.put("category", verb.getCategory());
+        response.put("argName", verb.getArgName());
+        response.put("returnName", verb.getReturnName());
+        response.put("returnType", verb.getReturnType());
+        response.put("requiresTokenManagement", verb.isRequiresTokenManagement());
+        
+        if (verb.getExampleJson() != null && !verb.getExampleJson().isEmpty()) {
+            response.put("exampleJson", verb.getExampleJson());
+        }
+
+        log.info("Retrieved details for verb: {}", verbName);
+        return response;
+    }
+
+    /**
+     * Find verbs by describing what you want to do (intent-based search).
+     * This is similar to search_verbs but optimized for natural language queries.
+     *
+     * @param contextDTO The execution context containing 'intent' description
+     * @return JSON with matching verbs
+     */
+    @Verb(
+        name = "find_verbs_by_intent",
+        description = "Find verbs by describing what you want to do in natural language. " +
+                     "Requires 'intent' parameter. Optional: 'maxResults' (default: 10). " +
+                     "Example: 'I want to send a message to Slack'",
+        returnType = ObjectNode.class,
+        returnName = "intent_results",
+        argName = "intent_params",
+        exampleJson = "{\"intent\": \"send a message to Slack\", \"maxResults\": 5}",
+        isAiCallable = true,
+        requiresTokenManagement = false,
+        skipMemoryStorage = true
+    )
+    public ObjectNode findVerbsByIntent(AgentExecutionContextDTO contextDTO) {
+        String intent = contextDTO.getExecutionArgumentScoped("intent", String.class)
+            .orElseThrow(() -> new IllegalArgumentException("intent parameter is required"));
+        int maxResults = contextDTO.getExecutionArgumentScoped("maxResults", Integer.class)
+            .orElse(10);
+
+        log.info("Finding verbs by intent: '{}', maxResults: {}", intent, maxResults);
+
+        List<VerbLookupService.VerbDescriptor> results = verbLookupService.findVerbsByIntent(intent, maxResults);
+
+        ObjectNode response = JsonUtil.MAPPER.createObjectNode();
+        response.put("intent", intent);
+        response.put("found", results.size());
+
+        ArrayNode verbsArray = response.putArray("verbs");
+        results.forEach(verb -> {
+            ObjectNode verbNode = verbsArray.addObject();
+            verbNode.put("name", verb.getName());
+            verbNode.put("description", verb.getDescription());
+            verbNode.put("category", verb.getCategory());
+            verbNode.put("compactSummary", verb.toCompactString());
+        });
+
+        log.info("Intent-based verb search completed. Found {} matching verbs", results.size());
+        return response;
     }
 }

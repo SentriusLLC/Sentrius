@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Agent Execution Details</title>
+    <style>
+        .detail-card {
+            background-color: #2d3748;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .detail-label {
+            font-weight: bold;
+            color: #a0aec0;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            color: #fff;
+            margin-bottom: 15px;
+        }
+
+        .resource-link {
+            display: inline-block;
+            margin: 5px 10px 5px 0;
+        }
+
+        .status-badge {
+            font-size: 1.1em;
+            padding: 8px 15px;
+        }
+
+        .logs-container {
+            background-color: #1a202c;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #e2e8f0;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .summary-container {
+            background-color: #2d3748;
+            border-left: 4px solid #4299e1;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<script th:inline="javascript">
+    var executionId = /*[[${executionId}]]*/ '';
+</script>
+
+<script th:inline="none">
+    $(document).ready(function() {
+        // Fetch agent execution audit details
+        $.ajax({
+            url: '/api/v1/sessions/agents/audit/details?executionId=' + encodeURIComponent(executionId),
+            method: 'GET',
+            success: function(audit) {
+                displayAuditDetails(audit);
+            },
+            error: function(xhr, status, error) {
+                console.error('Failed to fetch agent execution audit:', error);
+                $('#detail-container').html('<div class="alert alert-danger">Failed to load agent execution details.</div>');
+            }
+        });
+
+        function displayAuditDetails(audit) {
+            var statusBadgeClass = 'bg-secondary';
+            if (audit.status === 'COMPLETED') {
+                statusBadgeClass = 'bg-success';
+            } else if (audit.status === 'FAILED' || audit.status === 'ERROR') {
+                statusBadgeClass = 'bg-danger';
+            } else if (audit.status === 'RUNNING') {
+                statusBadgeClass = 'bg-warning';
+            }
+
+            var durationText = 'In Progress';
+            if (audit.durationMs !== null && audit.durationMs !== undefined) {
+                var seconds = Math.floor(audit.durationMs / 1000);
+                var minutes = Math.floor(seconds / 60);
+                var hours = Math.floor(minutes / 60);
+
+                if (hours > 0) {
+                    durationText = hours + 'h ' + (minutes % 60) + 'm ' + (seconds % 60) + 's';
+                } else if (minutes > 0) {
+                    durationText = minutes + 'm ' + (seconds % 60) + 's';
+                } else {
+                    durationText = seconds + 's';
+                }
+            }
+
+            var html = '<div class="detail-card">';
+            html += '<h4>Agent Execution Overview</h4>';
+            html += '<div class="row">';
+            html += '<div class="col-md-6">';
+            html += '<div class="detail-label">Agent Type</div>';
+            html += '<div class="detail-value">' + (audit.agentType || 'N/A') + '</div>';
+            html += '<div class="detail-label">Agent ID</div>';
+            html += '<div class="detail-value">' + (audit.agentId || 'N/A') + '</div>';
+            html += '<div class="detail-label">Execution ID</div>';
+            html += '<div class="detail-value"><code>' + (audit.executionId || 'N/A') + '</code></div>';
+            html += '<div class="detail-label">Executed By</div>';
+            html += '<div class="detail-value">' + (audit.executedBy || 'System') + '</div>';
+            html += '</div>';
+            html += '<div class="col-md-6">';
+            html += '<div class="detail-label">Status</div>';
+            html += '<div class="detail-value"><span class="badge status-badge ' + statusBadgeClass + '">' + audit.status + '</span></div>';
+            html += '<div class="detail-label">Start Time</div>';
+            html += '<div class="detail-value">' + (audit.startTime ? new Date(audit.startTime).toLocaleString() : 'N/A') + '</div>';
+            html += '<div class="detail-label">End Time</div>';
+            html += '<div class="detail-value">' + (audit.endTime ? new Date(audit.endTime).toLocaleString() : 'In Progress') + '</div>';
+            html += '<div class="detail-label">Duration</div>';
+            html += '<div class="detail-value">' + durationText + '</div>';
+            
+            if (audit.exitCode !== null && audit.exitCode !== undefined) {
+                html += '<div class="detail-label">Exit Code</div>';
+                html += '<div class="detail-value">' + audit.exitCode + '</div>';
+            }
+            
+            // Show occurrence count if greater than 1
+            if (audit.occurrenceCount && audit.occurrenceCount > 1) {
+                html += '<div class="detail-label">Occurrences</div>';
+                html += '<div class="detail-value"><span class="badge bg-info">' + audit.occurrenceCount + ' times</span></div>';
+
+                if (audit.lastOccurrence) {
+                    html += '<div class="detail-label">Last Occurrence</div>';
+                    html += '<div class="detail-value">' + new Date(audit.lastOccurrence).toLocaleString() + '</div>';
+                }
+            }
+
+            html += '</div>';
+            html += '</div>';
+            html += '</div>';
+
+            // Summary section
+            if (audit.summary && audit.summary.length > 0) {
+                html += '<div class="summary-container">';
+                html += '<h5><i class="bi bi-file-text"></i> Execution Summary</h5>';
+                html += '<p>' + audit.summary + '</p>';
+                html += '</div>';
+            }
+
+            // Resource links section
+            if (audit.resourceLinks && audit.resourceLinks.length > 0) {
+                try {
+                    var resources = JSON.parse(audit.resourceLinks);
+                    if (resources && resources.length > 0) {
+                        html += '<div class="detail-card">';
+                        html += '<h5><i class="bi bi-link-45deg"></i> Resource Links</h5>';
+                        resources.forEach(function(resource) {
+                            html += '<a href="' + resource.url + '" target="_blank" class="btn btn-sm btn-outline-primary resource-link">';
+                            html += '<i class="bi bi-box-arrow-up-right"></i> ' + resource.label;
+                            html += '</a>';
+                        });
+                        html += '</div>';
+                    }
+                } catch (e) {
+                    console.error('Failed to parse resource links:', e);
+                }
+            }
+
+            // Pod logs section
+            if (audit.podLogs && audit.podLogs.length > 0) {
+                html += '<div class="detail-card">';
+                html += '<h5><i class="bi bi-terminal"></i> Pod Logs</h5>';
+                html += '<div class="logs-container">' + audit.podLogs + '</div>';
+                html += '</div>';
+            }
+
+            $('#detail-container').html(html);
+        }
+    });
+</script>
+
+<body>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+                <div th:replace="~{fragments/alerts}"></div>
+
+                <div class="container-fluid">
+                    <div class="container">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h3>Agent Execution Details</h3>
+                            <a href="/sso/v1/sessions/audit/list" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Back to Audit Logs
+                            </a>
+                        </div>
+
+                        <div id="detail-container">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-3">Loading agent execution details...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+
+</html>

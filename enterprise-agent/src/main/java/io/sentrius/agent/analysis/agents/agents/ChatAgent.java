@@ -174,7 +174,7 @@ public class ChatAgent extends BaseEnterpriseAgent {
             throw new RuntimeException(e);
         }
         PromptBuilder promptBuilder = new PromptBuilder(verbRegistry, config);
-        var prompt = promptBuilder.buildPrompt(false);
+        String prompt = promptBuilder.buildPrompt(false);
         // Check if this is an autonomous agent
         boolean isAutonomous = null != agentConfigOptions.getType() && 
             agentConfigOptions.getType().equalsIgnoreCase("chat-autonomous");
@@ -208,6 +208,16 @@ public class ChatAgent extends BaseEnterpriseAgent {
         int consecutiveConversationalResponses = 0;
         
         while(running) {
+
+                // Create a new execution ID for this iteration
+                String iterationExecutionId = java.util.UUID.randomUUID().toString();
+                agentExecution.setCommunicationId(iterationExecutionId);
+
+                // Create audit record for this iteration
+                zeroTrustClientService.createAgentExecutionAudit(agentExecution, isAutonomous ? "chat-autonomous" :
+                    "chat");
+
+                String iterationStatus = "COMPLETED";
 
                 // Check if agent is paused if autonomous mode
                 if (isAutonomous) {
@@ -417,6 +427,12 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                     currentPlanStatus = "idle";
                                     consecutiveConversationalResponses = 0;
                                     
+                                    // CRITICAL: Clear conversation history and short-term memory for fresh start
+                                    agentExecutionContext.getMessages().clear();
+                                    //agentExecutionContext.getAgentShortTermMemory().clear();
+                                    agentExecutionContext.getAgentDataList().clear();
+                                    log.info("Cleared agent execution context (messages, short-term memory, data list) for fresh restart");
+
                                     // Get configurable idle sleep duration (default 30 seconds)
                                     long idleSleepMs = agentConfigOptions.getIdleSleepMs() != null 
                                         ? agentConfigOptions.getIdleSleepMs() 
@@ -434,6 +450,19 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                         }
                                     }
                                     
+                                    // CRITICAL: Reload agent config and rebuild prompt for fresh start
+                                    try {
+                                        config = chatVerbs.getAgentConfig(agentExecution);
+                                        var context = chatVerbs.getAgentContext(agentExecution);
+                                        agentExecutionContext.setAgentContext(context);
+                                        promptBuilder = new PromptBuilder(verbRegistry, config);
+                                        prompt = promptBuilder.buildPrompt(false);
+                                        log.info("Agent config reloaded and prompt rebuilt for new autonomous cycle");
+                                    } catch (IOException | ZtatException e) {
+                                        log.error("Failed to reload agent config on restart: {}", e.getMessage());
+                                        // Continue with existing prompt rather than crashing
+                                    }
+
                                     // Start fresh with new prompt - set response to null to trigger fresh prompt
                                     response = null;
                                 } else if (consecutiveConversationalResponses >= MAX_CONSECUTIVE_CONVERSATIONAL) {
@@ -461,6 +490,7 @@ public class ChatAgent extends BaseEnterpriseAgent {
                     }
                     allowedFailures = 20; // Reset allowed failures on successful heartbeat
                 } catch (ZtatException | Exception ex) {
+                    iterationStatus = "ERROR";
                     // Build a more informative error message for the LLM
                     StringBuilder errorMsg = new StringBuilder();
                     errorMsg.append("Error executing operation");
@@ -482,14 +512,48 @@ public class ChatAgent extends BaseEnterpriseAgent {
                             errorMsg.append("\nYour arguments were: ").append(
                                 response.getArguments() != null ? response.getArguments().toString() : "null"
                             );
+                            errorMsg.append("\n\nPlease adjust your arguments to match the expected format and try again.");
+                        } else {
+                            // Verb doesn't exist - provide discovery guidance
+                            errorMsg.append(", but this verb does not exist in the system.");
+                            errorMsg.append("\n\nThe verb '").append(response.getNextOperation())
+                                    .append("' is not registered. You MUST discover the correct verb before attempting to use it.");
+
+                            errorMsg.append("\n\nIMPORTANT: Use one of these verb discovery operations FIRST:");
+                            errorMsg.append("\n1. search_verbs - Search by keywords: {\"keywords\": \"github issues\", \"maxResults\": 5}");
+                            errorMsg.append("\n2. find_verbs_by_intent - Natural language search: {\"intent\": \"query GitHub issues\"}");
+                            errorMsg.append("\n3. get_verb_summary - Get overview of all verb categories");
+                            errorMsg.append("\n4. get_verbs_by_category - List verbs in a category: {\"category\": \"github\"}");
+
+                            // Try to suggest similar verbs
+                            var allVerbs = verbRegistry.getVerbs();
+                            var requestedVerb = response.getNextOperation().toLowerCase();
+                            var suggestions = allVerbs.keySet().stream()
+                                .filter(v -> {
+                                    String vLower = v.toLowerCase();
+                                    // Find verbs with similar words
+                                    String[] requestedWords = requestedVerb.split("_");
+                                    for (String word : requestedWords) {
+                                        if (word.length() > 3 && vLower.contains(word)) {
+                                            return true;
+                                        }
+                                    }
+                                    return false;
+                                })
+                                .limit(5)
+                                .toList();
+
+                            if (!suggestions.isEmpty()) {
+                                errorMsg.append("\n\nPossible similar verbs you might want to discover:");
+                                suggestions.forEach(s -> errorMsg.append("\n  - ").append(s));
+                            }
+
+                            errorMsg.append("\n\nDo NOT attempt to use verbs without discovering them first.");
                         }
                     }
                     
                     errorMsg.append("\n\nError details: ").append(ex.getMessage());
-                    errorMsg.append("\n\nPlease adjust your arguments to match the expected format and try again OR " +
-                        "try a different verb if you don't have the correct arguments at all." +
-                        ".");
-                    
+
                     agentExecutionContext.addMessages(Message.builder().role("system").content(
                         errorMsg.toString()
                     ).build());
@@ -499,9 +563,35 @@ public class ChatAgent extends BaseEnterpriseAgent {
                         log.error("Failed to heartbeat agent after multiple attempts, shutting down...");
                         throw new RuntimeException(ex);
                     } else {
-                        log.warn("Heartbeat failed, retrying... Remaining attempts: {}", allowedFailures);
+                        log.warn("Operation failed, re-prompting LLM with error context... Remaining attempts: {}", allowedFailures);
+
+                        // CRITICAL: Re-prompt the LLM to get a new decision based on the error message
+                        // The error message is already added to the context, so the LLM will see it
+                        if (isAutonomous && response != null) {
+                            try {
+                                // Re-prompt the agent with the error context to get a corrected response
+                                response = chatVerbs.promptAgent(agentExecution, agentExecutionContext, prompt,
+                                    executedOperations, currentPlanStatus, isAutonomous);
+                                log.info("LLM re-prompted after error. New response: {}",
+                                    response != null ? response.getNextOperation() : "null");
+                            } catch (ZtatException | IOException promptEx) {
+                                log.error("Failed to re-prompt LLM after error: {}", promptEx.getMessage());
+                                // Set response to null to trigger fresh prompt on next iteration
+                                response = null;
+                            }
+                        } else {
+                            // For non-autonomous mode or if response is null, clear response to trigger fresh prompt
+                            response = null;
+                        }
                     }
 
+                }
+
+                // Close audit record for this iteration
+                try {
+                    zeroTrustClientService.closeAgentExecutionAudit(agentExecution, iterationStatus);
+                } catch (ZtatException e) {
+                    log.debug("Could not close audit for chat agent iteration: {}", e.getMessage());
                 }
 
         }

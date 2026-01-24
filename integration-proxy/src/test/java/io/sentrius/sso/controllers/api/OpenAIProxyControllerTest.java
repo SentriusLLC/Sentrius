@@ -72,6 +72,9 @@ class OpenAIProxyControllerTest {
     private AgentService agentService;
 
     @Mock
+    private io.sentrius.sso.core.services.agents.AgentExecutionAuditService agentExecutionAuditService;
+
+    @Mock
     private ApplicationEnvironmentConfig applicationConfig;
 
     @Mock
@@ -88,7 +91,7 @@ class OpenAIProxyControllerTest {
             userService, systemOptions, errorOutputService,
             cryptoService, sessionTrackingService, keycloakService,
             atplPolicyService, ztatService, ztrService,
-            integrationSecurityTokenService, agentService,
+            integrationSecurityTokenService, agentService, agentExecutionAuditService,
             applicationConfig, provenanceKafkaProducer, promptAdvisorService
         );
     }

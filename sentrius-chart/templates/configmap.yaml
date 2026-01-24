@@ -91,6 +91,15 @@ data:
     spring.kafka.properties.metadata.max.age.ms=10000
     spring.kafka.properties.retry.backoff.ms=1000
     spring.kafka.bootstrap-servers=sentrius-kafka:9092
+    # WebSocket and Reactive configurations
+    # Prevent idle timeout disconnections - set to 60 minutes
+    spring.webflux.session.timeout=3600s
+    reactor.netty.http.server.idleTimeout=3600000
+    reactor.netty.http.client.responseTimeout=3600s
+    # Connection pool settings for WebSocket connections
+    reactor.netty.pool.maxConnections=500
+    reactor.netty.pool.acquireTimeout=45000
+    reactor.netty.pool.maxIdleTime=3600000
   llmproxy-application.properties: |
     keystore.file=sso.jceks
     keystore.password=${KEYSTORE_PASSWORD}

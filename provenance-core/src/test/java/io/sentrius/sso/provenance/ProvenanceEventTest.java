@@ -127,13 +127,14 @@ class ProvenanceEventTest {
             ProvenanceEvent.EventType.KNOWLEDGE_REQUESTED,
             ProvenanceEvent.EventType.KNOWLEDGE_DELETED,
             ProvenanceEvent.EventType.AGENT_PAUSED,
-            ProvenanceEvent.EventType.AGENT_RESUMED
+            ProvenanceEvent.EventType.AGENT_RESUMED,
+            ProvenanceEvent.EventType.USER_CHAT_ENDED
         };
 
         for (ProvenanceEvent.EventType type : expectedTypes) {
             assertNotNull(type);
         }
         
-        assertEquals(13, ProvenanceEvent.EventType.values().length);
+        assertEquals(14, ProvenanceEvent.EventType.values().length);
     }
 }

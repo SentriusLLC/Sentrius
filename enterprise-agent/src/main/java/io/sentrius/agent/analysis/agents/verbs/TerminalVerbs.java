@@ -141,11 +141,15 @@ public class TerminalVerbs {
      */
     @Verb(name = "fetch_terminal_logs",
           description = "Retrieves terminal log output content for specified terminals. " +
-                        "Takes 'terminals' argument containing list of HostSystemDTO objects (from list_open_terminals). " +
-                        "With admin privileges, can fetch logs for any user's terminals. " +
-                        "Use list_open_terminals first to get terminals, then pass them here to retrieve log content.",
+                        "AUTOMATIC MODE: If called with NO arguments or just empty {}, this verb automatically " +
+                        "retrieves terminals from agent memory (list_open_terminals) - THIS IS THE RECOMMENDED USAGE. " +
+                        "MANUAL MODE: Pass 'terminals' argument with full HostSystemDTO objects from list_open_terminals. " +
+                        "DO NOT pass just terminal IDs - you must pass complete terminal objects with 'hostConnection' field. " +
+                        "With admin privileges, can fetch logs for any user's terminals.",
           returnType = List.class,
-          exampleJson = "\"terminals\" : [{ \"id\" : 1, \"hostConnection\" : \"encrypted-session-id\" }]",
+          returnName = "fetch_terminal_logs",
+          argName = "terminals",
+          exampleJson = "{} OR {\"terminals\": [{\"id\": 1, \"hostConnection\": \"encrypted-session-id\"}]}",
           requiresTokenManagement = true,
           skipMemoryStorage = true)  // Don't store terminal logs in persistent memory - they're large and session-specific
     public List<ObjectNode> fetchTerminalOutput(TokenDTO token, AgentExecutionContextDTO contextDTO) throws ZtatException {
@@ -214,11 +218,57 @@ public class TerminalVerbs {
                 }
             }
 
+            // Fallback: If no terminals were provided, try to retrieve from agent memory
+            if (dtos.isEmpty()) {
+                log.info("No terminals in arguments, attempting to retrieve from agent memory (list_open_terminals)");
+                Object memoryTerminals = contextDTO.getAgentShortTermMemory().get("list_open_terminals");
+
+                if (memoryTerminals != null) {
+                    try {
+                        // Convert memory object to JsonNode and then to DTOs
+                        JsonNode memoryNode = JsonUtil.MAPPER.valueToTree(memoryTerminals);
+                        log.info("Found terminals in memory, type: {}, isArray: {}",
+                            memoryNode.getNodeType(), memoryNode.isArray());
+
+                        if (memoryNode.isArray()) {
+                            for (JsonNode item : memoryNode) {
+                                try {
+                                    HostSystemDTO dto = JsonUtil.MAPPER.treeToValue(item, HostSystemDTO.class);
+                                    dtos.add(dto);
+                                    log.info("Added terminal from memory: id={}, host={}, hostConnection={}",
+                                        dto.getId(), dto.getHost(),
+                                        dto.getHostConnection() != null ? "present" : "null");
+                                } catch (Exception e) {
+                                    log.error("Failed to convert memory terminal to HostSystemDTO: {}", e.getMessage(), e);
+                                }
+                            }
+                            log.info("Successfully retrieved {} terminals from agent memory", dtos.size());
+                        }
+                    } catch (Exception e) {
+                        log.error("Failed to parse terminals from memory: {}", e.getMessage(), e);
+                    }
+                } else {
+                    log.warn("No terminals found in agent memory under key 'list_open_terminals'");
+                }
+            }
+
             log.debug("Terminal list response: {}", dtos);
 
             if (dtos.isEmpty()) {
-                log.warn("No terminals to fetch logs from");
-                return responses;
+                log.error("No terminals to fetch logs from. Execution args: {}", contextDTO.getExecutionArgs());
+
+                // Provide helpful error message to guide the agent
+                String errorMsg = "No terminals provided to fetch logs from. " +
+                    "\n\nYou must pass the terminal objects from list_open_terminals. " +
+                    "\n\nCorrect usage:" +
+                    "\n1. Use memoryLookup to retrieve 'list_open_terminals' from agent memory" +
+                    "\n2. Pass those terminal objects to this verb: {\"terminals\": <terminal_objects_from_memory>}" +
+                    "\n\nAlternatively, if you have already executed list_open_terminals, this verb will " +
+                    "automatically retrieve those terminals from memory." +
+                    "\n\nAvailable memory keys: " + contextDTO.getAgentShortTermMemory().keySet() +
+                    "\nProvided arguments: " + contextDTO.getExecutionArgs();
+
+                throw new IllegalArgumentException(errorMsg);
             }
 
             for (HostSystemDTO dto : dtos) {
@@ -284,10 +334,9 @@ public class TerminalVerbs {
                         }
                         try {
                             // sessionId is already encrypted, don't URL encode it
-                            var sessionId = dto.getAssessment().getSessionId();
                             var response = zeroTrustClientService.callPutOnApi(
                                 execution, "/ssh/terminal/kill",
-                                Maps.immutableEntry("sessionId", List.of(sessionId))
+                                Maps.immutableEntry("sessionId", List.of(dto.getAssessment().getSessionId()))
                             );
                             if (response != null) {
                                 // Successfully retrieved logs
@@ -317,10 +366,9 @@ public class TerminalVerbs {
                             var token = agentVerbs.justifyAgent(execution,contextDTO, ztatRequestDTO, dto);
                             execution.setZtatToken(token);
                             // sessionId is already encrypted, don't URL encode it
-                            var sessionId = dto.getAssessment().getSessionId();
                             var response = zeroTrustClientService.callPutOnApi(
                                 execution, "/ssh/terminal/kill",
-                                Maps.immutableEntry("sessionId", List.of(sessionId))
+                                Maps.immutableEntry("sessionId", List.of(dto.getAssessment().getSessionId()))
                             );
                         }
                     }
@@ -329,6 +377,110 @@ public class TerminalVerbs {
         } catch (Exception | ZtatException e) {
             throw new RuntimeException("Failed to retrieve terminal list", e);
         }
+    }
+
+    @Verb(name = "kill_terminal_session",
+        description = "Kills an open terminal session by its hostConnection or sessionId. " +
+            "AUTOMATIC MODE: If called with just 'terminalId' or no valid arguments, automatically retrieves " +
+            "hostConnection from agent memory (list_open_terminals) - THIS IS THE RECOMMENDED USAGE. " +
+            "MANUAL MODE: Pass 'hostConnection' (from HostSystemDTO) or 'sessionId' parameter directly. " +
+            "Use this to terminate terminals found via list_open_terminals.",
+        exampleJson = "{\"terminalId\": 1} OR {\"hostConnection\": \"encrypted-session-id\"}",
+        argName = "kill_params",
+        returnName = "kill_result",
+        requiresTokenManagement = true)
+    public ObjectNode killTerminalSession(AgentExecution execution, AgentExecutionContextDTO contextDTO)
+        throws ZtatException, IOException {
+
+        // Get either hostConnection or sessionId
+        String sessionId = contextDTO.getExecutionArgumentScoped("hostConnection", String.class)
+            .or(() -> contextDTO.getExecutionArgumentScoped("sessionId", String.class))
+            .orElse(null);
+
+        // Fallback: If no sessionId/hostConnection provided, try to get from memory using terminalId
+        if (sessionId == null) {
+            log.info("No hostConnection or sessionId provided, attempting memory fallback");
+
+            // Check if terminalId was provided
+            Integer terminalId = contextDTO.getExecutionArgumentScoped("terminalId", Integer.class).orElse(null);
+
+            if (terminalId != null) {
+                log.info("Found terminalId: {}, looking up hostConnection from list_open_terminals in memory", terminalId);
+
+                // Get terminals from memory
+                Object memoryTerminals = contextDTO.getAgentShortTermMemory().get("list_open_terminals");
+                if (memoryTerminals != null) {
+                    try {
+                        JsonNode memoryNode = JsonUtil.MAPPER.valueToTree(memoryTerminals);
+                        if (memoryNode.isArray()) {
+                            for (JsonNode item : memoryNode) {
+                                if (item.has("id") && item.get("id").asInt() == terminalId) {
+                                    if (item.has("hostConnection")) {
+                                        sessionId = item.get("hostConnection").asText();
+                                        log.info("Found hostConnection for terminalId {}: {}", terminalId,
+                                            sessionId != null ? "present" : "null");
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.error("Failed to parse terminals from memory: {}", e.getMessage(), e);
+                    }
+                }
+
+                if (sessionId == null) {
+                    log.warn("Could not find terminal with id {} in memory", terminalId);
+                }
+            }
+        }
+
+        // Final validation
+        if (sessionId == null) {
+            String errorMsg = "Either 'hostConnection' or 'sessionId' parameter is required. " +
+                "\n\nAutomatic usage: Pass 'terminalId' (from list_open_terminals) and the verb will " +
+                "automatically look up the hostConnection from memory." +
+                "\n\nManual usage: Pass 'hostConnection' directly from terminal object." +
+                "\n\nExample: {\"terminalId\": 1}" +
+                "\n\nAvailable memory keys: " + contextDTO.getAgentShortTermMemory().keySet() +
+                "\nProvided arguments: " + contextDTO.getExecutionArgs();
+            throw new IllegalArgumentException(errorMsg);
+        }
+
+        log.info("Killing terminal session: {}", sessionId);
+
+        ObjectNode result = JsonUtil.MAPPER.createObjectNode();
+        result.put("sessionId", sessionId);
+
+        try {
+            // Call the API to kill the terminal session
+            var response = zeroTrustClientService.callPutOnApi(
+                execution, "/ssh/terminal/kill",
+                Maps.immutableEntry("sessionId", List.of(sessionId))
+            );
+
+            if (response != null) {
+                result.put("status", "killed");
+                result.put("response", response);
+                log.info("Successfully killed terminal session: {}", sessionId);
+            } else {
+                result.put("status", "error");
+                result.put("message", "No response from kill API");
+            }
+        } catch (ZtatException e) {
+            log.error("Failed to kill session - ZTAT approval required", e);
+            result.put("status", "requires_approval");
+            result.put("error", e.getMessage());
+            result.put("message", "Terminal kill requires zero-trust approval. Use kill_session_with_assessment for automatic approval flow.");
+            throw new RuntimeException("Terminal kill requires approval: " + e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Failed to kill terminal session", e);
+            result.put("status", "error");
+            result.put("error", e.getMessage());
+            throw new RuntimeException("Failed to kill terminal session: " + e.getMessage(), e);
+        }
+
+        return result;
     }
 
     @Verb(name = "open_ssh_terminal", description = "Opens an SSH websocket connection to a host system. " +
@@ -575,7 +727,7 @@ public class TerminalVerbs {
      * @return An ArrayNode containing this agent's WebSocket terminal sessions
      * @throws ZtatException If there is an error during the operation
      */
-    @Verb(name = "list_active_terminal_sessions",
+    @Verb(name = "list_my_active_terminal_sessions",
           description = "Lists SSH terminal sessions that THIS AGENT has opened via WebSocket (open_ssh_terminal verb). " +
                         "Does NOT list other users' terminals or system-wide sessions. " +
                         "For monitoring other users' terminal activity, use list_open_terminals instead. " +

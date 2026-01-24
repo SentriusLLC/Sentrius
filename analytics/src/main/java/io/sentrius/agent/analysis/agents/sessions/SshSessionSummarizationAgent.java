@@ -7,6 +7,7 @@ import io.sentrius.sso.core.repository.SessionLogRepository;
 import io.sentrius.sso.core.repository.SshSessionSummaryRepository;
 import io.sentrius.sso.core.repository.TerminalLogsRepository;
 import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
+import io.sentrius.sso.core.services.agents.AgentExecutionAuditService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -32,7 +33,8 @@ public class SshSessionSummarizationAgent {
     private final TerminalLogsRepository terminalLogsRepository;
     private final SshSessionSummaryRepository summaryRepository;
     private final IntegrationSecurityTokenService integrationSecurityTokenService;
-    
+    private final AgentExecutionAuditService auditService;
+
     /**
      * Process SSH sessions that have closed and don't have summaries yet - runs every 2 minutes
      */
@@ -44,23 +46,48 @@ public class SshSessionSummarizationAgent {
             log.debug("LLM integration not available, skipping SSH session summarization");
             return;
         }
-        
-        log.info("Processing SSH sessions without summaries...");
-        
+
+        log.debug("Checking for SSH sessions without summaries...");
+
         // Find closed sessions without summaries
         List<Long> sessionIds = summaryRepository.findClosedSessionsWithoutSummaries();
-        
-        log.info("Found {} SSH sessions to summarize", sessionIds.size());
-        
-        for (Long sessionId : sessionIds) {
-            try {
-                processSession(sessionId);
-            } catch (Exception e) {
-                log.error("Error processing SSH session {}: {}", sessionId, e.getMessage(), e);
-            }
+
+        // Skip audit creation if there's nothing to process
+        if (sessionIds.isEmpty()) {
+            log.debug("No SSH sessions to summarize");
+            return;
         }
-        
-        log.info("Finished processing SSH sessions");
+
+        // Only create audit when we have actual work to do
+        String taskExecutionId = java.util.UUID.randomUUID().toString();
+        createTaskAudit(taskExecutionId, "ssh-session-summarizer");
+
+        String taskStatus = "COMPLETED";
+        log.info("Processing {} SSH sessions without summaries...", sessionIds.size());
+
+        try {
+
+            int failed = 0;
+            for (Long sessionId : sessionIds) {
+                try {
+                    processSession(sessionId);
+                } catch (Exception e) {
+                    log.error("Error processing SSH session {}: {}", sessionId, e.getMessage(), e);
+                    failed++;
+                }
+            }
+
+            log.info("Finished processing SSH sessions");
+
+            if (failed > 0) {
+                taskStatus = "COMPLETED_WITH_ERRORS";
+            }
+        } catch (Exception e) {
+            log.error("Error in processSshSessions", e);
+            taskStatus = "ERROR";
+        } finally {
+            closeTaskAudit(taskExecutionId, taskStatus);
+        }
     }
     
     /**
@@ -235,6 +262,35 @@ public class SshSessionSummarizationAgent {
         } catch (Exception e) {
             log.debug("Error checking LLM availability", e);
             return false;
+        }
+    }
+
+    /**
+     * Create an audit record for a scheduled task execution
+     */
+    private void createTaskAudit(String taskExecutionId, String agentType) {
+        try {
+            auditService.createAudit(
+                "analytics-agent",
+                taskExecutionId,
+                agentType,
+                "system"
+            );
+            log.debug("Created audit for {} task: {}", agentType, taskExecutionId);
+        } catch (Exception e) {
+            log.debug("Could not create audit for {} task: {}", agentType, e.getMessage());
+        }
+    }
+
+    /**
+     * Close an audit record for a scheduled task execution
+     */
+    private void closeTaskAudit(String taskExecutionId, String status) {
+        try {
+            auditService.closeAudit(taskExecutionId, status);
+            log.debug("Closed audit for task {} with status: {}", taskExecutionId, status);
+        } catch (Exception e) {
+            log.debug("Could not close audit for task: {}", e.getMessage());
         }
     }
 }

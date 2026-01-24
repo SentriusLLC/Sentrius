@@ -88,5 +88,22 @@ public class AuditController extends BaseController {
         model.addAttribute("sessionId", sessionId);
         return "sso/sessions/rdp_session_view";
     }
+    
+    @GetMapping("/agents/audit/list")
+    @LimitAccess(sshAccess ={ SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public String agentAuditList(HttpServletRequest request, HttpServletResponse response, Model model) {
+        log.info("Viewing agent execution audit list");
+        return "sso/sessions/audit_users";
+    }
+    
+    @GetMapping("/agents/audit/view")
+    @LimitAccess(sshAccess ={ SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public String viewAgentAudit(
+        HttpServletRequest request, HttpServletResponse response,
+        @RequestParam("executionId") String executionId, Model model) {
+        log.info("Viewing agent execution audit {}", executionId);
+        model.addAttribute("executionId", executionId);
+        return "sso/sessions/agent_audit_view";
+    }
 
 }

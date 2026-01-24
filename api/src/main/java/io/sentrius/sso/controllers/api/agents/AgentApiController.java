@@ -162,7 +162,7 @@ public class AgentApiController extends BaseController {
             var username = keycloakService.extractUsername(compactJwt);
             operatingUser = userService.getUserByUsername(username);
         }
-        log.info("Received heartbeat from agent: {} {}", agentId, operatingUser);
+        log.trace("Received heartbeat from agent: {} {}", agentId, operatingUser);
         if (status.getStatus() == null || status.getStatus().isEmpty()) {
             log.warn("Heartbeat status is empty");
             return ResponseEntity.status(HttpStatus.SC_BAD_REQUEST).body("Heartbeat status is empty");
@@ -170,7 +170,7 @@ public class AgentApiController extends BaseController {
 
         agentService.recordHeartbeat(operatingUser.getUserId(),status.getName(), status);
         agentService.setCallBack(operatingUser, status.getAgentUrl());
-        log.info("Heartbeat status recorded for agent: {} {}", agentId, status);
+        log.trace("Heartbeat status recorded for agent: {} {}", agentId, status);
         return ResponseEntity.ok(Map.of("status", "success"));
     }
 
@@ -202,7 +202,7 @@ public class AgentApiController extends BaseController {
         }
 
         var communicationId = UUID.randomUUID().toString();
-        log.info("Received registration request from agent: {} {}", agentId, operatingUser);
+        log.debug("Received registration request from agent: {} {}", agentId, operatingUser);
         // Store the request in the database
         var ztatRequest = ztatService.createAgentRequest(agentId, "registration", "register",
             ZeroTrustAccessTokenReason.builder().commandNeed("registration call").reasonIdentifier(UUID.randomUUID().toString()).build(),

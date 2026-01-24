@@ -168,17 +168,34 @@ public class VerbRegistry {
                                 Map<String, Object> args)
         throws Exception {
 
-        log.info("Executing {}",  contextDTO);
+        // Enhanced logging for verb execution tracking
+        log.info("╔════════════════════════════════════════════════════════════════");
+        log.info("║ VERB EXECUTION START: {}", verb);
+        log.info("╠════════════════════════════════════════════════════════════════");
+
         synchronized (this) {
             var agentVerb = verbs.get(verb);
             if (null == agentVerb) {
+                log.error("║ ERROR: Unknown verb: {}", verb);
+                log.info("╚════════════════════════════════════════════════════════════════");
                 throw new IllegalArgumentException("Unknown verb: " + verb);
             }
 
-            if (null != args) {
+            // Log verb metadata
+            log.info("║ Verb Description: {}", agentVerb.getDescription());
+            log.info("║ Return Type: {}", agentVerb.getReturnType() != null ? agentVerb.getReturnType().getSimpleName() : "void");
+            log.info("║ Return Name: {}", agentVerb.getReturnName() != null ? agentVerb.getReturnName() : "N/A");
+            log.info("║ Requires Token Management: {}", agentVerb.isRequiresTokenManagement());
 
+            // Log input arguments
+            if (null != args && !args.isEmpty()) {
+                log.info("║ Input Arguments:");
                 for (Map.Entry<String, Object> entry : args.entrySet()) {
                     contextDTO.getExecutionArgs().put(entry.getKey(), entry.getValue().toString());
+                    log.info("║   - {}: {} (type: {})",
+                        entry.getKey(),
+                        entry.getValue(),
+                        entry.getValue() != null ? entry.getValue().getClass().getSimpleName() : "null");
                 }
 
                 if (agentVerb.getArgName() != null && !agentVerb.getArgName().isEmpty() && !agentVerb.getArgName().equals("arg1")) {
@@ -186,17 +203,24 @@ public class VerbRegistry {
                     for (Map.Entry<String, Object> entry : args.entrySet()) {
                         var node = JsonUtil.MAPPER.valueToTree(entry.getValue());
                         object.put(entry.getKey(), node);
-                        log.info("Interpreting input " +
-                            "for AgentExecutionContextDTO: {}", entry.getValue());
                     }
-
-
                     contextDTO.getExecutionArgs().put(agentVerb.getArgName(), object);
-
+                    log.info("║ Structured argument '{}' populated with {} fields", agentVerb.getArgName(), object.size());
                 }
+            } else {
+                log.info("║ Input Arguments: (none)");
             }
 
-            log.info("Executing verb: {}", verb);
+            // Log execution context summary
+            log.info("║ Short-term Memory Keys: {}", contextDTO.getAgentShortTermMemory().keySet());
+
+            // Get execution args keys (ObjectNode doesn't have keySet, use fieldNames)
+            java.util.List<String> execArgKeys = new java.util.ArrayList<>();
+            contextDTO.getExecutionArgs().fieldNames().forEachRemaining(execArgKeys::add);
+            log.info("║ Execution Args Keys: {}", execArgKeys);
+
+            log.info("╠════════════════════════════════════════════════════════════════");
+            log.info("║ EXECUTING VERB...");
             var returnType = agentVerb.getReturnType();
             var returnName = agentVerb.getReturnName();
             if (null != priorResponse ) {
@@ -211,18 +235,39 @@ public class VerbRegistry {
             }
             try {
 
-
-
                 var thisVerb = agentVerb;
                 var exec = thisVerb.isRequiresTokenManagement() ?
                     method.invoke(instance, agentExecution, contextDTO) :
                     method.invoke(instance, contextDTO);
 
                 JsonNode execNode = JsonUtil.MAPPER.valueToTree(exec);
-                log.info("Interpreting output for AgentExecutionContextDTO: {}", execNode);
-                
+
+                // Log execution output
+                log.info("╠════════════════════════════════════════════════════════════════");
+                log.info("║ VERB EXECUTION SUCCESSFUL");
+                log.info("║ Output Type: {}", exec != null ? exec.getClass().getSimpleName() : "null");
+
+                // Log output content (with size limits for large outputs)
+                String outputStr = execNode.toString();
+                if (outputStr.length() > 500) {
+                    log.info("║ Output (truncated): {}...", outputStr.substring(0, 500));
+                    log.info("║ Output Size: {} characters (full output in TRACE)", outputStr.length());
+                    log.trace("║ Full Output: {}", outputStr);
+                } else {
+                    log.info("║ Output: {}", outputStr);
+                }
+
                 // Handle memory storage based on verb configuration
                 handleMemoryStorage(thisVerb, verb, execNode, contextDTO);
+
+                // Log memory storage result
+                if (!thisVerb.isSkipMemoryStorage() && returnName != null && !returnName.isEmpty()) {
+                    log.info("║ Stored in Memory: key='{}', skipMemoryStorage={}", returnName, thisVerb.isSkipMemoryStorage());
+                } else {
+                    log.info("║ Memory Storage: skipped (skipMemoryStorage={})", thisVerb.isSkipMemoryStorage());
+                }
+
+                log.info("╚════════════════════════════════════════════════════════════════");
 
                 return VerbResponse.builder()
                     .returnType(returnType)
@@ -232,7 +277,10 @@ public class VerbRegistry {
             } catch (InvocationTargetException e) {
                     Throwable targetException = e.getTargetException();
                     if (targetException instanceof ZtatException ztatEx) {
-                        log.info("Mechanisms {}" , ztatEx.getMechanisms());
+                        log.info("╠════════════════════════════════════════════════════════════════");
+                        log.info("║ ZTAT TOKEN REQUIRED - Requesting additional permissions");
+                        log.info("║ Mechanisms: {}", ztatEx.getMechanisms());
+
                         var endpoint = zeroTrustClientService.createEndPointRequest("prompt_agent`", ztatEx.getEndpoint());
                         ZtatRequestDTO ztatRequestDTO = ZtatRequestDTO.builder()
                             .user(agentExecution.getUser())
@@ -247,7 +295,7 @@ public class VerbRegistry {
                             request, 60, TimeUnit.MINUTES);
                         agentExecution.setZtatToken(token);
 
-                        log.info("Re-attempting verb execution after Ztat token acquisition: {}", verb);
+                        log.info("║ ZTAT Token acquired, retrying verb execution...");
 
                         var thisVerb = agentVerb;
                         var exec = thisVerb.isRequiresTokenManagement() ?
@@ -255,8 +303,22 @@ public class VerbRegistry {
                             method.invoke(instance, contextDTO);
                         JsonNode execNode = JsonUtil.MAPPER.valueToTree(exec);
                         
+                        // Log retry output
+                        log.info("╠════════════════════════════════════════════════════════════════");
+                        log.info("║ VERB EXECUTION SUCCESSFUL (after ZTAT retry)");
+                        String outputStr = execNode.toString();
+                        if (outputStr.length() > 500) {
+                            log.info("║ Output (truncated): {}...", outputStr.substring(0, 500));
+                            log.info("║ Output Size: {} characters", outputStr.length());
+                            log.trace("║ Full Output: {}", outputStr);
+                        } else {
+                            log.info("║ Output: {}", outputStr);
+                        }
+
                         // Handle memory storage based on verb configuration (retry path)
                         handleMemoryStorage(thisVerb, verb, execNode, contextDTO);
+
+                        log.info("╚════════════════════════════════════════════════════════════════");
 
                         return VerbResponse.builder()
                             .returnType(returnType)
@@ -266,11 +328,21 @@ public class VerbRegistry {
 
                         // re-attempt
                     } else {
+                        log.error("╠════════════════════════════════════════════════════════════════");
+                        log.error("║ VERB EXECUTION FAILED - Non-ZTAT Exception");
+                        log.error("║ Exception Type: {}", targetException.getClass().getName());
+                        log.error("║ Error Message: {}", targetException.getMessage());
+                        log.error("╚════════════════════════════════════════════════════════════════");
                         throw new RuntimeException(targetException);
                     }
             } catch (Exception e) {
-                log.info(method.getName() + " failed", e);
-                e.printStackTrace();
+                log.error("╠════════════════════════════════════════════════════════════════");
+                log.error("║ VERB EXECUTION FAILED - Exception during execution");
+                log.error("║ Method: {}", method.getName());
+                log.error("║ Exception Type: {}", e.getClass().getName());
+                log.error("║ Error Message: {}", e.getMessage());
+                log.error("╚════════════════════════════════════════════════════════════════", e);
+
                 contextDTO.addMessages(Message.builder().role("system").content("Previous request failed: " + e.getMessage()).build());
                 throw new RuntimeException("Failed to execute verb: " + verb, e);
             }

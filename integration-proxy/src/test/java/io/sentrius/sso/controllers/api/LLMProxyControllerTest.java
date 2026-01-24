@@ -72,6 +72,9 @@ class LLMProxyControllerTest {
     private AgentService agentService;
 
     @Mock
+    private io.sentrius.sso.core.services.agents.AgentExecutionAuditService agentExecutionAuditService;
+
+    @Mock
     private ApplicationEnvironmentConfig applicationConfig;
 
     @Mock
@@ -93,7 +96,7 @@ class LLMProxyControllerTest {
             userService, systemOptions, errorOutputService,
             cryptoService, sessionTrackingService, keycloakService,
             ztatService, ztrService, integrationSecurityTokenService,
-            agentService, applicationConfig, provenanceKafkaProducer,
+            agentService, agentExecutionAuditService, applicationConfig, provenanceKafkaProducer,
             promptAdvisorService
         ));
         request = new MockHttpServletRequest();

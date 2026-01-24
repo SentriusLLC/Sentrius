@@ -28,6 +28,9 @@ import io.sentrius.sso.core.services.auditing.AuditService;
 import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.core.services.terminal.SessionTrackingService;
+import io.sentrius.sso.core.services.agents.AgentExecutionAuditService;
+import io.sentrius.sso.core.dto.agents.AgentExecutionAuditDTO;
+import io.sentrius.sso.core.model.agents.AgentExecutionAudit;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -53,6 +56,7 @@ public class AuditApiController extends BaseController {
     private final RdpSessionSummaryRepository rdpSessionSummaryRepository;
     private final RdpSessionScreenshotRepository rdpSessionScreenshotRepository;
     private final SshSessionSummaryRepository sshSessionSummaryRepository;
+    private final AgentExecutionAuditService agentExecutionAuditService;
 
     private WebClient webClient;
 
@@ -65,7 +69,8 @@ public class AuditApiController extends BaseController {
         KeycloakService keycloakService,
         RdpSessionSummaryRepository rdpSessionSummaryRepository,
         RdpSessionScreenshotRepository rdpSessionScreenshotRepository,
-        SshSessionSummaryRepository sshSessionSummaryRepository
+        SshSessionSummaryRepository sshSessionSummaryRepository,
+        AgentExecutionAuditService agentExecutionAuditService
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
@@ -76,6 +81,7 @@ public class AuditApiController extends BaseController {
         this.rdpSessionSummaryRepository = rdpSessionSummaryRepository;
         this.rdpSessionScreenshotRepository = rdpSessionScreenshotRepository;
         this.sshSessionSummaryRepository = sshSessionSummaryRepository;
+        this.agentExecutionAuditService = agentExecutionAuditService;
         try {
             this.webClient = WebClient.builder().baseUrl(appConfig.getAgentProxyExternalUrl()).build();
         }
@@ -240,6 +246,183 @@ public class AuditApiController extends BaseController {
                     .body(screenshot.getImageData());
             })
             .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * List all agent execution audits
+     */
+    @GetMapping("/agents/audit/list")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN}, sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<List<AgentExecutionAuditDTO>> listAgentExecutionAudits(
+        HttpServletRequest request, 
+        HttpServletResponse response
+    ) {
+        List<AgentExecutionAudit> audits = agentExecutionAuditService.getAllAudits();
+        List<AgentExecutionAuditDTO> dtos = audits.stream()
+            .map(this::convertToDTO)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
+    }
+
+    /**
+     * Get details for a specific agent execution audit
+     */
+    @GetMapping("/agents/audit/details")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN}, sshAccess = {SSHAccessEnum.CAN_MANAGE_SYSTEMS})
+    public ResponseEntity<AgentExecutionAuditDTO> getAgentExecutionAudit(
+        @RequestParam String executionId,
+        HttpServletRequest request,
+        HttpServletResponse response
+    ) {
+        return agentExecutionAuditService.getAuditByExecutionId(executionId)
+            .map(this::convertToDTO)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Create a new agent execution audit record
+     */
+    @PostMapping("/agents/audit/create")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
+    public ResponseEntity<AgentExecutionAuditDTO> createAgentExecutionAudit(
+        @RequestParam String agentId,
+        @RequestParam String executionId,
+        @RequestParam String agentType,
+        @RequestParam(required = false) String executedBy,
+        HttpServletRequest request
+    ) {
+        AgentExecutionAudit audit = agentExecutionAuditService.createAudit(
+            agentId, executionId, agentType, executedBy
+        );
+        return ResponseEntity.ok(convertToDTO(audit));
+    }
+
+    /**
+     * Update agent execution audit with completion details
+     */
+    @PostMapping("/agents/audit/update")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
+    public ResponseEntity<AgentExecutionAuditDTO> updateAgentExecutionAudit(
+        @RequestParam String executionId,
+        @RequestParam String status,
+        @RequestParam(required = false) String summary,
+        @RequestParam(required = false) String resourceLinks,
+        @RequestParam(required = false) Integer exitCode,
+        HttpServletRequest request
+    ) {
+        AgentExecutionAudit audit = agentExecutionAuditService.updateAuditCompletion(
+            executionId, status, summary, resourceLinks, exitCode
+        );
+        if (audit == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(convertToDTO(audit));
+    }
+
+    /**
+     * Update pod logs for an agent execution
+     */
+    @PostMapping("/agents/audit/logs")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
+    public ResponseEntity<Void> updateAgentExecutionLogs(
+        @RequestParam String executionId,
+        @RequestBody String podLogs,
+        HttpServletRequest request
+    ) {
+        agentExecutionAuditService.updatePodLogs(executionId, podLogs);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Close an agent execution audit (sets endTime and status)
+     */
+    @PostMapping("/agents/audit/close")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
+    public ResponseEntity<AgentExecutionAuditDTO> closeAgentExecutionAudit(
+        @RequestParam String executionId,
+        @RequestParam(required = false, defaultValue = "COMPLETED") String status,
+        HttpServletRequest request
+    ) {
+        AgentExecutionAudit audit = agentExecutionAuditService.closeAudit(executionId, status);
+        if (audit == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(convertToDTO(audit));
+    }
+
+    /**
+     * Delete all agent execution audits
+     */
+    @DeleteMapping("/agents/audit/all")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<Map<String, Object>> deleteAllAgentExecutionAudits(
+        HttpServletRequest request
+    ) {
+        long deletedCount = agentExecutionAuditService.deleteAllAudits();
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "deletedCount", deletedCount,
+            "message", "Deleted " + deletedCount + " agent execution audit records"
+        ));
+    }
+
+    /**
+     * Delete agent execution audits older than specified days
+     */
+    @DeleteMapping("/agents/audit/older-than/{days}")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<Map<String, Object>> deleteOldAgentExecutionAudits(
+        @PathVariable int days,
+        HttpServletRequest request
+    ) {
+        long deletedCount = agentExecutionAuditService.deleteAuditsOlderThan(days);
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "deletedCount", deletedCount,
+            "message", "Deleted " + deletedCount + " agent execution audit records older than " + days + " days"
+        ));
+    }
+
+    /**
+     * Consolidate duplicate agent execution audits.
+     * Merges audits with the same agentType, agentId, status, and executedBy into a single record
+     * with an incremented occurrenceCount.
+     */
+    @PostMapping("/agents/audit/consolidate")
+    @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
+    public ResponseEntity<Map<String, Object>> consolidateAgentExecutionAudits(
+        HttpServletRequest request
+    ) {
+        long consolidatedCount = agentExecutionAuditService.consolidateDuplicates();
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "consolidatedCount", consolidatedCount,
+            "message", "Consolidated " + consolidatedCount + " duplicate agent execution audit records"
+        ));
+    }
+
+    /**
+     * Convert AgentExecutionAudit entity to DTO
+     */
+    private AgentExecutionAuditDTO convertToDTO(AgentExecutionAudit audit) {
+        return AgentExecutionAuditDTO.builder()
+            .id(audit.getId())
+            .agentId(audit.getAgentId())
+            .executionId(audit.getExecutionId())
+            .agentType(audit.getAgentType())
+            .executedBy(audit.getExecutedBy())
+            .status(audit.getStatus())
+            .summary(audit.getSummary())
+            .resourceLinks(audit.getResourceLinks())
+            .podLogs(audit.getPodLogs())
+            .exitCode(audit.getExitCode())
+            .startTime(audit.getStartTime())
+            .endTime(audit.getEndTime())
+            .durationMs(audit.getDurationMs())
+            .occurrenceCount(audit.getOccurrenceCount())
+            .lastOccurrence(audit.getLastOccurrence())
+            .build();
     }
 
 }

@@ -115,7 +115,7 @@ public class ZeroTrustClientService {
         headers.set("X-Ztat-Token", token.getZtatToken());
         headers.set("X-Communication-Id", token.getCommunicationId());
 
-        log.info("Sending {}", body.toString());
+        log.trace("Sending {}", body.toString());
         HttpEntity<T> requestEntity = new HttpEntity<>(body, headers);
         if (!apiEndpoint.startsWith("/")) {
             apiEndpoint = "/" + apiEndpoint;
@@ -198,7 +198,7 @@ public class ZeroTrustClientService {
             headers.setBearerAuth(keycloakJwt);
         }
 
-        log.info("Sending {}", body.toString());
+        log.trace("Sending {}", body.toString());
         HttpEntity<T> requestEntity = new HttpEntity<>(body, headers);
         if (!apiEndpoint.startsWith("/")) {
             apiEndpoint = "/" + apiEndpoint;
@@ -253,6 +253,13 @@ public class ZeroTrustClientService {
         return callAuthenticatedGetOnApi(endpoint, apiEndpoint,  null);
     }
 
+    /**
+     * Request a Zero Trust Access Token (ZTAT) using Keycloak JWT and `ZtatRequestDTO`
+     */
+    public <T> String callAuthenticatedGetOnApi(@NonNull String apiEndpoint) throws ZtatException {
+        return callAuthenticatedGetOnApi(agentApiUrl, apiEndpoint,  null);
+    }
+
 
 
     /**
@@ -278,7 +285,7 @@ public class ZeroTrustClientService {
         headers.setBearerAuth(keycloakJwt);
         headers.set("X-Communication-Id", UUID.randomUUID().toString());
 
-        log.info("Sending {}", body.toString());
+        log.trace("Sending {}", body.toString());
         HttpEntity<T> requestEntity = new HttpEntity<>(body, headers);
         if (!apiEndpoint.startsWith("/")) {
             apiEndpoint = "/" + apiEndpoint;
@@ -451,7 +458,7 @@ public class ZeroTrustClientService {
         headers.set("X-Ztat-Token", token.getZtatToken());
         headers.set("X-Communication-Id", token.getCommunicationId());
 
-        log.info("Sending {}", body.toString());
+        log.trace("Sending {}", body.toString());
         HttpEntity<T> requestEntity = new HttpEntity<>(body, headers);
         if (!apiEndpoint.startsWith("/")) {
             apiEndpoint = "/" + apiEndpoint;
@@ -571,7 +578,7 @@ public class ZeroTrustClientService {
     }
 
 
-    <T> T callGetOnApi(@NonNull TokenDTO token, String endpoint, @NonNull String apiEndpoint) throws ZtatException {
+    public <T> T callGetOnApi(@NonNull TokenDTO token, String endpoint, @NonNull String apiEndpoint) throws ZtatException {
         String keycloakJwt = getKeycloakToken();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -916,6 +923,107 @@ public class ZeroTrustClientService {
                 log.error("DELETE request error: {}", e.getResponseBodyAsString());
                 throw new RuntimeException("DELETE request failed: " + e.getResponseBodyAsString());
             }
+        }
+    }
+
+    /**
+     * Create an agent execution audit record.
+     * This should be called when an agent starts a new execution/task.
+     *
+     * @param execution The agent execution context (communicationId will be used as executionId)
+     * @param agentType The type of agent (e.g., "chat-helper", "registered-agent", "monitoring-agent")
+     */
+    public void createAgentExecutionAudit(@NonNull AgentExecution execution, String agentType) {
+        String executionId = execution.getCommunicationId();
+        if (executionId == null || executionId.isEmpty()) {
+            log.warn("Cannot create audit: execution ID is null or empty");
+            return;
+        }
+
+        String agentId = execution.getUser() != null ? execution.getUser().getUsername() : "unknown";
+        String executedBy = agentId;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.setBearerAuth(getKeycloakToken());
+
+        String requestBody = "agentId=" + UriUtils.encode(agentId, StandardCharsets.UTF_8) +
+                           "&executionId=" + UriUtils.encode(executionId, StandardCharsets.UTF_8) +
+                           "&agentType=" + UriUtils.encode(agentType != null ? agentType : "unknown", StandardCharsets.UTF_8) +
+                           "&executedBy=" + UriUtils.encode(executedBy, StandardCharsets.UTF_8);
+
+        HttpEntity<String> requestEntity = new HttpEntity<>(requestBody, headers);
+
+        String url = agentApiUrl + "/api/v1/sessions/agents/audit/create";
+        log.debug("Creating agent execution audit: {} for agent: {}", executionId, agentId);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                log.debug("Successfully created agent execution audit: {}", executionId);
+            } else {
+                log.warn("Failed to create agent execution audit: {} - Status: {}", executionId, response.getStatusCode());
+            }
+
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
+                log.warn("ZTAT required for creating audit: {}", executionId);
+            } else {
+                log.debug("Error creating agent execution audit: {} - {}", executionId, e.getMessage());
+            }
+        } catch (Exception e) {
+            log.debug("Unexpected error creating agent execution audit: {} - {}", executionId, e.getMessage());
+        }
+    }
+
+    /**
+     * Close an agent execution audit by setting endTime and status.
+     * This should be called when an agent completes execution or shuts down.
+     *
+     * @param execution The agent execution context
+     * @param status The final status (COMPLETED, FAILED, ERROR)
+     * @throws ZtatException If ZTAT token validation fails
+     */
+    public void closeAgentExecutionAudit(@NonNull AgentExecution execution, String status) throws ZtatException {
+        String executionId = execution.getCommunicationId();
+        if (executionId == null || executionId.isEmpty()) {
+            log.warn("Cannot close audit: execution ID is null or empty");
+            return;
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.setBearerAuth(getKeycloakToken());
+
+        String finalStatus = (status != null && !status.isEmpty()) ? status : "COMPLETED";
+        String requestBody = "executionId=" + UriUtils.encode(executionId, StandardCharsets.UTF_8) +
+                           "&status=" + UriUtils.encode(finalStatus, StandardCharsets.UTF_8);
+
+        HttpEntity<String> requestEntity = new HttpEntity<>(requestBody, headers);
+
+        String url = agentApiUrl + "/api/v1/sessions/agents/audit/close";
+        log.debug("Closing agent execution audit: {} with status: {}", executionId, finalStatus);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                log.info("Successfully closed agent execution audit: {}", executionId);
+            } else {
+                log.warn("Failed to close agent execution audit: {} - Status: {}", executionId, response.getStatusCode());
+            }
+
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                log.debug("Agent execution audit not found for execution: {}", executionId);
+            } else if (e.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
+                throw new ZtatException(e.getResponseBodyAsString(), url);
+            } else {
+                log.warn("Error closing agent execution audit: {} - {}", executionId, e.getMessage());
+            }
+        } catch (Exception e) {
+            log.warn("Unexpected error closing agent execution audit: {} - {}", executionId, e.getMessage());
         }
     }
 

@@ -134,6 +134,14 @@ public class RegisteredAgent  extends BaseEnterpriseAgent {
                 var response = promptAgent(agentExecution);
                 AgentExecutionContextDTO agentExecutionContext = AgentExecutionContextDTO.builder().build();
                 while (running) {
+                    // Create a new execution ID for this iteration
+                    String iterationExecutionId = java.util.UUID.randomUUID().toString();
+                    agentExecution.setCommunicationId(iterationExecutionId);
+
+                    // Create audit record for this iteration
+                    zeroTrustClientService.createAgentExecutionAudit(agentExecution, "registered-agent");
+
+                    String iterationStatus = "COMPLETED";
                     try {
                         log.info("Got response: {}", response);
 
@@ -180,6 +188,14 @@ public class RegisteredAgent  extends BaseEnterpriseAgent {
 
                     } catch (Exception e) {
                         log.error("Exception in agent loop", e);
+                        iterationStatus = "ERROR";
+                    }
+
+                    // Close audit record for this iteration
+                    try {
+                        zeroTrustClientService.closeAgentExecutionAudit(agentExecution, iterationStatus);
+                    } catch (ZtatException e) {
+                        log.debug("Could not close audit for agent iteration: {}", e.getMessage());
                     }
 
                     // Sleep between prompts

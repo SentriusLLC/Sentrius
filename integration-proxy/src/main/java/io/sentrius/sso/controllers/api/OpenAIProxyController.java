@@ -19,6 +19,7 @@ import io.sentrius.sso.core.services.ATPLPolicyService;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.agents.AgentService;
+import io.sentrius.sso.core.services.agents.AgentExecutionAuditService;
 import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
 import io.sentrius.sso.core.services.security.KeycloakService;
@@ -63,6 +64,7 @@ public class OpenAIProxyController extends BaseController {
     final ZeroTrustRequestService ztrService;
     final IntegrationSecurityTokenService integrationSecurityTokenService;
     final AgentService agentService;
+    final AgentExecutionAuditService agentExecutionAuditService;
     private final ApplicationEnvironmentConfig applicationConfig;
     final AgentCommunicationMemoryStore agentCommunicationMemoryStore;
     final ProvenanceKafkaProducer provenanceKafkaProducer;
@@ -76,6 +78,7 @@ public class OpenAIProxyController extends BaseController {
         SessionTrackingService sessionTrackingService, KeycloakService keycloakService,
         ATPLPolicyService atplPolicyService, ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService,
         IntegrationSecurityTokenService integrationSecurityTokenService, AgentService agentService,
+        AgentExecutionAuditService agentExecutionAuditService,
         ApplicationEnvironmentConfig applicationConfig, ProvenanceKafkaProducer provenanceKafkaProducer,
         PromptAdvisorService promptAdvisorService
     ) {
@@ -88,6 +91,7 @@ public class OpenAIProxyController extends BaseController {
         this.ztrService = ztrService;
         this.integrationSecurityTokenService = integrationSecurityTokenService;
         this.agentService = agentService;
+        this.agentExecutionAuditService = agentExecutionAuditService;
         this.applicationConfig = applicationConfig;
         agentCommunicationMemoryStore = new AgentCommunicationMemoryStore(agentService);
         this.provenanceKafkaProducer = provenanceKafkaProducer;
@@ -188,31 +192,23 @@ public class OpenAIProxyController extends BaseController {
             rawBody
         );
 
-
-        ProvenanceEvent event = ProvenanceEvent.builder()
-            .eventId(communicationId)
-            .sessionId(communicationId)
-            .actor(operatingUser.getUsername())
-            .triggeringUser("LLM")
-            .eventType(ProvenanceEvent.EventType.KNOWLEDGE_REQUESTED)
-            .outputSummary("prompt LLM" + (chatRequest.getMessages() != null && !chatRequest.getMessages().isEmpty() 
-                ? chatRequest.getMessages().get(0).getContentAsString() 
-                : ""))
-            .timestamp(LocalDateTime.now().toInstant(java.time.ZoneOffset.UTC))
-            .build();
-        provenanceKafkaProducer.send(event);
-
-        event = ProvenanceEvent.builder()
-            .eventId(communicationId)
-            .sessionId(communicationId)
-            .actor("LLM")
-            .triggeringUser(operatingUser.getUsername())
-            .eventType(ProvenanceEvent.EventType.KNOWLEDGE_GENERATED)
-            .outputSummary("prompt LLM")
-            .timestamp(LocalDateTime.now().toInstant(java.time.ZoneOffset.UTC))
-            .build();
-        provenanceKafkaProducer.send(event);
-
+        // Create or update agent execution audit
+        try {
+            if (agentId != null && !agentId.isEmpty()) {
+                var existingAudit = agentExecutionAuditService.getAuditByExecutionId(communicationId);
+                if (existingAudit.isEmpty()) {
+                    agentExecutionAuditService.createAudit(
+                        agentId, 
+                        communicationId, 
+                        "chat-helper",
+                        operatingUser.getUsername()
+                    );
+                    log.info("Created agent execution audit for execution: {}, agent: {}", communicationId, agentId);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to create/update agent execution audit for execution: {}", communicationId, e);
+        }
 
 
         Span span = tracer.spanBuilder("AgentToAgentCommunication").startSpan();
@@ -329,6 +325,24 @@ public class OpenAIProxyController extends BaseController {
             "chat_request",
             rawBody
         );
+
+        // Create or update agent execution audit
+        try {
+            if (agentId != null && !agentId.isEmpty()) {
+                var existingAudit = agentExecutionAuditService.getAuditByExecutionId(communicationId);
+                if (existingAudit.isEmpty()) {
+                    agentExecutionAuditService.createAudit(
+                        agentId, 
+                        communicationId, 
+                        "chat-helper",
+                        operatingUser.getUsername()
+                    );
+                    log.info("Created agent execution audit for execution: {}, agent: {}", communicationId, agentId);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to create/update agent execution audit for execution: {}", communicationId, e);
+        }
 
         Span span = tracer.spanBuilder("AgentToAgentCommunication").startSpan();
         try (Scope scope = span.makeCurrent()) {

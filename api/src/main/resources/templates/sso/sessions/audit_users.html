@@ -159,6 +159,191 @@
         setInterval(function() {
             rdpTable.ajax.reload(null, false); // false to keep current page
         }, AUTO_REFRESH_INTERVAL);
+        
+        // Initialize Agent Executions Table
+        var agentTable = $('#agent-executions-table').DataTable({
+            ajax: {
+                url: '/api/v1/sessions/agents/audit/list',
+                dataSrc: '',
+            },
+            columns: [
+                { data: 'agentType' },
+                { 
+                    data: 'agentId',
+                    render: function(data, type, row) {
+                        // Truncate long agent IDs (e.g., pod names)
+                        if (data && data.length > 20) {
+                            return data.substring(0, 20) + '...';
+                        }
+                        return data || 'N/A';
+                    }
+                },
+                { 
+                    data: 'executedBy',
+                    render: function(data, type, row) {
+                        return data || 'System';
+                    }
+                },
+                {
+                    data: 'status',
+                    render: function(data, type, row) {
+                        if (data === 'COMPLETED') {
+                            return `<span class="badge bg-success">Completed</span>`;
+                        } else if (data === 'FAILED' || data === 'ERROR') {
+                            return `<span class="badge bg-danger">${data}</span>`;
+                        } else if (data === 'RUNNING') {
+                            return `<span class="badge bg-warning">Running</span>`;
+                        } else if (data === 'EXPIRED') {
+                            return `<span class="badge bg-secondary">Expired</span>`;
+                        } else {
+                            return `<span class="badge bg-secondary">${data}</span>`;
+                        }
+                    }
+                },
+                {
+                    data: 'occurrenceCount',
+                    render: function(data, type, row) {
+                        if (data && data > 1) {
+                            return `<span class="badge bg-info">${data}x</span>`;
+                        }
+                        return data || '1';
+                    }
+                },
+                {
+                    data: 'startTime',
+                    render: function(data, type, row) {
+                        if (data) {
+                            return new Date(data).toLocaleString();
+                        }
+                        return 'N/A';
+                    }
+                },
+                {
+                    data: 'durationMs',
+                    render: function(data, type, row) {
+                        if (data !== null && data !== undefined) {
+                            // Convert milliseconds to human-readable format
+                            var seconds = Math.floor(data / 1000);
+                            var minutes = Math.floor(seconds / 60);
+                            var hours = Math.floor(minutes / 60);
+                            
+                            if (hours > 0) {
+                                return hours + 'h ' + (minutes % 60) + 'm';
+                            } else if (minutes > 0) {
+                                return minutes + 'm ' + (seconds % 60) + 's';
+                            } else {
+                                return seconds + 's';
+                            }
+                        }
+                        return 'In Progress';
+                    }
+                },
+                {
+                    data: 'summary',
+                    render: function(data, type, row) {
+                        if (data && data.length > 0) {
+                            // Show first SUMMARY_MAX_LENGTH characters of summary
+                            var truncated = data.substring(0, SUMMARY_MAX_LENGTH);
+                            if (data.length > SUMMARY_MAX_LENGTH) {
+                                truncated += '...';
+                            }
+                            return `<span class="text-muted" style="font-size: 0.9em;">${truncated}</span>`;
+                        }
+                        return '<span class="text-muted">No summary available</span>';
+                    }
+                },
+                {
+                    data: 'executionId',
+                    render: function(data, type, row) {
+                        if (data) {
+                            return `<a href="/sso/v1/sessions/agents/audit/view?executionId=${encodeURIComponent(data)}" class="badge bg-primary">View Details</a>`;
+                        }
+                        return 'N/A';
+                    }
+                },
+            ],
+            order: [[5, 'desc']] // Sort by start time, newest first
+        });
+        
+        // Auto-refresh agent executions
+        setInterval(function() {
+            agentTable.ajax.reload(null, false); // false to keep current page
+        }, AUTO_REFRESH_INTERVAL);
+
+        // Agent audit management functions
+        window.consolidateAgentAudits = function() {
+            if (!confirm('This will consolidate duplicate audit entries. Continue?')) {
+                return;
+            }
+
+            $.ajax({
+                url: '/api/v1/sessions/agents/audit/consolidate',
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="_csrf"]').attr('content')
+                },
+                success: function(response) {
+                    alert('Consolidated ' + response.consolidatedCount + ' duplicate records');
+                    agentTable.ajax.reload();
+                },
+                error: function(xhr, status, error) {
+                    alert('Failed to consolidate audits: ' + error);
+                }
+            });
+        };
+
+        window.deleteAllAgentAudits = function() {
+            if (!confirm('WARNING: This will permanently delete ALL agent execution audit records. This action cannot be undone. Continue?')) {
+                return;
+            }
+
+            $.ajax({
+                url: '/api/v1/sessions/agents/audit/all',
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="_csrf"]').attr('content')
+                },
+                success: function(response) {
+                    alert('Deleted ' + response.deletedCount + ' audit records');
+                    agentTable.ajax.reload();
+                },
+                error: function(xhr, status, error) {
+                    alert('Failed to delete audits: ' + error);
+                }
+            });
+        };
+
+        window.deleteOldAgentAudits = function() {
+            var days = prompt('Delete audit records older than how many days?', '30');
+            if (days === null || days === '') {
+                return;
+            }
+
+            var daysNum = parseInt(days);
+            if (isNaN(daysNum) || daysNum < 1) {
+                alert('Please enter a valid number of days');
+                return;
+            }
+
+            if (!confirm('This will delete all agent audit records older than ' + daysNum + ' days. Continue?')) {
+                return;
+            }
+
+            $.ajax({
+                url: '/api/v1/sessions/agents/audit/older-than/' + daysNum,
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="_csrf"]').attr('content')
+                },
+                success: function(response) {
+                    alert('Deleted ' + response.deletedCount + ' audit records older than ' + daysNum + ' days');
+                    agentTable.ajax.reload();
+                },
+                error: function(xhr, status, error) {
+                    alert('Failed to delete old audits: ' + error);
+                }
+            });
+        };
     });
 </script>
 
@@ -185,6 +370,11 @@
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" id="rdp-tab" data-bs-toggle="tab" data-bs-target="#rdp-sessions" type="button" role="tab">
                                     RDP Sessions
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="agent-tab" data-bs-toggle="tab" data-bs-target="#agent-executions" type="button" role="tab">
+                                    Agent Executions
                                 </button>
                             </li>
                         </ul>
@@ -221,6 +411,41 @@
                                         <th>Start Time</th>
                                         <th>End Time</th>
                                         <th>Screenshots</th>
+                                        <th>Summary</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <!-- Data will be dynamically loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Agent Executions Tab -->
+                            <div class="tab-pane fade" id="agent-executions" role="tabpanel">
+                                <!-- Management Buttons -->
+                                <div class="mb-3 d-flex gap-2">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="consolidateAgentAudits()">
+                                        <i class="bi bi-collection"></i> Consolidate Duplicates
+                                    </button>
+                                    <button class="btn btn-outline-warning btn-sm" onclick="deleteOldAgentAudits()">
+                                        <i class="bi bi-calendar-x"></i> Delete Old Records
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm" onclick="deleteAllAgentAudits()">
+                                        <i class="bi bi-trash"></i> Delete All
+                                    </button>
+                                </div>
+
+                                <table id="agent-executions-table" class="display" style="width:100%">
+                                    <thead>
+                                    <tr>
+                                        <th>Agent Type</th>
+                                        <th>Agent ID</th>
+                                        <th>Executed By</th>
+                                        <th>Status</th>
+                                        <th>Occurrences</th>
+                                        <th>Start Time</th>
+                                        <th>Duration</th>
                                         <th>Summary</th>
                                         <th>Actions</th>
                                     </tr>

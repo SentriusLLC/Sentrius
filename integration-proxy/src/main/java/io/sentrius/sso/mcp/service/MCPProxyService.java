@@ -5,6 +5,7 @@ import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.AgentExecutionService;
+import io.sentrius.sso.core.services.agents.AgentExecutionAuditService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.core.dto.UserDTO;
 import io.sentrius.sso.core.dto.ztat.TokenDTO;
@@ -43,6 +44,7 @@ public class MCPProxyService {
     private final ZeroTrustRequestService ztrService;
     private final AgentClientService agentClientService;
     private final AgentExecutionService agentExecutionService;
+    private final AgentExecutionAuditService agentExecutionAuditService;
     private final ZeroTrustClientService zeroTrustClientService;
     private final ProvenanceKafkaProducer provenanceKafkaProducer;
     private final RestTemplate restTemplate;
@@ -61,20 +63,16 @@ public class MCPProxyService {
                 return MCPResponse.error(request.getId(), MCPError.unauthorized("Invalid JWT token"));
             }
             
-            // Submit provenance event for the request
-            submitProvenanceEvent(request, userId, communicationId, "ENDPOINT_ACCESS");
+            // Create agent execution audit on first MCP request
+            createAgentExecutionAudit(jwtToken, communicationId, userId);
             
             // Route request based on method
             MCPResponse response = routeRequest(request, jwtToken, communicationId, userId);
-            
-            // Submit provenance event for the response
-            submitProvenanceEvent(request, userId, communicationId, "ENDPOINT_ACCESS");
             
             return response;
             
         } catch (Exception e) {
             log.error("Error processing MCP request", e);
-            submitProvenanceEvent(request, userId, communicationId, "UNKNOWN");
             return MCPResponse.error(request.getId(), MCPError.internalError("Internal server error"));
         }
     }
@@ -246,23 +244,25 @@ public class MCPProxyService {
     }
     
     /**
-     * Submit provenance event for audit trail
+     * Create agent execution audit for MCP request
      */
-    private void submitProvenanceEvent(MCPRequest request, String userId, String communicationId, String eventType) {
+    private void createAgentExecutionAudit(String jwtToken, String communicationId, String userId) {
         try {
-            ProvenanceEvent event = ProvenanceEvent.builder()
-                .eventType(ProvenanceEvent.EventType.valueOf(eventType))
-                .sessionId(communicationId)
-                .actor(userId)
-                .triggeringUser(userId)
-                .timestamp(Instant.now())
-                .input("MCP " + request.getMethod() + " request")
-                .outputSummary("MCP request processed")
-                .build();
-            
-            provenanceKafkaProducer.send(event);
+            String agentId = keycloakService.extractAgentId(jwtToken);
+            if (agentId != null && !agentId.isEmpty()) {
+                var existingAudit = agentExecutionAuditService.getAuditByExecutionId(communicationId);
+                if (existingAudit.isEmpty()) {
+                    agentExecutionAuditService.createAudit(
+                        agentId,
+                        communicationId,
+                        "mcp",
+                        userId
+                    );
+                    log.info("Created agent execution audit for MCP execution: {}, agent: {}", communicationId, agentId);
+                }
+            }
         } catch (Exception e) {
-            log.warn("Failed to submit provenance event", e);
+            log.warn("Failed to create agent execution audit for MCP execution: {}", communicationId, e);
         }
     }
     

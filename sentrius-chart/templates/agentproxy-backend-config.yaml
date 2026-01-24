@@ -3,16 +3,19 @@
 apiVersion: cloud.google.com/v1
 kind: BackendConfig
 metadata:
-  # This name MUST match the name used in your Service annotation
   name: agentproxy-backend-config
   namespace: {{ .Values.tenant }}
   annotations:
-    helm.sh/resource-policy: keep # <--- Add this
+    helm.sh/resource-policy: keep
 spec:
+  # ADD THIS - WebSocket timeout (1 hour)
+  timeoutSec: 3600
+  connectionDraining:
+    drainingTimeoutSec: 60
   # Health check is required for GKE Ingress to work
   healthCheck:
     type: HTTP
-    port: {{ .Values.agentproxy.port }} # Match the Service port
+    port: {{ .Values.agentproxy.port }}
     requestPath: /actuator/health
     checkIntervalSec: 10
     timeoutSec: 5

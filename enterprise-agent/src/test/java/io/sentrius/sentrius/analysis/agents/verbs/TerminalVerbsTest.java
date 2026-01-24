@@ -82,10 +82,13 @@ class TerminalVerbsTest {
 
     @Test
     void fetchTerminalOutputHandlesEmptyDtosList() throws Exception, ZtatException {
-        List<ObjectNode> result = terminalVerbs.fetchTerminalOutput(null, AgentExecutionContextDTO.builder().build());
-
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
+        // When no terminals are provided, the method throws RuntimeException (wrapping IllegalArgumentException)
+        // to guide the agent on proper usage
+        RuntimeException exception = assertThrows(RuntimeException.class, () ->
+            terminalVerbs.fetchTerminalOutput(null, AgentExecutionContextDTO.builder().build()));
+        // Verify the root cause is IllegalArgumentException with helpful message
+        assertTrue(exception.getCause() instanceof IllegalArgumentException);
+        assertTrue(exception.getCause().getMessage().contains("No terminals provided to fetch logs from"));
     }
 
     @Test

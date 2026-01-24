@@ -18,6 +18,7 @@ import io.sentrius.sso.core.model.verbs.Endpoint;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.agents.AgentService;
+import io.sentrius.sso.core.services.agents.AgentExecutionAuditService;
 import io.sentrius.sso.core.services.security.CryptoService;
 import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
 import io.sentrius.sso.core.services.security.KeycloakService;
@@ -65,6 +66,7 @@ public class LLMProxyController extends BaseController {
     final ZeroTrustRequestService ztrService;
     final IntegrationSecurityTokenService integrationSecurityTokenService;
     final AgentService agentService;
+    final AgentExecutionAuditService agentExecutionAuditService;
     private final ApplicationEnvironmentConfig applicationConfig;
     final AgentCommunicationMemoryStore agentCommunicationMemoryStore;
     final ProvenanceKafkaProducer provenanceKafkaProducer;
@@ -78,6 +80,7 @@ public class LLMProxyController extends BaseController {
         SessionTrackingService sessionTrackingService, KeycloakService keycloakService,
         ZeroTrustAccessTokenService ztatService, ZeroTrustRequestService ztrService,
         IntegrationSecurityTokenService integrationSecurityTokenService, AgentService agentService,
+        AgentExecutionAuditService agentExecutionAuditService,
         ApplicationEnvironmentConfig applicationConfig, ProvenanceKafkaProducer provenanceKafkaProducer,
         PromptAdvisorService promptAdvisorService
     ) {
@@ -89,6 +92,7 @@ public class LLMProxyController extends BaseController {
         this.ztrService = ztrService;
         this.integrationSecurityTokenService = integrationSecurityTokenService;
         this.agentService = agentService;
+        this.agentExecutionAuditService = agentExecutionAuditService;
         this.applicationConfig = applicationConfig;
         agentCommunicationMemoryStore = new AgentCommunicationMemoryStore(agentService);
         this.provenanceKafkaProducer = provenanceKafkaProducer;
@@ -171,29 +175,27 @@ public class LLMProxyController extends BaseController {
             rawBody
         );
 
-        // Create provenance events
-        ProvenanceEvent requestEvent = ProvenanceEvent.builder()
-            .eventId(communicationId)
-            .sessionId(communicationId)
-            .actor(operatingUser.getUsername())
-            .triggeringUser("LLM")
-            .eventType(ProvenanceEvent.EventType.KNOWLEDGE_REQUESTED)
-            .outputSummary("prompt LLM (" + provider + "): " + 
-                llmRequest.getMessages().get(0).getContentAsString())
-            .timestamp(LocalDateTime.now().toInstant(java.time.ZoneOffset.UTC))
-            .build();
-        provenanceKafkaProducer.send(requestEvent);
-
-        ProvenanceEvent responseEvent = ProvenanceEvent.builder()
-            .eventId(communicationId)
-            .sessionId(communicationId)
-            .actor("LLM")
-            .triggeringUser(operatingUser.getUsername())
-            .eventType(ProvenanceEvent.EventType.KNOWLEDGE_GENERATED)
-            .outputSummary("prompt LLM (" + provider + ")")
-            .timestamp(LocalDateTime.now().toInstant(java.time.ZoneOffset.UTC))
-            .build();
-        provenanceKafkaProducer.send(responseEvent);
+        // Create or update agent execution audit
+        // The communication ID is the agent's execution ID
+        try {
+            if (agentId != null && !agentId.isEmpty()) {
+                // Check if audit already exists for this execution
+                var existingAudit = agentExecutionAuditService.getAuditByExecutionId(communicationId);
+                if (existingAudit.isEmpty()) {
+                    // First LLM call for this execution - create audit record
+                    agentExecutionAuditService.createAudit(
+                        agentId, 
+                        communicationId, 
+                        "chat-helper",  // Default to chat-helper, could be extracted from JWT if available
+                        operatingUser.getUsername()
+                    );
+                    log.info("Created agent execution audit for execution: {}, agent: {}", communicationId, agentId);
+                }
+                // Audit will be updated with summary when agent completes
+            }
+        } catch (Exception e) {
+            log.warn("Failed to create/update agent execution audit for execution: {}", communicationId, e);
+        }
 
         Span span = tracer.spanBuilder("AgentToAgentCommunication").startSpan();
         int retries = 2;
@@ -349,6 +351,24 @@ public class LLMProxyController extends BaseController {
             "llm_request",
             rawBody
         );
+
+        // Create or update agent execution audit
+        try {
+            if (agentId != null && !agentId.isEmpty()) {
+                var existingAudit = agentExecutionAuditService.getAuditByExecutionId(communicationId);
+                if (existingAudit.isEmpty()) {
+                    agentExecutionAuditService.createAudit(
+                        agentId, 
+                        communicationId, 
+                        "chat-helper",
+                        operatingUser.getUsername()
+                    );
+                    log.info("Created agent execution audit for execution: {}, agent: {}", communicationId, agentId);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to create/update agent execution audit for execution: {}", communicationId, e);
+        }
 
         Span span = tracer.spanBuilder("AgentToAgentCommunication").startSpan();
         try (Scope scope = span.makeCurrent()) {

@@ -75,37 +75,40 @@ public class PromptBuilder {
                 "- NEVER explain outside the JSON structure.\n"
             );
         }
-            // Append the list of available verbs
-            prompt.append("Verb operations:\n");
+            // Append verb discovery instructions instead of full verb list
+            prompt.append("VERB DISCOVERY:\n");
+            prompt.append("The system has 75+ verbs organized by category (slack, k8s, llm, mcp, jira, teams, etc.).\n");
+            prompt.append("Use the following verb lookup verbs to discover what operations are available:\n\n");
 
-            // Iterate through the verbs in the registry and append their details
-            verbRegistry.getVerbs().forEach((name, verb) -> {
-                prompt.append("- ").append(name);
-                prompt.append(" (").append(buildMethodSignature(verb.getMethod())).append(") - ");
-                prompt.append(verb.getDescription()).append("\n");
-                // Optionally generate example params based on arg1 class
-                Class<?>[] paramTypes = verb.getMethod().getParameterTypes();
+            // Only include the verb lookup verbs in the prompt
+            String[] verbLookupVerbs = {
+                "search_verbs",
+                "get_verbs_by_category",
+                "get_verb_summary",
+                "get_verb_details",
+                "find_verbs_by_intent"
+            };
 
-                if (paramTypes.length > 1 && !paramTypes[1].equals(Void.class)) {
-                    var paramName = verb.getMethod().getParameters()[1].getName();
-                    Object example = ExampleFactory.createExample(paramName, paramTypes[1]);  // create a stub from
-                    // your DTO
-                    try {
-                        if (verb.getExampleJson() != null && !verb.getExampleJson().isEmpty()) {
-                            prompt.append("  Example \"" + verb.getArgName() + "\": ").append(verb.getExampleJson()).append("\n");
-                        } else if (example != null) {
-                            // Serialize the example object to JSON
-                            String exampleJson = JsonUtil.MAPPER.writeValueAsString(example);
-                            prompt.append("  Example " + verb.getArgName() + ": ").append(exampleJson).append("\n");
-                        }
+            for (String verbName : verbLookupVerbs) {
+                AgentVerb verb = verbRegistry.getVerbs().get(verbName);
+                if (verb != null) {
+                    prompt.append("- ").append(verbName);
+                    prompt.append(" (").append(buildMethodSignature(verb.getMethod())).append(") - ");
+                    prompt.append(verb.getDescription()).append("\n");
 
-                    } catch (Exception e) {
-                        prompt.append("  Example params: [unavailable due to serialization error]\n");
+                    if (verb.getExampleJson() != null && !verb.getExampleJson().isEmpty()) {
+                        prompt.append("  Example: ").append(verb.getExampleJson()).append("\n");
+                    } else {
+                        prompt.append("  Example params: {}\n");
                     }
-                } else {
-                    prompt.append("  Example params: {}\n");
                 }
-            });
+            }
+
+            prompt.append("\nWORKFLOW:\n");
+            prompt.append("1. Use search_verbs or find_verbs_by_intent to discover verbs for your task\n");
+            prompt.append("2. Use get_verb_details to see full details about a specific verb\n");
+            prompt.append("3. Execute the discovered verb with appropriate parameters\n");
+            prompt.append("4. All discovered verbs can be used in your plan\n\n");
 
         return prompt.toString();
     }

@@ -28,6 +28,7 @@ import io.sentrius.sso.core.services.metadata.TerminalSessionMetadataService;
 import io.sentrius.sso.core.services.metadata.UserExperienceMetricsService;
 import io.sentrius.sso.core.services.openai.categorization.CommandCategorizer;
 import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
+import io.sentrius.sso.core.services.agents.AgentExecutionAuditService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,35 +52,62 @@ public class SessionAnalyticsAgent {
     private final SessionService sessionService;
     private final CommandCategorizer commandCategorizer;
     final IntegrationSecurityTokenService integrationSecurityTokenService;
+    private final AgentExecutionAuditService auditService;
 
 
     @Scheduled(fixedDelay = 60000) // Waits 60 seconds after the previous run completes
     @Transactional
     public void processSessions() {
-        log.info("Processing unprocessed sessions...");
+        log.debug("Checking for unprocessed sessions...");
 
         // Fetch already processed session IDs in bulk
         Set<Long> processedSessionIds = trackingRepository.findAllSessionIds();
-        log.info("Found {} processed sessions", processedSessionIds.size());
         List<TerminalSessionMetadata> unprocessedSessions = sessionMetadataService.getSessionsByState("CLOSED").stream()
             .filter(session -> !processedSessionIds.contains(session.getId()))
             .collect(Collectors.toList());
-        long count = 0;
-        for (TerminalSessionMetadata session : unprocessedSessions) {
-            count++;
-            try {
-                processSession(session);
-                // ACTIVE -> INACTIVE -> CLOSED -> PROCESSED
-                saveToTracking(session.getId(), "PROCESSED");
-            } catch (Exception e) {
-                log.error("Error processing session {}: {}", session.getId(), e.getMessage(), e);
-                saveToTracking(session.getId(), "ERROR");
-            }
-            session.setSessionStatus("PROCESSED");
-            sessionMetadataService.saveSession(session);
+
+        // Skip audit creation if there's nothing to process
+        if (unprocessedSessions.isEmpty()) {
+            log.debug("No unprocessed sessions found");
+            return;
         }
 
-        log.info("Finished processing {} sessions ", count);
+        // Only create audit when we have actual work to do
+        String taskExecutionId = java.util.UUID.randomUUID().toString();
+        createTaskAudit(taskExecutionId, "session-analytics");
+
+        String taskStatus = "COMPLETED";
+        log.info("Processing {} unprocessed sessions...", unprocessedSessions.size());
+
+        try {
+            long count = 0;
+            int failed = 0;
+            for (TerminalSessionMetadata session : unprocessedSessions) {
+                count++;
+                try {
+                    processSession(session);
+                    // ACTIVE -> INACTIVE -> CLOSED -> PROCESSED
+                    saveToTracking(session.getId(), "PROCESSED");
+                } catch (Exception e) {
+                    log.error("Error processing session {}: {}", session.getId(), e.getMessage(), e);
+                    saveToTracking(session.getId(), "ERROR");
+                    failed++;
+                }
+                session.setSessionStatus("PROCESSED");
+                sessionMetadataService.saveSession(session);
+            }
+
+            log.info("Finished processing {} sessions ", count);
+
+            if (failed > 0) {
+                taskStatus = "COMPLETED_WITH_ERRORS";
+            }
+        } catch (Exception e) {
+            log.error("Error in processSessions", e);
+            taskStatus = "ERROR";
+        } finally {
+            closeTaskAudit(taskExecutionId, taskStatus);
+        }
     }
 
 
@@ -207,5 +235,34 @@ public class SessionAnalyticsAgent {
 
     private CommandCategory categorizeCommand(String command) {
         return CommandCategory.fromDTO(commandCategorizer.categorizeCommand(command));
+    }
+
+    /**
+     * Create an audit record for a scheduled task execution
+     */
+    private void createTaskAudit(String taskExecutionId, String agentType) {
+        try {
+            auditService.createAudit(
+                "analytics-agent",
+                taskExecutionId,
+                agentType,
+                "system"
+            );
+            log.debug("Created audit for {} task: {}", agentType, taskExecutionId);
+        } catch (Exception e) {
+            log.debug("Could not create audit for {} task: {}", agentType, e.getMessage());
+        }
+    }
+
+    /**
+     * Close an audit record for a scheduled task execution
+     */
+    private void closeTaskAudit(String taskExecutionId, String status) {
+        try {
+            auditService.closeAudit(taskExecutionId, status);
+            log.debug("Closed audit for task {} with status: {}", taskExecutionId, status);
+        } catch (Exception e) {
+            log.debug("Could not close audit for task: {}", e.getMessage());
+        }
     }
 }

@@ -9,6 +9,7 @@ import io.sentrius.sso.core.services.security.ZeroTrustAccessTokenService;
 import io.sentrius.sso.core.services.security.ZeroTrustRequestService;
 import io.sentrius.sso.core.services.agents.AgentClientService;
 import io.sentrius.sso.core.services.agents.AgentExecutionService;
+import io.sentrius.sso.core.services.agents.AgentExecutionAuditService;
 import io.sentrius.sso.core.services.agents.ZeroTrustClientService;
 import io.sentrius.sso.provenance.kafka.ProvenanceKafkaProducer;
 
@@ -49,6 +50,9 @@ public class MCPProxyServiceTest {
     private AgentExecutionService agentExecutionService;
     
     @Mock
+    private AgentExecutionAuditService agentExecutionAuditService;
+    
+    @Mock
     private ZeroTrustClientService zeroTrustClientService;
     
     @Mock
@@ -69,6 +73,7 @@ public class MCPProxyServiceTest {
             ztrService,
             agentClientService,
             agentExecutionService,
+            agentExecutionAuditService,
             zeroTrustClientService,
             provenanceKafkaProducer,
             restTemplate,
@@ -96,7 +101,7 @@ public class MCPProxyServiceTest {
         assertNotNull(response.getResult());
         
         verify(keycloakService).validateJwt(jwtToken);
-        verify(provenanceKafkaProducer, times(2)).send(any());
+        verify(keycloakService).extractAgentId(jwtToken);
     }
 
     @Test

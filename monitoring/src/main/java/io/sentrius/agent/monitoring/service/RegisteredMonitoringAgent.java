@@ -117,14 +117,23 @@ public class RegisteredMonitoringAgent implements ApplicationListener<Applicatio
             initializeDefaultMonitoring();
             
             while (running) {
-                try {
+                // Create a new execution ID for this monitoring iteration
+                String iterationExecutionId = UUID.randomUUID().toString();
+                execution.setCommunicationId(iterationExecutionId);
+
+                // Create audit record for this iteration
+                zeroTrustClientService.createAgentExecutionAudit(execution, "monitoring-agent");
+
+                String iterationStatus = "COMPLETED";
                 try {
                     // Send periodic heartbeat
                     agentClientService.heartbeat(execution, agentName);
                 } catch (ZtatException e) {
                     log.error("Failed to send heartbeat", e);
                 }
-                    
+
+                try {
+
                     // Endpoint monitoring is handled by @Scheduled method in EndpointMonitoringService
                     // This thread handles agent-level coordination and AI-based analysis
                     
@@ -147,15 +156,25 @@ public class RegisteredMonitoringAgent implements ApplicationListener<Applicatio
                         performStabilityEvaluation();
                     }
                     
-                    // Sleep between iterations
+                } catch (Exception e) {
+                    log.error("Error in monitoring agent worker loop", e);
+                    iterationStatus = "ERROR";
+                }
+
+                // Close audit record for this iteration
+                try {
+                    zeroTrustClientService.closeAgentExecutionAudit(execution, iterationStatus);
+                } catch (ZtatException e) {
+                    log.debug("Could not close audit for monitoring iteration: {}", e.getMessage());
+                }
+
+                // Sleep between iterations
+                try {
                     Thread.sleep(60_000); // 1 minute
-                    
                 } catch (InterruptedException e) {
                     log.info("Monitoring Agent worker interrupted");
                     Thread.currentThread().interrupt();
                     break;
-                } catch (Exception e) {
-                    log.error("Error in monitoring agent worker loop", e);
                 }
             }
             

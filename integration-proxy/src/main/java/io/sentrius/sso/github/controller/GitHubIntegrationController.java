@@ -6,6 +6,7 @@ import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.model.security.IntegrationSecurityToken;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.model.verbs.Endpoint;
 import io.sentrius.sso.core.services.security.IntegrationSecurityTokenService;
 import io.sentrius.sso.core.services.security.KeycloakService;
 import io.sentrius.sso.github.service.GitHubMCPAdapter;
@@ -21,9 +22,9 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Controller for GitHub integration via native MCP protocol implementation
- * The integration proxy acts as the MCP server, making direct GitHub API calls
- * No external pods or containers are launched - all operations are handled directly
+ * Controller for GitHub integration via native API implementation
+ * The integration proxy acts as the direct API handler, making GitHub API calls
+ * No external pods or containers are needed - all operations are handled directly
  */
 @RestController
 @RequestMapping("/api/v1/github")
@@ -118,7 +119,7 @@ public class GitHubIntegrationController {
 
     /**
      * Get status of GitHub integration for a token
-     * Always returns active since no pod is needed
+     * Always returns active since direct API calls are always available
      */
     @GetMapping("/mcp/status")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
@@ -168,7 +169,7 @@ public class GitHubIntegrationController {
     }
 
     /**
-     * Disable GitHub integration for a token (no-op since no pod to delete)
+     * Disable GitHub integration for a token (no-op since always available)
      */
     @DeleteMapping("/mcp/delete")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
@@ -187,15 +188,15 @@ public class GitHubIntegrationController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Keycloak token");
         }
 
-        // No pod to delete - integration is always available when token exists
+        // Direct API is always available when token exists
         return ResponseEntity.ok(Map.of(
             "status", "success",
-            "message", "GitHub integration disabled (no resources to clean up)"
+            "message", "GitHub integration disabled (direct API always available)"
         ));
     }
 
     /**
-     * List GitHub integration tokens (replaces list of pods)
+     * List GitHub integration tokens
      */
     @GetMapping("/mcp/list")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
@@ -235,12 +236,14 @@ public class GitHubIntegrationController {
     }
 
     /**
-     * Proxy MCP requests directly to GitHub API
-     * The integration proxy acts as the MCP server
+     * Proxy API requests directly to GitHub API
+     * The integration proxy processes requests using GitHubMCPAdapter
      * Uses the token name saved in SystemOptions from the Launch Agent UI
      * Returns 404 if no token has been configured
      */
     @PostMapping("/mcp/proxy")
+    @Endpoint(description = "MCP proxy for github requests. Most queries for tickets, pull requests, etc should occur" +
+        " through this endpoint. The configured GitHub token will be used to make API calls.")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_LOG_IN})
     public ResponseEntity<String> proxyMCPRequest(
         @RequestHeader("Authorization") String token,
