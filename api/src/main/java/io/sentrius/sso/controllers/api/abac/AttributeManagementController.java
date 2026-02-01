@@ -7,15 +7,19 @@ import io.sentrius.sso.core.dto.abac.SyncStatusDTO;
 import io.sentrius.sso.core.model.abac.AttributeAssignment;
 import io.sentrius.sso.core.model.abac.AttributeDefinition;
 import io.sentrius.sso.core.model.security.enums.ApplicationAccessEnum;
+import io.sentrius.sso.core.model.users.UserAttribute;
 import io.sentrius.sso.core.services.abac.AttributeManagementService;
 import io.sentrius.sso.core.services.abac.KeycloakAttributeSyncScheduler;
+import io.sentrius.sso.core.services.users.UserAttributeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,12 +31,15 @@ import java.util.stream.Collectors;
 public class AttributeManagementController {
 
     private final AttributeManagementService attributeManagementService;
-    
+    private final UserAttributeService userAttributeService;
+
     @Autowired(required = false)
     private KeycloakAttributeSyncScheduler syncScheduler;
     
-    public AttributeManagementController(AttributeManagementService attributeManagementService) {
+    public AttributeManagementController(AttributeManagementService attributeManagementService,
+                                         UserAttributeService userAttributeService) {
         this.attributeManagementService = attributeManagementService;
+        this.userAttributeService = userAttributeService;
     }
 
     // ===== USER ATTRIBUTES ENDPOINTS =====
@@ -40,11 +47,48 @@ public class AttributeManagementController {
     @GetMapping("/user-attributes")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<List<AttributeAssignmentDTO>> getAllUserAttributes() {
+        List<AttributeAssignmentDTO> allDtos = new ArrayList<>();
+
+        // Get ABAC attribute assignments
         List<AttributeAssignment> assignments = attributeManagementService.getAllUserAttributes();
-        List<AttributeAssignmentDTO> dtos = assignments.stream()
+        List<AttributeAssignmentDTO> abacDtos = assignments.stream()
                 .map(this::toAssignmentDTO)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(dtos);
+        allDtos.addAll(abacDtos);
+
+        // Also include legacy user attributes from user_attributes table
+        List<UserAttribute> legacyAttributes = userAttributeService.getAllActiveAttributes();
+        for (UserAttribute attr : legacyAttributes) {
+            // Check if this attribute is already in ABAC assignments (avoid duplicates)
+            boolean alreadyExists = abacDtos.stream()
+                    .anyMatch(dto -> dto.getTargetId() != null
+                            && dto.getTargetId().equals(attr.getUserId())
+                            && dto.getAttributeName() != null
+                            && dto.getAttributeName().equals(attr.getAttributeName()));
+
+            if (!alreadyExists) {
+                AttributeAssignmentDTO dto = new AttributeAssignmentDTO();
+                dto.setId(attr.getId());
+                dto.setTargetId(attr.getUserId());
+                dto.setTargetType("USER");
+                dto.setAttributeName(attr.getAttributeName());
+                dto.setAttributeValue(attr.getAttributeValue());
+                dto.setSyncedFromKeycloak(attr.getSyncedFromKeycloak() != null && attr.getSyncedFromKeycloak());
+                dto.setActive(attr.getIsActive() != null && attr.getIsActive());
+                // Legacy attributes don't have validity periods, use createdAt for display
+                if (attr.getCreatedAt() != null) {
+                    dto.setCreatedAt(LocalDateTime.ofInstant(attr.getCreatedAt(), ZoneOffset.UTC));
+                }
+                if (attr.getUpdatedAt() != null) {
+                    dto.setUpdatedAt(LocalDateTime.ofInstant(attr.getUpdatedAt(), ZoneOffset.UTC));
+                }
+                // Mark as legacy source for UI distinction
+                dto.setSource("LEGACY");
+                allDtos.add(dto);
+            }
+        }
+
+        return ResponseEntity.ok(allDtos);
     }
 
     @GetMapping("/user-attributes/user/{userId}")
@@ -68,6 +112,9 @@ public class AttributeManagementController {
     @PostMapping("/user-attributes")
     @LimitAccess(applicationAccess = {ApplicationAccessEnum.CAN_MANAGE_APPLICATION})
     public ResponseEntity<AttributeAssignmentDTO> createUserAttribute(@RequestBody AttributeAssignmentDTO dto) {
+        log.debug("Creating user attribute: targetType={}, targetId={}, attributeName={}",
+                dto.getTargetType(), dto.getTargetId(), dto.getAttributeName());
+
         // Create or get attribute definition
         AttributeDefinition definition = attributeManagementService.getOrCreateAttributeDefinition(
                 dto.getAttributeName(),
@@ -75,10 +122,24 @@ public class AttributeManagementController {
                 "STRING"
         );
 
-        // Assign attribute
+        // IMPORTANT: Resolve targetId to Keycloak userId for consistency
+        // The UI may send username (e.g., "marc@sentrius.io" or "service-account-java-agents")
+        // but we need to store the Keycloak UUID for consistency with document access control
+        String resolvedTargetId = dto.getTargetId();
+        if ("USER".equals(dto.getTargetType()) || "NON_PERSON_ENTITY".equals(dto.getTargetType())) {
+            resolvedTargetId = attributeManagementService.resolveUserIdentifierToKeycloakId(dto.getTargetId());
+            if (resolvedTargetId == null) {
+                log.warn("Could not resolve targetId {} to Keycloak UUID, using as-is", dto.getTargetId());
+                resolvedTargetId = dto.getTargetId();
+            } else {
+                log.debug("Resolved targetId {} to Keycloak UUID: {}", dto.getTargetId(), resolvedTargetId);
+            }
+        }
+
+        // Assign attribute with resolved ID
         AttributeAssignment assignment = attributeManagementService.assignAttribute(
                 dto.getTargetType(),
-                dto.getTargetId(),
+                resolvedTargetId,
                 definition,
                 dto.getAttributeValue(),
                 dto.getValidFrom(),
@@ -89,7 +150,7 @@ public class AttributeManagementController {
         if (dto.isSyncToKeycloak() && dto.getTargetType().equals("USER")) {
             Map<String, String> attrs = new HashMap<>();
             attrs.put(dto.getAttributeName(), dto.getAttributeValue());
-            //attributeManagementService.syncUserAttributesToKeycloak(dto.getTargetId(), attrs);
+            //attributeManagementService.syncUserAttributesToKeycloak(resolvedTargetId, attrs);
         }
 
         return ResponseEntity.ok(toAssignmentDTO(assignment));
@@ -100,9 +161,24 @@ public class AttributeManagementController {
     public ResponseEntity<AttributeAssignmentDTO> updateUserAttribute(
             @PathVariable Long id,
             @RequestBody AttributeAssignmentDTO dto) {
-        // For simplicity, delete old and create new
-        attributeManagementService.removeAttributeAssignment(id);
-        return createUserAttribute(dto);
+        log.info("PUT /api/v1/abac/user-attributes/{}: Updating attribute assignment", id);
+        log.debug("Update request: id={}, targetType={}, targetId={}, attributeName={}, value={}",
+                id, dto.getTargetType(), dto.getTargetId(), dto.getAttributeName(), dto.getAttributeValue());
+
+        try {
+            // Remove old assignment
+            boolean removed = attributeManagementService.removeAttributeAssignment(id);
+            if (!removed) {
+                log.warn("Attribute assignment {} not found for update", id);
+                return ResponseEntity.notFound().build();
+            }
+
+            // Create new assignment with updated values
+            return createUserAttribute(dto);
+        } catch (Exception e) {
+            log.error("Error updating attribute assignment {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @DeleteMapping("/user-attributes/{id}")

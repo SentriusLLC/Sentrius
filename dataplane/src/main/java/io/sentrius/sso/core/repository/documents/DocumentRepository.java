@@ -92,4 +92,17 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
     Optional<Document> findByChecksum(String checksum);
 
     boolean existsByChecksum(String checksum);
+
+    // === Recent Documents for Analysis ===
+
+    @Query(value = """
+        SELECT * FROM documents d 
+        WHERE d.created_at >= NOW() - MAKE_INTERVAL(mins => :minutes)
+        ORDER BY d.created_at DESC
+        LIMIT 100
+        """, nativeQuery = true)
+    List<Document> findRecentDocuments(@Param("minutes") int minutes);
+
+    @Query("SELECT d FROM Document d ORDER BY d.createdAt DESC")
+    List<Document> findAllOrderByCreatedAtDesc();
 }

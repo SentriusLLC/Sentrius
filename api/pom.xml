@@ -111,6 +111,14 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
+        <!-- SurrealDB Java SDK for knowledge graph -->
+        <dependency>
+            <groupId>com.surrealdb</groupId>
+            <artifactId>surrealdb</artifactId>
+            <version>1.0.0-beta.1</version>
+            <optional>true</optional>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>

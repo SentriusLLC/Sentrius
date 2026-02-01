@@ -4,7 +4,9 @@ import java.security.GeneralSecurityException;
 import io.sentrius.sso.core.annotations.LimitAccess;
 import io.sentrius.sso.core.config.SystemOptions;
 import io.sentrius.sso.core.controllers.BaseController;
+import io.sentrius.sso.core.dto.TerminalLogDTO;
 import io.sentrius.sso.core.model.security.enums.SSHAccessEnum;
+import io.sentrius.sso.core.repository.SshSessionSummaryRepository;
 import io.sentrius.sso.core.services.ErrorOutputService;
 import io.sentrius.sso.core.services.UserService;
 import io.sentrius.sso.core.services.auditing.AuditService;
@@ -26,6 +28,7 @@ public class AuditController extends BaseController {
     private final AuditService auditService;
     private final CryptoService cryptoService;
     private final SessionTrackingService sessionTrackingService;
+    private final SshSessionSummaryRepository sshSessionSummaryRepository;
 
     public AuditController(
         UserService userService,
@@ -33,12 +36,14 @@ public class AuditController extends BaseController {
         ErrorOutputService errorOutputService,
         AuditService auditService,
         CryptoService cryptoService,
-        SessionTrackingService sessionTrackingService
+        SessionTrackingService sessionTrackingService,
+        SshSessionSummaryRepository sshSessionSummaryRepository
     ) {
         super(userService, systemOptions, errorOutputService);
         this.auditService = auditService;
         this.cryptoService = cryptoService;
         this.sessionTrackingService = sessionTrackingService;
+        this.sshSessionSummaryRepository = sshSessionSummaryRepository;
     }
 
     @GetMapping("/audit/list")
@@ -67,14 +72,33 @@ public class AuditController extends BaseController {
             return "redirect:/sso/v1/sessions/audit/list";
         }
 
-        model.addAttribute("sessionId", sessionId);
-        if ((null == logs || logs.isEmpty())){
+        // Fetch the session summary if available
+        String summary = null;
+        var sessionSummaryOpt = sshSessionSummaryRepository.findBySessionId(sessionIdLong);
+        if (sessionSummaryOpt.isPresent()) {
+            summary = sessionSummaryOpt.get().getSummary();
+        }
 
-            model.addAttribute("sessionAudit", sessionLog.get().toTerminalLogDTO(sessionId));
+        model.addAttribute("sessionId", sessionId);
+        TerminalLogDTO terminalLogDTO;
+        if ((null == logs || logs.isEmpty())){
+            terminalLogDTO = sessionLog.get().toTerminalLogDTO(sessionId);
         }
         else {
-            model.addAttribute("sessionAudit", logs.get(0).toDTO(sessionId));
+            terminalLogDTO = logs.get(0).toDTO(sessionId);
         }
+
+        // Add summary to DTO using builder pattern (create new DTO with summary)
+        terminalLogDTO = TerminalLogDTO.builder()
+            .sessionId(terminalLogDTO.getSessionId())
+            .user(terminalLogDTO.getUser())
+            .host(terminalLogDTO.getHost())
+            .closed(terminalLogDTO.getClosed())
+            .sessionTime(terminalLogDTO.getSessionTime())
+            .summary(summary)
+            .build();
+
+        model.addAttribute("sessionAudit", terminalLogDTO);
 
         return "sso/sessions/view_terms";
     }

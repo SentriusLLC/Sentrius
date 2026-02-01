@@ -1,0 +1,84 @@
+{{- if .Values.surrealdb.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-surrealdb
+  labels:
+    app: surrealdb
+    release: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: surrealdb
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: surrealdb
+        release: {{ .Release.Name }}
+    spec:
+      # Init container to fix permissions on the data directory
+      initContainers:
+        - name: fix-permissions
+          image: busybox:latest
+          command: ['sh', '-c', 'chown -R 1000:1000 /data && chmod -R 755 /data']
+          volumeMounts:
+            - name: surrealdb-data
+              mountPath: /data
+          securityContext:
+            runAsUser: 0
+      containers:
+        - name: surrealdb
+          image: "{{ .Values.surrealdb.image.repository }}:{{ .Values.surrealdb.image.tag }}"
+          imagePullPolicy: {{ .Values.surrealdb.image.pullPolicy }}
+          command: ["/surreal", "start"]
+          args:
+            - "--bind"
+            - "0.0.0.0:{{ .Values.surrealdb.port }}"
+            - "--user"
+            - "root"
+            - "--pass"
+            - "$(SURREAL_PASS)"
+            - "surrealkv:/data/sentrius.db"
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          ports:
+            - containerPort: {{ .Values.surrealdb.port }}
+              name: http
+          env:
+            - name: SURREAL_USER
+              value: "root"
+            - name: SURREAL_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-surrealdb-secret
+                  key: password
+            - name: SURREAL_LOG
+              value: {{ .Values.surrealdb.env.SURREAL_LOG | quote }}
+            - name: SURREAL_CAPS_ALLOW_ALL
+              value: {{ .Values.surrealdb.env.SURREAL_CAPS_ALLOW_ALL | quote }}
+            - name: SURREAL_CAPS_ALLOW_NET
+              value: {{ .Values.surrealdb.env.SURREAL_CAPS_ALLOW_NET | quote }}
+          volumeMounts:
+            - name: surrealdb-data
+              mountPath: /data
+          resources: {{- toYaml .Values.surrealdb.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: surrealdb-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-surrealdb-pvc
+{{- end }}

@@ -184,6 +184,9 @@ public class ChatAgent extends BaseEnterpriseAgent {
                 // Pass isAutonomous=true to get autonomous-mode prompting
                 response = chatVerbs.promptAgent(agentExecution, agentExecutionContext, prompt, 
                     new ArrayList<>(), "idle", true);
+            } else {
+                response = chatVerbs.promptAgent(agentExecution, agentExecutionContext, prompt,
+                    new ArrayList<>(), "idle", false);
             }
         } catch (ZtatException e) {
             throw new RuntimeException(e);
@@ -457,6 +460,7 @@ public class ChatAgent extends BaseEnterpriseAgent {
                                         agentExecutionContext.setAgentContext(context);
                                         promptBuilder = new PromptBuilder(verbRegistry, config);
                                         prompt = promptBuilder.buildPrompt(false);
+
                                         log.info("Agent config reloaded and prompt rebuilt for new autonomous cycle");
                                     } catch (IOException | ZtatException e) {
                                         log.error("Failed to reload agent config on restart: {}", e.getMessage());

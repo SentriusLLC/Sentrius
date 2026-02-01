@@ -15,5 +15,9 @@ public class TerminalLogDTO {
     private Boolean closed;
     private Timestamp sessionTime;
 
-
+    /**
+     * AI-generated summary of the session activity.
+     * May be null if no summary has been generated yet.
+     */
+    private String summary;
 }

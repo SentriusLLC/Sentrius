@@ -8,6 +8,8 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Entity representing a document stored in the system for retrieval and analysis.
@@ -50,13 +52,34 @@ public class Document {
     @Column(name = "tags")
     private String tags; // Comma-separated tags for categorization
 
-    // previously classified as UNCLASSIFIED, which are documents we assume are public or markings
-    // that are nothing more than tags. If not PUBLIC, then we must enforce markings-based access control.
-    @Column(name = "classification")
-    private String classification = "PUBLIC";
-
+    /**
+     * ABAC markings that drive access control.
+     *
+     * Markings use visibility expression syntax (compatible with Apache Accumulo AccessEvaluator):
+     * - Simple marking: "SENSITIVE" - requires user to have SENSITIVE authorization
+     * - AND expression: "SENSITIVE&FINANCE" - requires both SENSITIVE and FINANCE authorizations
+     * - OR expression: "SENSITIVE|HR" - requires either SENSITIVE or HR
+     * - Complex: "(SENSITIVE&FINANCE)|(HR&MANAGER)" - requires (SENSITIVE AND FINANCE) OR (HR AND MANAGER)
+     *
+     * Special markings:
+     * - null or empty: Document is PUBLIC (accessible to all authenticated users)
+     * - "USER:username": Document is private to specific user
+     * - "TEAM:teamname": Document is accessible to team members
+     *
+     * Access control is determined entirely by markings. The getVisibilityLevel()
+     * method derives a visibility level from markings for display/sorting purposes only.
+     */
     @Column(name = "markings")
     private String markings;
+
+    /**
+     * @deprecated Use markings instead. Classification is now derived from markings.
+     * This field is retained for backward compatibility and display purposes only.
+     * Call getVisibilityLevel() to get the derived visibility level.
+     */
+    @Deprecated
+    @Column(name = "classification")
+    private String classification;
 
     @Column(name = "created_by")
     private String createdBy;
@@ -124,6 +147,113 @@ public class Document {
             this.tags = null;
         } else {
             this.tags = String.join(",", tagsArray);
+        }
+    }
+
+    /**
+     * Check if document is public (no markings or explicitly public).
+     * Public documents are accessible to all authenticated users.
+     */
+    public boolean isPublic() {
+        return markings == null || markings.trim().isEmpty() || markings.equalsIgnoreCase("PUBLIC");
+    }
+
+    /**
+     * Check if document has user-specific markings (private to a user).
+     */
+    public boolean isUserPrivate() {
+        return markings != null && markings.contains("USER:");
+    }
+
+    /**
+     * Check if document has team-specific markings.
+     */
+    public boolean isTeamRestricted() {
+        return markings != null && markings.contains("TEAM:");
+    }
+
+    /**
+     * Get all user IDs if this document has USER: markings.
+     * Returns empty list if no USER: markings exist.
+     * Supports multiple USER: markings in the same document.
+     */
+    public List<String> getPrivateUserId() {
+        List<String> userIds = new ArrayList<>();
+        if (markings == null) return userIds;
+
+        String[] parts = markings.split("[,&|()]");
+        for (String part : parts) {
+            String trimmed = part.trim();
+            if (trimmed.startsWith("USER:")) {
+                userIds.add(trimmed.substring(5));
+            }
+        }
+        return userIds;
+    }
+
+    /**
+     * Derive visibility level from markings for display/sorting purposes only.
+     * This provides a human-readable visibility level based on the markings.
+     * Access control is still driven entirely by markings evaluation via AccessEvaluator.
+     *
+     * Visibility levels (from most to least restrictive):
+     * - PRIVATE: Contains USER: marking (user-specific)
+     * - TEAM: Contains TEAM: marking (team-specific)
+     * - SENSITIVE: Contains SENSITIVE marking or other restricted markings
+     * - RESTRICTED: Has some markings but not other special categories
+     * - PUBLIC: No markings (accessible to all authenticated users)
+     */
+    public String getVisibilityLevel() {
+        if (isPublic()) {
+            return "PUBLIC";
+        }
+
+        if (isUserPrivate()) {
+            return "PRIVATE";
+        }
+
+        if (isTeamRestricted()) {
+            return "TEAM";
+        }
+
+        String upperMarkings = markings.toUpperCase();
+
+        if (upperMarkings.contains("SENSITIVE")) {
+            return "SENSITIVE";
+        }
+
+        // Has some markings but not standard special categories
+        return "RESTRICTED";
+    }
+
+    /**
+     * Check if document requires specific markings for access.
+     * Returns true if the document has any access-control markings.
+     */
+    public boolean requiresMarkingsAccess() {
+        return !isPublic();
+    }
+
+    /**
+     * Get markings array split by comma (for simple comma-separated markings).
+     * For complex visibility expressions, use getMarkings() directly with AccessEvaluator.
+     */
+    public String[] getMarkingsArray() {
+        if (markings == null || markings.trim().isEmpty()) {
+            return new String[0];
+        }
+        return markings.split(",");
+    }
+
+    /**
+     * Set markings from array (joins with comma).
+     * For complex visibility expressions, use setMarkings() directly.
+     */
+    public void setMarkingsFromArray(String[] markingsArray) {
+        if (markingsArray == null || markingsArray.length == 0) {
+            this.markings = null;
+        } else {
+            this.markings = String.join(",", markingsArray);
         }
     }
 

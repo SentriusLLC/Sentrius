@@ -105,7 +105,7 @@ public class PromptBuilder {
             }
 
             prompt.append("\nWORKFLOW:\n");
-            prompt.append("1. Use search_verbs or find_verbs_by_intent to discover verbs for your task\n");
+            prompt.append("1. Use search_verbs or d to discover verbs for your task\n");
             prompt.append("2. Use get_verb_details to see full details about a specific verb\n");
             prompt.append("3. Execute the discovered verb with appropriate parameters\n");
             prompt.append("4. All discovered verbs can be used in your plan\n\n");

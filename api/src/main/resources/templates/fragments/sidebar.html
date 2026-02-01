@@ -107,6 +107,13 @@
                             <i class="fas fa-cogs"></i> <span class="ms-1 d-none d-sm-inline">Services</span>
                         </a>
                     </li>
+                    <li
+                            th:if="${uiAccessHelper.check(operatingUser, 'CAN_VIEW_KNOWLEDGE_GRAPH', '/ui/ai/knowledge-graph') || uiAccessHelper.check(operatingUser, 'CAN_MANAGE_APPLICATION', '/ui/ai/knowledge-graph')}"
+                        data-ui-resource="ai.knowledge_graph">
+                        <a href="/sso/v1/knowledge-graph/query" class="nav-link px-0 align-middle">
+                            <i class="fas fa-project-diagram"></i> <span class="ms-1 d-none d-sm-inline">Knowledge Graph</span>
+                        </a>
+                    </li>
                     <li th:if="${uiAccessHelper.check(operatingUser, 'CAN_MANAGE_USERS', '/ui/ai/manage_users')}"
                         data-ui-resource="ai.manage_users">
                         <a href="/sso/v1/users/list" class="nav-link px-0 align-middle">

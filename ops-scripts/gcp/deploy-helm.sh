@@ -270,6 +270,7 @@ helm upgrade --install sentrius ./sentrius-chart --namespace ${TENANT} \
     --set keycloak.realm.clients.sshagent.client_secret="${SSH_AGENT_CLIENT_SECRET}" \
     --set keycloak.realm.clients.agentProxy.client_secret="${SENTRIUS_APROXY_CLIENT_SECRET}" \
     --set keycloak.realm.clients.promptAdvisor.client_secret="${PROMPT_ADVISOR_CLIENT_SECRET}" \
+    --set surrealdb.password="${SURREALDB_PASSWORD}" \
     --set keycloak.image.repository="${GCP_REGISTRY}/sentrius-keycloak" \
     --set keycloak.image.pullPolicy="IfNotPresent" \
     --set keycloak.image.tag=${SENTRIUS_KEYCLOAK_VERSION} \

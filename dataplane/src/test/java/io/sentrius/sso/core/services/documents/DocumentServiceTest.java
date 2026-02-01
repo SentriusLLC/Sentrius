@@ -42,9 +42,12 @@ class DocumentServiceTest {
     @Mock
     private DocumentAccessControlService accessControlService;
 
+    @Mock
+    private KnowledgeGraphService knowledgeGraphService;
+
     @BeforeEach
     void setUp() {
-        documentService = new DocumentService(documentRepository, embeddingService, keycloakService, systemOptions, accessControlService);
+        documentService = new DocumentService(documentRepository, embeddingService, keycloakService, systemOptions, accessControlService, knowledgeGraphService);
     }
 
     @Test

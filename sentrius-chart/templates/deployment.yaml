@@ -80,6 +80,14 @@ spec:
                   name: {{ .Release.Name }}-db-secret
                   key: keystore-password
 
+            {{- if .Values.surrealdb.enabled }}
+            - name: SURREALDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-surrealdb-secret
+                  key: password
+            {{- end }}
+
             # Database URL switches based on Cloud SQL mode
             - name: SPRING_DATASOURCE_URL
               value: {{- if .Values.cloudsql.enabled }}

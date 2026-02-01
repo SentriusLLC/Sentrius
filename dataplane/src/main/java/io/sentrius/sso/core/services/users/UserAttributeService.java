@@ -34,6 +34,15 @@ public class UserAttributeService {
     }
 
     /**
+     * Get all active user attributes across all users.
+     * Used by the unified attribute management UI to display legacy attributes.
+     */
+    public List<UserAttribute> getAllActiveAttributes() {
+        log.debug("Getting all active user attributes");
+        return userAttributeRepository.findByIsActiveTrue();
+    }
+
+    /**
      * Get user attributes as a map
      */
     public Map<String, String> getUserAttributesAsMap(String userId) {

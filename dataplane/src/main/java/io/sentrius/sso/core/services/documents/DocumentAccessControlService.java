@@ -5,6 +5,7 @@ import io.sentrius.sso.core.model.users.UserAttribute;
 import io.sentrius.sso.core.repository.UserAttributeRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.accumulo.access.AccessEvaluator;
+import org.apache.accumulo.access.Authorizations;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +30,12 @@ public class DocumentAccessControlService {
     /**
      * Check if a user can access a specific document based on markings and attributes.
      * 
+     * Access control is driven by markings:
+     * - No markings (null/empty): PUBLIC - accessible to all authenticated users
+     * - USER:username marking: Private to that specific user
+     * - TEAM:teamname marking: Accessible to team members
+     * - Other markings: Evaluated via AccessEvaluator against user's authorizations
+     *
      * @param document The document to check access for
      * @param evaluator AccessEvaluator built from user's attributes (can be null)
      * @param userId The user ID attempting to access the document
@@ -37,13 +44,10 @@ public class DocumentAccessControlService {
     public boolean canAccessDocument(Document document, AccessEvaluator evaluator, String userId) {
         log.debug("Evaluating document access for user: {}, document: {}", userId, document.getDocumentName());
 
-        // If document has no markings, allow access (unclassified/public)
-        if (document.getMarkings() == null || document.getMarkings().trim().isEmpty()) {
-            if ("UNCLASSIFIED".equalsIgnoreCase(document.getClassification()) || 
-                "PUBLIC".equalsIgnoreCase(document.getClassification())) {
-                log.debug("Document is unclassified/public with no markings - access granted");
-                return true;
-            }
+        // If document has no markings, it's PUBLIC - allow access
+        if (document.isPublic()) {
+            log.debug("Document has no markings (PUBLIC) - access granted");
+            return true;
         }
 
         // If user is the creator, allow access
@@ -53,43 +57,31 @@ public class DocumentAccessControlService {
         }
 
         // Check USER: markings (private user-specific documents)
-        if (document.getMarkings() != null && document.getMarkings().contains("USER:")) {
-            String[] markingsArray = document.getMarkings().split(",");
-            for (String marking : markingsArray) {
-                if (marking.trim().startsWith("USER:")) {
-                    String markedUserId = marking.trim().substring(5);
-                    if (userId != null && userId.equals(markedUserId)) {
-                        log.debug("USER marking matched - access granted to owning user: {}", userId);
-                        return true;
-                    }
-                }
+        if (document.isUserPrivate()) {
+            List<String> privateUserIds = document.getPrivateUserId();
+            if (userId != null && privateUserIds.contains(userId)) {
+                log.debug("USER marking matched - access granted to owning user: {}", userId);
+                return true;
             }
-            log.debug("USER marking(s) present but user {} does not match - access denied", userId);
+            log.debug("USER marking present but user {} does not match - access denied", userId);
             return false;
         }
 
-        // Check if document is PUBLIC or UNCLASSIFIED - these should be accessible to all
-        if ("UNCLASSIFIED".equalsIgnoreCase(document.getClassification()) || 
-            "PUBLIC".equalsIgnoreCase(document.getClassification())) {
-            log.debug("Document is PUBLIC/UNCLASSIFIED - access granted");
-            return true;
-        }
-
         // Use AccessEvaluator to check if user has required markings
-        if (evaluator != null && document.getMarkings() != null && !document.getMarkings().trim().isEmpty()) {
+        if (evaluator != null && document.requiresMarkingsAccess()) {
             boolean canAccess = evaluator.canAccess(document.getMarkings());
             log.debug("AccessEvaluator result for markings '{}': {}", document.getMarkings(), canAccess);
             return canAccess;
         }
 
-        // If no evaluator and document has markings, deny access
-        if (document.getMarkings() != null && !document.getMarkings().trim().isEmpty()) {
+        // If no evaluator but document has markings, deny access
+        if (document.requiresMarkingsAccess()) {
             log.debug("Document has markings but user has no authorizations - access denied");
             return false;
         }
 
-        // Default: deny access for classified documents
-        log.debug("Document is classified but access could not be determined - access denied");
+        // Default: deny access
+        log.debug("Access could not be determined - access denied");
         return false;
     }
 
@@ -147,5 +139,62 @@ public class DocumentAccessControlService {
             return Collections.emptyList();
         }
         return userAttributeRepository.findByUserIdAndIsActiveTrue(userId);
+    }
+
+    /**
+     * Check if a user can access a knowledge graph node based on markings and attributes.
+     * Uses the same markings-driven ABAC logic as document access control.
+     *
+     * @param node The knowledge graph node to check access for
+     * @param userId The user ID attempting to access the node
+     * @return true if user can access the node, false otherwise
+     */
+    public boolean canAccessNode(io.sentrius.sso.core.model.documents.KnowledgeGraphNode node, String userId) {
+        log.debug("Evaluating knowledge graph node access for user: {}, node: {}", userId, node.getName());
+
+        // If node has no markings, it's PUBLIC - allow access
+        if (node.getMarkings() == null || node.getMarkings().trim().isEmpty()) {
+            log.debug("Node has no markings (PUBLIC) - access granted");
+            return true;
+        }
+
+        // If user is the creator, allow access
+        if (userId != null && userId.equals(node.getCreatedBy())) {
+            log.debug("User is the creator of the node - access granted");
+            return true;
+        }
+
+        // Check for user-specific markings (e.g., "USER:username")
+        if (node.getMarkings().contains("USER:")) {
+            if (node.getMarkings().contains("USER:" + userId)) {
+                log.debug("Node has user-specific marking - access granted");
+                return true;
+            }
+            log.debug("Node has USER: marking but not for this user - access denied");
+            return false;
+        }
+
+        // Build AccessEvaluator for ABAC check
+        List<UserAttribute> userAttributes = getUserAttributes(userId);
+        if (userAttributes.isEmpty()) {
+            log.debug("No attributes found for user - access denied");
+            return false;
+        }
+
+        List<Authorizations> authorizationsList = new ArrayList<>();
+        for (UserAttribute attr : userAttributes) {
+            authorizationsList.add(Authorizations.of(attr.getAttributeValue()));
+        }
+        AccessEvaluator evaluator = AccessEvaluator.of(authorizationsList);
+
+        // Evaluate access using ABAC
+        try {
+            boolean canAccess = evaluator.canAccess(node.getMarkings().getBytes());
+            log.debug("ABAC evaluation result for node: {}", canAccess);
+            return canAccess;
+        } catch (Exception e) {
+            log.error("Error evaluating ABAC access for node: {}", e.getMessage());
+            return false;
+        }
     }
 }

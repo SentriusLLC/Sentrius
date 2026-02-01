@@ -2,8 +2,10 @@ package io.sentrius.sso.core.services.agents;
 
 import io.sentrius.sso.core.model.agents.AgentExecutionAudit;
 import io.sentrius.sso.core.repository.AgentExecutionAuditRepository;
+import io.sentrius.sso.core.services.documents.KnowledgeGraphIngestionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,9 @@ public class AgentExecutionAuditService {
     private static final Logger logger = LoggerFactory.getLogger(AgentExecutionAuditService.class);
 
     private final AgentExecutionAuditRepository repository;
+
+    @Autowired(required = false)
+    private KnowledgeGraphIngestionService knowledgeGraphIngestionService;
 
     public AgentExecutionAuditService(AgentExecutionAuditRepository repository) {
         this.repository = repository;
@@ -180,6 +185,18 @@ public class AgentExecutionAuditService {
             AgentExecutionAudit updated = repository.save(audit);
             logger.info("Closed agent execution audit: {} with status: {}, duration: {}ms",
                 updated.getId(), updated.getStatus(), updated.getDurationMs());
+
+            // Ingest agent execution into knowledge graph (async, non-blocking)
+            try {
+                if (knowledgeGraphIngestionService != null && knowledgeGraphIngestionService.isAgentIngestionEnabled()) {
+                    knowledgeGraphIngestionService.ingestAgentExecution(updated);
+                    logger.debug("Ingested agent execution {} into knowledge graph", executionId);
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to ingest agent execution {} into knowledge graph: {}", executionId, e.getMessage());
+                // Don't fail the audit close if ingestion fails
+            }
+
             return updated;
         } else {
             logger.debug("Agent execution audit {} already closed at {}", executionId, audit.getEndTime());

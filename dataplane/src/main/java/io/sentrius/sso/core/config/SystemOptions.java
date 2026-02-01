@@ -210,6 +210,43 @@ public class SystemOptions {
     @Builder.Default
     public String githubAgentTokenName = "";
 
+    @Updatable(description = "Sleep time for the document relationship analyzer", group = "AI/LLM")
+    @Builder.Default
+    public Long documentRelationshipsSleep = 30000L;
+
+    // Knowledge Graph Session/Agent Integration Options
+    @Updatable(description = "Enable storing terminal/SSH session data in the knowledge graph", group = "Knowledge Graph")
+    @Builder.Default
+    public Boolean knowledgeGraphSessionsEnabled = false;
+
+    @Updatable(description = "Enable storing agent execution data in the knowledge graph", group = "Knowledge Graph")
+    @Builder.Default
+    public Boolean knowledgeGraphAgentExecutionsEnabled = false;
+
+    @Updatable(description = "Default markings for session data in knowledge graph (e.g., 'SESSION_DATA', 'SENSITIVE&AUDIT'). Users need these authorizations to query session nodes.", group = "Knowledge Graph")
+    @Builder.Default
+    public String knowledgeGraphSessionMarkings = "SESSION_DATA";
+
+    @Updatable(description = "Default markings for agent execution data in knowledge graph (e.g., 'AGENT_DATA', 'INTERNAL'). Users need these authorizations to query agent execution nodes.", group = "Knowledge Graph")
+    @Builder.Default
+    public String knowledgeGraphAgentMarkings = "AGENT_DATA";
+
+    @Updatable(description = "Whether to include command output in session nodes (can be verbose)", group = "Knowledge Graph")
+    @Builder.Default
+    public Boolean knowledgeGraphIncludeCommandOutput = false;
+
+    @Updatable(description = "Maximum number of commands per session to store in knowledge graph", group = "Knowledge Graph")
+    @Builder.Default
+    public Integer knowledgeGraphMaxCommandsPerSession = 100;
+
+    @Updatable(description = "Whether to create relationships between sessions and connected systems", group = "Knowledge Graph")
+    @Builder.Default
+    public Boolean knowledgeGraphSessionSystemRelationships = true;
+
+    @Updatable(description = "Whether to create relationships between agent executions and their communications", group = "Knowledge Graph")
+    @Builder.Default
+    public Boolean knowledgeGraphAgentCommunicationRelationships = true;
+
 
 
     // the default path may be sufficient
@@ -382,5 +419,104 @@ public class SystemOptions {
     String value = dynamicPropertiesService.getProperty("sentrius-sentrius","lockdownEnabled",
         lockdownEnabled != null ? lockdownEnabled.toString() : "false");
     return Boolean.parseBoolean(value);
+  }
+
+  // SurrealDB Knowledge Graph Configuration
+  @Updatable(description = "Enable SurrealDB knowledge graph integration", group = "Knowledge Graph")
+  @Builder.Default
+  public Boolean surrealdbEnabled = false;
+
+  @Updatable(description = "SurrealDB host address", group = "Knowledge Graph")
+  @Builder.Default
+  public String surrealdbHost = "sentrius-surrealdb";
+
+  @Updatable(description = "SurrealDB port", group = "Knowledge Graph")
+  @Builder.Default
+  public Integer surrealdbPort = 8000;
+
+  @Updatable(description = "SurrealDB username", group = "Knowledge Graph")
+  @Builder.Default
+  public String surrealdbUsername = "root";
+
+  @Updatable(description = "SurrealDB namespace", group = "Knowledge Graph")
+  @Builder.Default
+  public String surrealdbNamespace = "sentrius";
+
+  @Updatable(description = "SurrealDB database name", group = "Knowledge Graph")
+  @Builder.Default
+  public String surrealdbDatabase = "knowledge_graph";
+
+  /**
+   * Get SurrealDB enabled state from dynamic properties.
+   * @return the current SurrealDB enabled state
+   */
+  public Boolean getSurrealdbEnabled() {
+    if (dynamicPropertiesService == null) {
+      return surrealdbEnabled;
+    }
+    String value = dynamicPropertiesService.getProperty("sentrius-sentrius", "surrealdbEnabled",
+        surrealdbEnabled != null ? surrealdbEnabled.toString() : "false");
+    return Boolean.parseBoolean(value);
+  }
+
+  /**
+   * Get SurrealDB host from dynamic properties.
+   * @return the current SurrealDB host
+   */
+  public String getSurrealdbHost() {
+    if (dynamicPropertiesService == null) {
+      return surrealdbHost;
+    }
+    return dynamicPropertiesService.getProperty("sentrius-sentrius", "surrealdbHost",
+        surrealdbHost != null ? surrealdbHost : "sentrius-surrealdb");
+  }
+
+  /**
+   * Get SurrealDB port from dynamic properties.
+   * @return the current SurrealDB port
+   */
+  public Integer getSurrealdbPort() {
+    if (dynamicPropertiesService == null) {
+      return surrealdbPort;
+    }
+    String value = dynamicPropertiesService.getProperty("sentrius-sentrius", "surrealdbPort",
+        surrealdbPort != null ? surrealdbPort.toString() : "8000");
+    return Integer.parseInt(value);
+  }
+
+  /**
+   * Get SurrealDB username from dynamic properties.
+   * @return the current SurrealDB username
+   */
+  public String getSurrealdbUsername() {
+    if (dynamicPropertiesService == null) {
+      return surrealdbUsername;
+    }
+    return dynamicPropertiesService.getProperty("sentrius-sentrius", "surrealdbUsername",
+        surrealdbUsername != null ? surrealdbUsername : "root");
+  }
+
+  /**
+   * Get SurrealDB namespace from dynamic properties.
+   * @return the current SurrealDB namespace
+   */
+  public String getSurrealdbNamespace() {
+    if (dynamicPropertiesService == null) {
+      return surrealdbNamespace;
+    }
+    return dynamicPropertiesService.getProperty("sentrius-sentrius", "surrealdbNamespace",
+        surrealdbNamespace != null ? surrealdbNamespace : "sentrius");
+  }
+
+  /**
+   * Get SurrealDB database name from dynamic properties.
+   * @return the current SurrealDB database name
+   */
+  public String getSurrealdbDatabase() {
+    if (dynamicPropertiesService == null) {
+      return surrealdbDatabase;
+    }
+    return dynamicPropertiesService.getProperty("sentrius-sentrius", "surrealdbDatabase",
+        surrealdbDatabase != null ? surrealdbDatabase : "knowledge_graph");
   }
 }

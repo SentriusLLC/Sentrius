@@ -484,6 +484,13 @@ data:
     integrationproxy.externalUrl=http://sentrius-integrationproxy:8080/
     sentrius.integration.proxyUrl=http://sentrius-integrationproxy:8080/
     sentrius.abac.keycloak-sync.enabled=true
+    # SurrealDB Knowledge Graph configuration
+    surrealdb.enabled=true
+    surrealdb.host={{ .Release.Name }}-surrealdb
+    surrealdb.port={{ .Values.surrealdb.port | default 8000 }}
+    surrealdb.username={{ .Values.surrealdb.username | default "root" }}
+    surrealdb.namespace={{ .Values.surrealdb.namespace | default "sentrius" }}
+    surrealdb.database={{ .Values.surrealdb.database | default "knowledge" }}
     # Self-Healing configuration
     self-healing.enabled={{ .Values.selfHealing.enabled }}
     self-healing.off-hours.start={{ .Values.selfHealing.offHours.start }}

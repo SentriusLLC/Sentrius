@@ -124,8 +124,7 @@ class DocumentAccessControlServiceTest {
         Document document = Document.builder()
                 .documentName("test-document")
                 .content("test content")
-                .classification("PUBLIC")
-                .markings("GENERAL")
+                .markings("PUBLIC")
                 .createdBy(userId1)
                 .build();
 
@@ -252,7 +251,6 @@ class DocumentAccessControlServiceTest {
         Document document = Document.builder()
                 .documentName("test-document")
                 .content("test content")
-                .classification("PRIVATE")
                 .markings("USER:" + user1 + ",USER:" + user2)
                 .createdBy(user1)
                 .build();

@@ -13,12 +13,18 @@ import java.util.Optional;
 @Repository
 public interface UserAttributeRepository extends JpaRepository<UserAttribute, Long> {
 
+    // Find all active attributes across all users
+    List<UserAttribute> findByIsActiveTrue();
+
     // Find by user ID
     List<UserAttribute> findByUserIdAndIsActiveTrue(String userId);
     
     // Find by user ID and attribute name
     Optional<UserAttribute> findByUserIdAndAttributeNameAndIsActiveTrue(String userId, String attributeName);
     
+    // Find by user ID and attribute name (including inactive - needed to prevent unique constraint violations)
+    Optional<UserAttribute> findByUserIdAndAttributeName(String userId, String attributeName);
+
     // Find by attribute name across all users
     List<UserAttribute> findByAttributeNameAndIsActiveTrue(String attributeName);
     

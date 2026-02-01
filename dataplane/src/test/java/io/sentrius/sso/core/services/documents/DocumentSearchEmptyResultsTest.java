@@ -42,13 +42,16 @@ class DocumentSearchEmptyResultsTest {
     @Mock
     private DocumentAccessControlService accessControlService;
 
+    @Mock
+    private KnowledgeGraphService knowledgeGraphService;
+
     private DocumentService documentService;
     private SystemOptions systemOptions = new SystemOptions();
 
     @BeforeEach
     void setUp() {
         documentService = new DocumentService(documentRepository, embeddingService, 
-                keycloakService, systemOptions, accessControlService);
+                keycloakService, systemOptions, accessControlService, knowledgeGraphService);
     }
 
     @Test

@@ -241,6 +241,7 @@
         .badge-active { background-color: #28a745; color: white; }
         .badge-expired { background-color: #dc3545; color: white; }
         .badge-local { background-color: #6c757d; color: white; }
+        .badge-legacy { background-color: #fd7e14; color: white; }
 
         .modal {
             display: none;
@@ -697,7 +698,7 @@
                         <!-- User Assignments Tab -->
                         <div class="tab-content-section" id="assignments" role="tabpanel">
                             <div class="section-header">
-                                <div class="section-title">User Attribute Assignments</div>
+                                <div class="section-title">Attribute Assignments</div>
                                 <div style="display: flex; gap: 10px;">
                                     <button class="btn btn-success" onclick="syncAllFromKeycloak()">
                                         <i class="fas fa-sync"></i> Sync All from Keycloak
@@ -709,14 +710,15 @@
                             </div>
 
                             <div class="info-card">
-                                <div class="info-card-title">👥 Step 2: About User Attribute Assignments</div>
+                                <div class="info-card-title">👥 Step 2: About Attribute Assignments</div>
                                 <div class="info-card-text">
-                                    Manage attribute values assigned to individual users. Attributes can be synced from Keycloak 
+                                    Manage attribute values assigned to users and non-person entities (NPEs). Attributes can be synced from Keycloak 
                                     or managed locally with optional validity periods.
                                     <br><br>
                                     <strong>Example:</strong> After creating the <span class="code">department</span> attribute, assign 
-                                    <span class="code">department=engineering</span> to user "john.doe" and 
-                                    <span class="code">department=finance</span> to user "jane.smith". You can also set expiration dates 
+                                    <span class="code">department=engineering</span> to user "john.doe", 
+                                    <span class="code">department=finance</span> to user "jane.smith", or assign 
+                                    <span class="code">trust_level=high</span> to an NPE agent. You can also set expiration dates 
                                     for temporary access.
                                 </div>
                             </div>
@@ -746,8 +748,16 @@
                             <div class="filters-container">
                                 <div class="filter-row">
                                     <div class="filter-item">
-                                        <label>Search User</label>
-                                        <input type="text" id="filterUser" placeholder="Username or ID" onkeyup="filterAttributesTable()">
+                                        <label>Search Entity</label>
+                                        <input type="text" id="filterUser" placeholder="Username or Entity ID" onkeyup="filterAttributesTable()">
+                                    </div>
+                                    <div class="filter-item">
+                                        <label>Entity Type</label>
+                                        <select id="filterEntityType" onchange="filterAttributesTable()">
+                                            <option value="">All Types</option>
+                                            <option value="USER">User</option>
+                                            <option value="NON_PERSON_ENTITY">Non-Person Entity</option>
+                                        </select>
                                     </div>
                                     <div class="filter-item">
                                         <label>Attribute Name</label>
@@ -759,6 +769,7 @@
                                             <option value="">All Sources</option>
                                             <option value="keycloak">Keycloak</option>
                                             <option value="sentrius">Sentrius</option>
+                                            <option value="legacy">Legacy</option>
                                         </select>
                                     </div>
                                     <div class="filter-item">
@@ -776,7 +787,8 @@
                                 <table id="attributesTable">
                                     <thead>
                                         <tr>
-                                            <th>User ID</th>
+                                            <th>Entity Type</th>
+                                            <th>Entity ID</th>
                                             <th>Username</th>
                                             <th>Attribute Name</th>
                                             <th>Attribute Value</th>
@@ -789,7 +801,7 @@
                                     </thead>
                                     <tbody id="attributesTableBody">
                                         <tr>
-                                            <td colspan="9" class="empty-state">
+                                            <td colspan="10" class="empty-state">
                                                 <div class="empty-state-icon">📋</div>
                                                 <div class="empty-state-text">No user attributes found</div>
                                                 <div style="color: #868e96;">Click "Sync All from Keycloak" to import attributes</div>
@@ -970,14 +982,21 @@
 <div id="attributeModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 class="modal-title" id="attributeModalTitle">Add User Attribute</h2>
+            <h2 class="modal-title" id="attributeModalTitle">Add Attribute</h2>
             <button class="close" onclick="closeAttributeModal()">&times;</button>
         </div>
         <div class="modal-body">
             <form id="attributeForm">
                 <input type="hidden" id="assignmentId">
                 <div class="form-group">
-                    <label>User ID *</label>
+                    <label>Entity Type *</label>
+                    <select id="targetType" class="form-control" onchange="updateEntityIdLabel()">
+                        <option value="USER">User</option>
+                        <option value="NON_PERSON_ENTITY">Non-Person Entity (NPE)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label id="entityIdLabel">User ID *</label>
                     <div class="autocomplete-container">
                         <input type="text" id="userId" required placeholder="Start typing username..." autocomplete="off">
                         <div class="autocomplete-dropdown" id="userIdDropdown"></div>
@@ -1002,10 +1021,10 @@
                     <label>Valid Until</label>
                     <input type="datetime-local" id="validUntil">
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="syncToKeycloakGroup">
                     <label>
                         <input type="checkbox" id="syncToKeycloak" checked>
-                        Sync to Keycloak
+                        Sync to Keycloak (User only)
                     </label>
                 </div>
             </form>
@@ -1474,10 +1493,10 @@
         if (attributes.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="9" class="empty-state">
+                    <td colspan="10" class="empty-state">
                         <div class="empty-state-icon">📋</div>
-                        <div class="empty-state-text">No user attributes found</div>
-                        <div style="color: #868e96;">Click "Sync All from Keycloak" to import attributes</div>
+                        <div class="empty-state-text">No attributes found</div>
+                        <div style="color: #868e96;">Click "Add Attribute" to create attributes for users or NPEs</div>
                     </td>
                 </tr>
             `;
@@ -1486,25 +1505,30 @@
         
         tbody.innerHTML = attributes.map(attr => `
             <tr>
+                <td><span class="badge ${attr.targetType === 'USER' ? 'badge-subject' : 'badge-resource'}">
+                    ${attr.targetType === 'USER' ? 'User' : 'NPE'}
+                </span></td>
                 <td>${escapeHtml(attr.targetId || '-')}</td>
                 <td>${escapeHtml(attr.username || '-')}</td>
                 <td>${escapeHtml(attr.attributeName)}</td>
                 <td>${escapeHtml(attr.attributeValue)}</td>
-                <td><span class="badge ${attr.syncedFromKeycloak ? 'badge-keycloak' : 'badge-local'}">
-                    ${attr.syncedFromKeycloak ? 'Keycloak' : 'Sentrius'}
+                <td><span class="badge ${attr.source === 'LEGACY' ? 'badge-legacy' : (attr.syncedFromKeycloak ? 'badge-keycloak' : 'badge-local')}">
+                    ${attr.source === 'LEGACY' ? 'Legacy' : (attr.syncedFromKeycloak ? 'Keycloak' : 'Sentrius')}
                 </span></td>
                 <td>${attr.validFrom ? new Date(attr.validFrom).toLocaleDateString() : '-'}</td>
                 <td>${attr.validUntil ? new Date(attr.validUntil).toLocaleDateString() : '-'}</td>
-                <td><span class="badge ${attr.isActive ? 'badge-active' : 'badge-expired'}">
-                    ${attr.isActive ? 'Active' : 'Expired'}
+                <td><span class="badge ${attr.active ? 'badge-active' : 'badge-expired'}">
+                    ${attr.active ? 'Active' : 'Expired'}
                 </span></td>
                 <td class="actions-cell">
                     <button class="btn btn-sm btn-primary" onclick="editAttribute(${attr.id})">
                         <i class="fas fa-edit"></i>
                     </button>
+                    ${attr.targetType === 'USER' && attr.source !== 'LEGACY' ? `
                     <button class="btn btn-sm btn-success" onclick="syncUserFromKeycloak('${escapeHtml(attr.targetId)}')">
                         <i class="fas fa-sync"></i>
                     </button>
+                    ` : ''}
                     <button class="btn btn-sm btn-danger" onclick="deleteAttribute(${attr.id})">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -1515,6 +1539,7 @@
 
     function filterAttributesTable() {
         const userFilter = document.getElementById('filterUser').value.toLowerCase();
+        const entityTypeFilter = document.getElementById('filterEntityType').value;
         const attrFilter = document.getElementById('filterAttribute').value.toLowerCase();
         const sourceFilter = document.getElementById('filterSource').value;
         const statusFilter = document.getElementById('filterStatus').value;
@@ -1523,15 +1548,17 @@
             const matchesUser = !userFilter || 
                 (attr.targetId && attr.targetId.toLowerCase().includes(userFilter)) ||
                 (attr.username && attr.username.toLowerCase().includes(userFilter));
+            const matchesEntityType = !entityTypeFilter || attr.targetType === entityTypeFilter;
             const matchesAttr = !attrFilter || attr.attributeName.toLowerCase().includes(attrFilter);
             const matchesSource = !sourceFilter || 
                 (sourceFilter === 'keycloak' && attr.syncedFromKeycloak) ||
-                (sourceFilter === 'local' && !attr.syncedFromKeycloak);
+                (sourceFilter === 'sentrius' && !attr.syncedFromKeycloak && attr.source !== 'LEGACY') ||
+                (sourceFilter === 'legacy' && attr.source === 'LEGACY');
             const matchesStatus = !statusFilter ||
-                (statusFilter === 'active' && attr.isActive) ||
-                (statusFilter === 'expired' && !attr.isActive);
-            
-            return matchesUser && matchesAttr && matchesSource && matchesStatus;
+                (statusFilter === 'active' && attr.active) ||
+                (statusFilter === 'expired' && !attr.active);
+
+            return matchesUser && matchesEntityType && matchesAttr && matchesSource && matchesStatus;
         });
         
         renderAttributesTable(filtered);
@@ -1545,27 +1572,48 @@
         const attr = allAttributes.find(a => a.id === id);
         if (!attr) return;
         
-        document.getElementById('attributeModalTitle').textContent = 'Edit User Attribute';
+        const entityType = attr.targetType || 'USER';
+        document.getElementById('attributeModalTitle').textContent = `Edit ${entityType === 'USER' ? 'User' : 'NPE'} Attribute`;
         document.getElementById('assignmentId').value = attr.id;
+        document.getElementById('targetType').value = entityType;
         document.getElementById('userId').value = attr.targetId;
         document.getElementById('attributeName').value = attr.attributeName;
         document.getElementById('attributeValue').value = attr.attributeValue;
         document.getElementById('validFrom').value = attr.validFrom ? attr.validFrom.substring(0, 16) : '';
         document.getElementById('validUntil').value = attr.validUntil ? attr.validUntil.substring(0, 16) : '';
         document.getElementById('syncToKeycloak').checked = attr.syncedFromKeycloak;
+        updateEntityIdLabel();
         document.getElementById('attributeModal').style.display = 'block';
+    }
+    
+    function updateEntityIdLabel() {
+        const targetType = document.getElementById('targetType').value;
+        const label = document.getElementById('entityIdLabel');
+        const input = document.getElementById('userId');
+        const syncGroup = document.getElementById('syncToKeycloakGroup');
+        
+        if (targetType === 'USER') {
+            label.textContent = 'User ID *';
+            input.placeholder = 'Start typing username...';
+            syncGroup.style.display = 'block';
+        } else {
+            label.textContent = 'NPE ID *';
+            input.placeholder = 'Start typing NPE name...';
+            syncGroup.style.display = 'none';
+        }
     }
 
     function saveAttribute() {
         const id = document.getElementById('assignmentId').value;
+        const targetType = document.getElementById('targetType').value;
         const data = {
             targetId: document.getElementById('userId').value,
-            targetType: 'USER',
+            targetType: targetType,
             attributeName: document.getElementById('attributeName').value,
             attributeValue: document.getElementById('attributeValue').value,
             validFrom: document.getElementById('validFrom').value || null,
             validUntil: document.getElementById('validUntil').value || null,
-            syncToKeycloak: document.getElementById('syncToKeycloak').checked
+            syncToKeycloak: targetType === 'USER' ? document.getElementById('syncToKeycloak').checked : false
         };
         
         if (!data.targetId || !data.attributeName || !data.attributeValue) {
@@ -1917,9 +1965,11 @@
 
     // Initialize autocomplete when modal opens
     function openAddAttributeModal() {
-        document.getElementById('attributeModalTitle').textContent = 'Add User Attribute';
+        document.getElementById('attributeModalTitle').textContent = 'Add Attribute';
         document.getElementById('attributeForm').reset();
         document.getElementById('assignmentId').value = '';
+        document.getElementById('targetType').value = 'USER';
+        updateEntityIdLabel();
         document.getElementById('attributeModal').style.display = 'block';
         
         // Setup autocomplete on first open

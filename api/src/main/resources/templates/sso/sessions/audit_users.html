@@ -42,7 +42,7 @@
 
 <script th:inline="none">
     // Configuration constants
-    const SUMMARY_MAX_LENGTH = 150;
+    const SUMMARY_MAX_LENGTH = 80;
     const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
     
     $(document).ready(function() {
@@ -271,26 +271,6 @@
         }, AUTO_REFRESH_INTERVAL);
 
         // Agent audit management functions
-        window.consolidateAgentAudits = function() {
-            if (!confirm('This will consolidate duplicate audit entries. Continue?')) {
-                return;
-            }
-
-            $.ajax({
-                url: '/api/v1/sessions/agents/audit/consolidate',
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="_csrf"]').attr('content')
-                },
-                success: function(response) {
-                    alert('Consolidated ' + response.consolidatedCount + ' duplicate records');
-                    agentTable.ajax.reload();
-                },
-                error: function(xhr, status, error) {
-                    alert('Failed to consolidate audits: ' + error);
-                }
-            });
-        };
 
         window.deleteAllAgentAudits = function() {
             if (!confirm('WARNING: This will permanently delete ALL agent execution audit records. This action cannot be undone. Continue?')) {
@@ -425,9 +405,6 @@
                             <div class="tab-pane fade" id="agent-executions" role="tabpanel">
                                 <!-- Management Buttons -->
                                 <div class="mb-3 d-flex gap-2">
-                                    <button class="btn btn-outline-primary btn-sm" onclick="consolidateAgentAudits()">
-                                        <i class="bi bi-collection"></i> Consolidate Duplicates
-                                    </button>
                                     <button class="btn btn-outline-warning btn-sm" onclick="deleteOldAgentAudits()">
                                         <i class="bi bi-calendar-x"></i> Delete Old Records
                                     </button>

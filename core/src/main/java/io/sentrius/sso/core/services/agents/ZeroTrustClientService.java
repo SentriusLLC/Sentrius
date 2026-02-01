@@ -40,15 +40,14 @@ import org.springframework.web.util.UriUtils;
 public class ZeroTrustClientService {
 
     private final KeycloakService keycloakService;
+    private final RestTemplate restTemplate;
 
     @Value("${agent.api.url:http://localhost:8080}")
     private String agentApiUrl;
 
-
-    private final RestTemplate restTemplate = new RestTemplate();
-
-    public ZeroTrustClientService(KeycloakService keycloakService) {
+    public ZeroTrustClientService(KeycloakService keycloakService, RestTemplate restTemplate) {
         this.keycloakService = keycloakService;
+        this.restTemplate = restTemplate;
     }
 
     /**
@@ -927,6 +926,71 @@ public class ZeroTrustClientService {
     }
 
     /**
+     * Makes a PATCH request to the API with the given endpoint and body.
+     *
+     * @param token The authentication token
+     * @param apiEndpoint The API endpoint path
+     * @param body The request body
+     * @return Response body as string
+     * @throws ZtatException If ZTAT token validation fails
+     */
+    public <T> String callPatchOnApi(@NonNull TokenDTO token, @NonNull String apiEndpoint, T body) throws ZtatException {
+        return callPatchOnApi(token, agentApiUrl, apiEndpoint, body);
+    }
+
+    /**
+     * Makes a PATCH request to the API with the given endpoint and body.
+     *
+     * @param token The authentication token
+     * @param endpoint The base endpoint URL
+     * @param apiEndpoint The API endpoint path
+     * @param body The request body
+     * @return Response body as string
+     * @throws ZtatException If ZTAT token validation fails
+     */
+    public <T> String callPatchOnApi(@NonNull TokenDTO token, String endpoint, @NonNull String apiEndpoint, T body) throws ZtatException {
+        String keycloakJwt = getKeycloakToken();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(keycloakJwt);
+        headers.set("X-Ztat-Token", token.getZtatToken());
+        headers.set("X-Communication-Id", token.getCommunicationId());
+
+        log.trace("Sending PATCH request with body: {}", body.toString());
+        HttpEntity<T> requestEntity = new HttpEntity<>(body, headers);
+
+        if (!apiEndpoint.startsWith("/")) {
+            apiEndpoint = "/" + apiEndpoint;
+        }
+        if (!apiEndpoint.startsWith("/api/v1/")) {
+            apiEndpoint = "/api/v1" + apiEndpoint;
+        }
+
+        String url = endpoint + apiEndpoint;
+        log.info("PATCH request to: {}", url);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PATCH, requestEntity, String.class);
+
+            if (response.getStatusCode() == HttpStatus.OK || response.getStatusCode() == HttpStatus.CREATED || response.getStatusCode() == HttpStatus.NO_CONTENT) {
+                return response.getBody() != null ? response.getBody() : "";
+            } else if (response.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
+                throw new ZtatException(response.getBody(), apiEndpoint);
+            } else {
+                throw new RuntimeException("PATCH request failed: " + response.getStatusCode());
+            }
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.PRECONDITION_REQUIRED) {
+                log.info("Got PRECONDITION_REQUIRED: {}", e.getResponseBodyAsString());
+                throw new ZtatException(e.getResponseBodyAsString(), apiEndpoint);
+            } else {
+                log.error("PATCH request error: {}", e.getResponseBodyAsString());
+            }
+            throw new RuntimeException(e.getResponseBodyAsString());
+        }
+    }
+
+    /**
      * Create an agent execution audit record.
      * This should be called when an agent starts a new execution/task.
      *
@@ -946,6 +1010,7 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.setBearerAuth(getKeycloakToken());
+        headers.set("X-Communication-Id", execution.getCommunicationId());
 
         String requestBody = "agentId=" + UriUtils.encode(agentId, StandardCharsets.UTF_8) +
                            "&executionId=" + UriUtils.encode(executionId, StandardCharsets.UTF_8) +
@@ -982,7 +1047,7 @@ public class ZeroTrustClientService {
      * This should be called when an agent completes execution or shuts down.
      *
      * @param execution The agent execution context
-     * @param status The final status (COMPLETED, FAILED, ERROR)
+     * @param status The final status (COMPLET ED, FAILED, ERROR)
      * @throws ZtatException If ZTAT token validation fails
      */
     public void closeAgentExecutionAudit(@NonNull AgentExecution execution, String status) throws ZtatException {
@@ -995,6 +1060,8 @@ public class ZeroTrustClientService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.setBearerAuth(getKeycloakToken());
+        // Include X-Communication-Id header for NPE authentication
+        headers.set("X-Communication-Id", execution.getCommunicationId());
 
         String finalStatus = (status != null && !status.isEmpty()) ? status : "COMPLETED";
         String requestBody = "executionId=" + UriUtils.encode(executionId, StandardCharsets.UTF_8) +

@@ -360,6 +360,23 @@
 
                 <!-- Terminal Content -->
                 <div id="terminal-content" class="mt-5">
+                    <!-- Session Summary Section -->
+                    <div class="container mb-4" th:if="${sessionAudit.summary != null}">
+                        <div class="card bg-dark border-secondary">
+                            <div class="card-header bg-secondary text-white">
+                                <i class="fas fa-robot"></i> AI Session Summary
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text text-light" th:text="${sessionAudit.summary}" style="white-space: pre-wrap;"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="container mb-4" th:if="${sessionAudit.summary == null}">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Session summary not yet available. It will be generated automatically after the session closes.
+                        </div>
+                    </div>
+
                     <div class="container">
                         <div id="'collapse_output_0" class="container output_body" th:text="''">Panel Body</div>
                     </div>

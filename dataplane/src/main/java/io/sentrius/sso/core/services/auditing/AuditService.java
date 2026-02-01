@@ -5,10 +5,12 @@ import io.sentrius.sso.core.model.sessions.SessionLog;
 import io.sentrius.sso.core.model.sessions.TerminalLogs;
 import io.sentrius.sso.core.repository.SessionLogRepository;
 import io.sentrius.sso.core.repository.TerminalLogsRepository;
+import io.sentrius.sso.core.services.documents.KnowledgeGraphIngestionService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,6 +63,9 @@ public class AuditService {
     private final SessionLogRepository sessionLogRepository;
     private final TerminalLogsRepository TerminalLogsRepository;
 
+    @Autowired(required = false)
+    KnowledgeGraphIngestionService knowledgeGraphIngestionService;
+
     public AuditService(SessionLogRepository sessionLogRepository, TerminalLogsRepository TerminalLogsRepository,
                         TerminalLogsRepository terminalLogsRepository
     ) {
@@ -102,6 +107,18 @@ public class AuditService {
         SessionLog session = sessionLogRepository.findById(sessionId).orElseThrow();
         session.setClosed(true);
         sessionLogRepository.save(session);
+
+        // Ingest session into knowledge graph (async, non-blocking)
+        try {
+            if (knowledgeGraphIngestionService != null && knowledgeGraphIngestionService.isSessionIngestionEnabled()) {
+                List<TerminalLogs> logs = TerminalLogsRepository.findBySessionId(sessionId);
+                knowledgeGraphIngestionService.ingestSession(session, logs);
+                log.debug("Ingested closed session {} into knowledge graph", sessionId);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to ingest session {} into knowledge graph: {}", sessionId, e.getMessage());
+            // Don't fail the session close if ingestion fails
+        }
     }
 
 

@@ -10,6 +10,7 @@ from utils.config_manager import ConfigManager
 from agents.chat_helper.chat_helper_agent import ChatHelperAgent
 from agents.mcp.mcp_agent import MCPAgent
 from agents.coding.coding_agent import CodingAgent
+from agents.knowledge_graph.knowledge_graph_agent import KnowledgeGraphAgent
 
 # Configure logging
 logging.basicConfig(
@@ -22,6 +23,7 @@ AVAILABLE_AGENTS = {
     'chat-helper': ChatHelperAgent,
     'mcp': MCPAgent,
     'coding': CodingAgent,
+    'knowledge-graph': KnowledgeGraphAgent,
 }
 
 

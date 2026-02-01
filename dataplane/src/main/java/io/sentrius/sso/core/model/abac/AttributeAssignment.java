@@ -139,13 +139,14 @@ public class AttributeAssignment {
      * Type of entity the attribute is assigned to
      */
     public enum TargetType {
-        USER,           // Individual user
-        ROLE,           // User role
-        GROUP,          // User group
-        ENDPOINT,       // API endpoint/resource
-        DATA_ENTITY,    // Database entity/table
-        OPERATION,      // Specific operation/method
-        SYSTEM          // System-level resource
+        USER,               // Individual user
+        NON_PERSON_ENTITY,  // Non-person entity (agent, service account, etc.)
+        ROLE,               // User role
+        GROUP,              // User group
+        ENDPOINT,           // API endpoint/resource
+        DATA_ENTITY,        // Database entity/table
+        OPERATION,          // Specific operation/method
+        SYSTEM              // System-level resource
     }
 
     /**

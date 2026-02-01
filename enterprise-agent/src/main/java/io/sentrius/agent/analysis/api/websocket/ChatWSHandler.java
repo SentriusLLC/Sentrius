@@ -145,11 +145,17 @@ public class ChatWSHandler extends TextWebSocketHandler {
                     var websocketCommunication = websocky.get();
                     websocketCommunication.setUserId(userId);
                     if (null == websocketCommunication.getAgentExecutionContextDTO().getAgentContext()){
-                        log.info("Loading agent context for session ID: {} is null ? {}" , sessionId,
-                            agentExecutionService.getExecutionContextDTO( chatAgent.getAgentExecution().getExecutionId() ).getAgentContext()==null);
-                        websocketCommunication.getAgentExecutionContextDTO().setAgentContext(
-                            agentExecutionService.getExecutionContextDTO( chatAgent.getAgentExecution().getExecutionId() ).getAgentContext()
-                        );
+                        var executionContext = agentExecutionService.getExecutionContextDTO(chatAgent.getAgentExecution().getExecutionId());
+                        if (executionContext != null) {
+                            log.info("Loading agent context for session ID: {} is null ? {}", sessionId,
+                                executionContext.getAgentContext() == null);
+                            websocketCommunication.getAgentExecutionContextDTO().setAgentContext(
+                                executionContext.getAgentContext()
+                            );
+                        } else {
+                            log.warn("Execution context not found for session ID: {}, executionId: {}",
+                                sessionId, chatAgent.getAgentExecution().getExecutionId());
+                        }
                     }
                     log.info("Received message from session ID: {}, userId {}" , sessionId,
                         websocketCommunication.getUniqueIdentifier(), userId);

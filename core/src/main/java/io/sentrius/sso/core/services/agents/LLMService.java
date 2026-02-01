@@ -11,11 +11,13 @@ import io.sentrius.sso.core.utils.JsonUtil;
 import io.sentrius.sso.genai.Message;
 import io.sentrius.sso.genai.model.LLMRequest;
 import io.sentrius.sso.genai.model.VisionContent;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class LLMService implements EmbeddingServiceIfc {
 
@@ -28,11 +30,17 @@ public class LLMService implements EmbeddingServiceIfc {
     private static final String VISION_CONTENT_TYPE_TEXT = "text";
     private static final String VISION_CONTENT_TYPE_IMAGE_URL = "image_url";
     private static final String VISION_DETAIL_AUTO = "auto";
-    private static final String VISION_MODEL = "gpt-4o-mini";
+    private static final String VISION_MODEL = "gpt-4.1";
     private static final int VISION_MAX_TOKENS = 500;
 
     public LLMService(ZeroTrustClientService zeroTrustClientService) {
         this.zeroTrustClientService = zeroTrustClientService;
+        log.info("LLMService initialized with OpenAI endpoint: {}", openAiEndpoint);
+    }
+
+    public void setLLMEndpoint(String endpoint) {
+        this.openAiEndpoint = endpoint;
+        log.info("LLMService OpenAI endpoint set to: {}", openAiEndpoint);
     }
 
 

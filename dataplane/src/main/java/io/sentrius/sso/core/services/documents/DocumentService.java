@@ -50,18 +50,22 @@ public class DocumentService {
     private final DocumentAccessControlService accessControlService;
 
     private final SystemOptions  systemOptions;
+    
+    private final KnowledgeGraphService knowledgeGraphService;
 
     public DocumentService(DocumentRepository documentRepository,
                            @Autowired(required = false) EmbeddingService embeddingService,
                            KeycloakService keycloakService, 
                            SystemOptions systemOptions,
-                           DocumentAccessControlService accessControlService
+                           DocumentAccessControlService accessControlService,
+                           @Autowired(required = false) KnowledgeGraphService knowledgeGraphService
     ) {
         this.documentRepository = documentRepository;
         this.embeddingService = embeddingService;
         this.keycloakService = keycloakService;
         this.systemOptions = systemOptions;
         this.accessControlService = accessControlService;
+        this.knowledgeGraphService = knowledgeGraphService;
         this.restTemplate = new RestTemplate();
 
     }
@@ -109,6 +113,17 @@ public class DocumentService {
                 log.info("Generated embedding for document: id={}", saved.getId());
             } catch (Exception e) {
                 log.warn("Failed to generate embedding for document: id={}, error={}", 
+                        saved.getId(), e.getMessage());
+            }
+        }
+
+        // Store in knowledge graph if service is available
+        if (knowledgeGraphService != null) {
+            try {
+                knowledgeGraphService.storeDocumentAsNode(saved, createdBy);
+                log.info("Stored document in knowledge graph: id={}", saved.getId());
+            } catch (Exception e) {
+                log.warn("Failed to store document in knowledge graph: id={}, error={}", 
                         saved.getId(), e.getMessage());
             }
         }

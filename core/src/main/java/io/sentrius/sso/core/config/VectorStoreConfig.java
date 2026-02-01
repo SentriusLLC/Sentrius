@@ -1,10 +1,14 @@
 package io.sentrius.sso.core.config;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
+
 
 /**
  * Configuration for vector store capabilities in agent memory store.
@@ -41,11 +45,15 @@ public class VectorStoreConfig {
     }
 
     /**
-     * RestTemplate for HTTP calls
+     * RestTemplate for HTTP calls with PATCH support.
+     * Uses Apache HttpClient 5.x which properly supports all HTTP methods including PATCH.
      */
     @Bean
     public RestTemplate restTemplate() {
-        return new RestTemplate();
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory(httpClient);
+        requestFactory.setConnectTimeout(10000); // 10 seconds
+        return new RestTemplate(requestFactory);
     }
 
     /**

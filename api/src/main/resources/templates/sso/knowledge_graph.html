@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" class="dark" data-bs-theme="dark">
+<head>
+    <meta th:replace="~{fragments/header}">
+    <title>[[${systemOptions.systemLogoName}]] - Knowledge Graph Query</title>
+    <style>
+        .knowledge-container {
+            max-width: 1400px;
+            margin: 20px auto;
+            background: #1e1e1e;
+            border-radius: 15px;
+            padding: 0;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+        }
+        
+        .kg-header {
+            background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
+            padding: 20px;
+            border-bottom: 1px solid #444;
+        }
+        
+        .kg-header h2 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .kg-header p {
+            color: #aaa;
+            margin: 8px 0 0 0;
+            font-size: 0.95rem;
+        }
+        
+        .kg-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 0;
+            height: calc(100vh - 200px);
+        }
+        
+        .kg-sidebar {
+            background: #1a1a1a;
+            border-right: 1px solid #444;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .kg-main {
+            background: #252525;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .query-section {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .query-section h3 {
+            color: #ffffff;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            color: #bbb;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 0.9rem;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        
+        .btn-query {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            width: 100%;
+            transition: all 0.3s;
+        }
+        
+        .btn-query:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+        }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn-action {
+            background: #2a2a2a;
+            color: #bbb;
+            border: 1px solid #444;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        
+        .btn-action:hover {
+            background: #3a3a3a;
+            color: #fff;
+            border-color: #007bff;
+        }
+        
+        .results-area {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 200px;
+        }
+        
+        .result-node {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.2s;
+        }
+        
+        .result-node:hover {
+            border-color: #007bff;
+            transform: translateX(5px);
+        }
+        
+        .node-title {
+            color: #fff;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .node-meta {
+            color: #888;
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+        }
+        
+        .node-description {
+            color: #bbb;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .node-tags {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        .tag {
+            background: #007bff;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+        
+        .spinner {
+            border: 3px solid #444;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #888;
+        }
+        
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+        
+        .query-stats {
+            background: #2a2a2a;
+            border-radius: 6px;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            color: #bbb;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .query-mode-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            background: #1a1a1a;
+            border: 2px solid #444;
+            border-radius: 6px;
+            color: #bbb;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .mode-btn:hover {
+            background: #2a2a2a;
+            border-color: #007bff;
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            border-color: #007bff;
+            color: white;
+            font-weight: 600;
+        }
+
+        .answer-box {
+            background: linear-gradient(135deg, #1a4d2e 0%, #2a5a3a 100%);
+            border-left: 4px solid #4caf50;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .answer-box h3 {
+            color: #4caf50;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .answer-box .answer-text {
+            line-height: 1.6;
+            font-size: 1rem;
+            color: #e8f5e9;
+        }
+
+        .answer-meta {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            font-size: 0.85rem;
+            color: #c8e6c9;
+        }
+
+        .context-section {
+            margin-top: 20px;
+        }
+
+        .context-header {
+            background: #2a2a2a;
+            padding: 10px 15px;
+            border-radius: 6px 6px 0 0;
+            color: #aaa;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-bottom: 1px solid #444;
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div th:replace="~{fragments/sidebar}" class="col-auto sidebar" style="width: 180px;"></div>
+        <div class="col py-4">
+            <div class="main-content">
+
+<div class="knowledge-container">
+        <div class="kg-header">
+            <h2>Knowledge Graph Query</h2>
+            <p>Query and explore the document knowledge graph for semantic relationships and discovery</p>
+        </div>
+        
+        <div class="kg-content">
+            <!-- Sidebar with Query Builder -->
+            <div class="kg-sidebar">
+                <div class="query-section">
+                    <h3>Query Mode</h3>
+                    <div class="query-mode-toggle">
+                        <button class="mode-btn active" id="searchModeBtn" onclick="setQueryMode('search')">
+                            🔍 Search Graph
+                        </button>
+                        <button class="mode-btn" id="askModeBtn" onclick="setQueryMode('ask')">
+                            💬 Ask Question
+                        </button>
+                    </div>
+                </div>
+
+                <div class="query-section" id="searchQuerySection">
+                    <h3>Query Type</h3>
+                    <div class="form-group">
+                        <select id="queryType" class="form-control">
+                            <option value="SEARCH">Search Nodes</option>
+                            <option value="NEIGHBORS">Get Neighbors</option>
+                            <option value="TRAVERSE">Traverse Graph</option>
+                            <option value="PATH">Find Path</option>
+                            <option value="SUBGRAPH">Extract Subgraph</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="query-section" id="questionSection" style="display: none;">
+                    <h3>Ask a Question</h3>
+                    <div class="form-group">
+                        <label for="questionText">Your Question</label>
+                        <textarea id="questionText" class="form-control" rows="4"
+                                  placeholder="Examples:
+• What do the documents say about agents?
+• How are the contrib guide and agents related?
+• What deployment guides are available?
+• Tell me about custom agents in Sentrius"></textarea>
+                        <small style="color: #888; font-size: 0.8rem; display: block; margin-top: 8px;">
+                            Ask about document content, relationships, or both. The LLM will analyze documents and the knowledge graph to provide an intelligent answer.
+                        </small>
+                    </div>
+                    <button class="btn-query" onclick="askQuestion()" style="width: 100%;">
+                        Ask Question
+                    </button>
+                </div>
+
+                <div class="query-section" id="searchParamsSection">
+                    <h3>Search Parameters</h3>
+                    <div class="form-group">
+                        <label for="searchText">Search Text</label>
+                        <input type="text" id="searchText" class="form-control" placeholder="Enter search terms or natural language query...">
+                        <small style="color: #888; font-size: 0.8rem;">Keywords are extracted automatically from natural language</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="startNodeId">Start Node ID</label>
+                        <input type="text" id="startNodeId" class="form-control" placeholder="e.g., document:123">
+                    </div>
+                    <div class="form-group">
+                        <label for="targetNodeId">Target Node ID (for PATH)</label>
+                        <input type="text" id="targetNodeId" class="form-control" placeholder="e.g., document:456">
+                    </div>
+                    <div class="form-group">
+                        <label for="maxDepth">Max Depth</label>
+                        <input type="number" id="maxDepth" class="form-control" value="2" min="1" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label for="limit">Result Limit</label>
+                        <input type="number" id="limit" class="form-control" value="20" min="1" max="100">
+                    </div>
+                    <button class="btn-query" onclick="executeQuery()">Execute Query</button>
+                </div>
+                
+                <div class="query-section">
+                    <h3>Quick Actions</h3>
+                    <div class="quick-actions">
+                        <button class="btn-action" onclick="searchDocuments()">Search Docs</button>
+                        <button class="btn-action" onclick="viewRecent()">Recent Nodes</button>
+                        <button class="btn-action" onclick="showStatistics()">Statistics</button>
+                        <button class="btn-action" onclick="clearResults()">Clear Results</button>
+                    </div>
+                </div>
+                
+                <div class="query-section">
+                    <h3>Suggested Data Markings</h3>
+                    <div class="form-group">
+                        <label for="documentContent">Document Content</label>
+                        <textarea id="documentContent" class="form-control" rows="4" placeholder="Paste document content to get AI-suggested security markings..."></textarea>
+                    </div>
+                    <button class="btn-query" onclick="suggestMarkings()">Suggest Markings</button>
+                    <div id="markingsResult" style="margin-top: 10px; display: none;">
+                        <div style="background: #1a1a1a; padding: 10px; border-radius: 6px; border: 1px solid #444;">
+                            <strong style="color: #60a5fa;">Suggested Markings:</strong>
+                            <div id="markingsText" style="color: #bbb; margin-top: 5px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Results Area -->
+            <div class="kg-main">
+                <div id="queryStats" class="query-stats" style="display: none;">
+                    <span id="statsInfo">No results yet</span>
+                    <span id="statsTime">-</span>
+                </div>
+                
+                <div id="resultsArea" class="results-area">
+                    <div class="empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M6 .5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1H9v1.07a7.001 7.001 0 0 1 3.274 12.474l.601.602a.5.5 0 0 1-.707.708l-.746-.746A6.97 6.97 0 0 1 8 16a6.97 6.97 0 0 1-3.422-.892l-.746.746a.5.5 0 0 1-.707-.708l.602-.602A7.001 7.001 0 0 1 7 2.07V1h-.5A.5.5 0 0 1 6 .5zm2.5 5a.5.5 0 0 0-1 0v3.362l-1.429 2.38a.5.5 0 1 0 .858.515l1.5-2.5A.5.5 0 0 0 8.5 9V5.5zM.86 5.387A2.5 2.5 0 1 1 4.387 1.86 8.035 8.035 0 0 0 .86 5.387zM11.613 1.86a2.5 2.5 0 1 1 3.527 3.527 8.035 8.035 0 0 0-3.527-3.527z"/>
+                        </svg>
+                        <h3>No Results Yet</h3>
+                        <p>Configure your query and click "Execute Query" to explore the knowledge graph</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+            </div> <!-- main-content -->
+        </div> <!-- col -->
+    </div> <!-- row -->
+</div> <!-- container-fluid -->
+
+<script>
+// Get CSRF token from meta tag
+const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+
+let currentResults = [];
+let currentQueryMode = 'search'; // 'search' or 'ask'
+
+// Toggle between search and question modes
+function setQueryMode(mode) {
+    currentQueryMode = mode;
+
+    const searchModeBtn = document.getElementById('searchModeBtn');
+    const askModeBtn = document.getElementById('askModeBtn');
+    const searchQuerySection = document.getElementById('searchQuerySection');
+    const searchParamsSection = document.getElementById('searchParamsSection');
+    const questionSection = document.getElementById('questionSection');
+
+    if (mode === 'search') {
+        searchModeBtn.classList.add('active');
+        askModeBtn.classList.remove('active');
+        searchQuerySection.style.display = 'block';
+        searchParamsSection.style.display = 'block';
+        questionSection.style.display = 'none';
+    } else {
+        searchModeBtn.classList.remove('active');
+        askModeBtn.classList.add('active');
+        searchQuerySection.style.display = 'none';
+        searchParamsSection.style.display = 'none';
+        questionSection.style.display = 'block';
+    }
+
+    // Clear results when switching modes
+    clearResults();
+}
+
+// Ask a natural language question
+async function askQuestion() {
+    const questionText = document.getElementById('questionText').value.trim();
+
+    if (!questionText) {
+        showError('Please enter a question');
+        return;
+    }
+
+    showLoading('Analyzing knowledge graph and generating answer...');
+
+    try {
+        const response = await fetch('/api/v1/knowledge-graph/ask', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ question: questionText })
+        });
+
+        if (!response.ok) {
+            throw new Error('Question failed: ' + response.statusText);
+        }
+
+        const data = await response.json();
+        displayAnswer(data);
+    } catch (error) {
+        console.error('Question error:', error);
+        showError('Failed to answer question: ' + error.message);
+    }
+}
+
+// Display the LLM-generated answer with context
+function displayAnswer(data) {
+    console.log('displayAnswer called with data:', data);
+    console.log('Answer text:', data.answer);
+
+    const resultsArea = document.getElementById('resultsArea');
+    const statsDiv = document.getElementById('queryStats');
+
+    const contextNodes = data.contextNodes || [];
+    const contextRelationships = data.contextRelationships || [];
+    const contextDocuments = data.contextDocuments || [];
+
+    console.log('Context counts - Documents:', contextDocuments.length, 'Nodes:', contextNodes.length, 'Relationships:', contextRelationships.length);
+
+    // Build the answer display
+    let html = `
+        <div class="answer-box">
+            <h3>
+                <span>🤖</span>
+                Answer
+            </h3>
+            <div class="answer-text">${escapeHtml(data.answer || 'No answer generated')}</div>
+            <div class="answer-meta">
+                Based on ${data.contextDocumentCount || 0} documents,
+                ${data.contextNodeCount || 0} nodes, and
+                ${data.contextRelationshipCount || 0} relationships
+            </div>
+        </div>
+    `;
+
+    // Add document content section (most important for content questions)
+    if (contextDocuments.length > 0) {
+        html += `
+            <div class="context-section">
+                <div class="context-header">📄 Source Documents (${contextDocuments.length})</div>
+                ${contextDocuments.map(doc => renderDocument(doc)).join('')}
+            </div>
+        `;
+    }
+
+    // Add context nodes section
+    if (contextNodes.length > 0) {
+        html += `
+            <div class="context-section" style="margin-top: 20px;">
+                <div class="context-header">📊 Knowledge Graph Nodes (${contextNodes.length})</div>
+                ${contextNodes.map(node => renderNode(node)).join('')}
+            </div>
+        `;
+    }
+
+    // Add relationships section
+    if (contextRelationships.length > 0) {
+        html += `
+            <div class="context-section" style="margin-top: 20px;">
+                <div class="context-header">🔗 Relationships (${contextRelationships.length})</div>
+                ${contextRelationships.map(rel => renderRelationship(rel)).join('')}
+            </div>
+        `;
+    }
+
+    console.log('Setting resultsArea HTML, length:', html.length);
+    resultsArea.innerHTML = html;
+    console.log('resultsArea updated. Answer box exists:', document.querySelector('.answer-box') !== null);
+
+    // Update stats
+    const totalContext = (data.contextDocumentCount || 0) + (data.contextNodeCount || 0);
+    document.getElementById('statsInfo').textContent = `Question answered with ${totalContext} context items`;
+    document.getElementById('statsTime').textContent = 'LLM-powered';
+    statsDiv.style.display = 'flex';
+}
+
+// Render a document with its content
+function renderDocument(doc) {
+    const summary = doc.summary || doc.description || 'No summary available';
+    const docType = doc.type || 'document';
+
+    return `
+        <div class="result-node">
+            <div class="node-title">
+                📄 ${escapeHtml(doc.name)}
+                <span style="color: #888; font-size: 0.85rem; margin-left: 8px;">(${escapeHtml(docType)})</span>
+            </div>
+            <div class="node-description">${escapeHtml(summary)}</div>
+        </div>
+    `;
+}
+
+// Render a relationship
+function renderRelationship(rel) {
+    // Use provided names or extract from ID
+    const fromName = rel.fromNodeName || extractNameFromId(rel.fromNodeId || rel.fromNode);
+    const toName = rel.toNodeName || extractNameFromId(rel.toNodeId || rel.toNode);
+    const reason = rel.properties && rel.properties.reason ? rel.properties.reason : '';
+    const weight = rel.weight ? ` (${Math.round(rel.weight * 100)}%)` : '';
+
+    return `
+        <div class="result-node" style="background: #1e2a3a; border-left: 3px solid #007bff;">
+            <div class="node-title" style="font-size: 0.95rem;">
+                <span style="color: #4caf50;">${escapeHtml(fromName)}</span>
+                <span style="color: #007bff; margin: 0 10px;">→ ${rel.relationshipType} →</span>
+                <span style="color: #ff9800;">${escapeHtml(toName)}</span>
+                <span style="color: #888; font-size: 0.85rem;">${weight}</span>
+            </div>
+            ${reason ? `<div class="node-description">${escapeHtml(reason)}</div>` : ''}
+        </div>
+    `;
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+async function executeQuery() {
+    const queryType = document.getElementById('queryType').value;
+    const searchText = document.getElementById('searchText').value;
+    const startNodeId = document.getElementById('startNodeId').value;
+    const targetNodeId = document.getElementById('targetNodeId').value;
+    const maxDepth = parseInt(document.getElementById('maxDepth').value);
+    const limit = parseInt(document.getElementById('limit').value);
+    
+    const request = {
+        queryType: queryType,
+        searchText: searchText || null,
+        startNodeId: startNodeId || null,
+        targetNodeId: targetNodeId || null,
+        maxDepth: maxDepth,
+        limit: limit
+    };
+    
+    showLoading();
+    
+    try {
+        const response = await fetch('/api/v1/knowledge-graph/query', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify(request)
+        });
+        
+        if (!response.ok) {
+            throw new Error('Query failed: ' + response.statusText);
+        }
+        
+        const data = await response.json();
+        currentResults = data.nodes || [];
+        displayResults(data);
+    } catch (error) {
+        console.error('Query error:', error);
+        showError('Failed to execute query: ' + error.message);
+    }
+}
+
+function showLoading(message = 'Executing query...') {
+    document.getElementById('resultsArea').innerHTML = `
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>${message}</p>
+        </div>
+    `;
+    document.getElementById('queryStats').style.display = 'none';
+}
+
+function displayResults(data) {
+    const resultsArea = document.getElementById('resultsArea');
+    const statsDiv = document.getElementById('queryStats');
+    const nodes = data.nodes || [];
+
+    if (nodes.length === 0) {
+        resultsArea.innerHTML = `
+            <div class="empty-state">
+                <h3>No Results Found</h3>
+                <p>Try adjusting your query parameters</p>
+            </div>
+        `;
+        statsDiv.style.display = 'none';
+        return;
+    }
+    
+    // Show statistics (relationships will be loaded async)
+    document.getElementById('statsInfo').textContent = `Found ${nodes.length} nodes`;
+    document.getElementById('statsTime').textContent = `${data.executionTimeMs}ms`;
+    statsDiv.style.display = 'flex';
+    
+    // Build results HTML with nodes grouped by type
+    let html = '';
+
+    // Group nodes by type for better visualization
+    const documentNodes = nodes.filter(n => n.nodeType === 'document');
+    const conceptNodes = nodes.filter(n => n.nodeType === 'concept');
+    const procedureNodes = nodes.filter(n => n.nodeType === 'procedure');
+    const otherNodes = nodes.filter(n => !['document', 'concept', 'procedure'].includes(n.nodeType));
+
+    // Render document nodes
+    if (documentNodes.length > 0) {
+        html += `<div class="context-header" style="margin-bottom: 10px;">📄 Documents (${documentNodes.length})</div>`;
+        html += documentNodes.map(node => renderNode(node)).join('');
+    }
+
+    // Render concept nodes
+    if (conceptNodes.length > 0) {
+        html += `<div class="context-header" style="margin-top: 20px; margin-bottom: 10px;">💡 Concepts (${conceptNodes.length})</div>`;
+        html += conceptNodes.map(node => renderNode(node)).join('');
+    }
+
+    // Render procedure nodes
+    if (procedureNodes.length > 0) {
+        html += `<div class="context-header" style="margin-top: 20px; margin-bottom: 10px;">📋 Procedures (${procedureNodes.length})</div>`;
+        html += procedureNodes.map(node => renderNode(node)).join('');
+    }
+
+    // Render other nodes
+    if (otherNodes.length > 0) {
+        html += `<div class="context-header" style="margin-top: 20px; margin-bottom: 10px;">📊 Other Nodes (${otherNodes.length})</div>`;
+        html += otherNodes.map(node => renderNode(node)).join('');
+    }
+
+    // Add placeholder for relationships (loaded async)
+    html += `
+        <div id="relationshipsSection" style="margin-top: 20px;">
+            <div class="context-header" style="margin-bottom: 10px;">
+                🔗 Relationships
+                <span id="relationshipsCount" style="color: #888;">(loading...)</span>
+                <span id="relationshipsSpinner" class="spinner" style="width: 16px; height: 16px; border-width: 2px; display: inline-block; vertical-align: middle; margin-left: 10px;"></span>
+            </div>
+            <div id="relationshipsContent">
+                <div style="color: #888; font-size: 0.9rem; padding: 10px;">Loading relationships...</div>
+            </div>
+        </div>
+    `;
+
+    resultsArea.innerHTML = html;
+
+    // Async load relationships
+    loadRelationshipsForNodes(nodes);
+}
+
+// Asynchronously load relationships for the displayed nodes
+async function loadRelationshipsForNodes(nodes) {
+    const nodeIds = nodes.map(n => n.id).filter(id => id);
+
+    if (nodeIds.length === 0) {
+        document.getElementById('relationshipsCount').textContent = '(0)';
+        document.getElementById('relationshipsSpinner').style.display = 'none';
+        document.getElementById('relationshipsContent').innerHTML = '<div style="color: #888; font-size: 0.9rem; padding: 10px;">No relationships found</div>';
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/v1/knowledge-graph/relationships/for-nodes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ nodeIds: nodeIds })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch relationships');
+        }
+
+        const data = await response.json();
+        const relationships = data.relationships || [];
+        const nodeNames = data.nodeNames || {};
+
+        // Update stats
+        document.getElementById('relationshipsCount').textContent = `(${relationships.length})`;
+        document.getElementById('relationshipsSpinner').style.display = 'none';
+
+        // Update main stats too
+        const currentStats = document.getElementById('statsInfo').textContent;
+        document.getElementById('statsInfo').textContent = currentStats + `, ${relationships.length} relationships`;
+
+        if (relationships.length === 0) {
+            document.getElementById('relationshipsContent').innerHTML = '<div style="color: #888; font-size: 0.9rem; padding: 10px;">No relationships found</div>';
+            return;
+        }
+
+        // Render relationships with resolved names
+        const html = relationships.map(rel => renderRelationshipFromQuery(rel, nodes, nodeNames)).join('');
+        document.getElementById('relationshipsContent').innerHTML = html;
+
+    } catch (error) {
+        console.error('Error loading relationships:', error);
+        document.getElementById('relationshipsCount').textContent = '(error)';
+        document.getElementById('relationshipsSpinner').style.display = 'none';
+        document.getElementById('relationshipsContent').innerHTML = `<div style="color: #ff6b6b; font-size: 0.9rem; padding: 10px;">Failed to load relationships: ${error.message}</div>`;
+    }
+}
+
+// Render a relationship from query results (different format than answer relationships)
+function renderRelationshipFromQuery(rel, nodes, nodeNames = {}) {
+    // Try to find node names from the nodes list or nodeNames map
+    const fromNode = nodes.find(n => n.id === rel.fromNode);
+    const toNode = nodes.find(n => n.id === rel.toNode);
+
+    // Use provided names from API, or lookup from nodes, or extract from ID
+    let fromName = rel.fromNodeName || (fromNode ? fromNode.name : null) || nodeNames[rel.fromNode] || extractNameFromId(rel.fromNode);
+    let toName = rel.toNodeName || (toNode ? toNode.name : null) || nodeNames[rel.toNode] || extractNameFromId(rel.toNode);
+
+    const weight = rel.weight ? ` (${Math.round(rel.weight * 100)}%)` : '';
+
+    return `
+        <div class="result-node" style="background: #1e2a3a; border-left: 3px solid #007bff;">
+            <div class="node-title" style="font-size: 0.95rem;">
+                <span style="color: #4caf50;">${escapeHtml(fromName)}</span>
+                <span style="color: #007bff; margin: 0 10px;">→ ${rel.relationshipType} →</span>
+                <span style="color: #ff9800;">${escapeHtml(toName)}</span>
+                <span style="color: #888; font-size: 0.85rem;">${weight}</span>
+            </div>
+        </div>
+    `;
+}
+
+// Extract a human-readable name from a node ID
+function extractNameFromId(nodeId) {
+    if (!nodeId) return '';
+
+    const colonIndex = nodeId.indexOf(':');
+    if (colonIndex === -1) return nodeId;
+
+    let id = nodeId.substring(colonIndex + 1);
+
+    // Remove angle brackets if present
+    if (id.startsWith('⟨') && id.endsWith('⟩')) {
+        id = id.substring(1, id.length - 1);
+    }
+
+    // Convert hyphens to spaces and capitalize first letter of each word
+    return id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function renderNode(node) {
+    const tags = node.tags ? node.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('') : '';
+    const description = node.description || 'No description available';
+    const marking = node.markings || node.marking || 'PUBLIC';
+
+    // Build enriched content sections if available
+    let enrichedContent = '';
+
+    // Show concepts if present
+    if (node.concepts && node.concepts.length > 0) {
+        const conceptTags = node.concepts.slice(0, 5).map(c =>
+            `<span class="tag" style="background: #6c757d;">${escapeHtml(c)}</span>`
+        ).join('');
+        const moreCount = node.concepts.length > 5 ? `<span style="color: #888; font-size: 0.8rem;"> +${node.concepts.length - 5} more</span>` : '';
+        enrichedContent += `
+            <div style="margin-top: 10px;">
+                <strong style="color: #aaa; font-size: 0.85rem;">💡 Concepts:</strong>
+                <div style="margin-top: 5px;">${conceptTags}${moreCount}</div>
+            </div>
+        `;
+    }
+
+    // Show key facts if present (first 2)
+    if (node.keyFacts && node.keyFacts.length > 0) {
+        const facts = node.keyFacts.slice(0, 2).map(f =>
+            `<li style="color: #bbb; font-size: 0.85rem; margin-bottom: 3px;">${escapeHtml(f)}</li>`
+        ).join('');
+        const moreCount = node.keyFacts.length > 2 ? `<li style="color: #888; font-size: 0.8rem;">... and ${node.keyFacts.length - 2} more facts</li>` : '';
+        enrichedContent += `
+            <div style="margin-top: 10px;">
+                <strong style="color: #aaa; font-size: 0.85rem;">📌 Key Facts:</strong>
+                <ul style="margin: 5px 0 0 15px; padding: 0;">${facts}${moreCount}</ul>
+            </div>
+        `;
+    }
+
+    // Show procedures if present (just count)
+    if (node.procedures && node.procedures.length > 0) {
+        const procNames = node.procedures.slice(0, 3).map(p => p.name || p).join(', ');
+        const moreCount = node.procedures.length > 3 ? ` +${node.procedures.length - 3} more` : '';
+        enrichedContent += `
+            <div style="margin-top: 10px;">
+                <strong style="color: #aaa; font-size: 0.85rem;">📋 Procedures (${node.procedures.length}):</strong>
+                <span style="color: #bbb; font-size: 0.85rem; margin-left: 5px;">${escapeHtml(procNames)}${moreCount}</span>
+            </div>
+        `;
+    }
+
+    // Show topics if present
+    if (node.topics && node.topics.length > 0) {
+        const topicTags = node.topics.slice(0, 4).map(t =>
+            `<span class="tag" style="background: #28a745;">${escapeHtml(t)}</span>`
+        ).join('');
+        const moreCount = node.topics.length > 4 ? `<span style="color: #888; font-size: 0.8rem;"> +${node.topics.length - 4} more</span>` : '';
+        enrichedContent += `
+            <div style="margin-top: 10px;">
+                <strong style="color: #aaa; font-size: 0.85rem;">🏷️ Topics:</strong>
+                <div style="margin-top: 5px;">${topicTags}${moreCount}</div>
+            </div>
+        `;
+    }
+
+    // Show enrichment date if available
+    const enrichedAt = node.enrichedAt ? `<span style="color: #4caf50; margin-left: 10px;">✓ Enriched</span>` : '';
+
+    return `
+        <div class="result-node" onclick="selectNode('${node.id}')">
+            <div class="node-title">${escapeHtml(node.name)}${enrichedAt}</div>
+            <div class="node-meta">
+                <strong>Type:</strong> ${node.nodeType} | 
+                <strong>ID:</strong> ${node.id} | 
+                <strong>Marking:</strong> ${marking}
+            </div>
+            <div class="node-description">${escapeHtml(description)}</div>
+            ${enrichedContent}
+            ${tags ? `<div class="node-tags" style="margin-top: 10px;">${tags}</div>` : ''}
+        </div>
+    `;
+}
+
+function selectNode(nodeId) {
+    document.getElementById('startNodeId').value = nodeId;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function searchDocuments() {
+    document.getElementById('queryType').value = 'SEARCH';
+    document.getElementById('searchText').focus();
+}
+
+function viewRecent() {
+    document.getElementById('queryType').value = 'SEARCH';
+    document.getElementById('limit').value = '10';
+    executeQuery();
+}
+
+async function showStatistics() {
+    showLoading();
+    try {
+        const response = await fetch('/api/v1/knowledge-graph/statistics');
+        const data = await response.json();
+        
+        document.getElementById('resultsArea').innerHTML = `
+            <div class="result-node">
+                <div class="node-title">Knowledge Graph Statistics</div>
+                <div class="node-description">
+                    <strong>Status:</strong> ${data.enabled ? 'Enabled' : 'Disabled'}<br>
+                    <strong>Database:</strong> ${data.database || 'N/A'}
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        showError('Failed to load statistics');
+    }
+}
+
+function clearResults() {
+    document.getElementById('resultsArea').innerHTML = `
+        <div class="empty-state">
+            <h3>Results Cleared</h3>
+            <p>Configure your query and click "Execute Query" to explore the knowledge graph</p>
+        </div>
+    `;
+    document.getElementById('queryStats').style.display = 'none';
+}
+
+
+function showError(message) {
+    document.getElementById('resultsArea').innerHTML = `
+        <div class="empty-state">
+            <h3>Error</h3>
+            <p style="color: #ff6b6b;">${message}</p>
+        </div>
+    `;
+    document.getElementById('queryStats').style.display = 'none';
+}
+
+async function suggestMarkings() {
+    const content = document.getElementById('documentContent').value;
+    if (!content.trim()) {
+        alert('Please enter document content');
+        return;
+    }
+    
+    const markingsResult = document.getElementById('markingsResult');
+    const markingsText = document.getElementById('markingsText');
+    
+    // Show loading state
+    markingsResult.style.display = 'block';
+    markingsText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing document content...';
+    
+    try {
+        // Use document analysis endpoint which can leverage LLM
+        const response = await fetch('/api/v1/documents/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ content: content })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to analyze document');
+        }
+        
+        const analysis = await response.json();
+        
+        // Generate marking suggestions based on content analysis
+        let markings = [];
+        let marking = 'PUBLIC';
+        
+        // Simple heuristics with LLM-powered analysis
+        const contentLower = content.toLowerCase();
+        const suggestedTags = analysis.suggestedTags || [];
+        
+        // Check for sensitive keywords
+        if (contentLower.includes('classified') || contentLower.includes('secret') || 
+            contentLower.includes('confidential') || contentLower.includes('restricted')) {
+            marking = 'CONFIDENTIAL';
+            markings.push('INTERNAL');
+        }
+        
+        if (contentLower.includes('proprietary') || contentLower.includes('internal use only')) {
+            markings.push('PROPRIETARY');
+        }
+        
+        if (contentLower.includes('pii') || contentLower.includes('personally identifiable') ||
+            contentLower.includes('ssn') || contentLower.includes('social security')) {
+            markings.push('PII');
+            marking = 'PRIVATE';
+        }
+        
+        if (contentLower.includes('phi') || contentLower.includes('health information') ||
+            contentLower.includes('medical record')) {
+            markings.push('PHI');
+            marking = 'PRIVATE';
+        }
+        
+        // Add suggested tags as potential markings
+        if (suggestedTags.length > 0) {
+            const relevantTags = suggestedTags.slice(0, 3).map(tag => tag.toUpperCase());
+            markings.push(...relevantTags);
+        }
+        
+        // Remove duplicates
+        markings = [...new Set(markings)];
+        
+        // Display results
+        if (markings.length === 0 && marking === 'PUBLIC') {
+            markingsText.innerHTML = `
+                <strong style="color: #10b981;">marking:</strong> ${marking}<br>
+                <strong style="color: #10b981;">Markings:</strong> PUBLIC<br>
+                <em style="color: #888; font-size: 0.85rem;">No sensitive content detected. Document appears to be suitable for public access.</em>
+            `;
+        } else {
+            const markingsStr = markings.length > 0 ? markings.join(' & ') : 'INTERNAL';
+            markingsText.innerHTML = `
+                <strong style="color: #f59e0b;">marking:</strong> <code style="background: #374151; padding: 2px 6px; border-radius: 3px;">${marking}</code><br>
+                <strong style="color: #f59e0b;">Suggested Markings:</strong> <code style="background: #374151; padding: 2px 6px; border-radius: 3px;">${markingsStr}</code><br>
+                <em style="color: #888; font-size: 0.85rem; display: block; margin-top: 8px;">
+                    These markings are AI-generated suggestions based on content analysis. 
+                    Please review and adjust according to your organization's policies.
+                </em>
+            `;
+        }
+        
+        // Add word count and other stats
+        if (analysis.wordCount) {
+            markingsText.innerHTML += `<br><small style="color: #666;">Word count: ${analysis.wordCount}</small>`;
+        }
+        
+    } catch (error) {
+        console.error('Error suggesting markings:', error);
+        markingsText.innerHTML = `
+            <span style="color: #ef4444;">Failed to suggest markings. Ensure the document analysis service is available.</span>
+        `;
+    }
+}
+</script>
+
+</body>
+</html>

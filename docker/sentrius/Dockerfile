@@ -1,5 +1,6 @@
 # Use an OpenJDK image as the base
-FROM eclipse-temurin:17-jdk-jammy
+# Using Noble (Ubuntu 24.04) for GLIBC 2.39+ required by SurrealDB Java SDK
+FROM eclipse-temurin:17-jdk-noble
 
 # Declare the argument
 ARG INCLUDE_DEV_CERTS=false

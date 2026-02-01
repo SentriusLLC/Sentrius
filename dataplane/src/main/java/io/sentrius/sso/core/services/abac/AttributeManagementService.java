@@ -7,7 +7,9 @@ import io.sentrius.sso.core.repository.abac.AttributeAssignmentRepository;
 import io.sentrius.sso.core.repository.abac.AttributeDefinitionRepository;
 import io.sentrius.sso.core.repository.UserAttributeRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,11 @@ public class AttributeManagementService {
     private final UserAttributeRepository userAttributeRepository;
     private final io.sentrius.sso.core.services.security.KeycloakService keycloakService;
 
+    // Use @Lazy and @Autowired to break circular dependency with UserService
+    @Lazy
+    @Autowired(required = false)
+    private io.sentrius.sso.core.services.UserService userService;
+
     public AttributeManagementService(
             AttributeDefinitionRepository definitionRepository,
             AttributeAssignmentRepository assignmentRepository,
@@ -42,6 +49,42 @@ public class AttributeManagementService {
         this.assignmentRepository = assignmentRepository;
         this.userAttributeRepository = userAttributeRepository;
         this.keycloakService = keycloakService;
+    }
+
+    /**
+     * Resolve a user identifier (username or userId) to Keycloak UUID.
+     * This ensures consistency between ABAC attribute storage and document access control.
+     *
+     * @param identifier Can be username (e.g., "marc@sentrius.io", "service-account-java-agents") or Keycloak UUID
+     * @return Keycloak UUID (userId field) if user found, null otherwise
+     */
+    public String resolveUserIdentifierToKeycloakId(String identifier) {
+        if (identifier == null || identifier.trim().isEmpty()) {
+            return null;
+        }
+
+        if (userService == null) {
+            log.warn("UserService not available, cannot resolve identifier {} to Keycloak UUID", identifier);
+            return identifier; // Return as-is if service not available
+        }
+
+        // First, check if this is already a UUID by trying to look it up directly
+        io.sentrius.sso.core.model.users.User userById = userService.getUserByUserid(identifier);
+        if (userById != null) {
+            log.debug("Identifier {} is already a Keycloak UUID", identifier);
+            return userById.getUserId();
+        }
+
+        // Otherwise, treat it as a username and look up by username
+        Optional<io.sentrius.sso.core.model.users.User> userByUsername = userService.findByUsername(identifier);
+        if (userByUsername.isPresent()) {
+            String keycloakId = userByUsername.get().getUserId();
+            log.debug("Resolved username {} to Keycloak UUID: {}", identifier, keycloakId);
+            return keycloakId;
+        }
+
+        log.warn("Could not resolve identifier {} to a Keycloak UUID - user not found in database", identifier);
+        return null;
     }
 
     /**
@@ -163,10 +206,12 @@ public class AttributeManagementService {
             assignment = assignmentRepository.save(assignment);
         }
         
-        // IMPORTANT: Also persist to UserAttribute table for USER target types
+        // IMPORTANT: Also persist to UserAttribute table for USER and NON_PERSON_ENTITY target types
         // This ensures compatibility with DocumentAccessControlService and MemoryAccessControlService
-        if (targetType == AttributeAssignment.TargetType.USER) {
-            syncToUserAttributeTable(targetId, definition.getAttributeName(), value, 
+        // NPE agents need attributes in user_attributes table to access documents with markings
+        if (targetType == AttributeAssignment.TargetType.USER ||
+            targetType == AttributeAssignment.TargetType.NON_PERSON_ENTITY) {
+            syncToUserAttributeTable(targetId, definition.getAttributeName(), value,
                                     source.name(), syncedFromKeycloak);
         }
         
@@ -181,37 +226,55 @@ public class AttributeManagementService {
     private void syncToUserAttributeTable(String userId, String attributeName, String attributeValue,
                                           String source, boolean syncedFromKeycloak) {
         try {
-            // Check if UserAttribute already exists
+            // Check if UserAttribute already exists (active OR inactive to avoid constraint violation)
             Optional<UserAttribute> existingUserAttr = userAttributeRepository
                     .findByUserIdAndAttributeNameAndIsActiveTrue(userId, attributeName);
             
             if (existingUserAttr.isPresent()) {
-                // Update existing UserAttribute
+                // Update existing active UserAttribute
                 UserAttribute userAttr = existingUserAttr.get();
                 userAttr.setAttributeValue(attributeValue);
                 userAttr.setSource(source);
                 userAttr.setSyncedFromKeycloak(syncedFromKeycloak);
+                userAttr.setIsActive(true); // Ensure it's active
                 userAttributeRepository.save(userAttr);
                 log.debug("Updated UserAttribute for user: {}, attribute: {}", userId, attributeName);
             } else {
-                // Create new UserAttribute - use STRING as default type for simplicity
-                // UserAttribute has basic type checking (STRING, INTEGER, BOOLEAN, etc.)
-                // while AttributeDefinition has more complex type system
-                UserAttribute userAttr = UserAttribute.builder()
-                        .userId(userId)
-                        .attributeName(attributeName)
-                        .attributeValue(attributeValue)
-                        .attributeType("STRING")
-                        .source(source)
-                        .isActive(true)
-                        .syncedFromKeycloak(syncedFromKeycloak)
-                        .build();
-                userAttributeRepository.save(userAttr);
-                log.info("Created UserAttribute for user: {}, attribute: {} = {}", 
-                        userId, attributeName, attributeValue);
+                // Check for inactive attribute that might violate unique constraint
+                Optional<UserAttribute> inactiveAttr = userAttributeRepository
+                        .findByUserIdAndAttributeName(userId, attributeName);
+
+                if (inactiveAttr.isPresent()) {
+                    // Reactivate the inactive attribute
+                    UserAttribute userAttr = inactiveAttr.get();
+                    userAttr.setAttributeValue(attributeValue);
+                    userAttr.setSource(source);
+                    userAttr.setSyncedFromKeycloak(syncedFromKeycloak);
+                    userAttr.setIsActive(true); // Reactivate
+                    userAttributeRepository.save(userAttr);
+                    log.info("Reactivated UserAttribute for user: {}, attribute: {} = {}",
+                            userId, attributeName, attributeValue);
+                } else {
+                    // Create new UserAttribute - use STRING as default type for simplicity
+                    // UserAttribute has basic type checking (STRING, INTEGER, BOOLEAN, etc.)
+                    // while AttributeDefinition has more complex type system
+                    UserAttribute userAttr = UserAttribute.builder()
+                            .userId(userId)
+                            .attributeName(attributeName)
+                            .attributeValue(attributeValue)
+                            .attributeType("STRING")
+                            .source(source)
+                            .isActive(true)
+                            .syncedFromKeycloak(syncedFromKeycloak)
+                            .build();
+                    userAttributeRepository.save(userAttr);
+                    log.info("Created UserAttribute for user: {}, attribute: {} = {}",
+                            userId, attributeName, attributeValue);
+                }
             }
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            log.error("Database constraint violation syncing attribute to UserAttribute table for user: {}, attribute: {}", 
+            log.error("Database constraint violation syncing attribute to UserAttribute table for user: {}, attribute: {}. " +
+                     "This may indicate a race condition or the attribute exists but wasn't found.",
                      userId, attributeName, e);
             // Don't fail the main operation if UserAttribute sync fails
         } catch (org.springframework.dao.DataAccessException e) {
@@ -373,8 +436,9 @@ public class AttributeManagementService {
             assignmentRepository.save(a);
             log.info("Deactivated attribute assignment: {}", assignmentId);
             
-            // Also deactivate corresponding UserAttribute if this is a USER assignment
-            if (a.getTargetType() == AttributeAssignment.TargetType.USER) {
+            // Also deactivate corresponding UserAttribute if this is a USER or NON_PERSON_ENTITY assignment
+            if (a.getTargetType() == AttributeAssignment.TargetType.USER ||
+                a.getTargetType() == AttributeAssignment.TargetType.NON_PERSON_ENTITY) {
                 deactivateUserAttribute(a.getTargetId(), a.getAttributeDefinition().getAttributeName());
             }
             

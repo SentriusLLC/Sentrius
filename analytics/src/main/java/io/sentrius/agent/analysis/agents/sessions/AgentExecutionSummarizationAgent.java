@@ -192,6 +192,28 @@ public class AgentExecutionSummarizationAgent {
     }
 
     /**
+     * Automatically consolidate duplicate agent execution audits every hour.
+     * Merges audits with the same agentType, agentId, status, and executedBy into a single record.
+     */
+    @Scheduled(cron = "0 0 * * * *") // Every hour at minute 0
+    @Transactional
+    public void consolidateDuplicateAudits() {
+        log.debug("Running scheduled duplicate consolidation...");
+
+        try {
+            long consolidatedCount = auditService.consolidateDuplicates();
+
+            if (consolidatedCount > 0) {
+                log.info("Scheduled consolidation: merged {} duplicate agent execution audits", consolidatedCount);
+            } else {
+                log.debug("Scheduled consolidation: no duplicates found");
+            }
+        } catch (Exception e) {
+            log.error("Error during scheduled duplicate consolidation", e);
+        }
+    }
+
+    /**
      * Process a single agent execution - analyze logs and communications to generate summary
      */
     private void processExecution(String executionId) {

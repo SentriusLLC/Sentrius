@@ -447,6 +447,22 @@ neo4j:
     NEO4J_AUTH: ""  # To be set via environment variable (e.g., neo4j/your-secure-password)
     NEO4J_server_config_strict__validation__enabled: "true"
 
+# SurrealDB configuration for knowledge graph
+surrealdb:
+  enabled: true
+  image:
+    repository: surrealdb/surrealdb
+    tag: v2.1.3
+    pullPolicy: IfNotPresent
+  port: 8000
+  storageSize: 10Gi
+  resources: {}
+  password: ""  # To be set via environment variable or external secret
+  env:
+    SURREAL_LOG: info
+    SURREAL_CAPS_ALLOW_ALL: "false"
+    SURREAL_CAPS_ALLOW_NET: "false"
+
 adminer:
   enabled: false
 

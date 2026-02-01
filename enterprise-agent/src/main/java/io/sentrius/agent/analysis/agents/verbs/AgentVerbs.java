@@ -606,8 +606,13 @@ public class AgentVerbs extends VerbBase {
     )
     public JsonNode getAgentExecutionStatus(AgentExecution execution, AgentExecutionContextDTO context)
         throws ZtatException, JsonProcessingException {
-        var status =  agentExecutionService.getExecutionContextDTO(execution.getExecutionId());
+        var status = agentExecutionService.getExecutionContextDTO(execution.getExecutionId());
 
+        if (status == null) {
+            ObjectNode errorNode = JsonUtil.MAPPER.createObjectNode();
+            errorNode.put("error", "No execution context found for this agent");
+            return errorNode;
+        }
 
         var lastTen = ListUtils.getLastNElements(status.getMessages(),10);
         var messages = new ArrayList<Message>();
@@ -802,9 +807,13 @@ public class AgentVerbs extends VerbBase {
             agentName = agentName.replaceAll("_", "-");
         }
 
+        // Check for both 'context' and 'agentContext' parameter names (LLM may use either)
         var originalContext = context.getExecutionArgument("context");
         if (originalContext.isEmpty()) {
-            throw new RuntimeException("Context is required to create an agent. Please provide a description of what the agent should do.");
+            originalContext = context.getExecutionArgument("agentContext");
+        }
+        if (originalContext.isEmpty()) {
+            throw new RuntimeException("Context is required to create an agent. Please provide a description of what the agent should do. Use parameter name 'context' or 'agentContext'.");
         }
 
         var agentTypeArg = context.getExecutionArgument("agentType");

@@ -1,0 +1,18 @@
+{{- if .Values.surrealdb.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-surrealdb-pvc
+  labels:
+    app: surrealdb
+    release: {{ .Release.Name }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.config.storageClassName }}
+  storageClassName: {{ .Values.config.storageClassName }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.surrealdb.storageSize | default "10Gi" }}
+{{- end }}

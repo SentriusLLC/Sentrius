@@ -29,7 +29,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 @Slf4j
 @Service
@@ -38,11 +37,9 @@ public class AgentClientService {
 
     final ZeroTrustClientService zeroTrustClientService;
 
-
     @Value("${agent.callback.url:http://localhost:8080}")
     private String callbackUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
 
     public AgentClientService(ZeroTrustClientService zeroTrustClientService, KeycloakService keycloakService) {
         this.zeroTrustClientService = zeroTrustClientService;

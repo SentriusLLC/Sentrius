@@ -47,10 +47,6 @@ data:
       - lookup_agent_memory
       - search_agent_memory_semantic
 
-      MODE REQUIREMENT:
-      - Every response MUST include `"mode": "design"`.
-      - Any other mode is invalid.
-
       NAME RULE:
       - Agent names must match: [a-z]([-a-z0-9]*[a-z0-9])?
       - Use hyphens only.
